@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setores · Cadastro — Sistema A</title>
+
+<!-- provider + primitivos (mesma fundação das demais telas) -->
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+
+<style>
+/* ===== layout da tela Setores (cor 100% via var) ===== */
+.st-app{display:flex;min-height:100vh;background:var(--bg)}
+.st-app>.ui-side{position:sticky;top:0;height:100vh}
+.st-main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+.st-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.st-hi{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.st-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.st-mhead{display:none;align-items:flex-start;justify-content:space-between;padding:14px 20px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.st-mg{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.st-md{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.st-content{flex:1;padding:24px 32px 40px}
+
+/* toolbar */
+.st-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.st-count{font-size:12.5px;font-weight:600;color:var(--muted)}
+.st-count b{color:var(--text);font-weight:800}
+.st-toolright{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+
+/* árvore accordion */
+.st-tree{display:flex;flex-direction:column;gap:10px}
+.st-node{background:var(--s1);border:1px solid var(--border);border-radius:13px;overflow:hidden}
+.st-node.inactive{opacity:.72}
+.st-rowhead{display:flex;align-items:center;gap:13px;padding:14px 16px;cursor:pointer;user-select:none}
+.st-rowhead:hover{background:var(--s2)}
+.st-caret{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted2);transition:transform .18s}
+.st-node.open .st-caret{transform:rotate(180deg)}
+.st-caret.empty{visibility:hidden}
+.st-sigla{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--greenText);background:var(--activeBg);
+  border:1px solid var(--border);border-radius:7px;padding:4px 9px;flex:none;min-width:56px;text-align:center}
+.st-name{font-size:14.5px;font-weight:700;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-node.inactive .st-name{color:var(--muted)}
+.st-sub{font-size:11.5px;font-weight:700;color:var(--muted2);flex:none}
+.st-actions{display:flex;align-items:center;gap:6px;flex:none}
+.st-ibtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--border);
+  border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
+.st-ibtn:hover{background:var(--s3);color:var(--text)}
+.st-ibtn.danger:hover{color:var(--red);border-color:var(--red)}
+
+/* filhos (subsetores) */
+.st-kids{border-top:1px solid var(--border);background:var(--s1);padding:8px 14px 12px;display:flex;flex-direction:column;gap:8px}
+.st-kid{display:flex;align-items:center;gap:12px;margin-left:33px;padding:11px 13px;border-radius:10px;background:var(--s2);border:1px solid var(--border)}
+.st-kid.inactive{opacity:.72}
+.st-kid .st-name{font-size:13.5px}
+.st-addkid{display:inline-flex;align-items:center;gap:8px;margin-left:33px;padding:9px 12px;border:1px dashed var(--border);
+  border-radius:10px;background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;width:max-content}
+.st-addkid:hover{color:var(--greenText);border-color:var(--brand)}
+.st-kidempty{margin-left:33px;font-size:12px;font-weight:500;color:var(--muted2);padding:2px 2px 4px}
+
+/* onboarding (first-run) */
+.st-onb{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:30px 30px 28px;max-width:720px}
+.st-onb-ic{width:46px;height:46px;border-radius:13px;background:var(--activeBg);color:var(--greenText);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.st-onb-t{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.st-onb-p{font-size:13.5px;font-weight:500;color:var(--muted);line-height:1.55;margin-top:8px;max-width:620px}
+.st-onb-prev{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 6px}
+.st-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);
+  background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 11px}
+.st-chip .sg{font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--greenText)}
+.st-onb-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px}
+.st-onb-note{font-size:12.5px;font-weight:500;color:var(--muted2);margin-top:18px}
+
+/* skeleton / erro / sem-acesso */
+.st-skel{display:flex;flex-direction:column;gap:10px}
+.st-skrow{height:54px;border-radius:13px;border:1px solid var(--border);background:
+  linear-gradient(90deg,var(--s1) 0%,var(--s2) 50%,var(--s1) 100%);background-size:200% 100%;animation:stsk 1.2s ease-in-out infinite}
+@keyframes stsk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.st-msg{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:34px 30px;max-width:560px;text-align:center;margin:8px auto 0}
+.st-msg-ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
+  background:var(--chipBg);color:var(--muted)}
+.st-msg-ic.err{color:var(--red)}
+.st-msg-t{font-size:16px;font-weight:800}
+.st-msg-p{font-size:13px;font-weight:500;color:var(--muted);line-height:1.5;margin-top:7px}
+.st-msg-actions{display:flex;justify-content:center;margin-top:18px}
+
+/* toast */
+.st-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);z-index:80;
+  display:flex;align-items:center;gap:10px;max-width:90vw;padding:12px 16px;border-radius:11px;
+  background:var(--s2);border:1px solid var(--border);box-shadow:var(--cardShadow);
+  font-size:13px;font-weight:600;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.st-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.st-toast .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--brand)}
+.st-toast.err .bar{background:var(--red)}
+
+/* toggle de tema temporário (até existir a tela Configurações) */
+.st-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;
+  font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
+.st-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
+
+/* disabled (botão sem permissão) */
+.st-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
+
+@media (max-width:900px){
+  .st-app>.ui-side{display:none}
+  .st-top{display:none}
+  .st-mhead{display:flex}
+  .st-content{padding:16px 18px 40px}
+  .st-toolbar{gap:12px}
+  .st-onb{padding:22px 20px}
+  .st-kid,.st-addkid,.st-kidempty{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+  <button class="st-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+
+  <div class="st-app" id="app">
+    <main class="st-main">
+
+      <div class="st-top">
+        <div style="line-height:1.2">
+          <div class="st-hi">Setores</div>
+          <div class="st-dd">Áreas da escola e suas siglas · registro central que conecta projetos e atividades</div>
+        </div>
+      </div>
+
+      <div class="st-mhead">
+        <div>
+          <div class="st-mg">Setores</div>
+          <div class="st-md">Áreas e siglas</div>
+        </div>
+        <span id="st-mav"></span>
+      </div>
+
+      <div class="st-content">
+        <div class="st-toolbar" id="st-toolbar" hidden>
+          <div class="st-count" id="st-count"></div>
+          <div class="st-toolright">
+            <span id="st-showinactive"></span>
+            <span id="st-newbtn"></span>
+          </div>
+        </div>
+        <div id="st-stage"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="st-toast" id="st-toast"><span class="bar"></span><span id="st-toast-msg"></span></div>
+
+  <script src="ui.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    /* =========================================================
+       USUÁRIO ATUAL — placeholder até o Firebase Auth entrar
+       (mesma estratégia da tela Hoje). Trocar por auth real depois.
+       Perfis: 'Admin' | 'Editor' | 'Visualizador' | 'Consultor Externo'
+       ========================================================= */
+    var CURRENT_USER = { name: 'Mariana Souza', profile: 'Admin', initials: 'MS' };
+    var CAN_WRITE = CURRENT_USER.profile === 'Admin';
+    var CAN_VIEW  = CURRENT_USER.profile !== 'Consultor Externo';
+
+    /* estrutura inicial sugerida (editável depois) */
+    var SETORES_INICIAIS = [
+      { sigla: 'PED', nome: 'Pedagógico' },
+      { sigla: 'SEC', nome: 'Secretaria' },
+      { sigla: 'CRA', nome: 'CRA' },
+      { sigla: 'GES', nome: 'Gestão' },
+      { sigla: 'QLD', nome: 'Qualidade' },
+      { sigla: 'AGE', nome: 'Agência de Emprego' },
+      { sigla: 'COM', nome: 'Comercial' }
+    ];
+
+    /* =========================================================
+       CAMADA DE DADOS (pré-Firebase) — DECISÃO: persistência local
+       provisória (localStorage). Interface assíncrona idêntica à que
+       o Firestore vai implementar depois: list/create/update/setAtivo/
+       seedIniciais. Trocar só o corpo destes métodos mantém a tela
+       inalterada. Namespace exclusivo do Sistema A — nunca toca GMIX.
+       Regras de negócio (unicidade de sigla, profundidade de 1 nível,
+       bloqueio de órfão ativo, escrita protegida) ficam AQUI, não na UI.
+       ========================================================= */
+    var Store = (function () {
+      var KEY = 'grautfsa.setores.v1';
+      var RX = /^[A-Z0-9]{2,6}$/;
+
+      /* read(): [] = vazio de verdade · null = corrompido/indisponível (não sobrescreve) */
+      /* read(): [] = vazio · lança erro tipado por causa (indisponível × corrompido × formato) */
+      function read() {
+        var raw;
+        try { raw = localStorage.getItem(KEY); }
+        catch (e) { throw new Error('O armazenamento do navegador está indisponível (modo privado, bloqueio ou política). Recarregue ou tente outro navegador.'); }
+        if (raw == null) { return []; }
+        var v;
+        try { v = JSON.parse(raw); }
+        catch (e) { throw new Error('Os dados salvos estão corrompidos. Recarregue a página.'); }
+        if (!Array.isArray(v)) { throw new Error('Os dados salvos estão em formato inválido. Recarregue a página.'); }
+        return v;
+      }
+      function write(arr) {
+        try { localStorage.setItem(KEY, JSON.stringify(arr)); return true; }
+        catch (e) { return false; }
+      }
+      function done(v) { return new Promise(function (res) { setTimeout(function () { res(v); }, 160); }); }
+      function fail(msg, field) {
+        return new Promise(function (_, rej) {
+          setTimeout(function () { var e = new Error(msg); if (field) { e.field = field; } rej(e); }, 120);
+        });
+      }
+      var NOSAVE  = 'Não consegui salvar: o armazenamento do navegador está indisponível ou cheio.';
+      function nextOrdem(arr) { var m = 0; arr.forEach(function (s) { if (s.ordem > m) { m = s.ordem; } }); return m + 1; }
+
+      var api = {
+        list: function () {
+          var a;
+          try { a = read(); } catch (e) { return fail(e.message, 'geral'); }
+          a = a.slice();
+          a.sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0) || (x.sigla < y.sigla ? -1 : 1); });
+          return done(a);
+        },
+        create: function (d) {
+          var arr;
+          try { arr = read(); } catch (e) { return fail(e.message, 'geral'); }
+          var sigla = (d.sigla || '').toUpperCase();
+          var nome = (d.nome || '').trim();
+          var pai = d.setorPaiSigla || null;
+          if (!RX.test(sigla)) { return fail('Sigla inválida. Use de 2 a 6 letras ou números.', 'sigla'); }
+          if (arr.some(function (s) { return s.sigla === sigla; })) { return fail('A sigla "' + sigla + '" já está em uso.', 'sigla'); }
+          if (nome.length < 2) { return fail('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+          if (pai) {
+            var p = arr.filter(function (s) { return s.sigla === pai; })[0];
+            if (!p) { return fail('Setor pai não encontrado.', 'pai'); }
+            if (p.setorPaiSigla) { return fail('O setor pai precisa ser um setor raiz (não um subsetor).', 'pai'); }
+            if (!p.ativo) { return fail('O setor pai "' + pai + '" está inativo. Reative-o antes de criar subsetores nele.', 'pai'); }
+          }
+          var now = Date.now();
+          var novo = { sigla: sigla, nome: nome, setorPaiSigla: pai, ativo: true, ordem: nextOrdem(arr), criadoEm: now, atualizadoEm: now };
+          arr.push(novo);
+          if (!write(arr)) { return fail(NOSAVE, 'geral'); }
+          return done(novo);
+        },
+        update: function (sigla, patch) {
+          var arr;
+          try { arr = read(); } catch (e) { return fail(e.message, 'geral'); }
+          var i = -1; arr.forEach(function (s, idx) { if (s.sigla === sigla) { i = idx; } });
+          if (i < 0) { return fail('Setor não encontrado.', 'geral'); }
+          var cur = arr[i];
+          var nome = patch.nome != null ? patch.nome.trim() : cur.nome;
+          if (nome.length < 2) { return fail('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+          var pai = patch.setorPaiSigla !== undefined ? (patch.setorPaiSigla || null) : (cur.setorPaiSigla || null);
+          var ativo = patch.ativo !== undefined ? !!patch.ativo : cur.ativo;
+          var hasKids = arr.some(function (s) { return s.setorPaiSigla === sigla; });
+          if (pai) {
+            if (pai === sigla) { return fail('Um setor não pode ser pai de si mesmo.', 'pai'); }
+            if (hasKids) { return fail('Este setor tem subsetores, então só pode ser um setor raiz.', 'pai'); }
+            var p = arr.filter(function (s) { return s.sigla === pai; })[0];
+            if (!p) { return fail('Setor pai não encontrado.', 'pai'); }
+            if (p.setorPaiSigla) { return fail('O setor pai precisa ser um setor raiz (não um subsetor).', 'pai'); }
+            /* pai inativo só barra se o filho ficar ATIVO (filho inativo sob pai inativo é consistente) */
+            if (!p.ativo && ativo) { return fail('O setor pai "' + pai + '" está inativo. Reative-o antes, ou deixe este setor inativo também.', 'pai'); }
+          }
+          /* inativar pai com subsetores ativos → bloqueia */
+          if (cur.ativo && !ativo) {
+            var ativosFilhos = arr.filter(function (s) { return s.setorPaiSigla === sigla && s.ativo; }).map(function (s) { return s.sigla; });
+            if (ativosFilhos.length) { return fail('Não dá para inativar "' + sigla + '": há subsetores ativos (' + ativosFilhos.join(', ') + '). Inative ou mova antes.', 'ativo'); }
+          }
+          arr[i] = { sigla: cur.sigla, nome: nome, setorPaiSigla: pai, ativo: ativo, ordem: cur.ordem, criadoEm: cur.criadoEm, atualizadoEm: Date.now() };
+          if (!write(arr)) { return fail(NOSAVE, 'geral'); }
+          return done(arr[i]);
+        },
+        setAtivo: function (sigla, ativo) { return api.update(sigla, { ativo: !!ativo }); },
+        seedIniciais: function () {
+          var arr;
+          try { arr = read(); } catch (e) { return fail(e.message, 'geral'); }
+          if (arr.length) { return done(arr); } /* idempotente: só roda com coleção vazia */
+          var now = Date.now();
+          var seeded = SETORES_INICIAIS.map(function (s, idx) {
+            return { sigla: s.sigla, nome: s.nome, setorPaiSigla: null, ativo: true, ordem: idx + 1, criadoEm: now, atualizadoEm: now };
+          });
+          if (!write(seeded)) { return fail(NOSAVE, 'geral'); }
+          return done(seeded.slice());
+        }
+      };
+      return api;
+    })();
+
+    /* ===================== util ===================== */
+    function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+    /* txt(): nó com texto via textContent — nunca interpola dado do usuário em HTML (anti-injeção) */
+    function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+    function ico(d, size) {
+      size = size || 16;
+      var s = document.createElement('span'); s.style.display = 'inline-flex';
+      s.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size +
+        '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+      return s.firstChild;
+    }
+    var PATH = {
+      pencil: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path>',
+      archive: '<rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path>',
+      restore: '<path d="M3 8V3h5"></path><path d="M3.5 8a9 9 0 1 0 2.2-2.9"></path>',
+      layers: '<path d="M12 3 3 8l9 5 9-5z"></path><path d="M3 13l9 5 9-5"></path>',
+      lock: '<rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>',
+      alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>'
+    };
+
+    var ALL = [];          /* cache da lista */
+    var openSet = {};      /* siglas raiz expandidas */
+    var showInactive = false;
+
+    var stage = document.getElementById('st-stage');
+    var toolbar = document.getElementById('st-toolbar');
+
+    /* ===================== toast ===================== */
+    var toastEl = document.getElementById('st-toast');
+    var toastMsg = document.getElementById('st-toast-msg');
+    var toastTimer = null;
+    function toast(msg, kind) {
+      toastMsg.textContent = msg;
+      toastEl.classList.toggle('err', kind === 'err');
+      toastEl.classList.add('on');
+      if (toastTimer) { clearTimeout(toastTimer); }
+      toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2800);
+    }
+
+    /* ===================== boot ===================== */
+    function mount() {
+      var app = document.getElementById('app');
+      var oldSide = app.querySelector('.ui-side'); if (oldSide) { oldSide.remove(); }
+      app.insertBefore(UI.sidebar({ active: 'Setores', user: CURRENT_USER }), app.firstChild);
+
+      var mav = document.getElementById('st-mav'); mav.innerHTML = '';
+      mav.appendChild(UI.avatar({ initials: CURRENT_USER.initials, size: 42 }));
+
+      if (!CAN_VIEW) { renderNoAccess(); return; }
+      load();
+    }
+
+    function load() {
+      toolbar.hidden = true;
+      renderLoading();
+      Store.list().then(function (rows) {
+        ALL = rows;
+        if (rows.length) { renderTree(); } else { renderEmpty(); }
+      }).catch(function (e) { renderError(e); });
+    }
+
+    /* refresh sem skeleton (após mutações / eventos de outra aba) */
+    function refresh() {
+      Store.list().then(function (rows) {
+        ALL = rows;
+        if (rows.length) { renderTree(); } else { renderEmpty(); }
+      }).catch(function (e) { renderError(e); });
+    }
+
+    /* ===================== estados ===================== */
+    function renderLoading() {
+      stage.innerHTML = '';
+      var box = el('<div class="st-skel"></div>');
+      for (var i = 0; i < 4; i++) { box.appendChild(el('<div class="st-skrow"></div>')); }
+      stage.appendChild(box);
+    }
+
+    function renderError(e) {
+      toolbar.hidden = true;
+      stage.innerHTML = '';
+      var box = el('<div class="st-msg"></div>');
+      var icw = el('<div class="st-msg-ic err"></div>'); icw.appendChild(ico(PATH.alert, 22)); box.appendChild(icw);
+      box.appendChild(el('<div class="st-msg-t">Não consegui carregar os setores</div>'));
+      box.appendChild(txt('div', 'st-msg-p', (e && e.message) ? e.message : 'Falha de leitura.'));
+      var act = el('<div class="st-msg-actions"></div>');
+      act.appendChild(UI.button({ label: 'Tentar de novo', icon: 'repeat', onClick: load }));
+      box.appendChild(act);
+      stage.appendChild(box);
+    }
+
+    function renderNoAccess() {
+      toolbar.hidden = true;
+      stage.innerHTML = '';
+      var box = el('<div class="st-msg"></div>');
+      var icw = el('<div class="st-msg-ic"></div>'); icw.appendChild(ico(PATH.lock, 22)); box.appendChild(icw);
+      box.appendChild(el('<div class="st-msg-t">Acesso restrito</div>'));
+      box.appendChild(txt('div', 'st-msg-p', 'Seu perfil (' + CURRENT_USER.profile + ') não tem acesso ao cadastro de setores. Fale com um Admin se precisar consultar.'));
+      stage.appendChild(box);
+    }
+
+    function renderEmpty() {
+      toolbar.hidden = true;
+      stage.innerHTML = '';
+      var box = el('<div class="st-onb"></div>');
+      var icw = el('<div class="st-onb-ic"></div>'); icw.appendChild(ico(PATH.layers, 24)); box.appendChild(icw);
+      box.appendChild(el('<div class="st-onb-t">Comece pelos setores</div>'));
+      box.appendChild(el('<div class="st-onb-p">Setores são as áreas da escola — Pedagógico, Secretaria, Comercial e assim por diante. Cada um recebe uma <b>sigla curta</b> que liga atividades e projetos a essa área. Você pode partir da estrutura sugerida abaixo e ajustar tudo depois (renomear, inativar, criar novos).</div>'));
+
+      var prev = el('<div class="st-onb-prev"></div>');
+      SETORES_INICIAIS.forEach(function (s) {
+        var chip = el('<span class="st-chip"></span>');
+        chip.appendChild(txt('span', 'sg', s.sigla));
+        chip.appendChild(document.createTextNode(s.nome));
+        prev.appendChild(chip);
+      });
+      box.appendChild(prev);
+
+      if (CAN_WRITE) {
+        var actions = el('<div class="st-onb-actions"></div>');
+        actions.appendChild(UI.button({
+          label: 'Usar estrutura inicial (7 setores)', icon: 'check',
+          onClick: function () { Store.seedIniciais().then(function () { toast('Estrutura inicial criada: 7 setores.'); refresh(); }).catch(function (e) { toast(e.message, 'err'); }); }
+        }));
+        actions.appendChild(UI.button({ label: 'Criar do zero', variant: 'ghost', icon: 'plus', onClick: function () { openEditor(null, null); } }));
+        box.appendChild(actions);
+      } else {
+        box.appendChild(el('<div class="st-onb-note">Ainda não há setores cadastrados. Peça a um Admin para criar a estrutura inicial.</div>'));
+      }
+      stage.appendChild(box);
+    }
+
+    /* ===================== árvore ===================== */
+    function rootsOf() { return ALL.filter(function (s) { return !s.setorPaiSigla; }); }
+    function kidsOf(sig) { return ALL.filter(function (s) { return s.setorPaiSigla === sig; }); }
+
+    function renderToolbar() {
+      var roots = rootsOf();
+      var subs = ALL.filter(function (s) { return !!s.setorPaiSigla; });
+      var visRoots = showInactive ? roots : roots.filter(function (r) { return r.ativo; });
+      var visSubs  = showInactive ? subs : subs.filter(function (r) { return r.ativo; });
+      var inativos = ALL.filter(function (s) { return !s.ativo; }).length;
+      var c = document.getElementById('st-count');
+      /* só números entram em innerHTML (seguro); rótulos do usuário nunca */
+      c.innerHTML = '<b>' + visRoots.length + '</b> setores · <b>' + visSubs.length + '</b> subsetores' +
+        (inativos ? ' · ' + inativos + ' inativo(s)' + (showInactive ? '' : ' oculto(s)') : '');
+
+      var sw = document.getElementById('st-showinactive'); sw.innerHTML = '';
+      sw.appendChild(UI.checkbox({ checked: showInactive, label: 'Mostrar inativos', onToggle: function (v) { showInactive = v; renderTree(); } }));
+
+      var nb = document.getElementById('st-newbtn'); nb.innerHTML = '';
+      var btn = UI.button({ label: 'Novo setor', icon: 'plus', onClick: function () { if (CAN_WRITE) { openEditor(null, null); } } });
+      if (!CAN_WRITE) { btn.classList.add('st-disabled'); btn.setAttribute('title', 'Apenas o perfil Admin cadastra setores.'); }
+      nb.appendChild(btn);
+      toolbar.hidden = false;
+    }
+
+    function actionBtns(s) {
+      var wrap = el('<div class="st-actions"></div>');
+      if (!CAN_WRITE) { return wrap; }
+      var edit = el('<button class="st-ibtn" type="button" title="Editar"></button>'); edit.appendChild(ico(PATH.pencil, 16));
+      edit.addEventListener('click', function (e) { e.stopPropagation(); openEditor(s.sigla, null); });
+      wrap.appendChild(edit);
+      var tgl = el('<button class="st-ibtn' + (s.ativo ? ' danger' : '') + '" type="button" title="' + (s.ativo ? 'Inativar' : 'Reativar') + '"></button>');
+      tgl.appendChild(ico(s.ativo ? PATH.archive : PATH.restore, 16));
+      tgl.addEventListener('click', function (e) { e.stopPropagation(); toggleAtivo(s); });
+      wrap.appendChild(tgl);
+      return wrap;
+    }
+
+    function kidRow(s) {
+      var row = el('<div class="st-kid' + (s.ativo ? '' : ' inactive') + '"></div>');
+      row.appendChild(txt('span', 'st-sigla', s.sigla));
+      row.appendChild(txt('span', 'st-name', s.nome));
+      if (!s.ativo) { row.appendChild(UI.statusPill('Inativo', { tone: 'amber', shape: 'tag' })); }
+      row.appendChild(actionBtns(s));
+      return row;
+    }
+
+    function rootNode(s) {
+      var allKids = kidsOf(s.sigla);
+      var kids = showInactive ? allKids : allKids.filter(function (k) { return k.ativo; });
+      var open = !!openSet[s.sigla];
+      var node = el('<div class="st-node' + (open ? ' open' : '') + (s.ativo ? '' : ' inactive') + '"></div>');
+
+      var head = el('<div class="st-rowhead"></div>');
+      var caret = el('<span class="st-caret' + (allKids.length ? '' : ' empty') + '"></span>'); caret.appendChild(ico('<path d="M6 9l6 6 6-6"></path>', 18));
+      head.appendChild(caret);
+      head.appendChild(txt('span', 'st-sigla', s.sigla));
+      head.appendChild(txt('span', 'st-name', s.nome));
+      if (!s.ativo) { head.appendChild(UI.statusPill('Inativo', { tone: 'amber', shape: 'tag' })); }
+      head.appendChild(txt('span', 'st-sub', allKids.length + ' subsetor(es)'));
+      head.appendChild(actionBtns(s));
+      head.addEventListener('click', function () { openSet[s.sigla] = !openSet[s.sigla]; renderTree(); });
+      node.appendChild(head);
+
+      if (open) {
+        var kbox = el('<div class="st-kids"></div>');
+        if (kids.length) { kids.forEach(function (k) { kbox.appendChild(kidRow(k)); }); }
+        else { kbox.appendChild(el('<div class="st-kidempty">Nenhum subsetor' + (allKids.length && !showInactive ? ' ativo' : '') + ' aqui ainda.</div>')); }
+        if (CAN_WRITE) {
+          var add = el('<button class="st-addkid" type="button"></button>'); add.appendChild(ico('<path d="M12 5v14M5 12h14"></path>', 15)); add.appendChild(el('<span>Novo subsetor</span>'));
+          add.addEventListener('click', function () { openEditor(null, s.sigla); });
+          kbox.appendChild(add);
+        }
+        node.appendChild(kbox);
+      }
+      return node;
+    }
+
+    function renderTree() {
+      renderToolbar();
+      stage.innerHTML = '';
+      var tree = el('<div class="st-tree"></div>');
+      var roots = rootsOf();
+      var visibleRoots = showInactive ? roots : roots.filter(function (r) { return r.ativo; });
+      if (!visibleRoots.length) {
+        tree.appendChild(el('<div class="st-kidempty" style="margin-left:0">Nenhum setor ' + (showInactive ? '' : 'ativo ') + 'para mostrar. Ative "Mostrar inativos" ou crie um novo.</div>'));
+      } else {
+        visibleRoots.forEach(function (r) { tree.appendChild(rootNode(r)); });
+      }
+      stage.appendChild(tree);
+    }
+
+    function toggleAtivo(s) {
+      Store.setAtivo(s.sigla, !s.ativo).then(function () {
+        toast('Setor "' + s.sigla + '" ' + (s.ativo ? 'inativado' : 'reativado') + '.');
+        refresh();
+      }).catch(function (e) { toast(e.message, 'err'); });
+    }
+
+    /* ===================== editor (modal) ===================== */
+    function setErr(fieldEl, msg) { if (!fieldEl) { return; } var e = fieldEl.querySelector('.ui-ferr'); if (e) { e.textContent = msg; e.classList.add('on'); } }
+    function clearErrs(scope) { Array.prototype.forEach.call(scope.querySelectorAll('.ui-ferr'), function (e) { e.classList.remove('on'); e.textContent = ''; }); }
+
+    function openEditor(sigla, presetParent) {
+      if (!CAN_WRITE) { return; }
+      var editing = !!sigla;
+      var cur = editing ? ALL.filter(function (s) { return s.sigla === sigla; })[0] : null;
+      if (editing && !cur) { return; }
+      var hasKids = editing ? kidsOf(sigla).length > 0 : false;
+
+      var siglaInput = UI.input({ value: editing ? cur.sigla : '', placeholder: 'EX: PED', upper: true, filter: /[^A-Z0-9]/g, maxlength: 6, disabled: editing });
+      var siglaField = UI.field({ label: 'Sigla', required: true, control: siglaInput, hint: editing ? 'A sigla não muda depois de criada.' : '2 a 6 letras/números, sem espaço. Identifica o setor em todo o sistema.' });
+
+      var nomeInput = UI.input({ value: editing ? cur.nome : '', placeholder: 'Ex: Pedagógico' });
+      var nomeField = UI.field({ label: 'Nome do setor', required: true, control: nomeInput });
+
+      /* só raízes ATIVAS podem ser pai (evita subsetor ativo sob pai inativo) */
+      var rootOpts = rootsOf().filter(function (r) { return r.ativo && (!editing || r.sigla !== sigla); })
+        .map(function (r) { return { value: r.sigla, label: r.sigla + ' · ' + r.nome }; });
+      /* se o pai atual está inativo, mostra-o marcado — nunca some silenciosamente */
+      var parentInactive = false;
+      if (editing && cur.setorPaiSigla && !rootOpts.some(function (o) { return o.value === cur.setorPaiSigla; })) {
+        var par = ALL.filter(function (s) { return s.sigla === cur.setorPaiSigla; })[0];
+        if (par) { rootOpts.unshift({ value: par.sigla, label: par.sigla + ' · ' + par.nome + ' (inativo)' }); parentInactive = true; }
+      }
+      var parentVal = editing ? (cur.setorPaiSigla || '') : (presetParent || '');
+      var parentSelect = UI.select({ value: parentVal, placeholder: '— Setor raiz (sem pai) —', options: rootOpts, disabled: hasKids });
+      var parentField = UI.field({ label: 'Pertence a (setor pai)', control: parentSelect, hint: hasKids ? 'Este setor tem subsetores, então só pode ser raiz.' : parentInactive ? 'O setor pai atual está inativo. Reative-o em Setores, ou escolha outro / deixe como raiz.' : 'Em branco = setor raiz. Escolha um pai para criar um subsetor.' });
+
+      var ativoState = editing ? cur.ativo : true;
+      var ativoField = null;
+      if (editing) {
+        var chk = UI.checkbox({ checked: cur.ativo, label: 'Setor ativo', onToggle: function (v) { ativoState = v; } });
+        ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos somem das listas, mas o histórico é preservado.' });
+      }
+
+      var bodyFields = [siglaField, nomeField, parentField]; if (ativoField) { bodyFields.push(ativoField); }
+
+      var saveBtn = null;
+      var m = UI.modal({
+        title: editing ? ('Editar setor ' + cur.sigla) : (presetParent ? ('Novo subsetor de ' + presetParent) : 'Novo setor'),
+        width: 460,
+        body: bodyFields,
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar setor', icon: 'check', onClick: onSave });
+          return [cancel, saveBtn];
+        }
+      });
+
+      /* Enter em qualquer campo de texto salva (o modal já cuida do foco inicial) */
+      function submitOnEnter(e) { if (e.key === 'Enter') { e.preventDefault(); onSave(); } }
+      siglaInput.addEventListener('keydown', submitOnEnter);
+      nomeInput.addEventListener('keydown', submitOnEnter);
+
+      function onSave() {
+        clearErrs(m.card);
+        var sig = editing ? cur.sigla : siglaInput.value.trim().toUpperCase();
+        var nome = nomeInput.value.trim();
+        var pai = parentSelect.value || null;
+        var ok = true;
+        if (!editing && !/^[A-Z0-9]{2,6}$/.test(sig)) { setErr(siglaField, 'Use de 2 a 6 letras ou números.'); ok = false; }
+        if (nome.length < 2) { setErr(nomeField, 'Informe um nome com 2+ caracteres.'); ok = false; }
+        if (!ok) { return; }
+
+        if (saveBtn) { saveBtn.disabled = true; } /* evita duplo-envio */
+        var op = editing
+          ? Store.update(sig, { nome: nome, setorPaiSigla: pai, ativo: ativoState })
+          : Store.create({ sigla: sig, nome: nome, setorPaiSigla: pai });
+
+        op.then(function () {
+          if (pai) { openSet[pai] = true; }
+          m.close();
+          toast(editing ? ('Setor "' + sig + '" atualizado.') : ('Setor "' + sig + '" criado.'));
+          refresh();
+        }).catch(function (e) {
+          if (saveBtn) { saveBtn.disabled = false; }
+          var f = e && e.field;
+          if (f === 'sigla') { setErr(siglaField, e.message); }
+          else if (f === 'nome') { setErr(nomeField, e.message); }
+          else if (f === 'pai') { setErr(parentField, e.message); }
+          else if (f === 'ativo') { setErr(ativoField || parentField, e.message); }
+          else { toast((e && e.message) || 'Erro ao salvar.', 'err'); }
+        });
+      }
+    }
+
+    /* multi-aba: outra aba alterou os setores → re-sincroniza (não mexe num modal aberto) */
+    window.addEventListener('storage', function (e) {
+      if (e.key === 'grautfsa.setores.v1' && CAN_VIEW && !document.querySelector('.ui-moverlay')) {
+        refresh();
+        toast('Outra aba alterou os setores — lista atualizada.');
+      }
+    });
+
+    mount();
+  })();
+  </script>
+</body>
+</html>

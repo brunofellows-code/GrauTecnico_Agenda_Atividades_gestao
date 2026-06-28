@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Performance — Sistema A</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+
+<style>
+.pf-app{display:flex;min-height:100vh;background:var(--bg)}
+.pf-app>.ui-side{position:sticky;top:0;height:100vh}
+.pf-main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* topbar desktop */
+.pf-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.pf-top-l{display:flex;flex-direction:column;gap:3px}
+.pf-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pf-top-r{display:flex;align-items:center;gap:12px}
+
+/* header mobile */
+.pf-mhead{display:none;flex-direction:column;gap:12px;padding:14px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.pf-mhead-top{display:flex;align-items:center;gap:12px}
+.pf-back{width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
+.pf-back svg{width:18px;height:18px;color:var(--text)}
+.pf-mtitle{font-size:17px;font-weight:800;letter-spacing:-.02em}
+
+/* segmented período */
+.pf-seg{display:inline-flex;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.pf-seg-b{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer}
+.pf-seg-b.on{background:var(--cta);color:var(--ctaText)}
+.pf-mhead .pf-seg{display:flex;width:100%}
+.pf-mhead .pf-seg-b{flex:1;text-align:center;padding:8px 0}
+
+/* carimbo (não-retroativo) */
+.pf-stamp{font-size:11px;font-weight:600;color:var(--muted2);padding:12px 32px 0}
+
+.pf-body{padding:18px 32px 32px}
+
+/* KPI cards (foco + scorecard) */
+.pf-focus{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:13px}
+.pf-score{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:22px}
+.pf-big,.pf-small{background:var(--s1);border:1px solid var(--border);border-radius:15px}
+.pf-big{padding:16px 16px 14px}
+.pf-small{padding:13px}
+.pf-card-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.pf-small .pf-card-top{margin-bottom:9px}
+.pf-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.pf-label{flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-small .pf-label{font-size:11px}
+.pf-val{font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.pf-small .pf-val{font-size:20px}
+.pf-trend{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;margin-top:6px}
+.pf-small .pf-trend{font-size:11px;gap:4px}
+.pf-tri{font-size:10px;line-height:1}
+.pf-spark{display:flex;align-items:flex-end;gap:3px;height:30px;margin-top:12px}
+.pf-small .pf-spark{height:22px;gap:2.5px;margin-top:9px}
+.pf-spark i{flex:1;border-radius:2px 2px 0 0;min-height:3px;opacity:.85}
+
+/* botão "i" */
+.pf-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.pf-i:hover{color:var(--greenText)}
+.pf-i svg{display:block}
+
+/* gráficos */
+.pf-row1{display:grid;grid-template-columns:1.25fr 1fr;gap:13px;margin-bottom:13px}
+.pf-row2{display:grid;grid-template-columns:1fr 1.25fr;gap:13px}
+.pf-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px}
+.pf-card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.pf-card-t{font-size:14px;font-weight:800}
+
+/* barras horizontais */
+.pf-bh{position:relative}
+.pf-bh-rows{position:relative;z-index:1}
+.pf-bh-row{margin-bottom:13px}
+.pf-bh-row:last-child{margin-bottom:0}
+.pf-bh-head{display:flex;justify-content:space-between;margin-bottom:5px;font-size:11.5px;font-weight:700}
+.pf-bh-head .l{color:var(--muted)}
+.pf-bh-head .v{color:var(--text)}
+.pf-bh-track{height:14px;background:var(--track);border-radius:7px;overflow:hidden}
+.pf-bh-fill{height:100%;border-radius:7px}
+.pf-bh-meta{position:absolute;top:0;bottom:18px;width:2px;border-radius:2px;background:var(--muted2);z-index:2}
+.pf-bh-meta b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--muted2);white-space:nowrap}
+
+/* barras verticais */
+.pf-bv{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:20px}
+.pf-bv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.pf-bv-bar{width:100%;max-width:46px;border-radius:7px 7px 0 0;position:relative;min-height:4px}
+.pf-bv-val{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;color:var(--text)}
+.pf-bv-label{margin-top:7px;font-size:10.5px;font-weight:600;color:var(--muted2);text-align:center;line-height:1.1}
+
+/* popover do "i" */
+.pf-backdrop{position:fixed;inset:0;z-index:40;display:none}
+.pf-backdrop.on{display:block}
+.pf-pop{position:fixed;z-index:41;display:none;width:290px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.pf-pop.on{display:block}
+.pf-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.pf-pop-row{margin-bottom:8px}
+.pf-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.pf-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
+.pf-pop-note{margin-top:4px;font-size:11px;font-weight:700;color:var(--orange);line-height:1.3}
+
+/* tab bar mobile */
+.pf-tabbar{display:none}
+.pf-tab{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--muted);font-size:10px;font-weight:600}
+.pf-tab svg{width:22px;height:22px}
+.pf-tab.on{color:var(--greenText);font-weight:700}
+.pf-fab{width:50px;height:50px;border-radius:16px;background:var(--cta);color:var(--ctaText);display:flex;align-items:center;justify-content:center;margin-top:-6px;box-shadow:0 6px 16px var(--activeBg)}
+.pf-fab svg{width:24px;height:24px}
+
+/* toggle de tema temporário */
+.pf-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
+.pf-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
+
+@media (max-width:900px){
+  .pf-app>.ui-side{display:none}
+  .pf-top{display:none}
+  .pf-mhead{display:flex}
+  .pf-stamp{padding:14px 16px 0}
+  .pf-body{padding:16px 16px 96px}
+  .pf-focus{grid-template-columns:1fr 1fr}
+  .pf-score{grid-template-columns:1fr 1fr}
+  .pf-row1,.pf-row2{grid-template-columns:1fr;margin-bottom:13px}
+  #pf-aging,#pf-throughput,#pf-carga{display:none}
+  .pf-ader-row:nth-child(n+6){display:none}
+  .pf-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:80px;background:var(--s1);border-top:1px solid var(--border);align-items:flex-start;justify-content:space-around;padding:11px 14px 0;z-index:20}
+  .pf-dev{bottom:94px}
+}
+</style>
+</head>
+<body>
+
+  <button class="pf-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+
+  <div class="pf-app" id="app">
+    <main class="pf-main">
+
+      <div class="pf-top">
+        <div class="pf-top-l">
+          <div class="pf-h1">Performance</div>
+        </div>
+        <div class="pf-top-r">
+          <div class="pf-seg">
+            <button class="pf-seg-b" type="button">Hoje</button>
+            <button class="pf-seg-b on" type="button">Semana</button>
+            <button class="pf-seg-b" type="button">Mês</button>
+            <button class="pf-seg-b" type="button">Trim.</button>
+          </div>
+          <span id="pf-export"></span>
+        </div>
+      </div>
+
+      <div class="pf-mhead">
+        <div class="pf-mhead-top">
+          <div class="pf-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></div>
+          <div class="pf-mtitle">Performance</div>
+        </div>
+        <div class="pf-seg">
+          <button class="pf-seg-b" type="button">Hoje</button>
+          <button class="pf-seg-b on" type="button">Semana</button>
+          <button class="pf-seg-b" type="button">Mês</button>
+          <button class="pf-seg-b" type="button">Trim.</button>
+        </div>
+      </div>
+
+      <div class="pf-stamp">Medindo desde 02/06/2026 · atualizado às 14:32 · sem medição retroativa (lê o atividade_log)</div>
+
+      <div class="pf-body">
+        <div class="pf-focus" id="pf-focus"></div>
+        <div class="pf-score" id="pf-score"></div>
+        <div class="pf-row1">
+          <div id="pf-aderencia"></div>
+          <div id="pf-aging"></div>
+        </div>
+        <div class="pf-row2">
+          <div id="pf-throughput"></div>
+          <div id="pf-carga"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="pf-tabbar">
+    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span>Hoje</span></div>
+    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>Projetos</span></div>
+    <div class="pf-fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+    <div class="pf-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Performance</span></div>
+    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 16 0"></path><path d="M4 11v3a8 8 0 0 0 16 0v-3"></path></svg><span>Perfil</span></div>
+  </div>
+
+  <div class="pf-backdrop" id="pf-backdrop"></div>
+  <div class="pf-pop" id="pf-pop"></div>
+
+  <script src="ui.js"></script>
+  <script>
+  /* ===== DADOS (mock Seção 10.7 / 10.8) — fictícios; forma = contrato do Firestore ===== */
+  var USER = { name: 'Mariana Souza', profile: 'Admin', initials: 'MS' };
+
+  /* 5 KPIs em FOCO (os que disparam ação) */
+  var FOCUS = [
+    { label: 'Atividades atrasadas', value: '18', tone: 'red', trend: '+4', good: false,
+      info: { title: 'Atividades atrasadas', formula: 'vencidas não concluídas ÷ ativas ×100 (+ contagem)', dados: 'atividades: prazo, status', numeros: '18 vencidas ÷ 142 ativas = 12,7%' } },
+    { label: 'Aderência (semana)', value: '87%', tone: 'amber', trend: '+2pp', good: true,
+      info: { title: 'Aderência à rotina', formula: 'ocorrências feitas ÷ previstas ×100', dados: 'ocorrências de recorrência na semana', numeros: 'feitas 87 ÷ previstas 100 = 87%' } },
+    { label: 'Aging médio', value: '5,4 d', tone: 'amber', trend: '+0,6', good: false,
+      info: { title: 'Aging médio das atrasadas', formula: 'média(hoje − prazo) das atrasadas', dados: 'atrasadas: prazo', numeros: 'soma 97,2 d ÷ 18 = 5,4 d' } },
+    { label: 'Em andamento (WIP)', value: '27', tone: 'amber', trend: '+3', good: false,
+      info: { title: 'Trabalho em andamento (WIP)', formula: 'nº de atividades ativas em andamento', dados: 'atividades: status = em andamento', numeros: '27 em andamento agora' } },
+    { label: 'Bloqueadas', value: '4', tone: 'red', trend: '+2', good: false,
+      info: { title: 'Atividades bloqueadas', formula: 'nº com flag de impedimento', dados: 'atividades: bloqueada = true', numeros: '4 bloqueadas', nota: '⚠ requer flag de impedimento (campo a criar)' } }
+  ];
+
+  /* 11 KPIs no SCORECARD */
+  var SCORE = [
+    { label: 'Entregas no prazo', value: '72%', tone: 'amber', trend: '−3pp', good: false,
+      info: { title: 'Entregas no prazo', formula: 'concluídas no prazo ÷ total concluídas ×100', dados: 'concluídas: conclusão vs prazo', numeros: '108 ÷ 150 = 72%' } },
+    { label: 'Lead time', value: '9,1 d', tone: 'green', trend: '−1,2', good: true,
+      info: { title: 'Lead time', formula: 'média(conclusão − criação)', dados: 'concluídas: criação, conclusão', numeros: 'média 9,1 d em 150' } },
+    { label: 'Tempo de ciclo', value: '3,8 d', tone: 'green', trend: '−0,4', good: true,
+      info: { title: 'Tempo de ciclo', formula: 'média(conclusão − início)', dados: 'concluídas: início, conclusão', numeros: 'média 3,8 d em 150' } },
+    { label: 'Throughput / sem', value: '34', tone: 'green', trend: '+6', good: true,
+      info: { title: 'Throughput semanal', formula: 'concluídas na semana', dados: 'atividades com conclusão na semana', numeros: '34 concluídas (S6)' } },
+    { label: 'Backlog total', value: '142', tone: 'green', trend: '−9', good: true,
+      info: { title: 'Backlog total', formula: 'nº pendentes não concluídas', dados: 'atividades: status ≠ concluída', numeros: '142 pendentes' } },
+    { label: 'Reabertas', value: '6', tone: 'amber', trend: '+1', good: false,
+      info: { title: 'Atividades reabertas', formula: 'concluídas que voltaram a ativo', dados: 'log: concluída → ativa', numeros: '6 reaberturas no período', nota: '⚠ requer histórico de reabertura (campo a criar)' } },
+    { label: 'Sem responsável', value: '3', tone: 'red', trend: '+1', good: false,
+      info: { title: 'Sem responsável', formula: 'nº de ativas sem dono', dados: 'atividades ativas: responsável vazio', numeros: '3 sem responsável' } },
+    { label: 'Projetos em risco', value: '2', tone: 'amber', trend: '0', good: true,
+      info: { title: 'Projetos em risco', formula: 'nº de projetos com status Em risco', dados: 'projetos: status', numeros: '2 de 6 projetos' } },
+    { label: 'SLA cumprido', value: '91%', tone: 'green', trend: '+1pp', good: true,
+      info: { title: 'SLA cumprido', formula: 'dentro do SLA ÷ com SLA ×100', dados: 'atividades com SLA: conclusão vs SLA', numeros: '100 ÷ 110 = 91%', nota: '⚠ requer prazo-meta/SLA por atividade (campo a criar)' } },
+    { label: 'Carga média / pessoa', value: '8,3', tone: 'green', trend: '+0,4', good: true,
+      info: { title: 'Carga média por pessoa', formula: 'nº de ativas ÷ nº de responsáveis', dados: 'ativas + responsáveis distintos', numeros: 'ativas ÷ pessoas = 8,3' } },
+    { label: 'Evasão de prazo', value: '13%', tone: 'amber', trend: '−2pp', good: true,
+      info: { title: 'Evasão de prazo (reprogramação)', formula: 'reprogramadas ÷ total ×100', dados: 'atividades com prazo remarcado', numeros: '20 ÷ 150 = 13%' } }
+  ];
+
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function haloOf(tone) { return 'halo' + tone.charAt(0).toUpperCase() + tone.slice(1); }
+
+  /* ---------- popover do "i" ---------- */
+  var POP, BACK;
+  function infoBtn(data) {
+    var b = el('<button class="pf-i" type="button" aria-label="Como é calculado"></button>');
+    b.appendChild(UI.icon('info', 14));
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); openPop(ev, data); });
+    return b;
+  }
+  function openPop(ev, d) {
+    POP.innerHTML = '';
+    POP.appendChild(el('<div class="pf-pop-t">' + d.title + '</div>'));
+    [['FÓRMULA', d.formula], ['DADOS / COLUNAS', d.dados], ['NÚMEROS DESTE CÁLCULO', d.numeros]].forEach(function (r) {
+      var row = el('<div class="pf-pop-row"></div>');
+      row.appendChild(el('<div class="pf-pop-k">' + r[0] + '</div>'));
+      row.appendChild(el('<div class="pf-pop-v">' + r[1] + '</div>'));
+      POP.appendChild(row);
+    });
+    if (d.nota) { POP.appendChild(el('<div class="pf-pop-note">' + d.nota + '</div>')); }
+    BACK.classList.add('on');
+    POP.classList.add('on');
+    if (window.innerWidth <= 900) {
+      POP.style.left = '50%';
+      POP.style.transform = 'translateX(-50%)';
+      POP.style.top = '';
+      POP.style.bottom = '96px';
+    } else {
+      POP.style.transform = '';
+      POP.style.bottom = '';
+      var pr = POP.getBoundingClientRect();
+      var x = Math.min(ev.clientX + 12, window.innerWidth - pr.width - 12);
+      var y = Math.min(ev.clientY + 12, window.innerHeight - pr.height - 12);
+      POP.style.left = Math.max(12, x) + 'px';
+      POP.style.top = Math.max(12, y) + 'px';
+    }
+  }
+  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+
+  /* ---------- sparkline (mini-tendência ilustrativa) ---------- */
+  var SPK = 0;
+  function spark(k) {
+    SPK++;
+    var seed = SPK * 131 + k.label.length * 7;
+    var s = el('<div class="pf-spark"></div>');
+    var col = 'var(--' + k.tone + ')';
+    for (var i = 0; i < 7; i++) {
+      seed = (seed * 9301 + 49297) % 233280;
+      var hp = 30 + Math.round((seed / 233280) * 64);
+      s.appendChild(el('<i style="height:' + hp + '%;background:' + col + '"></i>'));
+    }
+    return s;
+  }
+
+  /* ---------- tendência (seta + variação, cor por "good") ---------- */
+  function trendNode(k) {
+    var c0 = k.trend.charAt(0);
+    var dir = c0 === '+' ? 'up' : (c0 === '−' || c0 === '-') ? 'down' : 'flat';
+    var sym = dir === 'up' ? '▴' : dir === 'down' ? '▾' : '•';
+    var col = dir === 'flat' ? 'var(--muted)' : (k.good ? 'var(--green)' : 'var(--red)');
+    var n = el('<div class="pf-trend"></div>');
+    n.style.color = col;
+    n.innerHTML = '<span class="pf-tri">' + sym + '</span><span>' + k.trend + '</span>';
+    return n;
+  }
+
+  /* ---------- card de KPI ---------- */
+  function kpiCard(k, big) {
+    var c = el('<div class="' + (big ? 'pf-big' : 'pf-small') + '"></div>');
+    var top = el('<div class="pf-card-top"></div>');
+    top.appendChild(el('<span class="pf-dot" style="background:var(--' + k.tone + ');box-shadow:0 0 0 3px var(--' + haloOf(k.tone) + ')"></span>'));
+    top.appendChild(el('<span class="pf-label">' + k.label + '</span>'));
+    top.appendChild(infoBtn(k.info));
+    c.appendChild(top);
+    c.appendChild(el('<div class="pf-val">' + k.value + '</div>'));
+    c.appendChild(trendNode(k));
+    c.appendChild(spark(k));
+    return c;
+  }
+
+  /* ---------- barras horizontais (aderência, carga) ---------- */
+  function barsH(items, opt) {
+    var node = el('<div class="pf-bh"></div>');
+    var rows = el('<div class="pf-bh-rows"></div>');
+    items.forEach(function (it) {
+      var r = el('<div class="pf-bh-row ' + (opt.rowClass || '') + '"></div>');
+      r.appendChild(el('<div class="pf-bh-head"><span class="l">' + it.l + '</span><span class="v">' + it.v + (opt.suffix || '') + '</span></div>'));
+      var tr = el('<div class="pf-bh-track"></div>');
+      tr.appendChild(el('<div class="pf-bh-fill" style="width:' + (it.v / opt.max * 100) + '%;background:' + it.c + '"></div>'));
+      r.appendChild(tr);
+      rows.appendChild(r);
+    });
+    node.appendChild(rows);
+    if (opt.meta != null) {
+      var m = el('<div class="pf-bh-meta" style="left:' + opt.meta + '%"></div>');
+      if (opt.metaLabel) { m.appendChild(el('<b>' + opt.metaLabel + '</b>')); }
+      node.appendChild(m);
+    }
+    return node;
+  }
+
+  /* ---------- barras verticais (aging, throughput) ---------- */
+  function barsV(items, opt) {
+    var node = el('<div class="pf-bv"></div>');
+    items.forEach(function (it) {
+      var col = el('<div class="pf-bv-col"></div>');
+      var bar = el('<div class="pf-bv-bar" style="height:' + (it.v / opt.max * 100) + '%;background:' + it.c + '"></div>');
+      bar.appendChild(el('<span class="pf-bv-val">' + it.v + '</span>'));
+      col.appendChild(bar);
+      col.appendChild(el('<span class="pf-bv-label">' + it.l + '</span>'));
+      node.appendChild(col);
+    });
+    return node;
+  }
+
+  function chartCard(title, info, body, id) {
+    var c = el('<div class="pf-card"></div>');
+    c.id = id;
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">' + title + '</div>'));
+    h.appendChild(infoBtn(info));
+    c.appendChild(h);
+    c.appendChild(body);
+    return c;
+  }
+
+  /* ---------- segmented (visual; recálculo só no Firestore) ---------- */
+  function wireSeg(group) {
+    group.addEventListener('click', function (e) {
+      var b = e.target.closest('.pf-seg-b'); if (!b) { return; }
+      var cur = group.querySelector('.pf-seg-b.on'); if (cur) { cur.classList.remove('on'); }
+      b.classList.add('on');
+    });
+  }
+
+  function render() {
+    POP = document.getElementById('pf-pop');
+    BACK = document.getElementById('pf-backdrop');
+    BACK.addEventListener('click', closePop);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Performance', user: USER }), app.firstChild);
+
+    document.getElementById('pf-export').appendChild(UI.button({ label: 'Exportar', icon: 'upload', variant: 'ghost' }));
+
+    var focus = document.getElementById('pf-focus');
+    FOCUS.forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
+    var score = document.getElementById('pf-score');
+    SCORE.forEach(function (k) { score.appendChild(kpiCard(k, false)); });
+
+    var G = 'var(--green)', A = 'var(--amber)', O = 'var(--orange)', R = 'var(--red)';
+    function aderColor(v) { return v >= 85 ? G : v >= 70 ? A : O; }
+
+    // Aderência por setor
+    var ader = [
+      { l: 'TI', v: 95 }, { l: 'Acadêmico', v: 92 }, { l: 'Marketing', v: 88 },
+      { l: 'Captação', v: 85 }, { l: 'Secretaria', v: 78 }, { l: 'Coordenação', v: 70 }, { l: 'Infraestrutura', v: 61 }
+    ].map(function (it) { it.c = aderColor(it.v); return it; });
+    document.getElementById('pf-aderencia').replaceWith(chartCard(
+      'Aderência por setor',
+      { title: 'Aderência por setor', formula: 'feitas ÷ previstas ×100, por setor', dados: 'ocorrências por setor na semana', numeros: 'meta 85% (linha); TI 95 → Infra 61' },
+      barsH(ader, { max: 100, suffix: '%', meta: 85, metaLabel: 'meta 85%', rowClass: 'pf-ader-row' }),
+      'pf-aderencia'
+    ));
+
+    // Aging
+    var aging = [
+      { l: '0–3d', v: 64, c: G }, { l: '4–7d', v: 38, c: A }, { l: '8–15d', v: 22, c: O }, { l: '15+d', v: 18, c: R }
+    ];
+    document.getElementById('pf-aging').replaceWith(chartCard(
+      'Envelhecimento (aging)',
+      { title: 'Envelhecimento das atrasadas', formula: 'atrasadas agrupadas por faixa de dias', dados: 'atrasadas: hoje − prazo', numeros: '0–3d:64 · 4–7d:38 · 8–15d:22 · 15+d:18' },
+      barsV(aging, { max: 64 }),
+      'pf-aging'
+    ));
+
+    // Throughput
+    var thru = [
+      { l: 'S1', v: 28 }, { l: 'S2', v: 31 }, { l: 'S3', v: 26 }, { l: 'S4', v: 34 }, { l: 'S5', v: 30 }, { l: 'S6', v: 37 }
+    ].map(function (it, i, a) { it.c = (i === a.length - 1) ? 'var(--brand)' : 'var(--muted2)'; return it; });
+    document.getElementById('pf-throughput').replaceWith(chartCard(
+      'Throughput semanal',
+      { title: 'Throughput semanal', formula: 'concluídas por semana', dados: 'conclusões S1–S6', numeros: 'S6 = 37 (última, destacada)' },
+      barsV(thru, { max: 37 }),
+      'pf-throughput'
+    ));
+
+    // Carga por responsável
+    var cargaMax = 12, cap = 10;
+    var carga = [
+      { l: 'Mariana', v: 12 }, { l: 'Carlos', v: 11 }, { l: 'Ana', v: 9 }, { l: 'Beatriz', v: 7 }, { l: 'João', v: 6 }
+    ].map(function (it) { it.c = it.v > cap ? A : G; return it; });
+    document.getElementById('pf-carga').replaceWith(chartCard(
+      'Carga por responsável',
+      { title: 'Carga por responsável', formula: 'nº de ativas por pessoa', dados: 'atividades ativas por responsável', numeros: 'capacidade 10 (linha); > 10 = sobrecarga' },
+      barsH(carga, { max: cargaMax, meta: cap / cargaMax * 100, metaLabel: 'cap. 10' }),
+      'pf-carga'
+    ));
+
+    document.querySelectorAll('.pf-seg').forEach(wireSeg);
+  }
+
+  render();
+  </script>
+</body>
+</html>

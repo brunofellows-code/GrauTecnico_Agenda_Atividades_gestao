@@ -1,0 +1,118 @@
+/* ============================================================
+   Sistema A · Grau Técnico FSA — Theme provider (v1)
+   ------------------------------------------------------------
+   Fonte ÚNICA de cor do sistema. Nas telas, nunca escreva hex:
+   use sempre var(--token).
+   Troca de tema: atributo data-theme="dark|light" no <html>,
+   aplicado por theme.js. Default = dark.
+   Tokens = Seção 2 do README. Regra de contraste do verde:
+   no tema claro, greenText e cta viram #15803D (texto/CTA);
+   o verde vivo (brand #22C55E) fica só em preenchimento/acento.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+
+/* ---------- TEMA ESCURO (default) ---------- */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* superfícies */
+  --bg:        #090B10;
+  --sideBg:    #0C0F16;
+  --s1:        #111520;
+  --s2:        #181D2A;
+  --s3:        #1F2535;
+  --chipBg:    #181D2A;
+
+  /* linhas */
+  --border:    #232B3E;
+  --track:     #232B3E;
+
+  /* texto */
+  --text:      #DDE4F2;
+  --muted:     #94A3B8;
+  --muted2:    #64748B;
+
+  /* marca / CTA */
+  --brand:     #22C55E;
+  --greenText: #22C55E;
+  --cta:       #58DD22;
+  --ctaText:   #06210A;
+  --onBrand:   #06210A;
+  --activeBg:  rgba(88,221,34,.12);
+
+  /* semáforo */
+  --green:     #22C55E;
+  --amber:     #F59E0B;
+  --red:       #EF4444;
+  --orange:    #F97316;
+
+  /* halos do dot (uso: box-shadow:0 0 0 3px var(--haloX)) */
+  --haloGreen:  rgba(34,197,94,.18);
+  --haloAmber:  rgba(245,158,11,.18);
+  --haloOrange: rgba(249,115,22,.18);
+  --haloRed:    rgba(239,68,68,.18);
+
+  /* elevação de card */
+  --cardShadow: 0 16px 50px rgba(2,6,23,.35);
+}
+
+/* ---------- TEMA CLARO ---------- */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* superfícies */
+  --bg:        #F4F6FA;
+  --sideBg:    #FFFFFF;
+  --s1:        #FFFFFF;
+  --s2:        #EEF1F6;
+  --s3:        #E4E8F0;
+  --chipBg:    #EEF1F6;
+
+  /* linhas */
+  --border:    #D8DEE9;
+  --track:     #E4E8F0;
+
+  /* texto */
+  --text:      #0E1726;
+  --muted:     #475569;
+  --muted2:    #64748B;
+
+  /* marca / CTA */
+  --brand:     #22C55E;
+  --greenText: #15803D;
+  --cta:       #15803D;
+  --ctaText:   #FFFFFF;
+  --onBrand:   #06210A;
+  --activeBg:  rgba(34,197,94,.12);
+
+  /* semáforo */
+  --green:     #16A34A;
+  --amber:     #D97706;
+  --red:       #DC2626;
+  --orange:    #EA580C;
+
+  /* halos do dot */
+  --haloGreen:  rgba(22,163,74,.14);
+  --haloAmber:  rgba(217,119,6,.14);
+  --haloOrange: rgba(234,88,12,.14);
+  --haloRed:    rgba(220,38,38,.12);
+
+  /* elevação de card */
+  --cardShadow: 0 16px 50px rgba(2,6,23,.14);
+}
+
+/* ---------- base mínima (herdada por todas as telas) ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Sora', 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hoje · Agenda — Sistema A</title>
+
+<!-- provider + primitivos -->
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+
+<style>
+/* ===== layout da tela Hoje (cor 100% via var) ===== */
+.hj-app{display:flex;min-height:100vh;background:var(--bg)}
+.hj-app>.ui-side{position:sticky;top:0;height:100vh}
+.hj-main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+.hj-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.hj-hi{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.hj-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+.hj-topactions{display:flex;align-items:center;gap:12px}
+.hj-search{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:10px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:13px;width:230px}
+.hj-search svg{width:16px;height:16px;flex:none}
+
+.hj-mhead{display:none;align-items:flex-start;justify-content:space-between;padding:14px 20px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.hj-mg{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.hj-md{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.hj-content{flex:1;padding:24px 32px 32px}
+.hj-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:24px}
+.hj-cols{display:grid;grid-template-columns:1.55fr 1fr;gap:20px;align-items:start}
+.hj-card{background:var(--s1);border:1px solid var(--border);border-radius:15px;padding:20px 22px}
+.hj-cardhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.hj-ctitle{font-size:15px;font-weight:800}
+.hj-nowbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--greenText);background:var(--activeBg);padding:4px 10px;border-radius:20px}
+.hj-nowbadge .pin{width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.hj-rstack{display:flex;flex-direction:column;gap:20px}
+.hj-rhead{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.hj-rtitle{font-size:14.5px;font-weight:800}
+.hj-rcount{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted)}
+.hj-reddot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 0 3px var(--haloRed)}
+.hj-late-badge{margin-left:auto;font-size:11px;font-weight:800;color:var(--red);background:var(--haloRed);padding:2px 9px;border-radius:20px}
+.hj-list{display:flex;flex-direction:column;gap:9px}
+
+/* timeline (markup próprio da tela) */
+.hj-tl{display:flex;flex-direction:column}
+.hj-tlrow{display:grid;grid-template-columns:54px 22px 1fr;align-items:stretch}
+.hj-time{font-size:13px;font-weight:700;padding-top:14px;text-align:right;padding-right:12px}
+.hj-rail{display:flex;flex-direction:column;align-items:center}
+.hj-seg{width:2px;background:var(--track)}
+.hj-tlrow .node{width:13px;height:13px}
+.hj-ev{padding:0 0 14px 4px}
+.hj-evcard{border-radius:11px;padding:11px 14px}
+.hj-evcard.now{background:var(--activeBg);border:1px solid var(--brand)}
+.hj-evcard.std{background:var(--s2);border:1px solid var(--border)}
+.hj-evmeta{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.hj-tag{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:var(--chipBg);border:1px solid var(--border)}
+.hj-evsec{font-size:11px;font-weight:600;color:var(--muted2)}
+.hj-evt{font-size:14px;font-weight:700}
+
+/* atividades do dia */
+.hj-daytask{display:flex;align-items:center;gap:11px}
+.hj-daytask .ui-check{flex:1}
+.hj-freq{font-size:10px;font-weight:700;color:var(--muted2);background:var(--chipBg);padding:2px 7px;border-radius:6px;border:1px solid var(--border);flex:none}
+
+/* atrasadas */
+.hj-late{display:flex;align-items:center;gap:11px}
+.hj-late-days{width:40px;text-align:center;flex:none}
+.hj-late-dn{font-size:17px;font-weight:800;line-height:1;color:var(--tone)}
+.hj-late-dl{font-size:9px;font-weight:700;color:var(--muted2);letter-spacing:.04em}
+.hj-late-main{flex:1;min-width:0}
+.hj-late-t{font-size:12.5px;font-weight:700;line-height:1.25}
+.hj-late-s{font-size:10.5px;font-weight:600;color:var(--muted2);margin-top:1px}
+
+/* dots da timeline (estados) */
+.node{border-radius:50%;flex:none}
+.node.done{background:var(--green);border:2px solid var(--green)}
+.node.now{background:var(--brand);border:2px solid var(--brand);box-shadow:0 0 0 4px var(--activeBg)}
+.node.todo{background:var(--s1);border:2px solid var(--track)}
+.tcol-now{color:var(--greenText)} .tcol-done{color:var(--muted2)} .tcol-todo{color:var(--text)}
+.ttl-done{color:var(--muted)} .ttl-live{color:var(--text)}
+
+/* tab bar (mobile) */
+.hj-tabbar{display:none}
+.hj-tab{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--muted);font-size:10px;font-weight:600}
+.hj-tab svg{width:22px;height:22px}
+.hj-tab.on{color:var(--greenText);font-weight:700}
+.hj-fab{width:50px;height:50px;border-radius:16px;background:var(--cta);color:var(--ctaText);display:flex;align-items:center;justify-content:center;margin-top:-6px;box-shadow:0 6px 16px var(--activeBg)}
+.hj-fab svg{width:24px;height:24px}
+
+/* toggle de tema temporário (até existir a tela Configurações) */
+.hj-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
+.hj-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
+
+@media (max-width:900px){
+  .hj-app>.ui-side{display:none}
+  .hj-top{display:none}
+  .hj-mhead{display:flex}
+  .hj-content{padding:16px 18px 96px}
+  .hj-kpis{grid-template-columns:1fr 1fr}
+  .hj-kpis .ui-kpi .info{display:none}
+  .hj-kpis .ui-kpi .val{font-size:25px}
+  .hj-cols{grid-template-columns:1fr}
+  .hj-card{padding:16px}
+  .hj-tlrow{grid-template-columns:46px 18px 1fr}
+  .hj-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:80px;background:var(--s1);border-top:1px solid var(--border);align-items:flex-start;justify-content:space-around;padding:11px 14px 0;z-index:20}
+  .hj-dev{bottom:94px}
+}
+</style>
+</head>
+<body>
+
+  <button class="hj-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+
+  <div class="hj-app" id="app">
+    <!-- sidebar inserida via JS (desktop) -->
+    <main class="hj-main">
+
+      <div class="hj-top">
+        <div style="line-height:1.2">
+          <div class="hj-hi">Bom dia, Mariana</div>
+          <div class="hj-dd">Quinta-feira, 26 de junho de 2026 · Agenda do dia</div>
+        </div>
+        <div class="hj-topactions">
+          <div class="hj-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4-4"></path></svg>
+            <span>Buscar projeto ou atividade</span>
+          </div>
+          <span id="hj-cta"></span>
+        </div>
+      </div>
+
+      <div class="hj-mhead">
+        <div>
+          <div class="hj-mg">Bom dia, Mariana</div>
+          <div class="hj-md">Quinta, 26 de junho · 12 atividades</div>
+        </div>
+        <span id="hj-mav"></span>
+      </div>
+
+      <div class="hj-content">
+        <div class="hj-kpis" id="hj-kpis"></div>
+
+        <div class="hj-cols">
+          <div class="hj-card">
+            <div class="hj-cardhead">
+              <div class="hj-ctitle">Linha do tempo de hoje</div>
+              <div class="hj-nowbadge"><span class="pin"></span> 11:24 agora</div>
+            </div>
+            <div class="hj-tl" id="hj-timeline"></div>
+          </div>
+
+          <div class="hj-rstack">
+            <div class="hj-card">
+              <div class="hj-rhead"><div class="hj-rtitle">Atividades do dia</div><span class="hj-rcount">5 de 12</span></div>
+              <div class="hj-list" id="hj-daytasks"></div>
+            </div>
+            <div class="hj-card">
+              <div class="hj-rhead"><span class="hj-reddot"></span><div class="hj-rtitle">Atrasadas e críticas</div><span class="hj-late-badge">4</span></div>
+              <div class="hj-list" id="hj-atrasadas"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- tab bar mobile -->
+  <div class="hj-tabbar">
+    <div class="hj-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span>Hoje</span></div>
+    <div class="hj-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>Projetos</span></div>
+    <div class="hj-fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+    <div class="hj-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg><span>Atividades</span></div>
+    <div class="hj-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 16 0"></path><path d="M4 11v3a8 8 0 0 0 16 0v-3"></path></svg><span>Perfil</span></div>
+  </div>
+
+  <script src="ui.js"></script>
+  <script>
+  /* ===== DADOS (mock Seção 10) — forma = contrato do Firestore ===== */
+  var DATA = {
+    user: { name: 'Mariana Souza', profile: 'Admin', initials: 'MS' },
+    kpis: [
+      { label: 'Atividades de hoje', value: '12', sub: '+3 vs ontem', tone: 'green' },
+      { label: 'Aderência da semana', value: '87%', sub: 'meta 90%', tone: 'amber' },
+      { label: 'Atrasadas / críticas', value: '4', sub: '2 críticas', tone: 'red' },
+      { label: 'Concluídas hoje', value: '5', sub: '42% do dia', tone: 'green' },
+      { label: 'Em andamento', value: '7', sub: '3 setores', tone: 'amber' },
+      { label: 'Projetos ativos', value: '9', sub: '2 em risco', tone: 'green' }
+    ],
+    timeline: [
+      { time: '08:00', title: 'Reunião de coordenação pedagógica', tag: 'Reunião', sector: 'Coordenação', state: 'done' },
+      { time: '09:30', title: 'Visita técnica — Laboratório de Enfermagem', tag: 'Visita', sector: 'Infraestrutura', state: 'done' },
+      { time: '11:00', title: 'Conferir documentação SENAI / MEC', tag: 'Atividade', sector: 'Secretaria', state: 'now' },
+      { time: '13:30', title: 'Atendimento a responsáveis — Matrículas 2026.2', tag: 'Atendimento', sector: 'Captação', state: 'todo' },
+      { time: '15:00', title: 'Atualizar planilha de evasão', tag: 'Atividade', sector: 'Acadêmico', state: 'todo' },
+      { time: '16:30', title: 'Banca de TCC — Técnico em Informática', tag: 'Banca', sector: 'Coordenação', state: 'todo' }
+    ],
+    dayTasks: [
+      { title: 'Conferência de presença diária', freq: 'Diário', done: true },
+      { title: 'Backup do sistema acadêmico', freq: 'Diário', done: true },
+      { title: 'Conferir documentação SENAI/MEC', freq: 'Único', done: false },
+      { title: 'Atualizar planilha de evasão', freq: 'Semanal', done: false },
+      { title: 'Postar comunicado no portal', freq: 'Único', done: false }
+    ],
+    atrasadas: [
+      { title: 'Inventário — Lab. de Informática', days: 11, sector: 'TI' },
+      { title: 'Relatório de frequência — Maio', days: 6, sector: 'Secretaria' },
+      { title: 'Renovar contrato de estágio', days: 3, sector: 'Coordenação' },
+      { title: 'Aprovar material do Vestibulinho', days: 2, sector: 'Captação' }
+    ]
+  };
+
+  /* monta um elemento a partir de string HTML (dados mock confiáveis) */
+  function el(html) {
+    var t = document.createElement('template');
+    t.innerHTML = html.trim();
+    return t.content.firstChild;
+  }
+
+  function tlRow(ev) {
+    var tagColor = ev.tag === 'Atividade' ? 'var(--brand)' : 'var(--muted2)';
+    var timeClass = ev.state === 'now' ? 'tcol-now' : ev.state === 'done' ? 'tcol-done' : 'tcol-todo';
+    var titleClass = ev.state === 'done' ? 'ttl-done' : 'ttl-live';
+    var cardClass = ev.state === 'now' ? 'now' : 'std';
+    return el(
+      '<div class="hj-tlrow">' +
+        '<div class="hj-time ' + timeClass + '">' + ev.time + '</div>' +
+        '<div class="hj-rail"><div class="hj-seg" style="height:14px"></div><div class="node ' + ev.state + '"></div><div class="hj-seg" style="flex:1"></div></div>' +
+        '<div class="hj-ev"><div class="hj-evcard ' + cardClass + '">' +
+          '<div class="hj-evmeta"><span class="hj-tag" style="color:' + tagColor + '">' + ev.tag + '</span><span class="hj-evsec">' + ev.sector + '</span></div>' +
+          '<div class="hj-evt ' + titleClass + '">' + ev.title + '</div>' +
+        '</div></div>' +
+      '</div>'
+    );
+  }
+
+  function lateRow(a) {
+    var sev = a.days > 7 ? { t: 'red', l: 'Crítico' } : a.days > 3 ? { t: 'orange', l: 'Alto' } : { t: 'amber', l: 'Médio' };
+    var row = el('<div class="hj-late" style="--tone:var(--' + sev.t + ')"></div>');
+    row.innerHTML =
+      '<div class="hj-late-days"><div class="hj-late-dn">' + a.days + '</div><div class="hj-late-dl">DIAS</div></div>' +
+      '<div class="hj-late-main"><div class="hj-late-t">' + a.title + '</div><div class="hj-late-s">' + a.sector + '</div></div>';
+    row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
+    return row;
+  }
+
+  function render(d) {
+    // sidebar (desktop) — entra como primeiro filho do app
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Hoje', user: d.user }), app.firstChild);
+
+    // CTA e avatar mobile via primitivos
+    document.getElementById('hj-cta').appendChild(UI.button({ label: 'Nova atividade', icon: 'plus' }));
+    document.getElementById('hj-mav').appendChild(UI.avatar({ initials: d.user.initials, size: 42 }));
+
+    // KPIs
+    var kg = document.getElementById('hj-kpis');
+    d.kpis.forEach(function (k) { kg.appendChild(UI.kpiCard(k)); });
+
+    // timeline
+    var tl = document.getElementById('hj-timeline');
+    d.timeline.forEach(function (ev) { tl.appendChild(tlRow(ev)); });
+
+    // atividades do dia
+    var dt = document.getElementById('hj-daytasks');
+    d.dayTasks.forEach(function (task) {
+      var row = el('<div class="hj-daytask"></div>');
+      row.appendChild(UI.checkbox({ checked: task.done, label: task.title, onToggle: function () {} }));
+      row.appendChild(el('<span class="hj-freq">' + task.freq + '</span>'));
+      dt.appendChild(row);
+    });
+
+    // atrasadas
+    var at = document.getElementById('hj-atrasadas');
+    d.atrasadas.forEach(function (a) { at.appendChild(lateRow(a)); });
+  }
+
+  render(DATA);
+  </script>
+</body>
+</html>
