@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atividades · Sistema A</title>
+
+<!-- provider + primitivos (mesma fundação das demais telas) -->
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+
+<style>
+/* ===== layout da tela Atividades (cor 100% via var) ===== */
+.at-app{display:flex;min-height:100vh;background:var(--bg)}
+.at-app>.ui-side{position:sticky;top:0;height:100vh}
+.at-main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+.at-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.at-hi{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.at-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.at-mhead{display:none;align-items:flex-start;justify-content:space-between;padding:14px 20px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.at-mg{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.at-md{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.at-content{flex:1;padding:22px 32px 48px}
+
+/* toolbar */
+.at-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.at-toolleft{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.at-toolright{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.at-count{font-size:12.5px;font-weight:600;color:var(--muted)}
+.at-count b{color:var(--text);font-weight:800}
+
+/* select compacto na toolbar (reaproveita a borda do tema) */
+.at-fsel{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text);background:var(--s1);
+  border:1px solid var(--border);border-radius:9px;padding:8px 11px;cursor:pointer}
+.at-fsel:focus{outline:none;border-color:var(--brand)}
+
+/* segmented (período) */
+.at-seg{display:inline-flex;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.at-seg button{font-family:inherit;font-size:12px;font-weight:700;color:var(--muted);background:transparent;border:0;cursor:pointer;
+  padding:7px 12px;border-radius:7px;white-space:nowrap;transition:color .15s,background .15s}
+.at-seg button:hover{color:var(--text)}
+.at-seg button.on{color:var(--ctaText);background:var(--cta)}
+
+/* busca */
+.at-search{display:inline-flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border);
+  border-radius:10px;padding:0 11px;min-width:210px}
+.at-search:focus-within{border-color:var(--brand)}
+.at-search svg{color:var(--muted2);flex:none}
+.at-search input{flex:1;min-width:0;font-family:inherit;font-size:13px;font-weight:600;color:var(--text);
+  background:transparent;border:0;outline:none;padding:9px 0}
+.at-search input::placeholder{color:var(--muted2);font-weight:500}
+
+/* sino de pendentes */
+.at-bell{position:relative;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;flex:none;
+  border:1px solid var(--border);border-radius:10px;background:var(--s1);color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s}
+.at-bell:hover{color:var(--text);border-color:var(--brand)}
+.at-bell .badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;
+  background:var(--haloRed);color:var(--red);font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center;line-height:1}
+
+/* toggle de visão */
+.at-vtoggle{display:inline-flex;background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.at-vtoggle button{display:inline-flex;align-items:center;gap:7px;font-family:inherit;font-size:12px;font-weight:700;color:var(--muted);
+  background:transparent;border:0;cursor:pointer;padding:7px 11px;border-radius:7px;transition:color .15s,background .15s}
+.at-vtoggle button:hover{color:var(--text)}
+.at-vtoggle button.on{color:var(--greenText);background:var(--activeBg)}
+
+/* ===== LISTA ===== */
+.at-list{display:flex;flex-direction:column;gap:20px}
+.at-group{display:flex;flex-direction:column;gap:9px}
+.at-grouphd{display:flex;align-items:center;gap:10px;padding:0 2px}
+.at-gname{font-size:12.5px;font-weight:800;letter-spacing:.02em;color:var(--text)}
+.at-gname.today{color:var(--greenText)}
+.at-gline{flex:1;height:1px;background:var(--border)}
+.at-gcount{font-size:11px;font-weight:700;color:var(--muted2)}
+
+.at-card{display:flex;align-items:center;gap:13px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:13px 15px}
+.at-card.late{border-color:var(--red);box-shadow:0 0 0 3px var(--haloRed)}
+.at-card.done{opacity:.72}
+.at-card.skip{opacity:.6}
+.at-check{flex:none}
+.at-cmain{flex:1;min-width:0}
+.at-ctitle{font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.at-card.done .at-ctitle{color:var(--muted);text-decoration:line-through}
+.at-card.skip .at-ctitle{color:var(--muted);text-decoration:line-through}
+.at-cmeta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:5px}
+.at-tag{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--greenText);background:var(--activeBg);
+  border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+.at-tag.sub{color:var(--muted);background:var(--chipBg)}
+.at-mi{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted)}
+.at-mi svg{color:var(--muted2)}
+.at-recpill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--muted);
+  background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 8px}
+.at-latebadge{font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--red);background:var(--haloRed);border-radius:6px;padding:2px 7px}
+.at-statetag{font-size:10px;font-weight:800;letter-spacing:.03em;border-radius:6px;padding:2px 7px}
+.at-statetag.skip{color:var(--amber);background:var(--chipBg);border:1px solid var(--border)}
+.at-statetag.rep{color:var(--orange);background:var(--chipBg);border:1px solid var(--border)}
+.at-cact{display:flex;align-items:center;gap:6px;flex:none}
+.at-ibtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--border);
+  border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
+.at-ibtn:hover{background:var(--s3);color:var(--text)}
+
+/* ===== KANBAN ===== */
+.at-kanban{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.at-col{background:var(--sideBg);border:1px solid var(--border);border-radius:14px;padding:12px;min-height:120px;transition:border-color .15s,background .15s}
+.at-col.dragover{border-color:var(--brand);background:var(--activeBg)}
+.at-colhd{display:flex;align-items:center;gap:9px;padding:4px 6px 12px}
+.at-coltitle{font-size:13px;font-weight:800;letter-spacing:.01em;color:var(--text)}
+.at-coltitle .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
+.at-coltitle .dot.todo{background:var(--amber)}
+.at-coltitle .dot.done{background:var(--green)}
+.at-colcount{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px}
+.at-colbody{display:flex;flex-direction:column;gap:9px;min-height:60px}
+.at-cardk{background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:12px 13px;cursor:grab}
+.at-cardk:active{cursor:grabbing}
+.at-cardk.late{border-color:var(--red);box-shadow:0 0 0 3px var(--haloRed)}
+.at-cardk.drag{opacity:.4}
+.at-kt{display:flex;align-items:flex-start;gap:10px}
+.at-kcheck{flex:none;margin-top:1px}
+.at-ktitle{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--text);line-height:1.3}
+.at-kmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.at-kfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:11px;padding-top:10px;border-top:1px solid var(--border)}
+.at-kdate{font-size:11px;font-weight:700;color:var(--muted)}
+.at-kdate.late{color:var(--red)}
+.at-colempty{font-size:12px;font-weight:500;color:var(--muted2);padding:14px 8px;text-align:center}
+
+/* cap aviso */
+.at-capnote{font-size:11.5px;font-weight:600;color:var(--amber);margin:14px 2px 0}
+
+/* onboarding (first-run) */
+.at-onb{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:30px 30px 28px;max-width:720px}
+.at-onb-ic{width:46px;height:46px;border-radius:13px;background:var(--activeBg);color:var(--greenText);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.at-onb-t{font-size:19px;font-weight:800;letter-spacing:-.01em}
+.at-onb-p{font-size:13.5px;font-weight:500;color:var(--muted);line-height:1.55;margin-top:8px;max-width:620px}
+.at-onb-prev{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 6px}
+.at-pchip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);
+  background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 11px}
+.at-pchip svg{color:var(--muted2)}
+.at-onb-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px}
+.at-onb-note{font-size:12.5px;font-weight:500;color:var(--muted2);margin-top:18px}
+
+/* skeleton / erro / sem-acesso */
+.at-skel{display:flex;flex-direction:column;gap:10px}
+.at-skrow{height:60px;border-radius:12px;border:1px solid var(--border);background:
+  linear-gradient(90deg,var(--s1) 0%,var(--s2) 50%,var(--s1) 100%);background-size:200% 100%;animation:atsk 1.2s ease-in-out infinite}
+@keyframes atsk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.at-msg{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:34px 30px;max-width:560px;text-align:center;margin:8px auto 0}
+.at-msg-ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
+  background:var(--chipBg);color:var(--muted)}
+.at-msg-ic.err{color:var(--red)}
+.at-msg-t{font-size:16px;font-weight:800}
+.at-msg-p{font-size:13px;font-weight:500;color:var(--muted);line-height:1.5;margin-top:7px}
+.at-msg-actions{display:flex;justify-content:center;margin-top:18px}
+
+/* toast */
+.at-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);z-index:80;
+  display:flex;align-items:center;gap:10px;max-width:90vw;padding:12px 16px;border-radius:11px;
+  background:var(--s2);border:1px solid var(--border);box-shadow:var(--cardShadow);
+  font-size:13px;font-weight:600;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.at-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.at-toast .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--brand)}
+.at-toast.err .bar{background:var(--red)}
+
+/* toggle de tema temporário (até existir a tela Configurações) */
+.at-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;
+  font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
+.at-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
+
+/* extras de modal próprios desta tela */
+.at-textarea{width:100%;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--text);background:var(--s2);
+  border:1px solid var(--border);border-radius:10px;padding:10px 12px;line-height:1.5;resize:vertical;min-height:74px}
+.at-textarea::placeholder{color:var(--muted2);font-weight:500}
+.at-textarea:focus{outline:none;border-color:var(--brand);background:var(--s1)}
+.at-date{width:100%;font-family:inherit;font-size:13.5px;font-weight:600;color:var(--text);background:var(--s2);
+  border:1px solid var(--border);border-radius:10px;padding:9px 12px}
+.at-date:focus{outline:none;border-color:var(--brand)}
+.at-date:disabled{color:var(--muted);background:var(--s3);cursor:not-allowed}
+.at-row2{display:flex;gap:12px;flex-wrap:wrap}
+.at-row2>*{flex:1;min-width:150px}
+.at-recbox{display:flex;flex-direction:column;gap:14px;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.at-grp{display:flex;flex-direction:column;gap:12px}
+.at-wdays{display:flex;gap:7px;flex-wrap:wrap}
+.at-wday{font-family:inherit;font-size:12px;font-weight:800;color:var(--muted);background:var(--s1);border:1px solid var(--border);
+  border-radius:9px;width:42px;height:38px;cursor:pointer;transition:color .15s,background .15s,border-color .15s}
+.at-wday:hover{color:var(--text)}
+.at-wday.on{color:var(--ctaText);background:var(--cta);border-color:var(--cta)}
+.at-note{font-size:12px;font-weight:600;color:var(--muted);line-height:1.45}
+.at-banner{display:none;font-size:12.5px;font-weight:600;color:var(--red);background:var(--chipBg);border:1px solid var(--red);
+  border-radius:10px;padding:10px 12px;line-height:1.4}
+.at-banner.on{display:block}
+.at-actsheet{display:flex;flex-direction:column;gap:8px}
+.at-actbtn{display:flex;align-items:center;gap:11px;width:100%;text-align:left;font-family:inherit;font-size:13.5px;font-weight:700;
+  color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:12px 14px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.at-actbtn:hover{background:var(--s3)}
+.at-actbtn svg{color:var(--muted);flex:none}
+.at-actbtn.danger{color:var(--red)}
+.at-actbtn.danger svg{color:var(--red)}
+.at-actbtn.danger:hover{border-color:var(--red)}
+.at-actbtn .sub{display:block;font-size:11px;font-weight:500;color:var(--muted2);margin-top:2px}
+.at-reqinfo{font-size:12px;font-weight:600;color:var(--muted);line-height:1.5;background:var(--chipBg);
+  border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+.at-reqinfo b{color:var(--text)}
+
+/* fila de pendentes */
+.at-pend{display:flex;flex-direction:column;gap:11px}
+.at-pcard{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:13px 14px}
+.at-pt{font-size:13.5px;font-weight:700;color:var(--text)}
+.at-pmeta{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:5px;line-height:1.5}
+.at-pdates{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:12.5px;font-weight:700}
+.at-pdates .from{color:var(--muted);text-decoration:line-through}
+.at-pdates .to{color:var(--greenText)}
+.at-pdates svg{color:var(--muted2)}
+.at-pwho{font-size:11px;font-weight:600;color:var(--muted2);margin-top:7px}
+.at-pact{display:flex;gap:9px;margin-top:12px}
+.at-pempty{font-size:13px;font-weight:500;color:var(--muted);text-align:center;padding:18px 8px}
+
+/* lista de inativas */
+.at-inact{display:flex;flex-direction:column;gap:9px}
+.at-inrow{display:flex;align-items:center;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px}
+.at-inname{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--muted)}
+.at-inempty{font-size:13px;font-weight:500;color:var(--muted);text-align:center;padding:16px 8px}
+
+/* disabled (botão sem permissão) */
+.at-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
+
+@media (max-width:900px){
+  .at-app>.ui-side{display:none}
+  .at-top{display:none}
+  .at-mhead{display:flex}
+  .at-content{padding:16px 18px 44px}
+  .at-kanban{grid-template-columns:1fr}
+  .at-search{min-width:0;flex:1}
+  .at-toolright{width:100%}
+}
+</style>
+</head>
+<body>
+
+  <!-- portão de acesso (guard.js controla) -->
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <button class="at-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+
+  <div class="at-app" id="app">
+    <main class="at-main">
+
+      <div class="at-top">
+        <div style="line-height:1.2">
+          <div class="at-hi">Atividades</div>
+          <div class="at-dd">Rotinas e tarefas recorrentes por setor · cada cartão é uma ocorrência da agenda</div>
+        </div>
+      </div>
+
+      <div class="at-mhead">
+        <div>
+          <div class="at-mg">Atividades</div>
+          <div class="at-md">Rotinas por setor</div>
+        </div>
+        <span id="at-mav"></span>
+      </div>
+
+      <div class="at-content">
+        <div id="at-toolbar"></div>
+        <div id="at-stage"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="at-toast" id="at-toast"><span class="bar"></span><span id="at-toast-msg"></span></div>
+
+  <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    /* =========================================================
+       USUÁRIO ATUAL — placeholder até o Guard.onReady publicar o
+       usuário real (mesma estratégia das telas Setores/Usuários).
+       Perfis: 'Admin' | 'Editor' | 'Visualizador' | 'Consultor Externo'
+       ========================================================= */
+    var CURRENT_USER = { uid: null, name: '—', profile: 'Visualizador', initials: '—' };
+    var CAN_WRITE = false;   /* Admin ou Editor — cria/edita/conclui */
+    var IS_ADMIN  = false;   /* super-autorizador da fila de mudança de data */
+
+    var R = window.GrautRecorrencia;   /* motor puro (já validado no Node) */
+
+    /* =========================================================
+       CAMADA DE DADOS — Firestore. Coleções: atividades, ocorrencias,
+       solicitacoes, usuarios, setores, atividade_log. Disciplina
+       where()/limit() nas grandes (atividades/ocorrencias); filtro de
+       setor é feito em memória para não exigir índice composto. Toda
+       mutação registra em atividade_log (best-effort). Namespace
+       exclusivo do Sistema A — nunca toca GMIX.
+       ========================================================= */
+    var Store = (function () {
+      var _fb = null;
+      function fb() {
+        if (!_fb) {
+          _fb = Promise.all([
+            import('./firebase.js'),
+            import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+          ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+        }
+        return _fb;
+      }
+
+      /* Traduz erro técnico do Firestore para linguagem leiga. */
+      function ferr(e) {
+        var code = (e && e.code) || '';
+        if (code === 'permission-denied') {
+          return Object.assign(new Error('Sem permissão para esta operação. Confirme seu perfil e que as Regras do Firestore foram publicadas.'), { field: 'geral', code: code });
+        }
+        if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
+          return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral', code: code });
+        }
+        return Object.assign(new Error((e && e.message) || 'Erro ao acessar o banco.'), { field: 'geral', code: code });
+      }
+
+      function mapDocs(snap) { var a = []; snap.forEach(function (d) { a.push(Object.assign({ id: d.id }, d.data())); }); return a; }
+
+      var api = {
+        /* ----- leituras de apoio ----- */
+        listSetores: function () {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            return f.getDocs(f.collection(db, 'setores')).then(function (snap) {
+              var a = []; snap.forEach(function (d) { a.push(d.data()); });
+              a.sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0) || (x.sigla < y.sigla ? -1 : 1); });
+              return a;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* Usuários ativos para o picker de responsável. Requer perfil Admin
+           pela rule de `list`. Quem não for Admin recebe permission-denied —
+           o chamador trata com fallback (auto-atribuição). */
+        listUsuariosAtivos: function () {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(1000));
+            return f.getDocs(q).then(function (snap) {
+              var a = []; snap.forEach(function (d) { a.push({ uid: d.id, nome: (d.data() || {}).nome || '(sem nome)', perfil: (d.data() || {}).perfil || '' }); });
+              a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+              return a;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* Todas as atividades ATIVAS (sem filtro de setor — o filtro é em
+           memória). Teto 2000 + filtro single-field = sem índice composto. */
+        listAtividadesAtivas: function () {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var q = f.query(f.collection(db, 'atividades'), f.where('ativo', '==', true), f.limit(2000));
+            return f.getDocs(q).then(mapDocs);
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        listInativas: function () {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var q = f.query(f.collection(db, 'atividades'), f.where('ativo', '==', false), f.limit(500));
+            return f.getDocs(q).then(mapDocs);
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* Ocorrências (overrides gravados) da janela. Range em campo único
+           (data) → sem índice composto; filtro de setor em memória. */
+        listOcorrencias: function (jIni, jFim) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var q = f.query(f.collection(db, 'ocorrencias'), f.where('data', '>=', jIni), f.where('data', '<=', jFim), f.limit(3000));
+            return f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { a.push(d.data()); }); return a; });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        listPendentes: function () {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var q = f.query(f.collection(db, 'solicitacoes'), f.where('status', '==', 'pendente'), f.limit(200));
+            return f.getDocs(q).then(mapDocs);
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* ----- mutações de atividade ----- */
+        criarAtividade: function (data, uid) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f, now = Date.now();
+            var doc = Object.assign({}, data, {
+              projetoSigla: null, ativo: true, criadoPor: uid, criadoEm: now, atualizadoEm: now
+            });
+            return f.addDoc(f.collection(db, 'atividades'), doc).then(function (ref) {
+              api.log({ acao: 'criar_atividade', entidade: 'atividade', refId: ref.id, antes: null, depois: doc });
+              return ref.id;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        atualizarAtividade: function (id, patch, antes) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+            return f.updateDoc(f.doc(db, 'atividades', id), up).then(function () {
+              api.log({ acao: 'editar_atividade', entidade: 'atividade', refId: id, antes: antes || null, depois: patch });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        inativarAtividade: function (id) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            return f.updateDoc(f.doc(db, 'atividades', id), { ativo: false, atualizadoEm: Date.now() }).then(function () {
+              api.log({ acao: 'inativar_atividade', entidade: 'atividade', refId: id, antes: { ativo: true }, depois: { ativo: false } });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        reativarAtividade: function (id) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            return f.updateDoc(f.doc(db, 'atividades', id), { ativo: true, atualizadoEm: Date.now() }).then(function () {
+              api.log({ acao: 'reativar_atividade', entidade: 'atividade', refId: id, antes: { ativo: false }, depois: { ativo: true } });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* ----- mutação de ocorrência (override idempotente) ----- */
+        setOcorrencia: function (act, origData, patch, acao) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var idoc = R.docIdOcorrencia(act.id, origData);
+            var base = {
+              atividadeId: act.id,
+              setorSigla: act.setorSigla,
+              responsavelUid: act.responsavelUid || null,
+              data: origData,
+              prazoOriginal: origData
+            };
+            var body = Object.assign(base, patch);
+            return f.setDoc(f.doc(db, 'ocorrencias', idoc), body, { merge: true }).then(function () {
+              api.log({ acao: acao || 'editar_ocorrencia', entidade: 'ocorrencia', refId: idoc, antes: null, depois: patch });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* ----- solicitações de mudança de data ----- */
+        createSolicitacao: function (d) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var doc = Object.assign({ status: 'pendente', criadoEm: Date.now() }, d);
+            return f.addDoc(f.collection(db, 'solicitacoes'), doc).then(function (ref) {
+              api.log({ acao: 'solicitar_data', entidade: 'solicitacao', refId: ref.id, antes: { data: d.dataAtual }, depois: { data: d.dataProposta } });
+              return ref.id;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        decidirSolicitacao: function (id, patch) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            return f.updateDoc(f.doc(db, 'solicitacoes', id), patch).then(function () {
+              api.log({ acao: patch.status === 'aprovada' ? 'aprovar_data' : 'rejeitar_data', entidade: 'solicitacao', refId: id, antes: { status: 'pendente' }, depois: { status: patch.status } });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
+        /* ----- log append-only (best-effort: nunca derruba a UX) ----- */
+        log: function (entry) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var row = Object.assign({ ts: Date.now(), uid: (CURRENT_USER && CURRENT_USER.uid) || null }, entry);
+            return f.addDoc(f.collection(db, 'atividade_log'), row);
+          }).catch(function (e) { if (window.console && console.warn) { console.warn('[atividades] log falhou', e); } });
+        }
+      };
+      return api;
+    })();
+
+    /* ===================== util de DOM ===================== */
+    function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+    /* txt(): texto via textContent — nunca interpola dado do usuário em HTML (anti-injeção) */
+    function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+    function ico(d, size) {
+      size = size || 16;
+      var s = document.createElement('span'); s.style.display = 'inline-flex';
+      s.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size +
+        '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+      return s.firstChild;
+    }
+    var PATH = {
+      pencil: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path>',
+      archive: '<rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path>',
+      restore: '<path d="M3 8V3h5"></path><path d="M3.5 8a9 9 0 1 0 2.2-2.9"></path>',
+      lock: '<rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>',
+      alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>',
+      repeat: '<polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path>',
+      clock: '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>',
+      user: '<circle cx="9" cy="8" r="3.4"></circle><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"></path><path d="M16.5 5.2a3.4 3.4 0 0 1 0 6"></path>',
+      check: '<path d="M5 12l4.5 4.5L19 6"></path>',
+      undo: '<path d="M3 8V3h5"></path><path d="M3.5 8a9 9 0 1 0 2.2-2.9"></path>',
+      skip: '<path d="M5 4l10 8-10 8z"></path><path d="M19 5v14"></path>',
+      play: '<path d="M6 4l12 8-12 8z"></path>',
+      calendar: '<rect x="3" y="4.5" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 2.5v4M16 2.5v4"></path>',
+      arrow: '<path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path>',
+      bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path>',
+      dots: '<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"></circle><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"></circle>',
+      plus: '<path d="M12 5v14M5 12h14"></path>',
+      x: '<path d="M18 6 6 18M6 6l12 12"></path>'
+    };
+    function initialsOf(name) {
+      var s = String(name || '').trim(); if (!s) { return 'U'; }
+      var p = s.split(/\s+/);
+      if (p.length === 1) { return p[0].slice(0, 2).toUpperCase(); }
+      return (p[0].charAt(0) + p[p.length - 1].charAt(0)).toUpperCase();
+    }
+
+    /* ===================== helpers de data civil ===================== */
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+    function fmtBR(iso) { if (!iso) { return ''; } var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+    var DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    function dayLabel(iso) {
+      var hoje = R.hojeISO();
+      if (iso === hoje) { return 'Hoje'; }
+      if (iso === R.addDias(hoje, 1)) { return 'Amanhã'; }
+      if (iso === R.addDias(hoje, -1)) { return 'Ontem'; }
+      var p = iso.split('-');
+      return DOW[R.diaSemana(iso)] + ' · ' + p[2] + '/' + p[1];
+    }
+    /* janela [jIni,jFim] por período. 'band' = atrasadas + próximos 30 dias. */
+    function windowFor(p) {
+      var hoje = R.hojeISO();
+      if (p === 'semana') { return { jIni: hoje, jFim: R.addDias(hoje, 6) }; }
+      if (p === 'mes') {
+        var y = parseInt(hoje.slice(0, 4), 10), m = parseInt(hoje.slice(5, 7), 10);
+        return { jIni: y + '-' + pad2(m) + '-01', jFim: y + '-' + pad2(m) + '-' + pad2(R.ultimoDiaMes(y, m)) };
+      }
+      return { jIni: R.addDias(hoje, -45), jFim: R.addDias(hoje, 30) };
+    }
+    var PERIODO_LABEL = { band: 'atrasadas + 30 dias', semana: 'esta semana', mes: 'este mês' };
+    var RECOR_LABEL = { diario: 'Diária', semanal: 'Semanal', quinzenal: 'Quinzenal', mensal: 'Mensal', unico: 'Única' };
+
+    var CAP = 300; /* teto de cartões renderizados por vez */
+
+    /* ===================== estado ===================== */
+    var SETORES = [];      /* docs de setores */
+    var ATIV = [];         /* TODAS as atividades ativas (filtro de setor é em memória) */
+    var USERS = [];        /* usuários ativos p/ picker (pode vir vazio sem permissão) */
+    var OCC_DOCS = [];     /* docs de ocorrencias na janela */
+    var OCC_BY_ATIV = {};  /* atividadeId -> [override docs] */
+    var PEND = [];         /* solicitacoes pendentes */
+    var BOARD = [];        /* ocorrências enriquecidas (após filtro/busca) */
+    var byKey = {};        /* key -> ocorrência (para drag & drop e ações) */
+    var dragKey = null;    /* ocorrência em arraste */
+    var capped = false;    /* houve corte pelo teto? */
+
+    var selSetor = '';     /* '' = todos os setores */
+    var periodo = 'band';
+    var view = 'lista';    /* 'lista' | 'kanban' */
+    var search = '';
+    var searchTimer = null;
+
+    var stage = document.getElementById('at-stage');
+    var toolbarEl = document.getElementById('at-toolbar');
+
+    /* ===================== toast ===================== */
+    var toastEl = document.getElementById('at-toast');
+    var toastMsg = document.getElementById('at-toast-msg');
+    var toastTimer = null;
+    function toast(msg, kind) {
+      toastMsg.textContent = msg;
+      toastEl.classList.toggle('err', kind === 'err');
+      toastEl.classList.add('on');
+      if (toastTimer) { clearTimeout(toastTimer); }
+      toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2800);
+    }
+
+    /* ===================== boot ===================== */
+    function mount() {
+      var app = document.getElementById('app');
+      var old = app.querySelector('.ui-side'); if (old) { old.parentNode.removeChild(old); }
+      app.insertBefore(UI.sidebar({ active: 'Atividades', user: CURRENT_USER }), app.firstChild);
+
+      var mav = document.getElementById('at-mav'); mav.innerHTML = '';
+      mav.appendChild(UI.avatar({ initials: CURRENT_USER.initials, size: 42 }));
+
+      load();
+    }
+
+    function safeUsers() { return Store.listUsuariosAtivos().catch(function () { return []; }); }
+
+    function indexOcc() {
+      OCC_BY_ATIV = {};
+      OCC_DOCS.forEach(function (o) {
+        if (!o || !o.atividadeId) { return; }
+        (OCC_BY_ATIV[o.atividadeId] = OCC_BY_ATIV[o.atividadeId] || []).push(o);
+      });
+    }
+
+    function loadBoardData() {
+      var w = windowFor(periodo);
+      return Promise.all([
+        Store.listOcorrencias(w.jIni, w.jFim),
+        CAN_WRITE ? Store.listPendentes() : Promise.resolve([])
+      ]).then(function (r) { OCC_DOCS = r[0]; PEND = r[1]; indexOcc(); });
+    }
+
+    function load() {
+      toolbarEl.innerHTML = '';
+      renderLoading();
+      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers()])
+        .then(function (res) { SETORES = res[0]; ATIV = res[1]; USERS = res[2]; return loadBoardData(); })
+        .then(function () { renderAll(); })
+        .catch(function (e) { renderError(e); });
+    }
+
+    /* recarrega atividades + janela após mutações (sem skeleton) */
+    function refresh() {
+      Store.listAtividadesAtivas()
+        .then(function (a) { ATIV = a; return loadBoardData(); })
+        .then(function () { renderAll(); })
+        .catch(function (e) { toast((e && e.message) || 'Falha ao atualizar.', 'err'); });
+    }
+
+    function renderAll() {
+      if (!ATIV.length) { toolbarEl.innerHTML = ''; renderEmpty(); return; }
+      renderToolbar();
+      renderBoard();
+    }
+
+    /* ===================== estados ===================== */
+    function renderLoading() {
+      stage.innerHTML = '';
+      var box = el('<div class="at-skel"></div>');
+      for (var i = 0; i < 5; i++) { box.appendChild(el('<div class="at-skrow"></div>')); }
+      stage.appendChild(box);
+    }
+
+    function renderError(e) {
+      toolbarEl.innerHTML = '';
+      stage.innerHTML = '';
+      var box = el('<div class="at-msg"></div>');
+      var icw = el('<div class="at-msg-ic err"></div>'); icw.appendChild(ico(PATH.alert, 22)); box.appendChild(icw);
+      box.appendChild(el('<div class="at-msg-t">Não consegui carregar as atividades</div>'));
+      box.appendChild(txt('div', 'at-msg-p', (e && e.message) ? e.message : 'Falha de leitura.'));
+      var act = el('<div class="at-msg-actions"></div>');
+      act.appendChild(UI.button({ label: 'Tentar de novo', icon: 'repeat', onClick: load }));
+      box.appendChild(act);
+      stage.appendChild(box);
+    }
+
+    function renderEmpty() {
+      stage.innerHTML = '';
+      var box = el('<div class="at-onb"></div>');
+      var icw = el('<div class="at-onb-ic"></div>'); icw.appendChild(ico(PATH.repeat, 24)); box.appendChild(icw);
+      box.appendChild(el('<div class="at-onb-t">Crie a primeira atividade</div>'));
+      box.appendChild(el('<div class="at-onb-p">Atividades são as rotinas e tarefas da escola — diárias, semanais, quinzenais (dias 1 e 15), mensais ou de data única. Cada atividade liga-se a um <b>setor</b> e a um <b>responsável</b>, e gera <b>ocorrências</b> que você acompanha em lista ou no quadro (Kanban). Concluir, pular ou reprogramar uma ocorrência não apaga o histórico.</div>'));
+
+      var prev = el('<div class="at-onb-prev"></div>');
+      [['repeat', 'Recorrência (5 tipos)'], ['user', 'Responsável por setor'], ['calendar', 'Ocorrências na agenda'], ['check', 'Concluir / pular / reprogramar']].forEach(function (p) {
+        var chip = el('<span class="at-pchip"></span>'); chip.appendChild(ico(PATH[p[0]], 14)); chip.appendChild(document.createTextNode(p[1])); prev.appendChild(chip);
+      });
+      box.appendChild(prev);
+
+      if (CAN_WRITE) {
+        var actions = el('<div class="at-onb-actions"></div>');
+        actions.appendChild(UI.button({ label: 'Nova atividade', icon: 'plus', onClick: function () { openEditor(null); } }));
+        var inb = UI.button({ label: 'Ver inativas', variant: 'ghost', icon: 'repeat', onClick: openInativas });
+        actions.appendChild(inb);
+        box.appendChild(actions);
+      } else {
+        box.appendChild(el('<div class="at-onb-note">Ainda não há atividades. Peça a um Admin ou Editor para cadastrar as rotinas do seu setor.</div>'));
+      }
+      stage.appendChild(box);
+    }
+
+    /* ===================== toolbar ===================== */
+    function setoresRaiz() { return SETORES.filter(function (s) { return !s.setorPaiSigla && s.ativo; }); }
+    function subsetoresDe(sig) { return SETORES.filter(function (s) { return s.setorPaiSigla === sig; }); }
+    function nomeSetor(sig) { var s = SETORES.filter(function (x) { return x.sigla === sig; })[0]; return s ? s.nome : sig; }
+
+    function renderToolbar() {
+      toolbarEl.innerHTML = '';
+      var bar = el('<div class="at-toolbar"></div>');
+
+      /* ---- esquerda: contagem ---- */
+      var left = el('<div class="at-toolleft"></div>');
+      var count = txt('div', 'at-count', '');
+      count.innerHTML = '<b>' + BOARD.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo];
+      left.appendChild(count);
+      bar.appendChild(left);
+
+      /* ---- direita: filtros e ações ---- */
+      var right = el('<div class="at-toolright"></div>');
+
+      /* setor */
+      var simpleRoots = setoresRaiz();
+      var sel = el('<select class="at-fsel" aria-label="Filtrar por setor"></select>');
+      sel.appendChild(el('<option value="">Todos os setores</option>'));
+      simpleRoots.forEach(function (s) { var o = document.createElement('option'); o.value = s.sigla; o.textContent = s.sigla + ' · ' + s.nome; sel.appendChild(o); });
+      sel.value = selSetor;
+      sel.addEventListener('change', function () { selSetor = sel.value; renderBoard(); updateCount(); });
+      right.appendChild(sel);
+
+      /* período (segmented) */
+      var seg = el('<div class="at-seg" role="group" aria-label="Período"></div>');
+      [['band', 'Atrasadas + 30d'], ['semana', 'Semana'], ['mes', 'Mês']].forEach(function (p) {
+        var b = el('<button type="button"' + (periodo === p[0] ? ' class="on"' : '') + '></button>'); b.textContent = p[1];
+        b.addEventListener('click', function () { if (periodo === p[0]) { return; } periodo = p[0]; refresh(); });
+        seg.appendChild(b);
+      });
+      right.appendChild(seg);
+
+      /* busca */
+      var sbox = el('<div class="at-search"></div>'); sbox.appendChild(ico(PATH.user ? '<circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4-4"></path>' : '', 15));
+      var sinp = el('<input type="text" placeholder="Buscar título, responsável, setor…" autocomplete="off" spellcheck="false">');
+      sinp.value = search;
+      sinp.addEventListener('input', function () {
+        search = sinp.value;
+        if (searchTimer) { clearTimeout(searchTimer); }
+        searchTimer = setTimeout(function () { renderBoard(); updateCount(); }, 180);
+      });
+      sbox.appendChild(sinp);
+      right.appendChild(sbox);
+
+      /* sino de pendentes (só quem escreve) */
+      if (CAN_WRITE) {
+        var actionable = pendentesAcionaveis();
+        var bell = el('<button class="at-bell" type="button" title="Pedidos de mudança de data"></button>');
+        bell.appendChild(ico(PATH.bell, 18));
+        if (actionable.length) { bell.appendChild(txt('span', 'badge', String(actionable.length))); }
+        bell.addEventListener('click', openPendentes);
+        right.appendChild(bell);
+      }
+
+      /* toggle de visão */
+      var vt = el('<div class="at-vtoggle" role="group" aria-label="Visão"></div>');
+      var bl = el('<button type="button"' + (view === 'lista' ? ' class="on"' : '') + '></button>'); bl.appendChild(UI.icon('bars', 15)); bl.appendChild(el('<span>Lista</span>'));
+      bl.addEventListener('click', function () { if (view === 'lista') { return; } view = 'lista'; renderToolbar(); renderBoard(); });
+      var bk = el('<button type="button"' + (view === 'kanban' ? ' class="on"' : '') + '></button>'); bk.appendChild(UI.icon('grid', 15)); bk.appendChild(el('<span>Kanban</span>'));
+      bk.addEventListener('click', function () { if (view === 'kanban') { return; } view = 'kanban'; renderToolbar(); renderBoard(); });
+      vt.appendChild(bl); vt.appendChild(bk);
+      right.appendChild(vt);
+
+      /* nova atividade */
+      if (CAN_WRITE) {
+        right.appendChild(UI.button({ label: 'Nova atividade', icon: 'plus', onClick: function () { openEditor(null); } }));
+      }
+
+      bar.appendChild(right);
+      toolbarEl.appendChild(bar);
+    }
+
+    /* atualiza só o número de ocorrências (sem reconstruir a toolbar — preserva o foco da busca) */
+    function updateCount() {
+      var c = toolbarEl.querySelector('.at-count');
+      if (c) { c.innerHTML = '<b>' + BOARD.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo]; }
+    }
+
+    /* ===================== permissões de ação ===================== */
+    function isOwner(act) { return !!(act && act.criadoPor && CURRENT_USER.uid && act.criadoPor === CURRENT_USER.uid); }
+    function canApproveDirect(act) { return IS_ADMIN || isOwner(act); }
+    function pendentesAcionaveis() {
+      return PEND.filter(function (s) { return IS_ADMIN || (s.donoUid && s.donoUid === CURRENT_USER.uid); });
+    }
+
+    /* ===================== construção das ocorrências ===================== */
+    /* Monta a lista de ocorrências (cartões) da janela atual, aplicando
+       filtro de setor e busca, recomputando "atrasada" pela data efetiva
+       (override de data conta) e ordenando por data efetiva + horário. */
+    function buildOccurrences() {
+      var w = windowFor(periodo);
+      var hoje = R.hojeISO();
+      var term = search.trim().toLowerCase();
+      var out = [];
+
+      ATIV.forEach(function (act) {
+        if (selSetor && act.setorSigla !== selSetor) { return; }
+        var ovs = OCC_BY_ATIV[act.id] || [];
+        var occs = R.ocorrenciasNaJanela(act, w.jIni, w.jFim, ovs, hoje);
+        occs.forEach(function (oc) {
+          var ov = oc.override || null;
+          var effDate = (ov && ov.dataOverride) || oc.data;
+          var aberto = (oc.status === 'pendente' || oc.status === 'reprogramada');
+          var enriched = {
+            key: act.id + '|' + oc.data,
+            act: act,
+            origData: oc.data,
+            effDate: effDate,
+            status: oc.status,
+            ov: ov,
+            titulo: (ov && ov.tituloOverride) || act.titulo,
+            horario: (ov && ov.horarioOverride) || act.horario || '',
+            atrasada: aberto && R.compareISO(effDate, hoje) < 0
+          };
+          out.push(enriched);
+        });
+      });
+
+      if (term) {
+        out = out.filter(function (o) {
+          var hay = (o.titulo || '') + ' ' + (o.act.responsavelNome || '') + ' ' + (o.act.setorSigla || '') + ' ' + (o.act.subsetorSigla || '');
+          return hay.toLowerCase().indexOf(term) !== -1;
+        });
+      }
+
+      out.sort(function (a, b) {
+        if (a.effDate !== b.effDate) { return a.effDate < b.effDate ? -1 : 1; }
+        var ha = a.horario || '99:99', hb = b.horario || '99:99';
+        if (ha !== hb) { return ha < hb ? -1 : 1; }
+        return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR');
+      });
+
+      capped = out.length > CAP;
+      if (capped) { out = out.slice(0, CAP); }
+
+      byKey = {};
+      out.forEach(function (o) { byKey[o.key] = o; });
+      return out;
+    }
+
+    function renderBoard() {
+      BOARD = buildOccurrences();
+      stage.innerHTML = '';
+      if (!BOARD.length) {
+        var box = el('<div class="at-msg"></div>');
+        var icw = el('<div class="at-msg-ic"></div>'); icw.appendChild(ico(PATH.calendar, 22)); box.appendChild(icw);
+        box.appendChild(el('<div class="at-msg-t">Nada na janela selecionada</div>'));
+        box.appendChild(txt('div', 'at-msg-p', (search.trim() || selSetor) ? 'Nenhuma ocorrência bate com o filtro/busca atual. Limpe o filtro ou troque o período.' : 'Não há ocorrências para este período. Troque o período acima ou crie uma atividade.'));
+        stage.appendChild(box);
+        return;
+      }
+      if (view === 'kanban') { renderKanban(); } else { renderList(); }
+      if (capped) { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
+    }
+
+    /* ----- meta comum dos cartões ----- */
+    function metaChips(o, into) {
+      into.appendChild(txt('span', 'at-tag', o.act.setorSigla));
+      if (o.act.subsetorSigla) { into.appendChild(txt('span', 'at-tag sub', o.act.subsetorSigla)); }
+      var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
+      if (o.horario) { var hr = el('<span class="at-mi"></span>'); hr.appendChild(ico(PATH.clock, 12)); hr.appendChild(document.createTextNode(o.horario)); into.appendChild(hr); }
+      if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
+      if (o.status === 'reprogramada' && o.ov && o.ov.dataOverride) { into.appendChild(txt('span', 'at-statetag rep', 'Reprogramada → ' + fmtBR(o.ov.dataOverride))); }
+      if (o.status === 'pulada') { into.appendChild(txt('span', 'at-statetag skip', 'Pulada')); }
+      if (o.atrasada) { into.appendChild(txt('span', 'at-latebadge', 'Atrasada')); }
+    }
+
+    /* ===================== LISTA ===================== */
+    function renderList() {
+      var wrap = el('<div class="at-list"></div>');
+      /* agrupa por data efetiva */
+      var groups = []; var idx = {};
+      BOARD.forEach(function (o) {
+        var k = o.effDate;
+        if (!(k in idx)) { idx[k] = groups.length; groups.push({ data: k, items: [] }); }
+        groups[idx[k]].items.push(o);
+      });
+      var hoje = R.hojeISO();
+      groups.forEach(function (g) {
+        var sec = el('<div class="at-group"></div>');
+        var hd = el('<div class="at-grouphd"></div>');
+        hd.appendChild(txt('span', 'at-gname' + (g.data === hoje ? ' today' : ''), dayLabel(g.data)));
+        hd.appendChild(el('<span class="at-gline"></span>'));
+        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' item(s)'));
+        sec.appendChild(hd);
+        g.items.forEach(function (o) { sec.appendChild(listCard(o)); });
+        wrap.appendChild(sec);
+      });
+      stage.appendChild(wrap);
+    }
+
+    function listCard(o) {
+      var done = o.status === 'concluida';
+      var skip = o.status === 'pulada';
+      var card = el('<div class="at-card' + (o.atrasada ? ' late' : '') + (done ? ' done' : '') + (skip ? ' skip' : '') + '"></div>');
+
+      /* check (concluir/reabrir) — só quem escreve */
+      var chkHolder = el('<span class="at-check"></span>');
+      if (CAN_WRITE && !skip) {
+        chkHolder.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { concluir(o); } } }));
+      } else {
+        var ph = el('<span class="ui-check"><span class="box' + (done ? ' on' : '') + '"></span></span>');
+        if (done) { ph.querySelector('.box').appendChild(UI.icon('check', 12)); }
+        chkHolder.appendChild(ph);
+      }
+      card.appendChild(chkHolder);
+
+      var main = el('<div class="at-cmain"></div>');
+      main.appendChild(txt('div', 'at-ctitle', o.titulo));
+      var meta = el('<div class="at-cmeta"></div>'); metaChips(o, meta); main.appendChild(meta);
+      card.appendChild(main);
+
+      if (CAN_WRITE) {
+        var act = el('<div class="at-cact"></div>');
+        var more = el('<button class="at-ibtn" type="button" title="Mais ações"></button>'); more.appendChild(ico(PATH.dots, 16));
+        more.addEventListener('click', function () { actionsMenu(o); });
+        act.appendChild(more);
+        card.appendChild(act);
+      }
+      return card;
+    }
+
+    /* ===================== KANBAN ===================== */
+    function renderKanban() {
+      var todo = [], doneList = [];
+      BOARD.forEach(function (o) {
+        if (o.status === 'concluida') { doneList.push(o); }
+        else if (o.status === 'pulada') { /* puladas não entram no quadro */ }
+        else { todo.push(o); } /* pendente + reprogramada */
+      });
+      /* atrasadas primeiro dentro de "A fazer" */
+      todo.sort(function (a, b) {
+        if (a.atrasada !== b.atrasada) { return a.atrasada ? -1 : 1; }
+        if (a.effDate !== b.effDate) { return a.effDate < b.effDate ? -1 : 1; }
+        return (a.horario || '99:99') < (b.horario || '99:99') ? -1 : 1;
+      });
+
+      var grid = el('<div class="at-kanban"></div>');
+      grid.appendChild(kanbanCol('A fazer', 'todo', todo, 'todo'));
+      grid.appendChild(kanbanCol('Concluída', 'done', doneList, 'done'));
+      stage.appendChild(grid);
+    }
+
+    function kanbanCol(title, dotCls, items, colKind) {
+      var col = el('<div class="at-col" data-col="' + colKind + '"></div>');
+      var hd = el('<div class="at-colhd"></div>');
+      var t = el('<div class="at-coltitle"></div>'); t.appendChild(el('<span class="dot ' + dotCls + '"></span>')); t.appendChild(document.createTextNode(title)); hd.appendChild(t);
+      hd.appendChild(txt('span', 'at-colcount', String(items.length)));
+      col.appendChild(hd);
+
+      var body = el('<div class="at-colbody"></div>');
+      if (!items.length) { body.appendChild(txt('div', 'at-colempty', colKind === 'done' ? 'Nenhuma concluída na janela.' : 'Nada a fazer aqui.')); }
+      else { items.forEach(function (o) { body.appendChild(kanbanCard(o)); }); }
+      col.appendChild(body);
+
+      /* drop zone (só quem escreve) */
+      if (CAN_WRITE) {
+        col.addEventListener('dragover', function (e) { e.preventDefault(); col.classList.add('dragover'); });
+        col.addEventListener('dragleave', function () { col.classList.remove('dragover'); });
+        col.addEventListener('drop', function (e) {
+          e.preventDefault(); col.classList.remove('dragover');
+          var o = dragKey ? byKey[dragKey] : null; dragKey = null;
+          if (!o) { return; }
+          if (colKind === 'done') { if (o.status !== 'concluida') { concluir(o); } }
+          else { if (o.status === 'concluida') { reabrir(o); } else if (o.status === 'pulada') { retomar(o); } }
+        });
+      }
+      return col;
+    }
+
+    function kanbanCard(o) {
+      var card = el('<div class="at-cardk' + (o.atrasada ? ' late' : '') + '"></div>');
+      if (CAN_WRITE) {
+        card.setAttribute('draggable', 'true');
+        card.addEventListener('dragstart', function (e) { dragKey = o.key; card.classList.add('drag'); try { e.dataTransfer.setData('text/plain', o.key); e.dataTransfer.effectAllowed = 'move'; } catch (er) {} });
+        card.addEventListener('dragend', function () { card.classList.remove('drag'); dragKey = null; });
+      }
+      var top = el('<div class="at-kt"></div>');
+      var chk = el('<span class="at-kcheck"></span>');
+      var done = o.status === 'concluida';
+      if (CAN_WRITE) {
+        chk.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { concluir(o); } } }));
+      } else {
+        var ph = el('<span class="ui-check"><span class="box' + (done ? ' on' : '') + '"></span></span>'); if (done) { ph.querySelector('.box').appendChild(UI.icon('check', 12)); } chk.appendChild(ph);
+      }
+      top.appendChild(chk);
+      top.appendChild(txt('div', 'at-ktitle', o.titulo));
+      card.appendChild(top);
+
+      var meta = el('<div class="at-kmeta"></div>'); metaChips(o, meta); card.appendChild(meta);
+
+      var foot = el('<div class="at-kfoot"></div>');
+      foot.appendChild(txt('span', 'at-kdate' + (o.atrasada ? ' late' : ''), dayLabel(o.effDate)));
+      if (CAN_WRITE) {
+        var more = el('<button class="at-ibtn" type="button" title="Mais ações"></button>'); more.appendChild(ico(PATH.dots, 16));
+        more.addEventListener('click', function () { actionsMenu(o); });
+        foot.appendChild(more);
+      }
+      card.appendChild(foot);
+      return card;
+    }
+
+    /* ===================== mutações de ocorrência ===================== */
+    function concluir(o) {
+      if (!CAN_WRITE) { return; }
+      Store.setOcorrencia(o.act, o.origData, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia')
+        .then(function () { toast('Ocorrência concluída.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+    function reabrir(o) {
+      if (!CAN_WRITE) { return; }
+      Store.setOcorrencia(o.act, o.origData, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia')
+        .then(function () { toast('Conclusão desfeita.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+    function pular(o) {
+      if (!CAN_WRITE) { return; }
+      Store.setOcorrencia(o.act, o.origData, { status: 'pulada' }, 'pular_ocorrencia')
+        .then(function () { toast('Ocorrência pulada.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+    function retomar(o) {
+      if (!CAN_WRITE) { return; }
+      Store.setOcorrencia(o.act, o.origData, { status: 'pendente' }, 'retomar_ocorrencia')
+        .then(function () { toast('Ocorrência retomada.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+
+    /* aplica reprogramação direta da ocorrência (dono/Admin) */
+    function aplicarReprogEsta(o, novaData) {
+      Store.setOcorrencia(o.act, o.origData, { status: 'reprogramada', dataOverride: novaData }, 'reprogramar_ocorrencia')
+        .then(function () { toast('Ocorrência reprogramada para ' + fmtBR(novaData) + '.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+
+    /* ===================== ações da ocorrência (menu) ===================== */
+    function actionsMenu(o) {
+      if (!CAN_WRITE) { return; }
+      var done = o.status === 'concluida';
+      var skip = o.status === 'pulada';
+
+      var rows = [];
+      function row(label, sub, pathIcon, danger, fn) {
+        var b = el('<button class="at-actbtn' + (danger ? ' danger' : '') + '" type="button"></button>');
+        b.appendChild(ico(pathIcon, 18));
+        var span = document.createElement('span'); span.appendChild(document.createTextNode(label));
+        if (sub) { span.appendChild(txt('span', 'sub', sub)); }
+        b.appendChild(span);
+        b.addEventListener('click', function () { m.close(); fn(); });
+        rows.push(b);
+      }
+
+      if (!skip) {
+        if (done) { row('Reabrir (desfazer conclusão)', 'Volta para “a fazer”, sem apagar histórico', PATH.undo, false, function () { reabrir(o); }); }
+        else { row('Concluir', null, PATH.check, false, function () { concluir(o); }); }
+      }
+      row('Reprogramar esta ocorrência', canApproveDirect(o.act) ? 'Aplica direto (você é dono/Admin)' : 'Cria um pedido para o dono aprovar', PATH.calendar, false, function () { reprogramarEstaModal(o); });
+      if (skip) { row('Retomar', 'Tira de “pulada” e volta a pendente', PATH.play, false, function () { retomar(o); }); }
+      else if (!done) { row('Pular esta ocorrência', null, PATH.skip, false, function () { pular(o); }); }
+      row('Editar só esta ocorrência', 'Muda título/horário apenas deste dia', PATH.pencil, false, function () { editarEstaModal(o); });
+      row('Editar a atividade (todas)', 'Altera a regra e as ocorrências futuras', PATH.repeat, false, function () { openEditor(o.act); });
+      row('Inativar atividade', 'Some das listas; histórico preservado', PATH.archive, true, function () { inativarAtividade(o.act); });
+
+      var m = UI.modal({ title: o.titulo, width: 440, body: function () { var box = el('<div class="at-actsheet"></div>'); rows.forEach(function (r) { box.appendChild(r); }); return box; } });
+    }
+
+    /* ----- reprogramar “esta” (com trava de aprovação de data) ----- */
+    function reprogramarEstaModal(o) {
+      var direct = canApproveDirect(o.act);
+      var dateInp = el('<input type="date" class="at-date" value="' + o.effDate + '">');
+      var dateField = UI.field({ label: 'Nova data', required: true, control: dateInp, hint: 'Data atual: ' + fmtBR(o.effDate) + '.' });
+
+      var motivoTa = el('<textarea class="at-textarea" placeholder="Por que precisa mudar a data? (ajuda o dono a decidir)"></textarea>');
+      var motivoField = UI.field({ label: 'Motivo' + (direct ? ' (opcional)' : ''), required: !direct, control: motivoTa });
+
+      var info = el('<div class="at-reqinfo"></div>');
+      info.innerHTML = direct
+        ? 'Você é <b>dono ou Admin</b> desta atividade: a reprogramação é aplicada <b>na hora</b>.'
+        : 'Você <b>não é o dono</b> desta atividade. Em vez de mudar a data direto, será criado um <b>pedido</b> para o dono (ou um Admin) aprovar.';
+
+      var banner = el('<div class="at-banner"></div>');
+
+      var body = [info, dateField, motivoField, banner];
+      var saveBtn = null;
+      var m = UI.modal({
+        title: 'Reprogramar ocorrência', width: 460, body: body,
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          saveBtn = UI.button({ label: direct ? 'Reprogramar' : 'Enviar pedido', icon: direct ? 'check' : 'repeat', onClick: onGo });
+          return [cancel, saveBtn];
+        }
+      });
+
+      function showBanner(msg) { banner.textContent = msg; banner.classList.add('on'); }
+      function onGo() {
+        banner.classList.remove('on');
+        var nova = dateInp.value;
+        if (!R.isISO(nova)) { showBanner('Escolha uma data válida.'); return; }
+        if (nova === o.effDate) { showBanner('A nova data é igual à atual. Escolha outro dia.'); return; }
+        var motivo = motivoTa.value.trim();
+        if (!direct && motivo.length < 3) { showBanner('Descreva o motivo do pedido (mínimo 3 caracteres).'); return; }
+        if (saveBtn) { saveBtn.disabled = true; }
+
+        if (direct) {
+          m.close(); aplicarReprogEsta(o, nova); return;
+        }
+        Store.createSolicitacao({
+          atividadeId: o.act.id, ocorrenciaData: o.origData, escopo: 'esta',
+          dataAtual: o.effDate, dataProposta: nova, motivo: motivo,
+          solicitanteUid: CURRENT_USER.uid,
+          solicitanteNome: CURRENT_USER.name, tituloAtividade: o.act.titulo, donoUid: o.act.criadoPor || null
+        }).then(function () { m.close(); toast('Pedido de mudança de data enviado ao dono.'); refresh(); })
+          .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } showBanner((e && e.message) || 'Falha ao enviar o pedido.'); });
+      }
+    }
+
+    /* ----- editar só esta ocorrência (título/horário) ----- */
+    function editarEstaModal(o) {
+      var tInp = UI.input({ value: o.titulo, placeholder: 'Título desta ocorrência' });
+      var tField = UI.field({ label: 'Título (só hoje)', control: tInp, hint: 'Vale apenas para esta ocorrência; a atividade continua com o título original.' });
+      var hInp = el('<input type="time" class="at-date" value="' + (o.horario || '') + '">');
+      var hField = UI.field({ label: 'Horário (só hoje)', control: hInp });
+      var banner = el('<div class="at-banner"></div>');
+
+      var saveBtn = null;
+      var m = UI.modal({
+        title: 'Editar esta ocorrência', width: 440, body: [tField, hField, banner],
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          saveBtn = UI.button({ label: 'Salvar', icon: 'check', onClick: onSave });
+          return [cancel, saveBtn];
+        }
+      });
+      function onSave() {
+        banner.classList.remove('on');
+        var titulo = tInp.value.trim();
+        if (!titulo) { banner.textContent = 'O título não pode ficar vazio.'; banner.classList.add('on'); return; }
+        var patch = {};
+        patch.tituloOverride = (titulo === o.act.titulo) ? null : titulo;
+        patch.horarioOverride = (hInp.value === (o.act.horario || '')) ? null : (hInp.value || null);
+        if (saveBtn) { saveBtn.disabled = true; }
+        Store.setOcorrencia(o.act, o.origData, patch, 'editar_ocorrencia')
+          .then(function () { m.close(); toast('Ocorrência atualizada.'); refresh(); })
+          .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } banner.textContent = e.message; banner.classList.add('on'); });
+      }
+    }
+
+    function inativarAtividade(act) {
+      if (!CAN_WRITE) { return; }
+      var m = UI.modal({
+        title: 'Inativar atividade', width: 420,
+        body: function () { var p = txt('p', null, 'Inativar “' + act.titulo + '”? Ela some das listas e do quadro, mas o histórico de ocorrências é preservado. Você pode reativá-la depois em “Ver inativas”.'); p.setAttribute('style', 'margin:0;color:var(--muted);font-size:13.5px;line-height:1.55'); return p; },
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          var go = UI.button({ label: 'Inativar', icon: 'archive', onClick: function () { close(); Store.inativarAtividade(act.id).then(function () { toast('Atividade inativada.'); refresh(); }).catch(function (e) { toast(e.message, 'err'); }); } });
+          return [cancel, go];
+        }
+      });
+    }
+
+    /* ===================== editor de atividade ===================== */
+    function openEditor(act) {
+      if (!CAN_WRITE) { return; }
+      var editing = !!act;
+
+      /* título / descrição */
+      var titInp = UI.input({ value: editing ? act.titulo : '', placeholder: 'Ex: Conferir matrículas do dia', maxlength: 120 });
+      var titField = UI.field({ label: 'Título', required: true, control: titInp });
+      var descTa = el('<textarea class="at-textarea" placeholder="Detalhes, instruções, checklist… (opcional)"></textarea>');
+      if (editing && act.descricao) { descTa.value = act.descricao; }
+      var descField = UI.field({ label: 'Descrição (opcional)', control: descTa });
+
+      /* setor (raízes ativas; preserva o atual se inativo) */
+      var setorOpts = setoresRaiz().map(function (s) { return { value: s.sigla, label: s.sigla + ' · ' + s.nome }; });
+      if (editing && act.setorSigla && !setorOpts.some(function (o) { return o.value === act.setorSigla; })) {
+        setorOpts.unshift({ value: act.setorSigla, label: act.setorSigla + ' · ' + nomeSetor(act.setorSigla) + ' (inativo)' });
+      }
+      var setorSelect = UI.select({ value: editing ? act.setorSigla : '', placeholder: '— Escolha o setor —', options: setorOpts });
+      var setorField = UI.field({ label: 'Setor', required: true, control: setorSelect, hint: 'Área da escola dona desta rotina.' });
+
+      /* subsetor (depende do setor) */
+      var subSelect = null;
+      var subHolder = el('<div></div>');
+      function subOptsFor(sig) { return subsetoresDe(sig).filter(function (s) { return s.ativo; }).map(function (s) { return { value: s.sigla, label: s.sigla + ' · ' + s.nome }; }); }
+      function paintSub(sig, val) {
+        subHolder.innerHTML = '';
+        var opts = subOptsFor(sig);
+        if (val && !opts.some(function (o) { return o.value === val; })) {
+          var sObj = SETORES.filter(function (s) { return s.sigla === val; })[0];
+          if (sObj) { opts.unshift({ value: val, label: val + ' · ' + sObj.nome + (sObj.ativo ? '' : ' (inativo)') }); }
+        }
+        subSelect = UI.select({ value: val || '', placeholder: '— Nenhum (direto no setor) —', options: opts, disabled: !sig });
+        subHolder.appendChild(subSelect);
+      }
+      paintSub(editing ? act.setorSigla : '', editing ? (act.subsetorSigla || '') : '');
+      var subField = UI.field({ label: 'Subsetor (opcional)', control: subHolder, hint: 'Refina dentro do setor, quando fizer sentido.' });
+      setorSelect.addEventListener('change', function () { paintSub(setorSelect.value, ''); });
+
+      /* responsável (usuários ativos; fallback p/ auto-atribuição) */
+      var respOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
+      if (editing && act.responsavelUid && !respOpts.some(function (o) { return o.value === act.responsavelUid; })) {
+        respOpts.unshift({ value: act.responsavelUid, label: (act.responsavelNome || '(responsável atual)') });
+      }
+      if (!respOpts.length && CURRENT_USER.uid) { respOpts.push({ value: CURRENT_USER.uid, label: CURRENT_USER.name + ' (você)' }); }
+      function respNomeOf(uid) {
+        var u = USERS.filter(function (x) { return x.uid === uid; })[0]; if (u) { return u.nome; }
+        if (editing && act.responsavelUid === uid) { return act.responsavelNome || ''; }
+        if (CURRENT_USER.uid === uid) { return CURRENT_USER.name; }
+        var o = respOpts.filter(function (x) { return x.value === uid; })[0]; return o ? o.label.replace(' (você)', '') : '';
+      }
+      var respSelect = UI.select({ value: editing ? act.responsavelUid : (CURRENT_USER.uid || ''), placeholder: '— Escolha o responsável —', options: respOpts });
+      var respHint = USERS.length ? 'Quem responde por esta rotina.' : 'Lista de usuários indisponível (precisa de perfil Admin). Atribuída a você por padrão.';
+      var respField = UI.field({ label: 'Responsável', required: true, control: respSelect, hint: respHint });
+
+      /* recorrência + campos condicionais */
+      var recBox = el('<div class="at-recbox"></div>');
+
+      var diInp = el('<input type="date" class="at-date" value="' + (editing && act.dataInicio ? act.dataInicio : R.hojeISO()) + '">');
+      var dfInp = el('<input type="date" class="at-date" value="' + (editing && act.dataFim ? act.dataFim : '') + '">');
+      var grpRecDates = el('<div class="at-grp"></div>');
+      var rowDates = el('<div class="at-row2"></div>');
+      rowDates.appendChild(UI.field({ label: 'Início', required: true, control: diInp, hint: 'A partir de quando vale.' }));
+      rowDates.appendChild(UI.field({ label: 'Fim (opcional)', control: dfInp, hint: 'Em branco = sem término.' }));
+      grpRecDates.appendChild(rowDates);
+
+      var selDias = (editing && Array.isArray(act.diasSemana)) ? act.diasSemana.slice() : [];
+      var grpSemanal = el('<div class="at-grp"></div>');
+      grpSemanal.appendChild(txt('div', 'at-note', 'Dias da semana:'));
+      var wdays = el('<div class="at-wdays"></div>');
+      DOW.forEach(function (name, i) {
+        var b = el('<button type="button" class="at-wday' + (selDias.indexOf(i) !== -1 ? ' on' : '') + '"></button>'); b.textContent = name;
+        b.addEventListener('click', function () { var k = selDias.indexOf(i); if (k === -1) { selDias.push(i); b.classList.add('on'); } else { selDias.splice(k, 1); b.classList.remove('on'); } });
+        wdays.appendChild(b);
+      });
+      grpSemanal.appendChild(wdays);
+
+      var dmOpts = []; for (var dd = 1; dd <= 31; dd++) { dmOpts.push({ value: String(dd), label: 'Dia ' + dd }); }
+      var dmSelect = UI.select({ value: editing && act.diaMes ? String(act.diaMes) : '', placeholder: '— Escolha o dia —', options: dmOpts });
+      var grpMensal = el('<div class="at-grp"></div>');
+      grpMensal.appendChild(UI.field({ label: 'Dia do mês', required: true, control: dmSelect, hint: '29, 30 ou 31 caem no último dia nos meses mais curtos.' }));
+
+      var grpQuinz = el('<div class="at-grp"></div>');
+      grpQuinz.appendChild(txt('div', 'at-note', 'Quinzenal = dias fixos 1 e 15 de cada mês (entre Início e Fim).'));
+
+      var unicoNonOwner = editing && act.recorrencia === 'unico' && !canApproveDirect(act);
+      var unInp = el('<input type="date" class="at-date" value="' + (editing && act.data ? act.data : R.hojeISO()) + '">');
+      if (unicoNonOwner) { unInp.setAttribute('disabled', 'disabled'); }
+      var deslizState = editing ? !!act.deslizante : false;
+      var grpUnico = el('<div class="at-grp"></div>');
+      grpUnico.appendChild(UI.field({ label: 'Data', required: true, control: unInp, hint: unicoNonOwner ? 'Você não é o dono: mudar a data exige pedido (botão abaixo).' : 'Dia único desta tarefa.' }));
+      var deslizChk = UI.checkbox({ checked: deslizState, label: 'Deslizante (rola para Hoje até concluir)', onToggle: function (v) { deslizState = v; } });
+      grpUnico.appendChild(UI.field({ label: 'Comportamento', control: deslizChk, hint: 'Se marcado, enquanto não concluída a ocorrência aparece sempre em Hoje.' }));
+      if (unicoNonOwner) { grpUnico.appendChild(UI.button({ label: 'Solicitar nova data', variant: 'ghost', icon: 'calendar', onClick: function () { solicitarSerieModal(act); } })); }
+
+      recBox.appendChild(grpRecDates);
+      recBox.appendChild(grpSemanal);
+      recBox.appendChild(grpMensal);
+      recBox.appendChild(grpQuinz);
+      recBox.appendChild(grpUnico);
+
+      function show(node, on) { node.style.display = on ? '' : 'none'; }
+      function setRecVis(t) {
+        show(grpRecDates, t && t !== 'unico');
+        show(grpSemanal, t === 'semanal');
+        show(grpMensal, t === 'mensal');
+        show(grpQuinz, t === 'quinzenal');
+        show(grpUnico, t === 'unico');
+      }
+
+      var recSelect = UI.select({
+        value: editing ? act.recorrencia : '', placeholder: '— Selecione —',
+        options: [{ value: 'diario', label: 'Diária' }, { value: 'semanal', label: 'Semanal' }, { value: 'quinzenal', label: 'Quinzenal (dias 1 e 15)' }, { value: 'mensal', label: 'Mensal' }, { value: 'unico', label: 'Data única' }],
+        onChange: function (v) { setRecVis(v); }
+      });
+      var recField = UI.field({ label: 'Recorrência', required: true, control: recSelect });
+      setRecVis(editing ? act.recorrencia : '');
+
+      var hrInp = el('<input type="time" class="at-date" value="' + (editing && act.horario ? act.horario : '') + '">');
+      var hrField = UI.field({ label: 'Horário (opcional)', control: hrInp, hint: 'Horário sugerido no dia.' });
+
+      var banner = el('<div class="at-banner"></div>');
+      function showBanner(msg) { banner.textContent = msg; banner.classList.add('on'); }
+
+      var saveBtn = null;
+      var m = UI.modal({
+        title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
+        body: [titField, descField, setorField, subField, respField, recField, recBox, hrField, banner],
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
+          return [cancel, saveBtn];
+        }
+      });
+
+      function onSave() {
+        banner.classList.remove('on');
+        var tipo = recSelect.value;
+        var titulo = titInp.value.trim();
+        var setor = setorSelect.value;
+        var errs = [];
+        if (!titulo) { errs.push('Informe o título.'); }
+        if (!setor) { errs.push('Escolha o setor.'); }
+        if (!tipo) { errs.push('Escolha a recorrência.'); }
+        if (tipo === 'semanal' && !selDias.length) { errs.push('Marque ao menos um dia da semana.'); }
+        if (tipo === 'mensal' && !dmSelect.value) { errs.push('Escolha o dia do mês.'); }
+        if (tipo === 'unico' && !R.isISO(unInp.value)) { errs.push('Escolha a data única.'); }
+        if (tipo && tipo !== 'unico' && !R.isISO(diInp.value)) { errs.push('Escolha a data de início.'); }
+        if (errs.length) { showBanner(errs[0]); return; }
+
+        var respUid = respSelect.value || CURRENT_USER.uid || null;
+        var payload = {
+          titulo: titulo,
+          descricao: descTa.value.trim(),
+          setorSigla: setor,
+          subsetorSigla: (subSelect && subSelect.value) ? subSelect.value : null,
+          responsavelUid: respUid,
+          responsavelNome: respNomeOf(respUid),
+          recorrencia: tipo,
+          horario: hrInp.value || null,
+          diasSemana: tipo === 'semanal' ? selDias.slice().sort(function (a, b) { return a - b; }) : null,
+          diaMes: tipo === 'mensal' ? parseInt(dmSelect.value, 10) : null,
+          data: tipo === 'unico' ? unInp.value : null,
+          deslizante: tipo === 'unico' ? !!deslizState : null,
+          dataInicio: tipo !== 'unico' ? diInp.value : null,
+          dataFim: (tipo !== 'unico' && dfInp.value) ? dfInp.value : null
+        };
+
+        var verr = R.validar(payload);
+        if (verr.length) { showBanner('Revise: ' + verr[0]); return; }
+
+        if (saveBtn) { saveBtn.disabled = true; }
+
+        if (!editing) {
+          Store.criarAtividade(payload, CURRENT_USER.uid)
+            .then(function () { m.close(); toast('Atividade criada.'); refresh(); })
+            .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } showBanner(e.message); });
+          return;
+        }
+
+        /* edição: trava de data só p/ único de não-dono (input já vem desabilitado) */
+        if (act.recorrencia === 'unico' && !canApproveDirect(act)) { payload.data = act.data; payload.deslizante = act.deslizante != null ? act.deslizante : false; }
+
+        Store.atualizarAtividade(act.id, payload, { titulo: act.titulo, recorrencia: act.recorrencia })
+          .then(function () { m.close(); toast('Atividade atualizada.'); refresh(); })
+          .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } showBanner(e.message); });
+      }
+    }
+
+    /* ----- pedido de nova data para atividade ÚNICA (escopo série) ----- */
+    function solicitarSerieModal(act) {
+      var dInp = el('<input type="date" class="at-date" value="' + (act.data || R.hojeISO()) + '">');
+      var dField = UI.field({ label: 'Nova data', required: true, control: dInp, hint: 'Data atual: ' + fmtBR(act.data) + '.' });
+      var mTa = el('<textarea class="at-textarea" placeholder="Motivo do pedido"></textarea>');
+      var mField = UI.field({ label: 'Motivo', required: true, control: mTa });
+      var banner = el('<div class="at-banner"></div>');
+      var info = el('<div class="at-reqinfo">Você não é o dono desta atividade. Será criado um <b>pedido</b> de mudança de data para o dono (ou Admin) aprovar.</div>');
+      var saveBtn = null;
+      var mm = UI.modal({
+        title: 'Solicitar nova data', width: 460, body: [info, dField, mField, banner],
+        footer: function (close) { var c = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }); saveBtn = UI.button({ label: 'Enviar pedido', icon: 'repeat', onClick: go }); return [c, saveBtn]; }
+      });
+      function go() {
+        banner.classList.remove('on');
+        var nova = dInp.value;
+        if (!R.isISO(nova)) { banner.textContent = 'Escolha uma data válida.'; banner.classList.add('on'); return; }
+        if (nova === act.data) { banner.textContent = 'A nova data é igual à atual.'; banner.classList.add('on'); return; }
+        var motivo = mTa.value.trim();
+        if (motivo.length < 3) { banner.textContent = 'Descreva o motivo (mínimo 3 caracteres).'; banner.classList.add('on'); return; }
+        if (saveBtn) { saveBtn.disabled = true; }
+        Store.createSolicitacao({ atividadeId: act.id, escopo: 'serie', dataAtual: act.data, dataProposta: nova, motivo: motivo, solicitanteUid: CURRENT_USER.uid, solicitanteNome: CURRENT_USER.name, tituloAtividade: act.titulo, setorSigla: act.setorSigla, donoUid: act.criadoPor || null })
+          .then(function () { mm.close(); toast('Pedido enviado ao dono.'); })
+          .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } banner.textContent = e.message; banner.classList.add('on'); });
+      }
+    }
+
+    /* ===================== inativas (reativação) ===================== */
+    function openInativas() {
+      if (!CAN_WRITE) { return; }
+      var holder = el('<div class="at-inact"></div>'); holder.appendChild(txt('div', 'at-inempty', 'Carregando…'));
+      UI.modal({ title: 'Atividades inativas', width: 520, body: holder });
+      Store.listInativas().then(function (rows) {
+        holder.innerHTML = '';
+        if (!rows.length) { holder.appendChild(txt('div', 'at-inempty', 'Nenhuma atividade inativa.')); return; }
+        rows.forEach(function (a) {
+          var row = el('<div class="at-inrow"></div>');
+          row.appendChild(txt('span', 'at-inname', a.titulo + ' · ' + a.setorSigla));
+          row.appendChild(UI.button({
+            label: 'Reativar', variant: 'ghost', icon: 'repeat', onClick: function () {
+              Store.reativarAtividade(a.id).then(function () { if (row.parentNode) { row.parentNode.removeChild(row); } toast('Atividade reativada.'); refresh(); if (!holder.querySelector('.at-inrow')) { holder.appendChild(txt('div', 'at-inempty', 'Nenhuma atividade inativa.')); } }).catch(function (e) { toast(e.message, 'err'); });
+            }
+          }));
+          holder.appendChild(row);
+        });
+      }).catch(function (e) { holder.innerHTML = ''; holder.appendChild(txt('div', 'at-inempty', (e && e.message) || 'Falha ao carregar inativas.')); });
+    }
+
+    /* ===================== fila de pendentes (mudança de data) ===================== */
+    function openPendentes() {
+      if (!CAN_WRITE) { return; }
+      var items = pendentesAcionaveis();
+      var holder = el('<div class="at-pend"></div>');
+      UI.modal({ title: 'Pedidos de mudança de data', width: 520, body: holder });
+      function paint() {
+        holder.innerHTML = '';
+        var live = items.filter(function (s) { return s.status === 'pendente'; });
+        if (!live.length) { holder.appendChild(txt('div', 'at-pempty', 'Nenhum pedido pendente para você.')); return; }
+        live.forEach(function (s) { holder.appendChild(pendCard(s, paint)); });
+      }
+      paint();
+    }
+
+    function pendCard(s, after) {
+      var card = el('<div class="at-pcard"></div>');
+      card.appendChild(txt('div', 'at-pt', s.tituloAtividade || '(atividade)'));
+      card.appendChild(txt('div', 'at-pmeta', (s.escopo === 'serie' ? 'Série inteira (data da atividade única)' : 'Só esta ocorrência') + (s.motivo ? (' · Motivo: ' + s.motivo) : '')));
+      var dates = el('<div class="at-pdates"></div>'); dates.appendChild(txt('span', 'from', fmtBR(s.dataAtual))); dates.appendChild(ico(PATH.arrow, 15)); dates.appendChild(txt('span', 'to', fmtBR(s.dataProposta))); card.appendChild(dates);
+      card.appendChild(txt('div', 'at-pwho', 'Solicitado por ' + (s.solicitanteNome || '—')));
+      var act = el('<div class="at-pact"></div>');
+      act.appendChild(UI.button({ label: 'Rejeitar', variant: 'ghost', icon: 'x', onClick: function () { decidir(s, 'rejeitada', after); } }));
+      act.appendChild(UI.button({ label: 'Aprovar', icon: 'check', onClick: function () { decidir(s, 'aprovada', after); } }));
+      card.appendChild(act);
+      return card;
+    }
+
+    function decidir(s, decision, after) {
+      var apply = Promise.resolve();
+      if (decision === 'aprovada') {
+        var act = ATIV.filter(function (a) { return a.id === s.atividadeId; })[0];
+        if (s.escopo === 'esta') {
+          var target = act || { id: s.atividadeId, setorSigla: s.setorSigla || null, responsavelUid: null };
+          apply = Store.setOcorrencia(target, s.ocorrenciaData, { status: 'reprogramada', dataOverride: s.dataProposta }, 'reprogramar_ocorrencia');
+        } else {
+          apply = Store.atualizarAtividade(s.atividadeId, { data: s.dataProposta }, null);
+        }
+      }
+      apply.then(function () {
+        return Store.decidirSolicitacao(s.id, { status: decision, decididoPor: CURRENT_USER.uid, decididoEm: Date.now() });
+      }).then(function () {
+        s.status = decision;
+        toast(decision === 'aprovada' ? 'Pedido aprovado e data atualizada.' : 'Pedido rejeitado.');
+        if (after) { after(); }
+        refresh();
+      }).catch(function (e) { toast(e.message, 'err'); });
+    }
+
+    /* ===================== entrada (Guard) ===================== */
+    Guard.onReady(function (u) {
+      CURRENT_USER = u;                          /* identidade real (substitui o placeholder) */
+      CAN_WRITE = (u.profile === 'Admin' || u.profile === 'Editor');
+      IS_ADMIN  = (u.profile === 'Admin');
+      mount();
+    });
+  })();
+  </script>
+</body>
+</html>

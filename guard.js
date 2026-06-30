@@ -38,7 +38,7 @@
 
   /* destinos LIVE (telas que já existem no repo do Grau).
      Qualquer item da sidebar fora desta lista mostra "em breve". */
-  var LIVE = { 'Hoje': 'hoje.html', 'Performance': 'performance.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
+  var LIVE = { 'Hoje': 'hoje.html', 'Atividades': 'atividades.html', 'Performance': 'performance.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
 
   /* ---------- iniciais a partir do nome ---------- */
   function initialsOf(name) {
