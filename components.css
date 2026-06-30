@@ -115,3 +115,32 @@
 
 /* botão desabilitado (ex.: enquanto salva — evita duplo-clique) */
 .ui-btn:disabled,.ui-btn[disabled]{opacity:.55;cursor:not-allowed}
+
+/* ============================================================
+   GUARD / PORTÃO DE ACESSO  (v1 — append-only, guard.js)
+   ------------------------------------------------------------
+   Adicionado na sessão "Fase 1 — Login + Acesso + Navegação".
+   NÃO altera nenhuma linha acima. Classes namespaced .graut-*
+   (sem colisão com .ui-/.hj-/.st-/.pf-/.ix-). Cor 100% via token.
+   ============================================================ */
+.graut-gate{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:var(--bg);color:var(--text);font-family:'Sora','Segoe UI',system-ui,sans-serif}
+.graut-gate__box{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;max-width:340px}
+.graut-gate__spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--track);
+  border-top-color:var(--brand);animation:graut-spin .8s linear infinite}
+@keyframes graut-spin{to{transform:rotate(360deg)}}
+.graut-gate__title{font-size:17px;font-weight:800;letter-spacing:-.01em}
+.graut-gate__msg{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
+.graut-gate__btn{margin-top:4px;font:inherit;font-size:13.5px;font-weight:800;color:var(--ctaText);
+  background:var(--cta);border:0;border-radius:11px;padding:11px 18px;cursor:pointer}
+.graut-gate__btn:hover{filter:brightness(1.05)}
+
+.graut-toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,16px);z-index:10000;max-width:90vw;
+  font-family:'Sora','Segoe UI',system-ui,sans-serif;font-size:13.5px;font-weight:700;color:var(--text);
+  background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 16px;
+  box-shadow:var(--cardShadow);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+.graut-toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* foco visível dos itens da sidebar que o guard.js torna clicáveis */
+.ui-nav:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;border-radius:9px}
+.ui-usercard [role="button"]:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:7px}

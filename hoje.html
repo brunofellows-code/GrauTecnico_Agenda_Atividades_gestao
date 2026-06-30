@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
+<script src="guard.js"></script>
 
 <style>
 /* ===== layout da tela Hoje (cor 100% via var) ===== */
@@ -110,6 +111,14 @@
 </style>
 </head>
 <body>
+
+  <!-- portão de acesso (guard.js controla) -->
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
 
   <button class="hj-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
 
@@ -277,7 +286,13 @@
     d.atrasadas.forEach(function (a) { at.appendChild(lateRow(a)); });
   }
 
-  render(DATA);
+  Guard.onReady(function (USER) {
+    DATA.user = USER;                                  // identidade real (sidebar + avatar)
+    var fn = String(USER.name || '').trim().split(/\s+/)[0] || USER.name;
+    var g1 = document.querySelector('.hj-hi'); if (g1) { g1.textContent = 'Bom dia, ' + fn; }
+    var g2 = document.querySelector('.hj-mg'); if (g2) { g2.textContent = 'Bom dia, ' + fn; }
+    render(DATA);
+  });
   </script>
 </body>
 </html>

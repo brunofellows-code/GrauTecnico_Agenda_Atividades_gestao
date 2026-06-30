@@ -1,0 +1,84 @@
+rules_version = '2';
+
+// ============================================================
+// Sistema A · Grau Técnico FSA — Regras do Firestore (Fase 1)
+// ------------------------------------------------------------
+// Princípios:
+//  - NUNCA banco aberto: o match coringa final nega tudo.
+//  - RBAC pela coleção `usuarios` (docId = UID): { email, nome,
+//    perfil, ativo }. Perfis: Admin | Editor | Visualizador |
+//    Consultor Externo.
+//  - O guard.js precisa que CADA usuário leia o PRÓPRIO doc de
+//    usuarios para descobrir se está ativo — por isso a leitura
+//    do próprio doc é liberada por DONO (não exige `ativo`).
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+    function meRef() {
+      return /databases/$(database)/documents/usuarios/$(request.auth.uid);
+    }
+    function meExists() {
+      return signedIn() && exists(meRef());
+    }
+    function me() {
+      return get(meRef()).data;
+    }
+    function isActive() {
+      return meExists() && me().ativo == true;
+    }
+    function perfil() {
+      return me().perfil;
+    }
+    function isAdmin() {
+      return isActive() && perfil() == 'Admin';
+    }
+    // escrita "padrão" do sistema: Admin ou Editor
+    function canWrite() {
+      return isActive() && (perfil() == 'Admin' || perfil() == 'Editor');
+    }
+
+    // ---------- usuarios (RBAC) ----------
+    match /usuarios/{uid} {
+      // dono lê o próprio doc (necessário ao guard) ou Admin lê qualquer um
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      // só Admin cria/edita/remove usuários
+      allow write: if isAdmin();
+    }
+
+    // ---------- setores ----------
+    match /setores/{sigla} {
+      allow read: if isActive();      // qualquer ativo consulta
+      allow write: if isAdmin();      // só Admin cadastra/edita setores
+    }
+
+    // ---------- projetos ----------
+    match /projetos/{id} {
+      allow read: if isActive();
+      allow write: if canWrite();     // Admin/Editor
+    }
+
+    // ---------- atividades ----------
+    match /atividades/{id} {
+      allow read: if isActive();
+      allow write: if canWrite();     // Admin/Editor
+    }
+
+    // ---------- atividade_log (append-only) ----------
+    match /atividade_log/{id} {
+      allow read: if isActive();
+      allow create: if canWrite();    // só registra; nunca altera/apaga
+      allow update, delete: if false; // histórico imutável
+    }
+
+    // ---------- tudo o mais: NEGA ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

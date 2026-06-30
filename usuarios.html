@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usuários · Cadastro — Sistema A</title>
+
+<!-- provider + primitivos (mesma fundação das demais telas) -->
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+
+<style>
+/* ===== layout da tela Usuários (cor 100% via var) ===== */
+.us-app{display:flex;min-height:100vh;background:var(--bg)}
+.us-app>.ui-side{position:sticky;top:0;height:100vh}
+.us-main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+.us-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.us-hi{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.us-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.us-mhead{display:none;align-items:flex-start;justify-content:space-between;padding:14px 20px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.us-mg{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.us-md{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+
+.us-content{flex:1;padding:24px 32px 40px}
+
+/* toolbar */
+.us-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.us-count{font-size:12.5px;font-weight:600;color:var(--muted)}
+.us-count b{color:var(--text);font-weight:800}
+.us-toolright{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+
+/* lista */
+.us-list{display:flex;flex-direction:column;gap:10px}
+.us-row{display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--s1);border:1px solid var(--border);border-radius:13px}
+.us-row.inactive{opacity:.66}
+.us-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.us-nm{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.us-em{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.us-badge{font-size:11px;font-weight:800;letter-spacing:.03em;border-radius:7px;padding:4px 10px;flex:none;
+  background:var(--chipBg);color:var(--muted);border:1px solid var(--border)}
+.us-badge.adm{background:var(--activeBg);color:var(--greenText)}
+.us-tag{font-size:11px;font-weight:700;flex:none;display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.us-tag .dot{width:7px;height:7px;border-radius:50%;background:var(--muted2)}
+.us-tag.on{color:var(--greenText)}
+.us-tag.on .dot{background:var(--green)}
+.us-you{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2);border:1px dashed var(--border);border-radius:6px;padding:2px 7px;flex:none}
+.us-actions{display:flex;align-items:center;gap:6px;flex:none}
+.us-ibtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--border);
+  border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
+.us-ibtn:hover{background:var(--s3);color:var(--text)}
+.us-ibtn.danger:hover{color:var(--red);border-color:var(--red)}
+.us-ibtn.off{opacity:.4;cursor:not-allowed}
+
+/* skeleton / msg / sem-acesso */
+.us-skel{display:flex;flex-direction:column;gap:10px}
+.us-skrow{height:58px;border-radius:13px;border:1px solid var(--border);background:
+  linear-gradient(90deg,var(--s1) 0%,var(--s2) 50%,var(--s1) 100%);background-size:200% 100%;animation:ussk 1.2s ease-in-out infinite}
+@keyframes ussk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.us-msg{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:34px 30px;max-width:560px;text-align:center;margin:8px auto 0}
+.us-msg-ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:var(--chipBg);color:var(--muted)}
+.us-msg-ic.err{color:var(--red)}
+.us-msg-t{font-size:16px;font-weight:800}
+.us-msg-p{font-size:13px;font-weight:500;color:var(--muted);line-height:1.5;margin-top:7px}
+.us-msg-actions{display:flex;justify-content:center;margin-top:18px}
+
+/* toast */
+.us-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);z-index:80;
+  display:flex;align-items:center;gap:10px;max-width:90vw;padding:12px 16px;border-radius:11px;
+  background:var(--s2);border:1px solid var(--border);box-shadow:var(--cardShadow);
+  font-size:13px;font-weight:600;color:var(--text);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.us-toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.us-toast .bar{width:4px;align-self:stretch;border-radius:4px;background:var(--brand)}
+.us-toast.err .bar{background:var(--red)}
+
+/* toggle de tema temporário (até existir a tela Configurações) */
+.us-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;
+  font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
+.us-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
+
+.us-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
+
+@media (max-width:900px){
+  .us-app>.ui-side{display:none}
+  .us-top{display:none}
+  .us-mhead{display:flex}
+  .us-content{padding:16px 18px 40px}
+}
+</style>
+</head>
+<body>
+
+  <!-- portão de acesso (guard.js controla) -->
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <button class="us-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+
+  <div class="us-app" id="app">
+    <main class="us-main">
+
+      <div class="us-top">
+        <div style="line-height:1.2">
+          <div class="us-hi">Usuários</div>
+          <div class="us-dd">Quem acessa o sistema e com qual perfil · o login é criado no Console; aqui se define a permissão</div>
+        </div>
+      </div>
+
+      <div class="us-mhead">
+        <div>
+          <div class="us-mg">Usuários</div>
+          <div class="us-md">Acessos e perfis</div>
+        </div>
+        <span id="us-mav"></span>
+      </div>
+
+      <div class="us-content">
+        <div class="us-toolbar" id="us-toolbar" hidden>
+          <div class="us-count" id="us-count"></div>
+          <div class="us-toolright">
+            <span id="us-showinactive"></span>
+            <span id="us-newbtn"></span>
+          </div>
+        </div>
+        <div id="us-stage"></div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="us-toast" id="us-toast"><span class="bar"></span><span id="us-toast-msg"></span></div>
+
+  <script src="ui.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    /* Placeholder até a guarda entregar a identidade real (Guard.onReady). */
+    var CURRENT_USER = { uid: '', name: '', profile: 'Visualizador', initials: '' };
+    var CAN_VIEW = false; /* só Admin vê esta tela (recomputado no onReady) */
+
+    var PERFIS = ['Admin', 'Editor', 'Visualizador', 'Consultor Externo'];
+    var PERFIL_HINT = 'Admin: tudo. Editor: cria/edita atividades. Visualizador: só lê. Consultor Externo: acesso restrito.';
+    var RX_UID = /^[A-Za-z0-9_-]{6,128}$/;
+    var RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    /* =========================================================
+       CAMADA DE DADOS — Firestore (coleção 'usuarios', docId = UID).
+       Interface assíncrona: list/create/update/setAtivo.
+       O UID é sempre derivado do docId (d.id), então o doc de
+       bootstrap criado no Console — que pode não ter o campo 'uid' —
+       também é lido corretamente. Namespace exclusivo do Sistema A.
+       ========================================================= */
+    var Store = (function () {
+      var COL = 'usuarios';
+
+      var _fb = null;
+      function fb() {
+        if (!_fb) {
+          _fb = Promise.all([
+            import('./firebase.js'),
+            import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+          ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+        }
+        return _fb;
+      }
+      function ferr(e) {
+        var code = (e && e.code) || '';
+        if (code === 'permission-denied') {
+          return Object.assign(new Error('Sem permissão. Apenas o perfil Admin gerencia usuários, e as Regras do Firestore precisam estar publicadas.'), { field: 'geral' });
+        }
+        if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
+          return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });
+        }
+        return Object.assign(new Error((e && e.message) || 'Erro ao acessar o banco de usuários.'), { field: 'geral' });
+      }
+      function rowFrom(d) { return Object.assign({ uid: d.id }, d.data()); }
+      function readAll(ctx) {
+        var db = ctx.db, f = ctx.f;
+        return f.getDocs(f.collection(db, COL)).then(function (snap) {
+          var arr = []; snap.forEach(function (d) { arr.push(rowFrom(d)); }); return arr;
+        });
+      }
+      function vErr(msg, field) { return Object.assign(new Error(msg), { field: field }); }
+
+      var api = {
+        list: function () {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            var q = f.query(f.collection(db, COL), f.orderBy('nome'), f.limit(1000));
+            return f.getDocs(q).then(function (snap) {
+              var a = []; snap.forEach(function (d) { a.push(rowFrom(d)); });
+              a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+              return a;
+            }).catch(function (e) {
+              /* se algum doc não tiver 'nome', o orderBy do servidor pode falhar:
+                 cai para leitura sem ordenação e ordena no cliente. */
+              return f.getDocs(f.collection(db, COL)).then(function (snap) {
+                var a = []; snap.forEach(function (d) { a.push(rowFrom(d)); });
+                a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+                return a;
+              });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+        create: function (d) {
+          var uid = (d.uid || '').trim();
+          var email = (d.email || '').trim();
+          var nome = (d.nome || '').trim();
+          var perfil = d.perfil || '';
+          return fb().then(function (ctx) {
+            return readAll(ctx).then(function (arr) {
+              if (!RX_UID.test(uid)) { throw vErr('UID inválido. Cole o UID exatamente como aparece no Authentication.', 'uid'); }
+              if (arr.some(function (u) { return u.uid === uid; })) { throw vErr('Já existe um usuário com este UID.', 'uid'); }
+              if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
+              if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+              if (PERFIS.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
+              var now = Date.now();
+              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, ativo: true, criadoEm: now, atualizadoEm: now };
+              var db = ctx.db, f = ctx.f;
+              return f.setDoc(f.doc(db, COL, uid), novo).then(function () { return novo; });
+            });
+          }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
+        },
+        update: function (uid, patch) {
+          return fb().then(function (ctx) {
+            return readAll(ctx).then(function (arr) {
+              var cur = arr.filter(function (u) { return u.uid === uid; })[0];
+              if (!cur) { throw vErr('Usuário não encontrado.', 'geral'); }
+              var email = patch.email != null ? patch.email.trim() : cur.email;
+              var nome = patch.nome != null ? patch.nome.trim() : cur.nome;
+              var perfil = patch.perfil != null ? patch.perfil : cur.perfil;
+              var ativo = patch.ativo !== undefined ? !!patch.ativo : (cur.ativo !== false);
+              if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
+              if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+              if (PERFIS.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
+              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, ativo: ativo,
+                criadoEm: cur.criadoEm || Date.now(), atualizadoEm: Date.now() };
+              var db = ctx.db, f = ctx.f;
+              return f.setDoc(f.doc(db, COL, uid), updated).then(function () { return updated; });
+            });
+          }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
+        },
+        setAtivo: function (uid, ativo) { return api.update(uid, { ativo: !!ativo }); }
+      };
+      return api;
+    })();
+
+    /* ===================== util ===================== */
+    function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+    function ico(d, size) {
+      size = size || 16;
+      var s = document.createElement('span'); s.style.display = 'inline-flex';
+      s.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size +
+        '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+      return s.firstChild;
+    }
+    var PATH = {
+      pencil: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path>',
+      archive: '<rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path>',
+      restore: '<path d="M3 8V3h5"></path><path d="M3.5 8a9 9 0 1 0 2.2-2.9"></path>',
+      users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>',
+      lock: '<rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>',
+      alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>'
+    };
+    function initialsOf(name) {
+      var p = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!p.length) { return '?'; }
+      return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+    }
+
+    var ALL = [];
+    var showInactive = false;
+
+    var toolbar = document.getElementById('us-toolbar');
+    var stage = document.getElementById('us-stage');
+    var toastEl = document.getElementById('us-toast');
+    var toastMsg = document.getElementById('us-toast-msg');
+    var toastTimer = null;
+    function toast(msg, kind) {
+      toastMsg.textContent = msg;
+      toastEl.classList.toggle('err', kind === 'err');
+      toastEl.classList.add('on');
+      if (toastTimer) { clearTimeout(toastTimer); }
+      toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2800);
+    }
+    function setErr(fieldEl, msg) { if (!fieldEl) { return; } var e = fieldEl.querySelector('.ui-ferr'); if (e) { e.textContent = msg; e.classList.add('on'); } }
+    function clearErrs(scope) { Array.prototype.forEach.call(scope.querySelectorAll('.ui-ferr'), function (e) { e.classList.remove('on'); e.textContent = ''; }); }
+
+    /* ===================== montagem ===================== */
+    function mount() {
+      var app = document.getElementById('app');
+      var old = app.querySelector('.ui-side'); if (old) { old.parentNode.removeChild(old); }
+      app.insertBefore(UI.sidebar({ active: 'Usuários', user: CURRENT_USER }), app.firstChild);
+
+      var mav = document.getElementById('us-mav'); mav.innerHTML = '';
+      mav.appendChild(UI.avatar({ initials: CURRENT_USER.initials, size: 42 }));
+
+      if (!CAN_VIEW) { renderNoAccess(); return; }
+      load();
+    }
+
+    function load() {
+      toolbar.hidden = true;
+      renderLoading();
+      Store.list().then(function (rows) {
+        ALL = rows;
+        renderList();
+      }).catch(function (e) { renderError(e); });
+    }
+    function refresh() {
+      Store.list().then(function (rows) {
+        ALL = rows;
+        renderList();
+      }).catch(function (e) { renderError(e); });
+    }
+
+    function renderLoading() {
+      toolbar.hidden = true;
+      stage.innerHTML = '';
+      var sk = txt('div', 'us-skel');
+      for (var i = 0; i < 4; i++) { sk.appendChild(txt('div', 'us-skrow')); }
+      stage.appendChild(sk);
+    }
+    function renderError(e) {
+      toolbar.hidden = true;
+      stage.innerHTML = '';
+      var box = txt('div', 'us-msg');
+      var ic = txt('div', 'us-msg-ic err'); ic.appendChild(ico(PATH.alert, 22)); box.appendChild(ic);
+      box.appendChild(txt('div', 'us-msg-t', 'Não consegui carregar os usuários'));
+      box.appendChild(txt('div', 'us-msg-p', (e && e.message) || 'Erro desconhecido.'));
+      var act = txt('div', 'us-msg-actions');
+      act.appendChild(UI.button({ label: 'Tentar de novo', icon: 'repeat', onClick: load }));
+      box.appendChild(act);
+      stage.appendChild(box);
+    }
+    function renderNoAccess() {
+      toolbar.hidden = true;
+      stage.innerHTML = '';
+      var box = txt('div', 'us-msg');
+      var ic = txt('div', 'us-msg-ic'); ic.appendChild(ico(PATH.lock, 22)); box.appendChild(ic);
+      box.appendChild(txt('div', 'us-msg-t', 'Acesso restrito'));
+      box.appendChild(txt('div', 'us-msg-p', 'Apenas o perfil Admin pode gerenciar usuários. Se precisar de acesso, fale com um administrador.'));
+      stage.appendChild(box);
+    }
+
+    function badge(perfil) {
+      var b = txt('span', 'us-badge' + (perfil === 'Admin' ? ' adm' : ''), perfil || '—');
+      return b;
+    }
+    function statusTag(ativo) {
+      var t = txt('span', 'us-tag' + (ativo ? ' on' : ''));
+      t.appendChild(txt('span', 'dot'));
+      t.appendChild(txt('span', null, ativo ? 'Ativo' : 'Inativo'));
+      return t;
+    }
+    function row(u) {
+      var isSelf = u.uid === CURRENT_USER.uid;
+      var r = txt('div', 'us-row' + (u.ativo ? '' : ' inactive'));
+      r.appendChild(UI.avatar({ initials: initialsOf(u.nome), size: 38 }));
+
+      var meta = txt('div', 'us-meta');
+      meta.appendChild(txt('div', 'us-nm', u.nome || '(sem nome)'));
+      meta.appendChild(txt('div', 'us-em', u.email || ''));
+      r.appendChild(meta);
+
+      if (isSelf) { r.appendChild(txt('span', 'us-you', 'VOCÊ')); }
+      r.appendChild(badge(u.perfil));
+      r.appendChild(statusTag(u.ativo !== false));
+
+      var act = txt('div', 'us-actions');
+      var edit = txt('button', 'us-ibtn'); edit.title = 'Editar'; edit.appendChild(ico(PATH.pencil, 16));
+      edit.addEventListener('click', function () { openEditor(u.uid); });
+      act.appendChild(edit);
+
+      var tgl = txt('button', 'us-ibtn' + (u.ativo ? ' danger' : '') + (isSelf ? ' off' : ''));
+      tgl.title = isSelf ? 'Você não pode desativar o seu próprio acesso' : (u.ativo ? 'Desativar' : 'Reativar');
+      tgl.appendChild(ico(u.ativo ? PATH.archive : PATH.restore, 16));
+      tgl.addEventListener('click', function () { if (isSelf) { toast('Você não pode desativar o seu próprio acesso.', 'err'); return; } toggleAtivo(u); });
+      act.appendChild(tgl);
+
+      r.appendChild(act);
+      return r;
+    }
+
+    function renderList() {
+      var vis = showInactive ? ALL : ALL.filter(function (u) { return u.ativo !== false; });
+      var inativos = ALL.filter(function (u) { return u.ativo === false; }).length;
+
+      toolbar.hidden = false;
+      var count = document.getElementById('us-count');
+      count.innerHTML = '';
+      count.appendChild(txt('b', null, String(vis.length)));
+      count.appendChild(document.createTextNode(' ' + (vis.length === 1 ? 'usuário' : 'usuários') + (inativos ? ' · ' + inativos + ' inativo(s)' : '')));
+
+      var sw = document.getElementById('us-showinactive'); sw.innerHTML = '';
+      sw.appendChild(UI.checkbox({ checked: showInactive, label: 'Mostrar inativos', onToggle: function (v) { showInactive = v; renderList(); } }));
+
+      var nb = document.getElementById('us-newbtn'); nb.innerHTML = '';
+      nb.appendChild(UI.button({ label: 'Adicionar usuário', icon: 'plus', onClick: function () { openEditor(null); } }));
+
+      stage.innerHTML = '';
+      if (!vis.length) {
+        var box = txt('div', 'us-msg');
+        var ic = txt('div', 'us-msg-ic'); ic.appendChild(ico(PATH.users, 22)); box.appendChild(ic);
+        box.appendChild(txt('div', 'us-msg-t', 'Nenhum usuário para mostrar'));
+        box.appendChild(txt('div', 'us-msg-p', inativos ? 'Há usuários inativos. Marque "Mostrar inativos" para vê-los.' : 'Clique em "Adicionar usuário" para liberar o primeiro acesso.'));
+        stage.appendChild(box);
+        return;
+      }
+      var list = txt('div', 'us-list');
+      vis.forEach(function (u) { list.appendChild(row(u)); });
+      stage.appendChild(list);
+    }
+
+    function toggleAtivo(u) {
+      if (!CAN_VIEW) { return; }
+      Store.setAtivo(u.uid, !u.ativo).then(function () {
+        toast(u.ativo ? ('Acesso de "' + u.nome + '" desativado.') : ('Acesso de "' + u.nome + '" reativado.'));
+        refresh();
+      }).catch(function (e) { toast((e && e.message) || 'Erro ao alterar.', 'err'); });
+    }
+
+    /* ===================== editor (modal) ===================== */
+    function openEditor(uid) {
+      if (!CAN_VIEW) { return; }
+      var editing = !!uid;
+      var cur = editing ? ALL.filter(function (u) { return u.uid === uid; })[0] : null;
+      if (editing && !cur) { return; }
+      var isSelf = editing && cur.uid === CURRENT_USER.uid;
+
+      var uidInput = UI.input({ value: editing ? cur.uid : '', placeholder: 'Cole o UID do Authentication', disabled: editing });
+      var uidField = UI.field({ label: 'UID (Authentication)', required: !editing, control: uidInput,
+        hint: editing ? 'O UID identifica a conta e não muda.' : 'No Console → Authentication, copie o UID da conta já criada. É a chave que liga o login a este perfil.' });
+
+      var emailInput = UI.input({ value: editing ? cur.email : '', placeholder: 'pessoa@grautecnico.com.br' });
+      var emailField = UI.field({ label: 'E-mail', required: true, control: emailInput, hint: 'Use o mesmo e-mail da conta no Authentication.' });
+
+      var nomeInput = UI.input({ value: editing ? cur.nome : '', placeholder: 'Ex: Maria Silva' });
+      var nomeField = UI.field({ label: 'Nome', required: true, control: nomeInput });
+
+      var perfilOpts = PERFIS.map(function (p) { return { value: p, label: p }; });
+      var perfilSelect = UI.select({ value: editing ? cur.perfil : '', placeholder: '— Selecione o perfil —', options: perfilOpts, disabled: isSelf });
+      var perfilField = UI.field({ label: 'Perfil', required: true, control: perfilSelect,
+        hint: isSelf ? 'Você não pode alterar o seu próprio perfil.' : PERFIL_HINT });
+
+      var ativoState = editing ? (cur.ativo !== false) : true;
+      var ativoField = null;
+      if (editing && !isSelf) {
+        var chk = UI.checkbox({ checked: cur.ativo !== false, label: 'Usuário ativo', onToggle: function (v) { ativoState = v; } });
+        ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos não conseguem entrar; o registro é preservado.' });
+      }
+
+      var bodyFields = [uidField, nomeField, emailField, perfilField]; if (ativoField) { bodyFields.push(ativoField); }
+
+      var saveBtn = null;
+      var m = UI.modal({
+        title: editing ? ('Editar ' + (cur.nome || 'usuário')) : 'Adicionar usuário',
+        width: 480,
+        body: bodyFields,
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          saveBtn = UI.button({ label: editing ? 'Salvar' : 'Adicionar', icon: 'check', onClick: onSave });
+          return [cancel, saveBtn];
+        }
+      });
+
+      function submitOnEnter(e) { if (e.key === 'Enter') { e.preventDefault(); onSave(); } }
+      uidInput.addEventListener('keydown', submitOnEnter);
+      emailInput.addEventListener('keydown', submitOnEnter);
+      nomeInput.addEventListener('keydown', submitOnEnter);
+
+      function onSave() {
+        clearErrs(m.card);
+        var uidVal = editing ? cur.uid : uidInput.value.trim();
+        var email = emailInput.value.trim();
+        var nome = nomeInput.value.trim();
+        var perfil = isSelf ? cur.perfil : (perfilSelect.value || '');
+        var ok = true;
+        if (!editing && !RX_UID.test(uidVal)) { setErr(uidField, 'Cole um UID válido (sem espaços).'); ok = false; }
+        if (!RX_EMAIL.test(email)) { setErr(emailField, 'Informe um e-mail válido.'); ok = false; }
+        if (nome.length < 2) { setErr(nomeField, 'Informe um nome com 2+ caracteres.'); ok = false; }
+        if (PERFIS.indexOf(perfil) < 0) { setErr(perfilField, 'Selecione um perfil.'); ok = false; }
+        if (!ok) { return; }
+
+        if (saveBtn) { saveBtn.disabled = true; }
+        var op = editing
+          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, ativo: isSelf ? true : ativoState })
+          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil });
+
+        op.then(function () {
+          m.close();
+          toast(editing ? ('Usuário "' + nome + '" atualizado.') : ('Usuário "' + nome + '" adicionado.'));
+          refresh();
+        }).catch(function (e) {
+          if (saveBtn) { saveBtn.disabled = false; }
+          var f = e && e.field;
+          if (f === 'uid') { setErr(uidField, e.message); }
+          else if (f === 'email') { setErr(emailField, e.message); }
+          else if (f === 'nome') { setErr(nomeField, e.message); }
+          else if (f === 'perfil') { setErr(perfilField, e.message); }
+          else { toast((e && e.message) || 'Erro ao salvar.', 'err'); }
+        });
+      }
+    }
+
+    /* ===================== identidade real ===================== */
+    Guard.onReady(function (u) {
+      CURRENT_USER = u;
+      CAN_VIEW = CURRENT_USER.profile === 'Admin';
+      mount();
+    });
+  })();
+  </script>
+</body>
+</html>

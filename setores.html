@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="theme.css">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
+<script src="guard.js"></script>
 
 <style>
 /* ===== layout da tela Setores (cor 100% via var) ===== */
@@ -117,6 +118,14 @@
 </head>
 <body>
 
+  <!-- portão de acesso (guard.js controla) -->
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
   <button class="st-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
 
   <div class="st-app" id="app">
@@ -179,113 +188,132 @@
     ];
 
     /* =========================================================
-       CAMADA DE DADOS (pré-Firebase) — DECISÃO: persistência local
-       provisória (localStorage). Interface assíncrona idêntica à que
-       o Firestore vai implementar depois: list/create/update/setAtivo/
-       seedIniciais. Trocar só o corpo destes métodos mantém a tela
-       inalterada. Namespace exclusivo do Sistema A — nunca toca GMIX.
-       Regras de negócio (unicidade de sigla, profundidade de 1 nível,
+       CAMADA DE DADOS — Firestore (coleção 'setores', docId = sigla).
+       Interface assíncrona: list/create/update/setAtivo/seedIniciais.
+       As regras de negócio (unicidade de sigla, profundidade de 1 nível,
        bloqueio de órfão ativo, escrita protegida) ficam AQUI, não na UI.
+       Namespace exclusivo do Sistema A — nunca toca GMIX.
        ========================================================= */
     var Store = (function () {
-      var KEY = 'grautfsa.setores.v1';
-      var RX = /^[A-Z0-9]{2,6}$/;
+      var RX  = /^[A-Z0-9]{2,6}$/;
+      var COL = 'setores';
 
-      /* read(): [] = vazio de verdade · null = corrompido/indisponível (não sobrescreve) */
-      /* read(): [] = vazio · lança erro tipado por causa (indisponível × corrompido × formato) */
-      function read() {
-        var raw;
-        try { raw = localStorage.getItem(KEY); }
-        catch (e) { throw new Error('O armazenamento do navegador está indisponível (modo privado, bloqueio ou política). Recarregue ou tente outro navegador.'); }
-        if (raw == null) { return []; }
-        var v;
-        try { v = JSON.parse(raw); }
-        catch (e) { throw new Error('Os dados salvos estão corrompidos. Recarregue a página.'); }
-        if (!Array.isArray(v)) { throw new Error('Os dados salvos estão em formato inválido. Recarregue a página.'); }
-        return v;
+      /* Carrega o Firebase uma única vez (módulos cacheados pelo navegador).
+         Importa o db de firebase.js + as funções modulares do Firestore. */
+      var _fb = null;
+      function fb() {
+        if (!_fb) {
+          _fb = Promise.all([
+            import('./firebase.js'),
+            import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+          ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+        }
+        return _fb;
       }
-      function write(arr) {
-        try { localStorage.setItem(KEY, JSON.stringify(arr)); return true; }
-        catch (e) { return false; }
+
+      /* Traduz erro técnico do Firestore para linguagem leiga (mantém .field='geral'). */
+      function ferr(e) {
+        var code = (e && e.code) || '';
+        if (code === 'permission-denied') {
+          return Object.assign(new Error('Sem permissão para esta operação. Confirme que seu perfil é Admin e que as Regras do Firestore foram publicadas.'), { field: 'geral' });
+        }
+        if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
+          return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });
+        }
+        return Object.assign(new Error((e && e.message) || 'Erro ao acessar o banco de setores.'), { field: 'geral' });
       }
-      function done(v) { return new Promise(function (res) { setTimeout(function () { res(v); }, 160); }); }
-      function fail(msg, field) {
-        return new Promise(function (_, rej) {
-          setTimeout(function () { var e = new Error(msg); if (field) { e.field = field; } rej(e); }, 120);
+
+      /* Lê a coleção inteira de setores para validar integridade relacional
+         (pai existe / é raiz / está ativo; filhos ativos). É uma coleção
+         administrativa e pequena; a varredura client-side aqui é segura.
+         A disciplina where()/limit() vale para coleções grandes (atividades,
+         atividade_log), não para esta. */
+      function readAll(ctx) {
+        var db = ctx.db, f = ctx.f;
+        return f.getDocs(f.collection(db, COL)).then(function (snap) {
+          var arr = []; snap.forEach(function (d) { arr.push(d.data()); }); return arr;
         });
       }
-      var NOSAVE  = 'Não consegui salvar: o armazenamento do navegador está indisponível ou cheio.';
       function nextOrdem(arr) { var m = 0; arr.forEach(function (s) { if (s.ordem > m) { m = s.ordem; } }); return m + 1; }
+      function vErr(msg, field) { return Object.assign(new Error(msg), { field: field }); }
 
       var api = {
         list: function () {
-          var a;
-          try { a = read(); } catch (e) { return fail(e.message, 'geral'); }
-          a = a.slice();
-          a.sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0) || (x.sigla < y.sigla ? -1 : 1); });
-          return done(a);
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            /* leitura da tela: ordena no servidor + teto de segurança */
+            var q = f.query(f.collection(db, COL), f.orderBy('ordem'), f.limit(500));
+            return f.getDocs(q).then(function (snap) {
+              var a = []; snap.forEach(function (d) { a.push(d.data()); });
+              a.sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0) || (x.sigla < y.sigla ? -1 : 1); });
+              return a;
+            });
+          }).catch(function (e) { throw ferr(e); });
         },
         create: function (d) {
-          var arr;
-          try { arr = read(); } catch (e) { return fail(e.message, 'geral'); }
           var sigla = (d.sigla || '').toUpperCase();
-          var nome = (d.nome || '').trim();
-          var pai = d.setorPaiSigla || null;
-          if (!RX.test(sigla)) { return fail('Sigla inválida. Use de 2 a 6 letras ou números.', 'sigla'); }
-          if (arr.some(function (s) { return s.sigla === sigla; })) { return fail('A sigla "' + sigla + '" já está em uso.', 'sigla'); }
-          if (nome.length < 2) { return fail('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
-          if (pai) {
-            var p = arr.filter(function (s) { return s.sigla === pai; })[0];
-            if (!p) { return fail('Setor pai não encontrado.', 'pai'); }
-            if (p.setorPaiSigla) { return fail('O setor pai precisa ser um setor raiz (não um subsetor).', 'pai'); }
-            if (!p.ativo) { return fail('O setor pai "' + pai + '" está inativo. Reative-o antes de criar subsetores nele.', 'pai'); }
-          }
-          var now = Date.now();
-          var novo = { sigla: sigla, nome: nome, setorPaiSigla: pai, ativo: true, ordem: nextOrdem(arr), criadoEm: now, atualizadoEm: now };
-          arr.push(novo);
-          if (!write(arr)) { return fail(NOSAVE, 'geral'); }
-          return done(novo);
+          var nome  = (d.nome || '').trim();
+          var pai   = d.setorPaiSigla || null;
+          return fb().then(function (ctx) {
+            return readAll(ctx).then(function (arr) {
+              if (!RX.test(sigla)) { throw vErr('Sigla inválida. Use de 2 a 6 letras ou números.', 'sigla'); }
+              if (arr.some(function (s) { return s.sigla === sigla; })) { throw vErr('A sigla "' + sigla + '" já está em uso.', 'sigla'); }
+              if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+              if (pai) {
+                var p = arr.filter(function (s) { return s.sigla === pai; })[0];
+                if (!p) { throw vErr('Setor pai não encontrado.', 'pai'); }
+                if (p.setorPaiSigla) { throw vErr('O setor pai precisa ser um setor raiz (não um subsetor).', 'pai'); }
+                if (!p.ativo) { throw vErr('O setor pai "' + pai + '" está inativo. Reative-o antes de criar subsetores nele.', 'pai'); }
+              }
+              var now = Date.now();
+              var novo = { sigla: sigla, nome: nome, setorPaiSigla: pai, ativo: true, ordem: nextOrdem(arr), criadoEm: now, atualizadoEm: now };
+              var db = ctx.db, f = ctx.f;
+              return f.setDoc(f.doc(db, COL, sigla), novo).then(function () { return novo; });
+            });
+          }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         },
         update: function (sigla, patch) {
-          var arr;
-          try { arr = read(); } catch (e) { return fail(e.message, 'geral'); }
-          var i = -1; arr.forEach(function (s, idx) { if (s.sigla === sigla) { i = idx; } });
-          if (i < 0) { return fail('Setor não encontrado.', 'geral'); }
-          var cur = arr[i];
-          var nome = patch.nome != null ? patch.nome.trim() : cur.nome;
-          if (nome.length < 2) { return fail('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
-          var pai = patch.setorPaiSigla !== undefined ? (patch.setorPaiSigla || null) : (cur.setorPaiSigla || null);
-          var ativo = patch.ativo !== undefined ? !!patch.ativo : cur.ativo;
-          var hasKids = arr.some(function (s) { return s.setorPaiSigla === sigla; });
-          if (pai) {
-            if (pai === sigla) { return fail('Um setor não pode ser pai de si mesmo.', 'pai'); }
-            if (hasKids) { return fail('Este setor tem subsetores, então só pode ser um setor raiz.', 'pai'); }
-            var p = arr.filter(function (s) { return s.sigla === pai; })[0];
-            if (!p) { return fail('Setor pai não encontrado.', 'pai'); }
-            if (p.setorPaiSigla) { return fail('O setor pai precisa ser um setor raiz (não um subsetor).', 'pai'); }
-            /* pai inativo só barra se o filho ficar ATIVO (filho inativo sob pai inativo é consistente) */
-            if (!p.ativo && ativo) { return fail('O setor pai "' + pai + '" está inativo. Reative-o antes, ou deixe este setor inativo também.', 'pai'); }
-          }
-          /* inativar pai com subsetores ativos → bloqueia */
-          if (cur.ativo && !ativo) {
-            var ativosFilhos = arr.filter(function (s) { return s.setorPaiSigla === sigla && s.ativo; }).map(function (s) { return s.sigla; });
-            if (ativosFilhos.length) { return fail('Não dá para inativar "' + sigla + '": há subsetores ativos (' + ativosFilhos.join(', ') + '). Inative ou mova antes.', 'ativo'); }
-          }
-          arr[i] = { sigla: cur.sigla, nome: nome, setorPaiSigla: pai, ativo: ativo, ordem: cur.ordem, criadoEm: cur.criadoEm, atualizadoEm: Date.now() };
-          if (!write(arr)) { return fail(NOSAVE, 'geral'); }
-          return done(arr[i]);
+          return fb().then(function (ctx) {
+            return readAll(ctx).then(function (arr) {
+              var cur = arr.filter(function (s) { return s.sigla === sigla; })[0];
+              if (!cur) { throw vErr('Setor não encontrado.', 'geral'); }
+              var nome  = patch.nome != null ? patch.nome.trim() : cur.nome;
+              if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+              var pai   = patch.setorPaiSigla !== undefined ? (patch.setorPaiSigla || null) : (cur.setorPaiSigla || null);
+              var ativo = patch.ativo !== undefined ? !!patch.ativo : cur.ativo;
+              var hasKids = arr.some(function (s) { return s.setorPaiSigla === sigla; });
+              if (pai) {
+                if (pai === sigla) { throw vErr('Um setor não pode ser pai de si mesmo.', 'pai'); }
+                if (hasKids) { throw vErr('Este setor tem subsetores, então só pode ser um setor raiz.', 'pai'); }
+                var p = arr.filter(function (s) { return s.sigla === pai; })[0];
+                if (!p) { throw vErr('Setor pai não encontrado.', 'pai'); }
+                if (p.setorPaiSigla) { throw vErr('O setor pai precisa ser um setor raiz (não um subsetor).', 'pai'); }
+                if (!p.ativo && ativo) { throw vErr('O setor pai "' + pai + '" está inativo. Reative-o antes, ou deixe este setor inativo também.', 'pai'); }
+              }
+              if (cur.ativo && !ativo) {
+                var ativosFilhos = arr.filter(function (s) { return s.setorPaiSigla === sigla && s.ativo; }).map(function (s) { return s.sigla; });
+                if (ativosFilhos.length) { throw vErr('Não dá para inativar "' + sigla + '": há subsetores ativos (' + ativosFilhos.join(', ') + '). Inative ou mova antes.', 'ativo'); }
+              }
+              var updated = { sigla: cur.sigla, nome: nome, setorPaiSigla: pai, ativo: ativo, ordem: cur.ordem, criadoEm: cur.criadoEm, atualizadoEm: Date.now() };
+              var db = ctx.db, f = ctx.f;
+              return f.setDoc(f.doc(db, COL, sigla), updated).then(function () { return updated; });
+            });
+          }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         },
         setAtivo: function (sigla, ativo) { return api.update(sigla, { ativo: !!ativo }); },
         seedIniciais: function () {
-          var arr;
-          try { arr = read(); } catch (e) { return fail(e.message, 'geral'); }
-          if (arr.length) { return done(arr); } /* idempotente: só roda com coleção vazia */
-          var now = Date.now();
-          var seeded = SETORES_INICIAIS.map(function (s, idx) {
-            return { sigla: s.sigla, nome: s.nome, setorPaiSigla: null, ativo: true, ordem: idx + 1, criadoEm: now, atualizadoEm: now };
-          });
-          if (!write(seeded)) { return fail(NOSAVE, 'geral'); }
-          return done(seeded.slice());
+          return fb().then(function (ctx) {
+            return readAll(ctx).then(function (arr) {
+              if (arr.length) { return arr; } /* idempotente: só roda com a coleção vazia */
+              var now = Date.now();
+              var db = ctx.db, f = ctx.f;
+              var seeded = SETORES_INICIAIS.map(function (s, idx) {
+                return { sigla: s.sigla, nome: s.nome, setorPaiSigla: null, ativo: true, ordem: idx + 1, criadoEm: now, atualizadoEm: now };
+              });
+              return Promise.all(seeded.map(function (s) { return f.setDoc(f.doc(db, COL, s.sigla), s); }))
+                .then(function () { return seeded.slice(); });
+            });
+          }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         }
       };
       return api;
@@ -609,15 +637,16 @@
       }
     }
 
-    /* multi-aba: outra aba alterou os setores → re-sincroniza (não mexe num modal aberto) */
-    window.addEventListener('storage', function (e) {
-      if (e.key === 'grautfsa.setores.v1' && CAN_VIEW && !document.querySelector('.ui-moverlay')) {
-        refresh();
-        toast('Outra aba alterou os setores — lista atualizada.');
-      }
-    });
+    /* Sincronização entre abas em tempo real (Firestore onSnapshot) fica como
+       melhoria futura. Hoje a lista re-sincroniza após cada operação e ao
+       recarregar a página — suficiente para o uso administrativo (1 admin). */
 
-    mount();
+    Guard.onReady(function (u) {
+      CURRENT_USER = u;                                   // identidade real (substitui o placeholder)
+      CAN_WRITE = CURRENT_USER.profile === 'Admin';
+      CAN_VIEW  = CURRENT_USER.profile !== 'Consultor Externo';
+      mount();
+    });
   })();
   </script>
 </body>
