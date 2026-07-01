@@ -1115,12 +1115,15 @@
       var wrap = el('<div class="at-list"></div>');
       groups.forEach(function (g) {
         var late = 0; g.items.forEach(function (o) { if (o.atrasada) { late++; } });
-        var c = corSetor(g.act.setorSigla);
         var open = !!openSeries[g.id];
         var sec = el('<div class="at-sgroup' + (open ? ' open' : '') + '"></div>');
         var hd = el('<button type="button" class="at-shd"></button>');
         var car = el('<span class="at-scaret"></span>'); car.appendChild(ico('<path d="M6 9l6 6 6-6"></path>', 16)); hd.appendChild(car);
-        var sg = txt('span', 'at-tag', g.act.setorSigla || '—'); sg.style.color = 'var(--' + c + ')'; sg.style.background = 'var(--' + c + 'Bg)'; hd.appendChild(sg);
+        if (g.act.todosSetores) {
+          var atag = txt('span', 'at-tag', 'Todos'); atag.style.color = 'var(--muted)'; atag.style.background = 'var(--chipBg)'; hd.appendChild(atag);
+        } else {
+          setoresDe(g.act).forEach(function (sg2) { var t2 = txt('span', 'at-tag', sg2); var c2 = corSetor(sg2); t2.style.color = 'var(--' + c2 + ')'; t2.style.background = 'var(--' + c2 + 'Bg)'; hd.appendChild(t2); });
+        }
         hd.appendChild(txt('span', 'at-stitle', g.act.titulo));
         var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[g.act.recorrencia] || g.act.recorrencia)); hd.appendChild(rec);
         hd.appendChild(el('<span class="at-gline"></span>'));
