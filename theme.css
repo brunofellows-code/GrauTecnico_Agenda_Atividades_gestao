@@ -56,6 +56,16 @@
 
   /* elevação de card */
   --cardShadow: 0 16px 50px rgba(2,6,23,.35);
+
+  /* paleta de setor — categórica, fora do semáforo (fg + fundo translúcido) */
+  --setor1:#A78BFA; --setor1Bg:rgba(167,139,250,.16); /* violeta  */
+  --setor2:#60A5FA; --setor2Bg:rgba(96,165,250,.16);  /* azul     */
+  --setor3:#22D3EE; --setor3Bg:rgba(34,211,238,.16);  /* ciano    */
+  --setor4:#94A3B8; --setor4Bg:rgba(148,163,184,.16); /* ardósia  */
+  --setor5:#F472B6; --setor5Bg:rgba(244,114,182,.16); /* magenta  */
+  --setor6:#818CF8; --setor6Bg:rgba(129,140,248,.16); /* índigo   */
+  --setor7:#D6A85B; --setor7Bg:rgba(214,168,91,.16);  /* bronze   */
+  --setor8:#5EEAD4; --setor8Bg:rgba(94,234,212,.16);  /* turquesa */
 }
 
 /* ---------- TEMA CLARO ---------- */
@@ -101,6 +111,16 @@
 
   /* elevação de card */
   --cardShadow: 0 16px 50px rgba(2,6,23,.14);
+
+  /* paleta de setor — categórica, fora do semáforo (fg + fundo translúcido) */
+  --setor1:#7C3AED; --setor1Bg:rgba(124,58,237,.10); /* violeta  */
+  --setor2:#2563EB; --setor2Bg:rgba(37,99,235,.10);  /* azul     */
+  --setor3:#0891B2; --setor3Bg:rgba(8,145,178,.10);  /* ciano    */
+  --setor4:#475569; --setor4Bg:rgba(71,85,105,.10);  /* ardósia  */
+  --setor5:#DB2777; --setor5Bg:rgba(219,39,119,.10); /* magenta  */
+  --setor6:#4F46E5; --setor6Bg:rgba(79,70,229,.10);  /* índigo   */
+  --setor7:#92600E; --setor7Bg:rgba(146,96,14,.10);  /* bronze   */
+  --setor8:#0F766E; --setor8Bg:rgba(15,118,110,.10); /* turquesa */
 }
 
 /* ---------- base mínima (herdada por todas as telas) ---------- */

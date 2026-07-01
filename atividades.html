@@ -91,6 +91,16 @@
 .at-tag{font-size:10.5px;font-weight:800;letter-spacing:.05em;color:var(--greenText);background:var(--activeBg);
   border:1px solid var(--border);border-radius:6px;padding:2px 7px}
 .at-tag.sub{color:var(--muted);background:var(--chipBg)}
+.at-sgroup{border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--s1)}
+.at-shd{display:flex;align-items:center;gap:9px;width:100%;padding:12px 14px;background:transparent;border:0;cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.at-shd:hover{background:var(--s2)}
+.at-scaret{display:inline-flex;color:var(--muted);transition:transform .15s}
+.at-sgroup.open .at-scaret{transform:rotate(180deg)}
+.at-stitle{font-weight:700;font-size:14px;color:var(--text)}
+.at-sbody{padding:2px 14px 12px 14px;display:flex;flex-direction:column;gap:8px}
+.at-multibox{display:flex;flex-direction:column;gap:10px}
+.at-extrasec{display:flex;flex-wrap:wrap;gap:8px 18px;padding-left:2px}
+.at-hint2{font-size:12px;color:var(--muted)}
 .at-mi{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted)}
 .at-mi svg{color:var(--muted2)}
 .at-recpill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--muted);
@@ -566,7 +576,8 @@
 
     var selSetor = '';     /* '' = todos os setores */
     var periodo = 'band';
-    var view = 'lista';    /* 'lista' | 'kanban' */
+    var view = 'setor';    /* 'setor' | 'lista' | 'serie' | 'kanban' | 'quadro' */
+    var openSeries = {};   /* séries expandidas na visão colapsada */
     var search = '';
     var searchTimer = null;
 
@@ -688,6 +699,22 @@
     function setoresRaiz() { return SETORES.filter(function (s) { return !s.setorPaiSigla && s.ativo; }); }
     function subsetoresDe(sig) { return SETORES.filter(function (s) { return s.setorPaiSigla === sig; }); }
     function nomeSetor(sig) { var s = SETORES.filter(function (x) { return x.sigla === sig; })[0]; return s ? s.nome : sig; }
+    /* cor efetiva do setor por sigla: cor salva → subsetor herda do pai → fallback por ordem */
+    function corSetor(sig) {
+      var s = SETORES.filter(function (x) { return x.sigla === sig; })[0];
+      if (!s) { return 'setor1'; }
+      if (/^setor[1-8]$/.test(s.cor)) { return s.cor; }
+      if (s.setorPaiSigla) { return corSetor(s.setorPaiSigla); }
+      var o = s.ordem || 1; return 'setor' + (((o - 1) % 8) + 1);
+    }
+    /* multi-homing: siglas em que a atividade aparece (todos → todas as raízes ativas; senão array; senão o setor principal legado) */
+    function setoresRaizAtivasSiglas() { return setoresRaiz().map(function (s) { return s.sigla; }); }
+    function setoresDe(act) {
+      if (act && act.todosSetores) { return setoresRaizAtivasSiglas(); }
+      if (act && Array.isArray(act.setorSiglas) && act.setorSiglas.length) { return act.setorSiglas.slice(); }
+      return (act && act.setorSigla) ? [act.setorSigla] : [];
+    }
+    function uniqSig(a) { var seen = {}, out = []; a.forEach(function (x) { if (x && !seen[x]) { seen[x] = 1; out.push(x); } }); return out; }
 
     function renderToolbar() {
       toolbarEl.innerHTML = '';
@@ -745,11 +772,17 @@
 
       /* toggle de visão */
       var vt = el('<div class="at-vtoggle" role="group" aria-label="Visão"></div>');
-      var bl = el('<button type="button"' + (view === 'lista' ? ' class="on"' : '') + '></button>'); bl.appendChild(UI.icon('bars', 15)); bl.appendChild(el('<span>Lista</span>'));
-      bl.addEventListener('click', function () { if (view === 'lista') { return; } view = 'lista'; renderToolbar(); renderBoard(); });
-      var bk = el('<button type="button"' + (view === 'kanban' ? ' class="on"' : '') + '></button>'); bk.appendChild(UI.icon('grid', 15)); bk.appendChild(el('<span>Kanban</span>'));
-      bk.addEventListener('click', function () { if (view === 'kanban') { return; } view = 'kanban'; renderToolbar(); renderBoard(); });
-      vt.appendChild(bl); vt.appendChild(bk);
+      function vbtn(id, label, iconNode) {
+        var b = el('<button type="button"' + (view === id ? ' class="on"' : '') + '></button>');
+        b.appendChild(iconNode); b.appendChild(el('<span>' + label + '</span>'));
+        b.addEventListener('click', function () { if (view === id) { return; } view = id; renderToolbar(); renderBoard(); });
+        return b;
+      }
+      vt.appendChild(vbtn('setor', 'Setor', ico('<path d="M12 2 21 7l-9 5-9-5 9-5zM3 12l9 5 9-5"></path>', 15)));
+      vt.appendChild(vbtn('lista', 'Lista', UI.icon('bars', 15)));
+      vt.appendChild(vbtn('serie', 'Série', ico('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>', 15)));
+      vt.appendChild(vbtn('kanban', 'Kanban', UI.icon('grid', 15)));
+      vt.appendChild(vbtn('quadro', 'Quadro', ico('<path d="M4 4h6v16H4zM14 4h6v16h-6z"></path>', 15)));
       right.appendChild(vt);
 
       /* nova atividade */
@@ -785,7 +818,7 @@
       var out = [];
 
       ATIV.forEach(function (act) {
-        if (selSetor && act.setorSigla !== selSetor) { return; }
+        if (selSetor && !act.todosSetores && setoresDe(act).indexOf(selSetor) === -1) { return; }
         var ovs = OCC_BY_ATIV[act.id] || [];
         var occs = R.ocorrenciasNaJanela(act, w.jIni, w.jFim, ovs, hoje);
         occs.forEach(function (oc) {
@@ -809,7 +842,7 @@
 
       if (term) {
         out = out.filter(function (o) {
-          var hay = (o.titulo || '') + ' ' + (o.act.responsavelNome || '') + ' ' + (o.act.setorSigla || '') + ' ' + (o.act.subsetorSigla || '');
+          var hay = (o.titulo || '') + ' ' + (o.act.responsavelNome || '') + ' ' + setoresDe(o.act).join(' ') + ' ' + (o.act.subsetorSigla || '') + (o.act.todosSetores ? ' todos' : '');
           return hay.toLowerCase().indexOf(term) !== -1;
         });
       }
@@ -840,14 +873,22 @@
         stage.appendChild(box);
         return;
       }
-      if (view === 'kanban') { renderKanban(); } else { renderList(); }
+      if (view === 'kanban') { renderKanban(); }
+      else if (view === 'setor') { renderPorSetor(); }
+      else if (view === 'quadro') { renderQuadroSetor(); }
+      else if (view === 'serie') { renderColapsadoSerie(); }
+      else { renderList(); }
       if (capped) { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
     }
 
     /* ----- meta comum dos cartões ----- */
     function metaChips(o, into) {
-      into.appendChild(txt('span', 'at-tag', o.act.setorSigla));
-      if (o.act.subsetorSigla) { into.appendChild(txt('span', 'at-tag sub', o.act.subsetorSigla)); }
+      if (o.act.todosSetores) {
+        var alltag = txt('span', 'at-tag', 'Todos os setores'); alltag.style.color = 'var(--muted)'; alltag.style.background = 'var(--chipBg)'; into.appendChild(alltag);
+      } else {
+        setoresDe(o.act).forEach(function (sg) { var st = txt('span', 'at-tag', sg); var sc = corSetor(sg); st.style.color = 'var(--' + sc + ')'; st.style.background = 'var(--' + sc + 'Bg)'; into.appendChild(st); });
+      }
+      if (o.act.subsetorSigla) { var subt = txt('span', 'at-tag sub', o.act.subsetorSigla); var cc = corSetor(o.act.subsetorSigla); subt.style.color = 'var(--' + cc + ')'; subt.style.background = 'var(--' + cc + 'Bg)'; into.appendChild(subt); }
       var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
       if (o.horario) { var hr = el('<span class="at-mi"></span>'); hr.appendChild(ico(PATH.clock, 12)); hr.appendChild(document.createTextNode(o.horario)); into.appendChild(hr); }
       if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
@@ -989,6 +1030,112 @@
       }
       card.appendChild(foot);
       return card;
+    }
+
+    /* ===================== AGRUPADO POR SETOR ===================== */
+    function byGrupoSetorOrdem(a, b) {
+      var sa = SETORES.filter(function (s) { return s.sigla === a.sig; })[0];
+      var sb = SETORES.filter(function (s) { return s.sigla === b.sig; })[0];
+      var oa = sa ? (sa.ordem || 999) : 999, ob = sb ? (sb.ordem || 999) : 999;
+      return oa - ob || (a.sig < b.sig ? -1 : 1);
+    }
+    function groupBySetor() {
+      var groups = [], idx = {};
+      BOARD.forEach(function (o) {
+        var sigs = setoresDe(o.act); if (!sigs.length) { sigs = ['—']; }
+        sigs.forEach(function (k) {
+          if (!(k in idx)) { idx[k] = groups.length; groups.push({ sig: k, items: [] }); }
+          groups[idx[k]].items.push(o);
+        });
+      });
+      groups.sort(byGrupoSetorOrdem);
+      return groups;
+    }
+    function renderPorSetor() {
+      var wrap = el('<div class="at-list"></div>');
+      groupBySetor().forEach(function (g) {
+        var late = 0; g.items.forEach(function (o) { if (o.atrasada) { late++; } });
+        var c = corSetor(g.sig);
+        var sec = el('<div class="at-group"></div>');
+        var hd = el('<div class="at-grouphd"></div>');
+        var sg = txt('span', 'at-tag', g.sig); sg.style.color = 'var(--' + c + ')'; sg.style.background = 'var(--' + c + 'Bg)'; hd.appendChild(sg);
+        hd.appendChild(txt('span', 'at-gname', nomeSetor(g.sig)));
+        hd.appendChild(el('<span class="at-gline"></span>'));
+        if (late) { hd.appendChild(txt('span', 'at-latebadge', late + ' atrasada(s)')); }
+        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' item(s)'));
+        sec.appendChild(hd);
+        g.items.forEach(function (o) { sec.appendChild(listCard(o)); });
+        wrap.appendChild(sec);
+      });
+      stage.appendChild(wrap);
+    }
+
+    /* ===================== QUADRO POR SETOR ===================== */
+    function renderQuadroSetor() {
+      var cols = [], idx = {};
+      BOARD.forEach(function (o) {
+        if (o.status === 'pulada') { return; }
+        var sigs = setoresDe(o.act); if (!sigs.length) { sigs = ['—']; }
+        sigs.forEach(function (k) {
+          if (!(k in idx)) { idx[k] = cols.length; cols.push({ sig: k, items: [] }); }
+          cols[idx[k]].items.push(o);
+        });
+      });
+      cols.sort(byGrupoSetorOrdem);
+      var grid = el('<div class="at-kanban"></div>');
+      cols.forEach(function (col) {
+        var c = corSetor(col.sig);
+        col.items.sort(function (a, b) { if (a.atrasada !== b.atrasada) { return a.atrasada ? -1 : 1; } return a.effDate < b.effDate ? -1 : 1; });
+        var box = el('<div class="at-col"></div>');
+        var hd = el('<div class="at-colhd"></div>');
+        var t = el('<div class="at-coltitle"></div>');
+        var dot = el('<span class="dot"></span>'); dot.style.background = 'var(--' + c + ')'; t.appendChild(dot);
+        t.appendChild(document.createTextNode(col.sig + ' · ' + nomeSetor(col.sig)));
+        hd.appendChild(t);
+        hd.appendChild(txt('span', 'at-colcount', String(col.items.length)));
+        box.appendChild(hd);
+        var body = el('<div class="at-colbody"></div>');
+        if (!col.items.length) { body.appendChild(txt('div', 'at-colempty', 'Nada aqui.')); }
+        else { col.items.forEach(function (o) { body.appendChild(kanbanCard(o)); }); }
+        box.appendChild(body);
+        grid.appendChild(box);
+      });
+      stage.appendChild(grid);
+    }
+
+    /* ===================== COLAPSADO POR SÉRIE ===================== */
+    function renderColapsadoSerie() {
+      var groups = [], idx = {};
+      BOARD.forEach(function (o) {
+        var k = o.act.id;
+        if (!(k in idx)) { idx[k] = groups.length; groups.push({ id: k, act: o.act, items: [] }); }
+        groups[idx[k]].items.push(o);
+      });
+      groups.sort(function (a, b) { return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
+      var wrap = el('<div class="at-list"></div>');
+      groups.forEach(function (g) {
+        var late = 0; g.items.forEach(function (o) { if (o.atrasada) { late++; } });
+        var c = corSetor(g.act.setorSigla);
+        var open = !!openSeries[g.id];
+        var sec = el('<div class="at-sgroup' + (open ? ' open' : '') + '"></div>');
+        var hd = el('<button type="button" class="at-shd"></button>');
+        var car = el('<span class="at-scaret"></span>'); car.appendChild(ico('<path d="M6 9l6 6 6-6"></path>', 16)); hd.appendChild(car);
+        var sg = txt('span', 'at-tag', g.act.setorSigla || '—'); sg.style.color = 'var(--' + c + ')'; sg.style.background = 'var(--' + c + 'Bg)'; hd.appendChild(sg);
+        hd.appendChild(txt('span', 'at-stitle', g.act.titulo));
+        var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[g.act.recorrencia] || g.act.recorrencia)); hd.appendChild(rec);
+        hd.appendChild(el('<span class="at-gline"></span>'));
+        if (late) { hd.appendChild(txt('span', 'at-latebadge', late + ' atras.')); }
+        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' ocor.'));
+        hd.addEventListener('click', function () { openSeries[g.id] = !openSeries[g.id]; renderBoard(); });
+        sec.appendChild(hd);
+        if (open) {
+          var body = el('<div class="at-sbody"></div>');
+          g.items.forEach(function (o) { body.appendChild(listCard(o)); });
+          sec.appendChild(body);
+        }
+        wrap.appendChild(sec);
+      });
+      stage.appendChild(wrap);
     }
 
     /* ===================== mutações de ocorrência ===================== */
@@ -1187,6 +1334,28 @@
       var subField = UI.field({ label: 'Subsetor (opcional)', control: subHolder, hint: 'Refina dentro do setor, quando fizer sentido.' });
       setorSelect.addEventListener('change', function () { paintSub(setorSelect.value, ''); });
 
+      /* multi-setor (multi-homing) — aditivo: além do setor principal acima */
+      var todosState = editing ? !!act.todosSetores : false;
+      var extraState = {};
+      if (editing && Array.isArray(act.setorSiglas)) {
+        act.setorSiglas.forEach(function (sg) { if (sg !== act.setorSigla) { extraState[sg] = true; } });
+      }
+      var extraHolder = el('<div class="at-extrasec"></div>');
+      function repaintExtras() {
+        extraHolder.innerHTML = '';
+        if (todosState) { extraHolder.appendChild(txt('div', 'at-hint2', 'Vai aparecer em todos os setores ativos.')); return; }
+        setoresRaiz().forEach(function (s) {
+          if (s.sigla === setorSelect.value) { return; }
+          extraHolder.appendChild(UI.checkbox({ checked: !!extraState[s.sigla], label: s.sigla + ' · ' + s.nome, onToggle: function (v) { extraState[s.sigla] = v; } }));
+        });
+      }
+      var todosChk = UI.checkbox({ checked: todosState, label: 'Aparece em todos os setores', onToggle: function (v) { todosState = v; repaintExtras(); } });
+      repaintExtras();
+      var multiWrap = el('<div class="at-multibox"></div>');
+      multiWrap.appendChild(todosChk); multiWrap.appendChild(extraHolder);
+      var multiField = UI.field({ label: 'Também aparece em (opcional)', control: multiWrap, hint: 'Multi-homing: a atividade surge em cada área marcada. O responsável continua sendo um só.' });
+      setorSelect.addEventListener('change', function () { repaintExtras(); });
+
       /* responsável (usuários ativos; fallback p/ auto-atribuição) */
       var respOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
       if (editing && act.responsavelUid && !respOpts.some(function (o) { return o.value === act.responsavelUid; })) {
@@ -1275,7 +1444,7 @@
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, setorField, subField, respField, recField, recBox, hrField, banner],
+        body: [titField, descField, setorField, subField, multiField, respField, recField, recBox, hrField, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -1288,6 +1457,7 @@
         var tipo = recSelect.value;
         var titulo = titInp.value.trim();
         var setor = setorSelect.value;
+        var siglas = todosState ? [] : uniqSig([setor].concat(Object.keys(extraState).filter(function (k) { return extraState[k]; })).filter(Boolean));
         var errs = [];
         if (!titulo) { errs.push('Informe o título.'); }
         if (!setor) { errs.push('Escolha o setor.'); }
@@ -1303,6 +1473,8 @@
           titulo: titulo,
           descricao: descTa.value.trim(),
           setorSigla: setor,
+          setorSiglas: siglas,
+          todosSetores: !!todosState,
           subsetorSigla: (subSelect && subSelect.value) ? subSelect.value : null,
           responsavelUid: respUid,
           responsavelNome: respNomeOf(respUid),

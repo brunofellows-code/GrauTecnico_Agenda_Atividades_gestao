@@ -72,6 +72,10 @@
 .st-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text);
   background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:7px 11px}
 .st-chip .sg{font-size:11px;font-weight:800;letter-spacing:.05em;color:var(--greenText)}
+.st-swrow{display:flex;gap:9px;flex-wrap:wrap}
+.st-sw{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;outline:none;transition:transform .12s}
+.st-sw:hover{transform:scale(1.14)}
+.st-sw.on{box-shadow:0 0 0 2px var(--s1),0 0 0 4px var(--text)}
 .st-onb-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px}
 .st-onb-note{font-size:12.5px;font-weight:500;color:var(--muted2);margin-top:18px}
 
@@ -266,7 +270,7 @@
                 if (!p.ativo) { throw vErr('O setor pai "' + pai + '" está inativo. Reative-o antes de criar subsetores nele.', 'pai'); }
               }
               var now = Date.now();
-              var novo = { sigla: sigla, nome: nome, setorPaiSigla: pai, ativo: true, ordem: nextOrdem(arr), criadoEm: now, atualizadoEm: now };
+              var novo = { sigla: sigla, nome: nome, setorPaiSigla: pai, ativo: true, cor: (/^setor[1-8]$/.test(d.cor) ? d.cor : 'setor1'), ordem: nextOrdem(arr), criadoEm: now, atualizadoEm: now };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, sigla), novo).then(function () { return novo; });
             });
@@ -294,7 +298,7 @@
                 var ativosFilhos = arr.filter(function (s) { return s.setorPaiSigla === sigla && s.ativo; }).map(function (s) { return s.sigla; });
                 if (ativosFilhos.length) { throw vErr('Não dá para inativar "' + sigla + '": há subsetores ativos (' + ativosFilhos.join(', ') + '). Inative ou mova antes.', 'ativo'); }
               }
-              var updated = { sigla: cur.sigla, nome: nome, setorPaiSigla: pai, ativo: ativo, ordem: cur.ordem, criadoEm: cur.criadoEm, atualizadoEm: Date.now() };
+              var updated = { sigla: cur.sigla, nome: nome, setorPaiSigla: pai, ativo: ativo, cor: (/^setor[1-8]$/.test(patch.cor) ? patch.cor : (cur.cor || 'setor1')), ordem: cur.ordem, criadoEm: cur.criadoEm, atualizadoEm: Date.now() };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, sigla), updated).then(function () { return updated; });
             });
@@ -308,7 +312,7 @@
               var now = Date.now();
               var db = ctx.db, f = ctx.f;
               var seeded = SETORES_INICIAIS.map(function (s, idx) {
-                return { sigla: s.sigla, nome: s.nome, setorPaiSigla: null, ativo: true, ordem: idx + 1, criadoEm: now, atualizadoEm: now };
+                return { sigla: s.sigla, nome: s.nome, setorPaiSigla: null, ativo: true, cor: 'setor' + ((idx % 8) + 1), ordem: idx + 1, criadoEm: now, atualizadoEm: now };
               });
               return Promise.all(seeded.map(function (s) { return f.setDoc(f.doc(db, COL, s.sigla), s); }))
                 .then(function () { return seeded.slice(); });
@@ -453,6 +457,13 @@
     /* ===================== árvore ===================== */
     function rootsOf() { return ALL.filter(function (s) { return !s.setorPaiSigla; }); }
     function kidsOf(sig) { return ALL.filter(function (s) { return s.setorPaiSigla === sig; }); }
+    /* cor efetiva do setor: usa a cor salva; senão subsetor herda do pai; senão cai por ordem */
+    function corKey(s) {
+      if (s && /^setor[1-8]$/.test(s.cor)) { return s.cor; }
+      if (s && s.setorPaiSigla) { var p = ALL.filter(function (x) { return x.sigla === s.setorPaiSigla; })[0]; if (p) { return corKey(p); } }
+      var o = (s && s.ordem) ? s.ordem : 1; return 'setor' + (((o - 1) % 8) + 1);
+    }
+    function sigTag(s) { var t = txt('span', 'st-sigla', s.sigla); var c = corKey(s); t.style.color = 'var(--' + c + ')'; t.style.background = 'var(--' + c + 'Bg)'; return t; }
 
     function renderToolbar() {
       var roots = rootsOf();
@@ -490,7 +501,7 @@
 
     function kidRow(s) {
       var row = el('<div class="st-kid' + (s.ativo ? '' : ' inactive') + '"></div>');
-      row.appendChild(txt('span', 'st-sigla', s.sigla));
+      row.appendChild(sigTag(s));
       row.appendChild(txt('span', 'st-name', s.nome));
       if (!s.ativo) { row.appendChild(UI.statusPill('Inativo', { tone: 'amber', shape: 'tag' })); }
       row.appendChild(actionBtns(s));
@@ -506,7 +517,7 @@
       var head = el('<div class="st-rowhead"></div>');
       var caret = el('<span class="st-caret' + (allKids.length ? '' : ' empty') + '"></span>'); caret.appendChild(ico('<path d="M6 9l6 6 6-6"></path>', 18));
       head.appendChild(caret);
-      head.appendChild(txt('span', 'st-sigla', s.sigla));
+      head.appendChild(sigTag(s));
       head.appendChild(txt('span', 'st-name', s.nome));
       if (!s.ativo) { head.appendChild(UI.statusPill('Inativo', { tone: 'amber', shape: 'tag' })); }
       head.appendChild(txt('span', 'st-sub', allKids.length + ' subsetor(es)'));
@@ -586,7 +597,20 @@
         ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos somem das listas, mas o histórico é preservado.' });
       }
 
-      var bodyFields = [siglaField, nomeField, parentField]; if (ativoField) { bodyFields.push(ativoField); }
+      var CORES = ['setor1', 'setor2', 'setor3', 'setor4', 'setor5', 'setor6', 'setor7', 'setor8'];
+      var parentObj = presetParent ? (ALL.filter(function (s) { return s.sigla === presetParent; })[0]) : null;
+      var corState = editing ? corKey(cur) : (parentObj ? corKey(parentObj) : corKey({ ordem: rootsOf().length + 1 }));
+      if (!/^setor[1-8]$/.test(corState)) { corState = 'setor1'; }
+      var swRow = el('<div class="st-swrow"></div>');
+      CORES.forEach(function (c) {
+        var sw = el('<button type="button" class="st-sw' + (c === corState ? ' on' : '') + '"></button>');
+        sw.style.background = 'var(--' + c + ')';
+        sw.addEventListener('click', function () { corState = c; Array.prototype.forEach.call(swRow.children, function (x) { x.classList.remove('on'); }); sw.classList.add('on'); });
+        swRow.appendChild(sw);
+      });
+      var corField = UI.field({ label: 'Cor do setor', control: swRow, hint: presetParent ? 'Herdou a cor do setor pai — pode trocar.' : 'Uma cor por área ajuda a bater o olho nas listas.' });
+
+      var bodyFields = [siglaField, nomeField, parentField, corField]; if (ativoField) { bodyFields.push(ativoField); }
 
       var saveBtn = null;
       var m = UI.modal({
@@ -617,8 +641,8 @@
 
         if (saveBtn) { saveBtn.disabled = true; } /* evita duplo-envio */
         var op = editing
-          ? Store.update(sig, { nome: nome, setorPaiSigla: pai, ativo: ativoState })
-          : Store.create({ sigla: sig, nome: nome, setorPaiSigla: pai });
+          ? Store.update(sig, { nome: nome, setorPaiSigla: pai, ativo: ativoState, cor: corState })
+          : Store.create({ sigla: sig, nome: nome, setorPaiSigla: pai, cor: corState });
 
         op.then(function () {
           if (pai) { openSet[pai] = true; }
