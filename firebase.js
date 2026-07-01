@@ -19,7 +19,11 @@ import {
   setPersistence,
   browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBn_TQmjq2JfgR4-PpB59178_DtKJTUFfc",
@@ -32,7 +36,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+/* Cache local persistente (IndexedDB): leituras repetidas saem do
+   cache local em vez de ir à rede a cada tela — reduz o tempo de
+   abertura. Multi-aba habilitado. Se o navegador bloquear o
+   armazenamento (modo privado restrito), o Firestore cai para o
+   modo em memória sem quebrar. */
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 
 /* Mantém o usuário logado entre sessões/abas. Se o navegador
    bloquear o armazenamento (modo privado restrito), cai no

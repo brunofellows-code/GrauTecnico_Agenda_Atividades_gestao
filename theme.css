@@ -66,6 +66,9 @@
   --setor6:#818CF8; --setor6Bg:rgba(129,140,248,.16); /* índigo   */
   --setor7:#D6A85B; --setor7Bg:rgba(214,168,91,.16);  /* bronze   */
   --setor8:#5EEAD4; --setor8Bg:rgba(94,234,212,.16);  /* turquesa */
+
+  /* status "em andamento" (azul, fora do semáforo amarelo/verde/vermelho) */
+  --doing:#38BDF8; --haloDoing:rgba(56,189,248,.15);
 }
 
 /* ---------- TEMA CLARO ---------- */
@@ -121,6 +124,9 @@
   --setor6:#4F46E5; --setor6Bg:rgba(79,70,229,.10);  /* índigo   */
   --setor7:#92600E; --setor7Bg:rgba(146,96,14,.10);  /* bronze   */
   --setor8:#0F766E; --setor8Bg:rgba(15,118,110,.10); /* turquesa */
+
+  /* status "em andamento" */
+  --doing:#0284C7; --haloDoing:rgba(2,132,199,.13);
 }
 
 /* ---------- base mínima (herdada por todas as telas) ---------- */

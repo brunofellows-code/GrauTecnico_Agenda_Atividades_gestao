@@ -101,6 +101,8 @@
 .at-multibox{display:flex;flex-direction:column;gap:10px}
 .at-extrasec{display:flex;flex-wrap:wrap;gap:8px 18px;padding-left:2px}
 .at-hint2{font-size:12px;color:var(--muted)}
+.at-freqhd{display:flex;align-items:center;gap:8px;margin:16px 2px 8px;color:var(--muted)}
+.at-freqname{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
 .at-mi{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted)}
 .at-mi svg{color:var(--muted2)}
 .at-recpill{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--muted);
@@ -109,6 +111,9 @@
 .at-statetag{font-size:10px;font-weight:800;letter-spacing:.03em;border-radius:6px;padding:2px 7px}
 .at-statetag.skip{color:var(--amber);background:var(--chipBg);border:1px solid var(--border)}
 .at-statetag.rep{color:var(--orange);background:var(--chipBg);border:1px solid var(--border)}
+.at-statetag.doing{color:var(--doing);background:var(--chipBg);border:1px solid var(--border)}
+.at-coltitle .dot.doing{background:var(--doing)}
+.at-card.doing{box-shadow:inset 3px 0 0 var(--doing)}
 .at-cact{display:flex;align-items:center;gap:6px;flex:none}
 .at-ibtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--border);
   border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
@@ -824,7 +829,7 @@
         occs.forEach(function (oc) {
           var ov = oc.override || null;
           var effDate = (ov && ov.dataOverride) || oc.data;
-          var aberto = (oc.status === 'pendente' || oc.status === 'reprogramada');
+          var aberto = (oc.status === 'pendente' || oc.status === 'reprogramada' || oc.status === 'em_andamento');
           var enriched = {
             key: act.id + '|' + oc.data,
             act: act,
@@ -892,6 +897,7 @@
       var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
       if (o.horario) { var hr = el('<span class="at-mi"></span>'); hr.appendChild(ico(PATH.clock, 12)); hr.appendChild(document.createTextNode(o.horario)); into.appendChild(hr); }
       if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
+      if (o.status === 'em_andamento') { into.appendChild(txt('span', 'at-statetag doing', 'Em andamento')); }
       if (o.status === 'reprogramada' && o.ov && o.ov.dataOverride) { into.appendChild(txt('span', 'at-statetag rep', 'Reprogramada → ' + fmtBR(o.ov.dataOverride))); }
       if (o.status === 'pulada') { into.appendChild(txt('span', 'at-statetag skip', 'Pulada')); }
       if (o.atrasada) { into.appendChild(txt('span', 'at-latebadge', 'Atrasada')); }
@@ -924,7 +930,8 @@
     function listCard(o) {
       var done = o.status === 'concluida';
       var skip = o.status === 'pulada';
-      var card = el('<div class="at-card' + (o.atrasada ? ' late' : '') + (done ? ' done' : '') + (skip ? ' skip' : '') + '"></div>');
+      var doing = o.status === 'em_andamento';
+      var card = el('<div class="at-card' + (o.atrasada ? ' late' : '') + (done ? ' done' : '') + (skip ? ' skip' : '') + (doing ? ' doing' : '') + '"></div>');
 
       /* check (concluir/reabrir) — só quem escreve */
       var chkHolder = el('<span class="at-check"></span>');
@@ -954,21 +961,23 @@
 
     /* ===================== KANBAN ===================== */
     function renderKanban() {
-      var todo = [], doneList = [];
+      var todo = [], doing = [], doneList = [];
       BOARD.forEach(function (o) {
         if (o.status === 'concluida') { doneList.push(o); }
+        else if (o.status === 'em_andamento') { doing.push(o); }
         else if (o.status === 'pulada') { /* puladas não entram no quadro */ }
         else { todo.push(o); } /* pendente + reprogramada */
       });
-      /* atrasadas primeiro dentro de "A fazer" */
-      todo.sort(function (a, b) {
+      var ordena = function (a, b) {
         if (a.atrasada !== b.atrasada) { return a.atrasada ? -1 : 1; }
         if (a.effDate !== b.effDate) { return a.effDate < b.effDate ? -1 : 1; }
         return (a.horario || '99:99') < (b.horario || '99:99') ? -1 : 1;
-      });
+      };
+      todo.sort(ordena); doing.sort(ordena);
 
       var grid = el('<div class="at-kanban"></div>');
       grid.appendChild(kanbanCol('A fazer', 'todo', todo, 'todo'));
+      grid.appendChild(kanbanCol('Em andamento', 'doing', doing, 'doing'));
       grid.appendChild(kanbanCol('Concluída', 'done', doneList, 'done'));
       stage.appendChild(grid);
     }
@@ -981,7 +990,7 @@
       col.appendChild(hd);
 
       var body = el('<div class="at-colbody"></div>');
-      if (!items.length) { body.appendChild(txt('div', 'at-colempty', colKind === 'done' ? 'Nenhuma concluída na janela.' : 'Nada a fazer aqui.')); }
+      if (!items.length) { body.appendChild(txt('div', 'at-colempty', colKind === 'done' ? 'Nenhuma concluída na janela.' : (colKind === 'doing' ? 'Nada em andamento.' : 'Nada a fazer aqui.'))); }
       else { items.forEach(function (o) { body.appendChild(kanbanCard(o)); }); }
       col.appendChild(body);
 
@@ -994,7 +1003,8 @@
           var o = dragKey ? byKey[dragKey] : null; dragKey = null;
           if (!o) { return; }
           if (colKind === 'done') { if (o.status !== 'concluida') { concluir(o); } }
-          else { if (o.status === 'concluida') { reabrir(o); } else if (o.status === 'pulada') { retomar(o); } }
+          else if (colKind === 'doing') { if (o.status !== 'em_andamento') { iniciar(o); } }
+          else { if (o.status === 'concluida') { reabrir(o); } else if (o.status !== 'pendente') { retomar(o); } }
         });
       }
       return col;
@@ -1105,38 +1115,51 @@
 
     /* ===================== COLAPSADO POR SÉRIE ===================== */
     function renderColapsadoSerie() {
-      var groups = [], idx = {};
+      /* 1) agrupa ocorrências por série (atividade) */
+      var smap = {}, slist = [];
       BOARD.forEach(function (o) {
         var k = o.act.id;
-        if (!(k in idx)) { idx[k] = groups.length; groups.push({ id: k, act: o.act, items: [] }); }
-        groups[idx[k]].items.push(o);
+        if (!(k in smap)) { smap[k] = { id: k, act: o.act, items: [] }; slist.push(smap[k]); }
+        smap[k].items.push(o);
       });
-      groups.sort(function (a, b) { return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
+      /* 2) agrupa séries por frequência de recorrência */
+      var fmap = {};
+      slist.forEach(function (s) { var f = s.act.recorrencia || 'unico'; (fmap[f] = fmap[f] || []).push(s); });
+      var FREQ_ORDER = ['diario', 'semanal', 'quinzenal', 'mensal', 'unico'];
       var wrap = el('<div class="at-list"></div>');
-      groups.forEach(function (g) {
-        var late = 0; g.items.forEach(function (o) { if (o.atrasada) { late++; } });
-        var open = !!openSeries[g.id];
-        var sec = el('<div class="at-sgroup' + (open ? ' open' : '') + '"></div>');
-        var hd = el('<button type="button" class="at-shd"></button>');
-        var car = el('<span class="at-scaret"></span>'); car.appendChild(ico('<path d="M6 9l6 6 6-6"></path>', 16)); hd.appendChild(car);
-        if (g.act.todosSetores) {
-          var atag = txt('span', 'at-tag', 'Todos'); atag.style.color = 'var(--muted)'; atag.style.background = 'var(--chipBg)'; hd.appendChild(atag);
-        } else {
-          setoresDe(g.act).forEach(function (sg2) { var t2 = txt('span', 'at-tag', sg2); var c2 = corSetor(sg2); t2.style.color = 'var(--' + c2 + ')'; t2.style.background = 'var(--' + c2 + 'Bg)'; hd.appendChild(t2); });
-        }
-        hd.appendChild(txt('span', 'at-stitle', g.act.titulo));
-        var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[g.act.recorrencia] || g.act.recorrencia)); hd.appendChild(rec);
-        hd.appendChild(el('<span class="at-gline"></span>'));
-        if (late) { hd.appendChild(txt('span', 'at-latebadge', late + ' atras.')); }
-        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' ocor.'));
-        hd.addEventListener('click', function () { openSeries[g.id] = !openSeries[g.id]; renderBoard(); });
-        sec.appendChild(hd);
-        if (open) {
-          var body = el('<div class="at-sbody"></div>');
-          g.items.forEach(function (o) { body.appendChild(listCard(o)); });
-          sec.appendChild(body);
-        }
-        wrap.appendChild(sec);
+      FREQ_ORDER.forEach(function (f) {
+        var arr = fmap[f]; if (!arr || !arr.length) { return; }
+        arr.sort(function (a, b) { return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
+        var fhd = el('<div class="at-freqhd"></div>');
+        fhd.appendChild(ico(PATH.repeat, 13));
+        fhd.appendChild(txt('span', 'at-freqname', RECOR_LABEL[f] || f));
+        fhd.appendChild(el('<span class="at-gline"></span>'));
+        fhd.appendChild(txt('span', 'at-gcount', arr.length + (arr.length === 1 ? ' série' : ' séries')));
+        wrap.appendChild(fhd);
+        arr.forEach(function (g) {
+          var late = 0; g.items.forEach(function (o) { if (o.atrasada) { late++; } });
+          var open = !!openSeries[g.id];
+          var sec = el('<div class="at-sgroup' + (open ? ' open' : '') + '"></div>');
+          var hd = el('<button type="button" class="at-shd"></button>');
+          var car = el('<span class="at-scaret"></span>'); car.appendChild(ico('<path d="M6 9l6 6 6-6"></path>', 16)); hd.appendChild(car);
+          if (g.act.todosSetores) {
+            var atag = txt('span', 'at-tag', 'Todos'); atag.style.color = 'var(--muted)'; atag.style.background = 'var(--chipBg)'; hd.appendChild(atag);
+          } else {
+            setoresDe(g.act).forEach(function (sg2) { var t2 = txt('span', 'at-tag', sg2); var c2 = corSetor(sg2); t2.style.color = 'var(--' + c2 + ')'; t2.style.background = 'var(--' + c2 + 'Bg)'; hd.appendChild(t2); });
+          }
+          hd.appendChild(txt('span', 'at-stitle', g.act.titulo));
+          hd.appendChild(el('<span class="at-gline"></span>'));
+          if (late) { hd.appendChild(txt('span', 'at-latebadge', late + ' atras.')); }
+          hd.appendChild(txt('span', 'at-gcount', g.items.length + ' ocor.'));
+          hd.addEventListener('click', function () { openSeries[g.id] = !openSeries[g.id]; renderBoard(); });
+          sec.appendChild(hd);
+          if (open) {
+            var body = el('<div class="at-sbody"></div>');
+            g.items.forEach(function (o) { body.appendChild(listCard(o)); });
+            sec.appendChild(body);
+          }
+          wrap.appendChild(sec);
+        });
       });
       stage.appendChild(wrap);
     }
@@ -1166,6 +1189,18 @@
         .then(function () { toast('Ocorrência retomada.'); refresh(); })
         .catch(function (e) { toast(e.message, 'err'); });
     }
+    function iniciar(o) {
+      if (!CAN_WRITE) { return; }
+      Store.setOcorrencia(o.act, o.origData, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia')
+        .then(function () { toast('Marcada como em andamento.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+    function pendenciar(o) {
+      if (!CAN_WRITE) { return; }
+      Store.setOcorrencia(o.act, o.origData, { status: 'pendente', concluidaEm: null }, 'pendenciar_ocorrencia')
+        .then(function () { toast('Voltou para “a fazer”.'); refresh(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
 
     /* aplica reprogramação direta da ocorrência (dono/Admin) */
     function aplicarReprogEsta(o, novaData) {
@@ -1191,9 +1226,12 @@
         rows.push(b);
       }
 
+      var doing = o.status === 'em_andamento';
       if (!skip) {
         if (done) { row('Reabrir (desfazer conclusão)', 'Volta para “a fazer”, sem apagar histórico', PATH.undo, false, function () { reabrir(o); }); }
         else { row('Concluir', null, PATH.check, false, function () { concluir(o); }); }
+        if (!done && !doing) { row('Marcar como em andamento', 'Sinaliza que a tarefa já começou', PATH.play, false, function () { iniciar(o); }); }
+        if (doing) { row('Voltar para “a fazer”', 'Tira de “em andamento”', PATH.undo, false, function () { pendenciar(o); }); }
       }
       row('Reprogramar esta ocorrência', canApproveDirect(o.act) ? 'Aplica direto (você é dono/Admin)' : 'Cria um pedido para o dono aprovar', PATH.calendar, false, function () { reprogramarEstaModal(o); });
       if (skip) { row('Retomar', 'Tira de “pulada” e volta a pendente', PATH.play, false, function () { retomar(o); }); }

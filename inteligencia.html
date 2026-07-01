@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inteligência — Sistema A</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+
+<style>
+.pf-app{display:flex;min-height:100vh;background:var(--bg)}
+.pf-app>.ui-side{position:sticky;top:0;height:100vh}
+.pf-main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* topbar desktop */
+.pf-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.pf-top-l{display:flex;flex-direction:column;gap:3px}
+.pf-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pf-top-r{display:flex;align-items:center;gap:12px}
+
+/* header mobile */
+.pf-mhead{display:none;flex-direction:column;gap:12px;padding:14px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
+.pf-mhead-top{display:flex;align-items:center;gap:12px}
+.pf-back{width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
+.pf-back svg{width:18px;height:18px;color:var(--text)}
+.pf-mtitle{font-size:17px;font-weight:800;letter-spacing:-.02em}
+
+/* segmented período */
+.pf-seg{display:inline-flex;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.pf-seg-b{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer}
+.pf-seg-b.on{background:var(--cta);color:var(--ctaText)}
+.pf-mhead .pf-seg{display:flex;width:100%}
+.pf-mhead .pf-seg-b{flex:1;text-align:center;padding:8px 0}
+
+/* carimbo (não-retroativo) */
+.pf-stamp{font-size:11px;font-weight:600;color:var(--muted2);padding:12px 32px 0}
+
+.pf-body{padding:18px 32px 32px}
+
+/* KPI cards (foco + scorecard) */
+.pf-focus{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:13px}
+.pf-score{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:22px}
+.pf-big,.pf-small{background:var(--s1);border:1px solid var(--border);border-radius:15px}
+.pf-big{padding:16px 16px 14px}
+.pf-small{padding:13px}
+.pf-card-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.pf-small .pf-card-top{margin-bottom:9px}
+.pf-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.pf-label{flex:1;min-width:0;font-size:12px;font-weight:700;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-small .pf-label{font-size:11px}
+.pf-val{font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.pf-small .pf-val{font-size:20px}
+.pf-trend{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;margin-top:6px}
+.pf-small .pf-trend{font-size:11px;gap:4px}
+.pf-tri{font-size:10px;line-height:1}
+.pf-spark{display:flex;align-items:flex-end;gap:3px;height:30px;margin-top:12px}
+.pf-small .pf-spark{height:22px;gap:2.5px;margin-top:9px}
+.pf-spark i{flex:1;border-radius:2px 2px 0 0;min-height:3px;opacity:.85}
+
+/* botão "i" */
+.pf-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.pf-i:hover{color:var(--greenText)}
+.pf-i svg{display:block}
+
+/* gráficos */
+.pf-row1{display:grid;grid-template-columns:1.25fr 1fr;gap:13px;margin-bottom:13px}
+.pf-row2{display:grid;grid-template-columns:1fr 1.25fr;gap:13px}
+.pf-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px}
+.pf-card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.pf-card-t{font-size:14px;font-weight:800}
+
+/* barras horizontais */
+.pf-bh{position:relative}
+.pf-bh-rows{position:relative;z-index:1}
+.pf-bh-row{margin-bottom:13px}
+.pf-bh-row:last-child{margin-bottom:0}
+.pf-bh-head{display:flex;justify-content:space-between;margin-bottom:5px;font-size:11.5px;font-weight:700}
+.pf-bh-head .l{color:var(--muted)}
+.pf-bh-head .v{color:var(--text)}
+.pf-bh-track{height:14px;background:var(--track);border-radius:7px;overflow:hidden}
+.pf-bh-fill{height:100%;border-radius:7px}
+.pf-bh-meta{position:absolute;top:0;bottom:18px;width:2px;border-radius:2px;background:var(--muted2);z-index:2}
+.pf-bh-meta b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--muted2);white-space:nowrap}
+
+/* barras verticais */
+.pf-bv{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:20px}
+.pf-bv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.pf-bv-bar{width:100%;max-width:46px;border-radius:7px 7px 0 0;position:relative;min-height:4px}
+.pf-bv-val{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;color:var(--text)}
+.pf-bv-label{margin-top:7px;font-size:10.5px;font-weight:600;color:var(--muted2);text-align:center;line-height:1.1}
+
+/* popover do "i" */
+.pf-backdrop{position:fixed;inset:0;z-index:40;display:none}
+.pf-backdrop.on{display:block}
+.pf-pop{position:fixed;z-index:41;display:none;width:290px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.pf-pop.on{display:block}
+.pf-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.pf-pop-row{margin-bottom:8px}
+.pf-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.pf-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
+.pf-pop-note{margin-top:4px;font-size:11px;font-weight:700;color:var(--orange);line-height:1.3}
+
+/* tab bar mobile */
+.pf-tabbar{display:none}
+.pf-tab{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--muted);font-size:10px;font-weight:600}
+.pf-tab svg{width:22px;height:22px}
+.pf-tab.on{color:var(--greenText);font-weight:700}
+.pf-fab{width:50px;height:50px;border-radius:16px;background:var(--cta);color:var(--ctaText);display:flex;align-items:center;justify-content:center;margin-top:-6px;box-shadow:0 6px 16px var(--activeBg)}
+.pf-fab svg{width:24px;height:24px}
+
+/* toggle de tema temporário */
+.pf-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
+.pf-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
+
+@media (max-width:900px){
+  .pf-app>.ui-side{display:none}
+  .pf-top{display:none}
+  .pf-mhead{display:flex}
+  .pf-stamp{padding:14px 16px 0}
+  .pf-body{padding:16px 16px 96px}
+  .pf-focus{grid-template-columns:1fr 1fr}
+  .pf-score{grid-template-columns:1fr 1fr}
+  .pf-row1,.pf-row2{grid-template-columns:1fr;margin-bottom:13px}
+  #pf-aging,#pf-throughput,#pf-carga{display:none}
+  .pf-ader-row:nth-child(n+6){display:none}
+  .pf-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:80px;background:var(--s1);border-top:1px solid var(--border);align-items:flex-start;justify-content:space-around;padding:11px 14px 0;z-index:20}
+  .pf-dev{bottom:94px}
+}
+
+/* ---- Inteligência: adições ---- */
+.pf-sub2{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:6px}
+.pf-empty2{font-size:12.5px;color:var(--muted);padding:18px 4px}
+.pf-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:340px;padding:40px 20px}
+.pf-state-t{font-size:16px;font-weight:800;color:var(--text)}
+.pf-state-s{font-size:13px;color:var(--muted);max-width:440px;line-height:1.5}
+.pf-plano{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.pf-plano-item{display:flex;align-items:flex-start;gap:11px;padding:11px 2px;border-top:1px solid var(--border)}
+.pf-plano-item:first-child{border-top:0}
+.pf-plano-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
+.pf-plano-c{flex:1;min-width:0}
+.pf-plano-txt{font-size:13.5px;font-weight:700;color:var(--text)}
+.pf-plano-act{font-size:12px;color:var(--muted);margin-top:2px}
+.pf-plano-ok{font-size:13.5px;font-weight:700;color:var(--green);padding:14px 2px}
+</style>
+</head>
+<body>
+
+  <!-- portão de acesso (guard.js controla) -->
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <button class="pf-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+
+  <div class="pf-app" id="app">
+    <main class="pf-main">
+
+      <div class="pf-top">
+        <div class="pf-top-l">
+          <div class="pf-h1">Inteligência</div>
+        </div>
+        <div class="pf-top-r">
+          <div class="pf-seg">
+            <button class="pf-seg-b on" type="button" data-periodo="band">Atrasadas + 30d</button>
+            <button class="pf-seg-b" type="button" data-periodo="semana">Semana</button>
+            <button class="pf-seg-b" type="button" data-periodo="mes">Mês</button>
+          </div>
+          <span id="pf-export"></span>
+        </div>
+      </div>
+
+      <div class="pf-mhead">
+        <div class="pf-mhead-top">
+          <div class="pf-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></div>
+          <div class="pf-mtitle">Inteligência</div>
+        </div>
+        <div class="pf-seg">
+          <button class="pf-seg-b on" type="button" data-periodo="band">Atrasadas + 30d</button>
+          <button class="pf-seg-b" type="button" data-periodo="semana">Semana</button>
+          <button class="pf-seg-b" type="button" data-periodo="mes">Mês</button>
+        </div>
+      </div>
+
+      <div class="pf-stamp" id="pf-stamp">Indicadores do estado atual das rotinas.</div>
+
+      <div class="pf-body" id="pf-body"></div>
+
+    </main>
+  </div>
+
+  <div class="pf-tabbar">
+    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span>Hoje</span></div>
+    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg><span>Projetos</span></div>
+    <div class="pf-fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
+    <div class="pf-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Inteligência</span></div>
+    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 16 0"></path><path d="M4 11v3a8 8 0 0 0 16 0v-3"></path></svg><span>Perfil</span></div>
+  </div>
+
+  <div class="pf-backdrop" id="pf-backdrop"></div>
+  <div class="pf-pop" id="pf-pop"></div>
+
+  <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script src="kpi.js"></script>
+  <script>
+  /* ===== Inteligência: KPIs REAIS via kpi.js (motor validado à mão). Zero mock. ===== */
+  var USER = { name: '—', profile: 'Visualizador', initials: '—' };
+  var PERIODO = 'band';   /* band = atrasadas + 30 dias (padrão) | 'semana' | 'mes' */
+  var MODELO = null;      /* último retorno de KPI.computar */
+
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function haloOf(tone) { return 'halo' + tone.charAt(0).toUpperCase() + tone.slice(1); }
+
+  /* ---------- popover do "i" ---------- */
+  var POP, BACK;
+  function infoBtn(data) {
+    var b = el('<button class="pf-i" type="button" aria-label="Como é calculado"></button>');
+    b.appendChild(UI.icon('info', 14));
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); openPop(ev, data); });
+    return b;
+  }
+  function openPop(ev, d) {
+    POP.innerHTML = '';
+    POP.appendChild(el('<div class="pf-pop-t">' + d.title + '</div>'));
+    [['FÓRMULA', d.formula], ['DADOS / COLUNAS', d.dados], ['NÚMEROS DESTE CÁLCULO', d.numeros]].forEach(function (r) {
+      var row = el('<div class="pf-pop-row"></div>');
+      row.appendChild(el('<div class="pf-pop-k">' + r[0] + '</div>'));
+      row.appendChild(el('<div class="pf-pop-v">' + r[1] + '</div>'));
+      POP.appendChild(row);
+    });
+    if (d.nota) { POP.appendChild(el('<div class="pf-pop-note">' + d.nota + '</div>')); }
+    BACK.classList.add('on');
+    POP.classList.add('on');
+    if (window.innerWidth <= 900) {
+      POP.style.left = '50%';
+      POP.style.transform = 'translateX(-50%)';
+      POP.style.top = '';
+      POP.style.bottom = '96px';
+    } else {
+      POP.style.transform = '';
+      POP.style.bottom = '';
+      var pr = POP.getBoundingClientRect();
+      var x = Math.min(ev.clientX + 12, window.innerWidth - pr.width - 12);
+      var y = Math.min(ev.clientY + 12, window.innerHeight - pr.height - 12);
+      POP.style.left = Math.max(12, x) + 'px';
+      POP.style.top = Math.max(12, y) + 'px';
+    }
+  }
+  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+
+  /* ---------- sparkline (mini-tendência ilustrativa) ---------- */
+  /* ---------- card de KPI (sem tendência: ainda não há histórico real) ---------- */
+  function kpiCard(k, big) {
+    var c = el('<div class="' + (big ? 'pf-big' : 'pf-small') + '"></div>');
+    var top = el('<div class="pf-card-top"></div>');
+    top.appendChild(el('<span class="pf-dot" style="background:var(--' + k.tone + ');box-shadow:0 0 0 3px var(--' + haloOf(k.tone) + ')"></span>'));
+    top.appendChild(el('<span class="pf-label">' + k.label + '</span>'));
+    top.appendChild(infoBtn(k.info));
+    c.appendChild(top);
+    c.appendChild(el('<div class="pf-val">' + k.value + '</div>'));
+    if (k.sub) { c.appendChild(el('<div class="pf-sub2">' + k.sub + '</div>')); }
+    return c;
+  }
+
+  /* ---------- barras horizontais (aderência, carga) ---------- */
+  function barsH(items, opt) {
+    var node = el('<div class="pf-bh"></div>');
+    var rows = el('<div class="pf-bh-rows"></div>');
+    items.forEach(function (it) {
+      var r = el('<div class="pf-bh-row ' + (opt.rowClass || '') + '"></div>');
+      r.appendChild(el('<div class="pf-bh-head"><span class="l">' + it.l + '</span><span class="v">' + it.v + (opt.suffix || '') + '</span></div>'));
+      var tr = el('<div class="pf-bh-track"></div>');
+      tr.appendChild(el('<div class="pf-bh-fill" style="width:' + (it.v / opt.max * 100) + '%;background:' + it.c + '"></div>'));
+      r.appendChild(tr);
+      rows.appendChild(r);
+    });
+    node.appendChild(rows);
+    if (opt.meta != null) {
+      var m = el('<div class="pf-bh-meta" style="left:' + opt.meta + '%"></div>');
+      if (opt.metaLabel) { m.appendChild(el('<b>' + opt.metaLabel + '</b>')); }
+      node.appendChild(m);
+    }
+    return node;
+  }
+
+  /* ---------- barras verticais (aging, throughput) ---------- */
+  function barsV(items, opt) {
+    var node = el('<div class="pf-bv"></div>');
+    items.forEach(function (it) {
+      var col = el('<div class="pf-bv-col"></div>');
+      var bar = el('<div class="pf-bv-bar" style="height:' + (it.v / opt.max * 100) + '%;background:' + it.c + '"></div>');
+      bar.appendChild(el('<span class="pf-bv-val">' + it.v + '</span>'));
+      col.appendChild(bar);
+      col.appendChild(el('<span class="pf-bv-label">' + it.l + '</span>'));
+      node.appendChild(col);
+    });
+    return node;
+  }
+
+  function chartCard(title, info, body, id) {
+    var c = el('<div class="pf-card"></div>');
+    c.id = id;
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">' + title + '</div>'));
+    h.appendChild(infoBtn(info));
+    c.appendChild(h);
+    c.appendChild(body);
+    return c;
+  }
+
+  /* ---------- formatação ---------- */
+  function fmtPct(v) { return v == null ? '—' : v + '%'; }
+  function fmtDias(x) { return (Math.round(x * 10) / 10).toString().replace('.', ',') + ' d'; }
+  function brData(iso) { var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function rotuloSemana(iso) { var p = iso.split('-'); return p[2] + '/' + p[1]; }
+  function rotuloPeriodo(p) { return ({ band: 'atrasadas + 30 dias', semana: 'esta semana', mes: 'este mês' })[p] || p; }
+
+  /* ---------- KPIs de topo (grandes) ---------- */
+  function toneAder(v) { return v == null ? 'muted2' : v >= 90 ? 'green' : v >= 80 ? 'amber' : 'red'; }
+  function focusKPIs(m) {
+    var t = m.totais;
+    return [
+      { label: 'Aderência à rotina', value: fmtPct(m.aderencia), tone: toneAder(m.aderencia),
+        sub: t.concluidasAteHoje + ' de ' + t.previstasAteHoje + ' previstas até hoje',
+        info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
+      { label: 'Atividades atrasadas', value: String(t.atrasadas), tone: t.atrasadas ? 'red' : 'green',
+        sub: 'vencidas e ainda abertas',
+        info: { title: 'Atividades atrasadas', formula: 'ocorrências abertas (pendente, em andamento ou reprogramada) com data efetiva < hoje', dados: 'ocorrências da janela + override de data', numeros: t.atrasadas + ' atrasada(s) agora' } },
+      { label: 'Em andamento', value: String(t.andamento), tone: t.andamento ? 'doing' : 'muted2',
+        sub: 'já iniciadas, não concluídas',
+        info: { title: 'Trabalho em andamento (WIP)', formula: 'ocorrências com status = em andamento', dados: 'ocorrências: override de status', numeros: t.andamento + ' em andamento' } },
+      { label: 'Concluídas na janela', value: String(t.concluidas), tone: 'green',
+        sub: rotuloPeriodo(m.periodo),
+        info: { title: 'Concluídas na janela', formula: 'ocorrências com status = concluída dentro da janela', dados: 'ocorrências: override de status', numeros: t.concluidas + ' concluída(s)' } }
+    ];
+  }
+
+  /* ---------- KPIs secundários (pequenos) ---------- */
+  function scoreKPIs(m) {
+    var t = m.totais;
+    var pessoas = m.carga.filter(function (c) { return c.nome !== '(sem responsável)'; }).length;
+    var cargaMedia = pessoas ? (Math.round(t.abertas / pessoas * 10) / 10) : null;
+    var cargaStr = cargaMedia == null ? '—' : String(cargaMedia).replace('.', ',');
+    return [
+      { label: 'Previstas até hoje', value: String(t.previstasAteHoje), tone: 'muted2',
+        info: { title: 'Previstas até hoje', formula: 'ocorrências da janela com data ≤ hoje, menos as puladas', dados: 'ocorrências da janela', numeros: t.previstasAteHoje + ' previstas' } },
+      { label: 'Aging médio', value: t.atrasadas ? fmtDias(m.agingMedio) : '—', tone: t.atrasadas ? 'amber' : 'green',
+        info: { title: 'Aging médio das atrasadas', formula: 'média de (hoje − data efetiva) das atrasadas', dados: 'atrasadas: data efetiva', numeros: t.atrasadas ? ('soma de dias ÷ ' + t.atrasadas + ' = ' + fmtDias(m.agingMedio)) : 'sem atrasadas' } },
+      { label: 'Reprogramação', value: m.reprogPct + '%', tone: m.reprogPct > 20 ? 'orange' : 'green',
+        info: { title: 'Evasão de prazo (reprogramação)', formula: 'reprogramadas ÷ total de ocorrências × 100', dados: 'ocorrências: status reprogramada', numeros: t.reprogramadas + ' ÷ ' + t.ocorrencias + ' = ' + m.reprogPct + '%' } },
+      { label: 'Puladas', value: String(t.puladas), tone: t.puladas ? 'amber' : 'green',
+        info: { title: 'Ocorrências puladas', formula: 'ocorrências com status = pulada', dados: 'ocorrências: override de status', numeros: t.puladas + ' pulada(s)' } },
+      { label: 'Sem responsável', value: String(t.semResp), tone: t.semResp ? 'red' : 'green',
+        info: { title: 'Abertas sem responsável', formula: 'ocorrências abertas cujo responsável está vazio', dados: 'atividade: responsavelNome', numeros: t.semResp + ' sem responsável' } },
+      { label: 'Carga média / pessoa', value: cargaStr, tone: 'muted2',
+        info: { title: 'Carga média por pessoa', formula: 'abertas ÷ nº de responsáveis com carga', dados: 'abertas + responsáveis distintos', numeros: pessoas ? (t.abertas + ' ÷ ' + pessoas + ' = ' + cargaStr) : 'sem responsáveis' } }
+    ];
+  }
+
+  /* ---------- gráficos ---------- */
+  function aderCor(v) { return v == null ? 'var(--muted2)' : v >= 90 ? 'var(--green)' : v >= 80 ? 'var(--amber)' : 'var(--red)'; }
+  function chartAderencia(m) {
+    var itens = m.porSetor.filter(function (s) { return s.previstas > 0; }).map(function (s) {
+      return { l: KPI.nomeSetor(s.sig, m.setores), v: s.aderencia == null ? 0 : s.aderencia, c: aderCor(s.aderencia) };
+    });
+    var body = itens.length
+      ? barsH(itens, { max: 100, suffix: '%', meta: 90, metaLabel: 'meta 90%', rowClass: 'pf-ader-row' })
+      : el('<div class="pf-empty2">Nenhuma ocorrência prevista até hoje.</div>');
+    return chartCard('Aderência por setor',
+      { title: 'Aderência por setor', formula: 'concluídas ÷ previstas × 100, por setor (até hoje)', dados: 'ocorrências agrupadas por setor (multi-setor conta em cada um)', numeros: 'linha = meta 90%; ordem: pior para melhor' },
+      body, 'pf-aderencia');
+  }
+  function chartAging(m) {
+    var f = m.faixasAging;
+    var itens = [
+      { l: '0–3d', v: f.f03, c: 'var(--green)' }, { l: '4–7d', v: f.f47, c: 'var(--amber)' },
+      { l: '8–15d', v: f.f815, c: 'var(--orange)' }, { l: '15+d', v: f.f15, c: 'var(--red)' }
+    ];
+    var max = Math.max(1, f.f03, f.f47, f.f815, f.f15);
+    return chartCard('Envelhecimento (aging)',
+      { title: 'Envelhecimento das atrasadas', formula: 'atrasadas agrupadas por faixa de dias de atraso', dados: 'atrasadas: hoje − data efetiva', numeros: '0–3d: ' + f.f03 + ' · 4–7d: ' + f.f47 + ' · 8–15d: ' + f.f815 + ' · 15+d: ' + f.f15 },
+      barsV(itens, { max: max }), 'pf-aging');
+  }
+  function chartThroughput(m) {
+    var t = m.throughput.slice(-8);
+    if (!t.length) {
+      return chartCard('Throughput semanal',
+        { title: 'Throughput semanal', formula: 'concluídas por semana (segunda a domingo)', dados: 'concluídas: data efetiva ≤ hoje', numeros: 'sem conclusões na janela' },
+        el('<div class="pf-empty2">Sem conclusões na janela.</div>'), 'pf-throughput');
+    }
+    var max = Math.max.apply(null, t.map(function (x) { return x.n; }).concat([1]));
+    var itens = t.map(function (x, i, a) { return { l: rotuloSemana(x.semana), v: x.n, c: (i === a.length - 1) ? 'var(--brand)' : 'var(--muted2)' }; });
+    return chartCard('Throughput semanal',
+      { title: 'Throughput semanal', formula: 'nº de concluídas por semana', dados: 'concluídas agrupadas pela segunda-feira da semana', numeros: 'últimas ' + t.length + ' semana(s); a última é destacada' },
+      barsV(itens, { max: max }), 'pf-throughput');
+  }
+  function chartCarga(m) {
+    var top = m.carga.slice(0, 8);
+    if (!top.length) {
+      return chartCard('Carga por responsável',
+        { title: 'Carga por responsável', formula: 'abertas por pessoa', dados: 'abertas: pendente + em andamento + reprogramada', numeros: 'nada aberto' },
+        el('<div class="pf-empty2">Nada aberto no momento.</div>'), 'pf-carga');
+    }
+    var vals = m.carga.map(function (x) { return x.n; }).sort(function (a, b) { return a - b; });
+    var mediana = vals[Math.floor(vals.length / 2)] || 0;
+    var cap = Math.max(1, Math.round(mediana * 1.5));
+    var max = Math.max.apply(null, top.map(function (x) { return x.n; }).concat([cap]));
+    var itens = top.map(function (x) { return { l: x.nome, v: x.n, c: x.n > cap ? 'var(--amber)' : 'var(--green)' }; });
+    return chartCard('Carga por responsável',
+      { title: 'Carga por responsável (WIP)', formula: 'nº de abertas por pessoa', dados: 'abertas por responsável', numeros: 'linha = 1,5× a mediana (' + cap + '); acima = sobrecarga' },
+      barsH(itens, { max: max, meta: cap / max * 100, metaLabel: '1,5× mediana' }), 'pf-carga');
+  }
+
+  /* ---------- plano de ação (priorização) ---------- */
+  function planoAcao(m) {
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Plano de ação — o que atacar primeiro</div>'));
+    h.appendChild(infoBtn({ title: 'Plano de ação', formula: 'priorização por impacto: setores com mais atrasadas, pessoas sobrecarregadas e itens sem dono', dados: 'derivado dos indicadores acima', numeros: 'ordenado pelo nº de atrasadas' }));
+    card.appendChild(h);
+    var list = el('<div class="pf-plano"></div>');
+    var itens = [];
+    m.porSetor.forEach(function (s) {
+      if (s.atrasadas > 0) {
+        itens.push({ sev: s.atrasadas >= 5 ? 'red' : 'amber',
+          txt: KPI.nomeSetor(s.sig, m.setores) + ': ' + s.atrasadas + ' atrasada(s) · aderência ' + (s.aderencia == null ? '—' : s.aderencia + '%'),
+          act: 'Repriorizar e redistribuir as vencidas mais antigas primeiro.' });
+      }
+    });
+    var vals = m.carga.map(function (x) { return x.n; }).sort(function (a, b) { return a - b; });
+    var mediana = vals[Math.floor(vals.length / 2)] || 0; var cap = Math.max(1, Math.round(mediana * 1.5));
+    m.carga.forEach(function (c) {
+      if (c.nome !== '(sem responsável)' && c.n > cap) {
+        itens.push({ sev: 'amber', txt: c.nome + ': ' + c.n + ' abertas (acima de 1,5× a mediana)', act: 'Aliviar a carga ou renegociar prazos.' });
+      }
+    });
+    if (m.totais.semResp > 0) {
+      itens.push({ sev: 'red', txt: m.totais.semResp + ' ocorrência(s) aberta(s) sem responsável', act: 'Atribuir um dono para não cair no vazio.' });
+    }
+    if (!itens.length) {
+      list.appendChild(el('<div class="pf-plano-ok">Sem alertas: rotina em dia. 🎯</div>'));
+    } else {
+      itens.forEach(function (it) {
+        var row = el('<div class="pf-plano-item"></div>');
+        row.appendChild(el('<span class="pf-plano-dot" style="background:var(--' + it.sev + ')"></span>'));
+        var cc = el('<div class="pf-plano-c"></div>');
+        var t1 = el('<div class="pf-plano-txt"></div>'); t1.textContent = it.txt; cc.appendChild(t1);
+        var t2 = el('<div class="pf-plano-act"></div>'); t2.textContent = it.act; cc.appendChild(t2);
+        row.appendChild(cc);
+        list.appendChild(row);
+      });
+    }
+    card.appendChild(list);
+    return card;
+  }
+
+  /* ---------- render + estados + boot ---------- */
+  function paint(m) {
+    MODELO = m;
+    document.getElementById('pf-stamp').textContent =
+      'Janela: ' + rotuloPeriodo(m.periodo) + ' (' + brData(m.janela.jIni) + ' a ' + brData(m.janela.jFim) + ') · ' +
+      m.totais.atividadesAtivas + ' atividades ativas · ' + m.totais.ocorrencias + ' ocorrências.';
+    var body = document.getElementById('pf-body');
+    body.innerHTML = '';
+    var focus = el('<div class="pf-focus"></div>');
+    focusKPIs(m).forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
+    body.appendChild(focus);
+    var score = el('<div class="pf-score"></div>');
+    scoreKPIs(m).forEach(function (k) { score.appendChild(kpiCard(k, false)); });
+    body.appendChild(score);
+    var row1 = el('<div class="pf-row1"></div>');
+    row1.appendChild(chartAderencia(m)); row1.appendChild(chartAging(m));
+    body.appendChild(row1);
+    var row2 = el('<div class="pf-row2"></div>');
+    row2.appendChild(chartThroughput(m)); row2.appendChild(chartCarga(m));
+    body.appendChild(row2);
+    body.appendChild(planoAcao(m));
+  }
+
+  function showState(title, sub) {
+    var body = document.getElementById('pf-body'); body.innerHTML = '';
+    var box = el('<div class="pf-state"></div>');
+    var t = el('<div class="pf-state-t"></div>'); t.textContent = title; box.appendChild(t);
+    if (sub) { var s = el('<div class="pf-state-s"></div>'); s.textContent = sub; box.appendChild(s); }
+    body.appendChild(box);
+  }
+
+  function carregar() {
+    showState('Carregando indicadores…', 'Lendo as ocorrências da janela.');
+    KPI.carregar(PERIODO).then(KPI.computar).then(function (m) {
+      if (!m.totais.atividadesAtivas) {
+        document.getElementById('pf-stamp').textContent = 'Sem atividades ativas.';
+        showState('Ainda não há atividades', 'Cadastre atividades para ver os indicadores de gestão.');
+        return;
+      }
+      paint(m);
+    }).catch(function (e) {
+      showState('Não consegui carregar os indicadores', (e && e.message) || 'Erro ao ler o banco.');
+    });
+  }
+
+  function setPeriodo(p) { if (p === PERIODO) { return; } PERIODO = p; carregar(); }
+
+  function wireSeg(group) {
+    group.addEventListener('click', function (e) {
+      var b = e.target.closest('.pf-seg-b'); if (!b) { return; }
+      document.querySelectorAll('.pf-seg .pf-seg-b').forEach(function (x) {
+        if (x.getAttribute('data-periodo') === b.getAttribute('data-periodo')) { x.classList.add('on'); } else { x.classList.remove('on'); }
+      });
+      setPeriodo(b.getAttribute('data-periodo') || 'band');
+    });
+  }
+
+  function renderShell() {
+    POP = document.getElementById('pf-pop');
+    BACK = document.getElementById('pf-backdrop');
+    BACK.addEventListener('click', closePop);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Inteligência', user: USER }), app.firstChild);
+    var exp = document.getElementById('pf-export');
+    if (exp) { var rb = UI.button({ label: 'Atualizar', icon: 'upload', variant: 'ghost' }); rb.addEventListener('click', carregar); exp.appendChild(rb); }
+    document.querySelectorAll('.pf-seg').forEach(wireSeg);
+    carregar();
+  }
+
+  Guard.onReady(function (u) { USER = u; renderShell(); });
+  </script>
+</body>
+</html>
