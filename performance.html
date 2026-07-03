@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Performance — Sistema A</title>
+<title>Performance — GERA</title>
 
 <link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
@@ -168,7 +170,9 @@
   function haloOf(tone) { return 'halo' + tone.charAt(0).toUpperCase() + tone.slice(1); }
   function tomToken(t) { return t === 'ok' ? 'green' : t === 'warn' ? 'amber' : t === 'bad' ? 'red' : 'muted2'; }
   function fmtPct(v) { return v == null ? '—' : v + '%'; }
-  function fmtDias(v) { return v == null ? '—' : String(v).replace('.', ',') + ' d'; }
+  /* M3: par iniciada→concluída no mesmo dia dá ciclo 0 (matemática certa,
+     leitura ruim) — todo ciclo MEDIDO abaixo de 1 dia exibe "<1 d". */
+  function fmtDias(v) { if (v == null) { return '—'; } if (v < 1) { return '<1 d'; } return String(v).replace('.', ',') + ' d'; }
   function fmtNum(v) { return String(v).replace('.', ','); }
   function brData(iso) { var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
   function brDataHora(ms) {
@@ -463,5 +467,6 @@
   Guard.onReady(function (u) { USER = u; renderShell(); });
   })();
   </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>

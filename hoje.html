@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hoje · Agenda — Sistema A</title>
+<title>Hoje · Agenda — GERA</title>
 
 <!-- provider + primitivos -->
 <link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
@@ -123,6 +125,16 @@
 .hj-state-s{font-size:13px;color:var(--muted);max-width:460px;line-height:1.5}
 .hj-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .hj-toast.err{border-color:var(--red);color:var(--red)}
+/* ---- N4-B: botão "Agenda de Eventos" pulsante (D2) — tokens, sem hex ---- */
+.hj-evbtn{position:relative}
+.hj-evbtn.pulse{animation:hjEvPulse 1.6s ease-in-out infinite}
+@keyframes hjEvPulse{
+  0%,100%{box-shadow:0 0 0 0 var(--haloDoing)}
+  50%{box-shadow:0 0 0 7px var(--haloDoing)}
+}
+@media (prefers-reduced-motion: reduce){
+  .hj-evbtn.pulse{animation:none;box-shadow:0 0 0 3px var(--haloDoing)}
+}
 </style>
 </head>
 <body>
@@ -469,6 +481,29 @@
     var cta = UI.button({ label: 'Nova atividade', icon: 'plus' });
     cta.addEventListener('click', function () { window.location.href = 'atividades.html'; });
     document.getElementById('hj-cta').appendChild(cta);
+
+    /* N4-B (D2): botão "Agenda de Eventos" — pulsa se max(atualizadoEm) dos
+       eventos > localStorage['graut_evt_lastSeen'] (por aparelho). Custo da
+       checagem: 1 read (orderBy atualizadoEm desc + limit 1). Falha ou
+       coleção vazia → botão normal, sem pulso, sem quebrar a tela. */
+    (function wireEventosBtn() {
+      var evBtn = UI.button({ label: 'Agenda de Eventos', icon: 'clock', variant: 'ghost' });
+      evBtn.classList.add('hj-evbtn');
+      evBtn.addEventListener('click', function () { window.location.href = 'eventos.html'; });
+      var slot = document.getElementById('hj-cta');
+      slot.parentNode.insertBefore(evBtn, slot);
+      fb().then(function (c) {
+        var q = c.f.query(c.f.collection(c.db, 'eventos'),
+          c.f.orderBy('atualizadoEm', 'desc'), c.f.limit(1));
+        return c.f.getDocs(q);
+      }).then(function (snap) {
+        var max = 0;
+        snap.forEach(function (d) { max = (d.data() || {}).atualizadoEm || 0; });
+        var visto = 0;
+        try { visto = parseInt(localStorage.getItem('graut_evt_lastSeen') || '0', 10) || 0; } catch (e) {}
+        if (max > visto) { evBtn.classList.add('pulse'); }
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[hoje] pulso eventos indisponível', e); } });
+    })();
     document.getElementById('hj-mav').appendChild(UI.avatar({ initials: USER.initials, size: 42 }));
     var fn = String(USER.name || '').trim().split(/\s+/)[0] || USER.name;
     var g1 = document.querySelector('.hj-hi'); if (g1) { g1.textContent = saudacao() + ', ' + fn; }
@@ -481,5 +516,6 @@
     refresh();
   });
   </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>

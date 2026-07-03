@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossário — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+
+<style>
+.gl-app{display:flex;min-height:100vh;background:var(--bg)}
+.gl-app>.ui-side{position:sticky;top:0;height:100vh}
+.gl-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.gl-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.gl-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.gl-body{padding:18px 32px 40px;max-width:860px}
+.gl-intro{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px}
+.gl-search{width:100%;margin-bottom:14px}
+.gl-sec{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
+.gl-sec-t{font-size:14px;font-weight:800;margin-bottom:6px}
+.gl-item{border-top:1px solid var(--border);padding:11px 2px}
+.gl-item:first-of-type{border-top:0}
+.gl-term{font-size:13px;font-weight:800;color:var(--greenText)}
+.gl-def{font-size:12.5px;font-weight:500;color:var(--text);line-height:1.55;margin-top:3px}
+.gl-def em{font-style:normal;font-weight:700;color:var(--muted)}
+.gl-none{font-size:12.5px;color:var(--muted);padding:14px 2px}
+@media (max-width:760px){.gl-top{padding:14px 16px}.gl-body{padding:14px 16px 28px}}
+</style>
+</head>
+<body>
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <div class="gl-app" id="app">
+    <main class="gl-main">
+      <div class="gl-top"><div class="gl-h1">Glossário</div></div>
+      <div class="gl-body" id="gl-body"></div>
+    </main>
+  </div>
+
+  <script src="ui.js"></script>
+  <script>
+  (function () {
+  'use strict';
+
+  /* ============================================================
+     GLOSSÁRIO (Protocolo A · aba 2) — linguagem simples.
+     O "i" das telas PROVA o cálculo; aqui explicamos o SIGNIFICADO.
+     ============================================================ */
+
+  var SECOES = [
+    ['Siglas dos setores', [
+      ['PED — Pedagógico', 'Setor que cuida das aulas, professores e do conteúdo dos cursos.'],
+      ['SEC — Secretaria', 'Setor que cuida de matrículas, documentos e atendimento ao aluno.'],
+      ['CRA — Central de Relacionamento com o Aluno', 'Setor que acompanha o aluno durante o curso: dúvidas, avisos e retenção.'],
+      ['GES — Gestão', 'Direção e administração da escola: decisões, finanças e pessoas.'],
+      ['QLD — Qualidade', 'Setor que verifica se os processos estão sendo seguidos e melhora o que não está funcionando.'],
+      ['AGE — Agência de Emprego', 'Setor que conecta alunos formados a vagas de trabalho.'],
+      ['COM — Comercial', 'Setor que capta novos alunos: vendas, campanhas e visitas.'],
+      ['SIGLA', 'Código curto e ESTÁVEL de cada setor (ex.: PED). É por ela que o sistema liga atividades, eventos e indicadores ao setor — por isso mudar a sigla de um setor em uso é perigoso.']
+    ]],
+    ['Termos do dia a dia', [
+      ['Atividade', 'Uma tarefa cadastrada no sistema. Pode acontecer uma vez só (única) ou se repetir (recorrente).'],
+      ['Ocorrência', 'CADA vez que uma atividade acontece. Uma atividade "limpar sala toda segunda" gera uma ocorrência por segunda-feira. O check de feito/não-feito é por ocorrência — assim o histórico não se perde.'],
+      ['Recorrência', 'A regra de repetição: Diária, Semanal, Quinzenal (2× por mês, a cada ~15 dias), Mensal ou Única.'],
+      ['Data deslizante', 'Só para atividade única: se não foi feita, a pendência "desliza" e continua aparecendo até ser concluída.'],
+      ['Reprogramada', 'Ocorrência cuja data foi adiada com aprovação. Conta no indicador de reprogramação.'],
+      ['Pulada', 'Ocorrência marcada como "não vai acontecer desta vez" (ex.: feriado). Não conta como atraso nem entra na aderência.'],
+      ['Subtarefa', 'Pedaço de uma atividade, com % próprio (0, 25, 50, 75, 100). A média das subtarefas vira o % da atividade; a média das atividades vira o % do projeto (cascata).'],
+      ['Projeto', 'Um conjunto de atividades com objetivo comum (ex.: Semana Pedagógica). O % do projeto sobe sozinho conforme as atividades avançam.'],
+      ['Reunião (no sistema)', 'Registro de uma reunião com suas DECISÕES: o que foi decidido, quem é o dono e o prazo. Uma decisão pode virar atividade com 1 clique.'],
+      ['Rollforward', 'Decisões ainda abertas de reuniões passadas reaparecem automaticamente na reunião seguinte — nada cai no esquecimento.'],
+      ['Evento', 'Compromisso com data no calendário (formatura, feira, visita), com custo previsto e custo realizado. Pode ou não pertencer a um projeto.'],
+      ['Soft-delete', 'Nada é apagado de verdade: o registro é só "desativado" e some das telas, mas o histórico continua guardado.'],
+      ['atividade_log', 'O "livro-caixa" do sistema: toda criação, edição e conclusão fica registrada com data, hora e autor. A tela Performance lê daqui.']
+    ]],
+    ['Indicadores (o que cada número significa)', [
+      ['Atividades atrasadas', 'Quantas ocorrências passaram do prazo e ainda não foram feitas. Se sobe, algo precisa ser replanejado ou redistribuído.'],
+      ['Aderência à rotina', 'De tudo o que estava previsto até hoje, quanto foi realmente feito (em %). É o termômetro da disciplina da rotina. Sem nada previsto no período, mostra "—" (não inventa 0%).'],
+      ['Conclusão no prazo', 'Das que foram concluídas, quantas foram concluídas DENTRO do prazo (em %). Se está baixo, os prazos estão irreais ou a fila está travando.'],
+      ['Aging das atrasadas', 'Há quantos dias, em média, as atrasadas estão vencidas. Atrasada "velha" (8+ dias) é mais grave que a de ontem — ataque as mais velhas primeiro.'],
+      ['Carga (WIP)', 'Quantas ocorrências em aberto cada pessoa/setor tem. Carga muito acima da mediana = sobrecarga → redistribuir.'],
+      ['Tempo de ciclo', 'Quanto tempo passa entre INICIAR e CONCLUIR uma ocorrência (em dias). Mede a velocidade real de execução. "<1 d" = começou e terminou no mesmo dia.'],
+      ['Taxa de reprogramação', 'Quantas ocorrências foram adiadas, em % do total. Alta demais = metas ou escopo precisam de revisão.'],
+      ['Throughput', 'Quantas ocorrências são concluídas por semana. Mostra a capacidade real da equipe.'],
+      ['Score do setor (0–100)', 'Nota única que junta: aderência (peso 50), atrasadas (peso 30) e aging (peso 20). Verde ≥ 80 · amarelo 60–79 · vermelho < 60. O "i" ao lado do score mostra a conta feita com os números do dia.'],
+      ['Gargalo', 'Setor que o detector aponta como ponto de travamento: aderência abaixo de 80%, ou atrasadas antigas com carga bem acima da mediana. É o 1º item do Plano de ação.'],
+      ['Δ7d (delta 7 dias)', 'Quanto o indicador mudou em relação a 7 dias atrás. Seta verde = melhorou; vermelha = piorou. Só aparece na janela padrão e depois de 7 fotos diárias ("coletando X/7 dias").'],
+      ['Sparkline', 'O mini-gráfico de linha dentro do card: a forma dos últimos 7 dias do indicador, para ver a tendência de relance.'],
+      ['Snapshot (foto do dia)', 'Uma vez por dia o sistema grava os números daquele dia. É dessa série de fotos que nascem o Δ7d e o sparkline. Sem medição retroativa: só existe tendência a partir do 1º dia de foto.'],
+      ['Janela padrão', 'O recorte de tempo dos indicadores: dos últimos 45 dias até 30 dias à frente. As tendências (Δ7d) só valem nessa janela — comparar com "semana" ou "mês" misturaria réguas diferentes.'],
+      ['Pareto', 'Regra 80/20: poucos itens causam a maior parte do problema. O Plano de ação e a Matriz de Risco ordenam do mais impactante para o menos.']
+    ]],
+    ['Perfis e permissões', [
+      ['Admin', 'Vê e faz tudo, inclusive gerenciar usuários e aprovar mudanças de data automaticamente.'],
+      ['Editor', 'Cria e edita atividades, projetos, reuniões e eventos. Mudança de data de série precisa de aprovação.'],
+      ['Visualizador', 'Só enxerga: não cria nem edita nada.'],
+      ['Consultor Externo', 'Acesso de visualização limitado, pensado para alguém de fora da equipe.'],
+      ['RBAC', 'Controle de acesso por papel (Role-Based Access Control): o que cada perfil pode fazer é imposto também no banco (Regras do Firestore), não só na tela.']
+    ]],
+    ['Importação', [
+      ['Planilha-modelo', 'O arquivo CSV com as colunas que o sistema espera. A 1ª linha é o cabeçalho com os nomes das colunas.'],
+      ['Código estável', 'A coluna "codigo": um identificador que NUNCA muda (ex.: PED-001). É por ele que o sistema sabe se a linha é uma atividade nova (cria) ou existente (atualiza).'],
+      ['De-para', 'A conferência coluna a coluna: o que o sistema ESPERAVA × o que ENCONTROU no arquivo. Divergência crítica BLOQUEIA a importação; divergência leve só alerta e pede confirmação.'],
+      ['Delta', 'Só grava o que MUDOU. Linha idêntica ao que já existe é pulada; célula vazia PRESERVA o valor atual (não apaga nada por engano). Nunca sobrescreve tudo.'],
+      ['Auditoria da importação', 'Cada criação/alteração da importação vai para o atividade_log com o rótulo de importação — dá para rastrear depois o que aquele arquivo mudou.']
+    ]],
+    ['Telas', [
+      ['Meu Dia (Hoje)', 'A primeira tela: compromissos e atividades do dia em uma visão única, com check por ocorrência.'],
+      ['Inteligência', 'O painel de priorização: indicadores gerais, score por setor, gargalos e o Plano de ação (o que atacar primeiro).'],
+      ['Performance', 'O ranking por pessoa, lido do atividade_log. Pior score primeiro — é onde agir. Não mede o passado anterior ao log.'],
+      ['Agenda de Eventos', 'O calendário mensal de eventos de todos os setores, com custo previsto × realizado. O botão no Meu Dia pulsa quando há novidade.'],
+      ['Matriz de Risco', 'A lista dos riscos do sistema/operação, ordenada por Pareto (impacto × chance), cada um com sua mitigação.'],
+      ['Importar', 'A tela de importação por planilha, com o de-para de auditoria e o preview do delta antes de gravar.']
+    ]]
+  ];
+
+  function boot(USER) {
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Glossário', user: USER }), app.firstChild);
+    var body = document.getElementById('gl-body');
+
+    var intro = document.createElement('div');
+    intro.className = 'gl-intro';
+    intro.textContent = 'Toda sigla e todo elemento do sistema, explicados em linguagem simples. O "i" ao lado de cada número nas telas mostra a CONTA; aqui você encontra o SIGNIFICADO.';
+    body.appendChild(intro);
+
+    var busca = UI.input({ placeholder: 'Buscar termo… (ex.: aderência, PED, delta)' });
+    busca.classList.add('gl-search');
+    body.appendChild(busca);
+
+    var holder = document.createElement('div');
+    body.appendChild(holder);
+
+    function render(filtro) {
+      holder.innerHTML = '';
+      var f = (filtro || '').trim().toLowerCase();
+      var achou = false;
+      SECOES.forEach(function (sec) {
+        var itens = sec[1].filter(function (it) {
+          if (!f) { return true; }
+          return (it[0] + ' ' + it[1]).toLowerCase().indexOf(f) >= 0;
+        });
+        if (!itens.length) { return; }
+        achou = true;
+        var card = document.createElement('div'); card.className = 'gl-sec';
+        var t = document.createElement('div'); t.className = 'gl-sec-t'; t.textContent = sec[0];
+        card.appendChild(t);
+        itens.forEach(function (it) {
+          var d = document.createElement('div'); d.className = 'gl-item';
+          var a = document.createElement('div'); a.className = 'gl-term'; a.textContent = it[0];
+          var b = document.createElement('div'); b.className = 'gl-def'; b.textContent = it[1];
+          d.appendChild(a); d.appendChild(b);
+          card.appendChild(d);
+        });
+        holder.appendChild(card);
+      });
+      if (!achou) {
+        var n = document.createElement('div'); n.className = 'gl-none';
+        n.textContent = 'Nenhum termo encontrado para "' + filtro + '". Sentiu falta de algo? Peça para incluir.';
+        holder.appendChild(n);
+      }
+    }
+    busca.addEventListener('input', function () { render(busca.value); });
+    render('');
+  }
+
+  Guard.onReady(boot);
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

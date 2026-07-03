@@ -101,6 +101,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---------- eventos (agenda de eventos — N4-B; soft-delete por `ativo`) ----------
+    match /eventos/{id} {
+      allow read: if isActive();
+      allow create, update: if canWrite();
+      allow delete: if false;
+    }
+
     // ---------- kpi_snapshots (foto diária dos indicadores; 1 doc/dia, imutável) ----------
     match /kpi_snapshots/{dia} {
       allow read: if isActive();

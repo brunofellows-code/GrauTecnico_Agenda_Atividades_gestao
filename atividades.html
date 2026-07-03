@@ -3,10 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atividades · Sistema A</title>
+<title>Atividades · GERA</title>
 
 <!-- provider + primitivos (mesma fundação das demais telas) -->
 <link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
@@ -372,6 +374,19 @@
           }).catch(function (e) { throw ferr(e); });
         },
 
+        /* N4: projetos ativos p/ o vínculo opcional da atividade. */
+        listProjetosAtivos: function () {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var q = f.query(f.collection(db, 'projetos'), f.where('ativo', '==', true), f.limit(200));
+            return f.getDocs(q).then(function (snap) {
+              var a = []; snap.forEach(function (d) { a.push({ id: d.id, nome: (d.data() || {}).nome || '(sem nome)' }); });
+              a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+              return a;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+
         /* Todas as atividades ATIVAS (sem filtro de setor — o filtro é em
            memória). Teto 2000 + filtro single-field = sem índice composto. */
         listAtividadesAtivas: function () {
@@ -571,6 +586,7 @@
     var SETORES = [];      /* docs de setores */
     var ATIV = [];         /* TODAS as atividades ativas (filtro de setor é em memória) */
     var USERS = [];        /* usuários ativos p/ picker (pode vir vazio sem permissão) */
+    var PROJETOS = [];     /* N4: projetos ativos p/ vínculo opcional */
     var OCC_DOCS = [];     /* docs de ocorrencias na janela */
     var OCC_BY_ATIV = {};  /* atividadeId -> [override docs] */
     var PEND = [];         /* solicitacoes pendentes */
@@ -614,6 +630,7 @@
     }
 
     function safeUsers() { return Store.listUsuariosAtivos().catch(function () { return []; }); }
+    function safeProjetos() { return Store.listProjetosAtivos().catch(function () { return []; }); }
 
     function indexOcc() {
       OCC_BY_ATIV = {};
@@ -634,8 +651,8 @@
     function load() {
       toolbarEl.innerHTML = '';
       renderLoading();
-      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers()])
-        .then(function (res) { SETORES = res[0]; ATIV = res[1]; USERS = res[2]; return loadBoardData(); })
+      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers(), safeProjetos()])
+        .then(function (res) { SETORES = res[0]; ATIV = res[1]; USERS = res[2]; PROJETOS = res[3]; return loadBoardData(); })
         .then(function () { renderAll(); })
         .catch(function (e) { renderError(e); });
     }
@@ -1413,6 +1430,18 @@
       var respHint = USERS.length ? 'Quem responde por esta rotina.' : 'Lista de usuários indisponível (precisa de perfil Admin). Atribuída a você por padrão.';
       var respField = UI.field({ label: 'Responsável', required: true, control: respSelect, hint: respHint });
 
+      /* N4: vínculo OPCIONAL a projeto (o % da atividade cascateia p/ o projeto).
+         `origem` (decisão de reunião) nunca é editada aqui — só preservada. */
+      var projOpts = PROJETOS.map(function (p) { return { value: p.id, label: p.nome }; });
+      if (editing && act.projetoId && !projOpts.some(function (o) { return o.value === act.projetoId; })) {
+        projOpts.unshift({ value: act.projetoId, label: '(projeto atual)' });
+      }
+      var projSelect = UI.select({ value: (editing && act.projetoId) ? act.projetoId : '', placeholder: '— Sem projeto —', options: projOpts });
+      var projHint = (editing && act.origem && act.origem.tipo === 'reuniao')
+        ? 'Nasceu de uma decisão de reunião (origem preservada).'
+        : 'Opcional: soma o % desta atividade ao progresso do projeto.';
+      var projField = UI.field({ label: 'Projeto (opcional)', control: projSelect, hint: projHint });
+
       /* recorrência + campos condicionais */
       var recBox = el('<div class="at-recbox"></div>');
 
@@ -1485,7 +1514,7 @@
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, setorField, subField, multiField, respField, recField, recBox, hrField, banner],
+        body: [titField, descField, setorField, subField, multiField, respField, projField, recField, recBox, hrField, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -1526,7 +1555,8 @@
           data: tipo === 'unico' ? unInp.value : null,
           deslizante: tipo === 'unico' ? !!deslizState : null,
           dataInicio: tipo !== 'unico' ? diInp.value : null,
-          dataFim: (tipo !== 'unico' && dfInp.value) ? dfInp.value : null
+          dataFim: (tipo !== 'unico' && dfInp.value) ? dfInp.value : null,
+          projetoId: (projSelect && projSelect.value) ? projSelect.value : null
         };
 
         var verr = R.validar(payload);
@@ -1656,5 +1686,6 @@
     });
   })();
   </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>

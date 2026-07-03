@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matriz de Risco — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+
+<style>
+.rk-app{display:flex;min-height:100vh;background:var(--bg)}
+.rk-app>.ui-side{position:sticky;top:0;height:100vh}
+.rk-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.rk-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.rk-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.rk-body{padding:18px 32px 40px;max-width:920px}
+.rk-intro{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px}
+.rk-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex}
+.rk-i:hover{color:var(--greenText)}
+.rk-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px;border-left:4px solid var(--border)}
+.rk-card.red{border-left-color:var(--red)}
+.rk-card.amber{border-left-color:var(--amber)}
+.rk-card.green{border-left-color:var(--green)}
+.rk-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rk-rank{font-size:11px;font-weight:800;color:var(--muted2);flex:none}
+.rk-t{font-size:14px;font-weight:800;flex:1;min-width:200px}
+.rk-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:11px;border:1px solid var(--border)}
+.rk-meta{font-size:11px;font-weight:700;color:var(--muted2);margin-top:5px}
+.rk-desc{font-size:12.5px;color:var(--text);line-height:1.55;margin-top:8px}
+.rk-mit{margin-top:10px;padding:10px 12px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border)}
+.rk-mit-k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);margin-bottom:3px}
+.rk-mit-v{font-size:12.5px;color:var(--text);line-height:1.5}
+.rk-pop{position:fixed;z-index:41;display:none;width:300px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.rk-pop.on{display:block}
+.rk-back{position:fixed;inset:0;z-index:40;display:none}
+.rk-back.on{display:block}
+.rk-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.rk-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:8px}
+@media (max-width:760px){.rk-top{padding:14px 16px}.rk-body{padding:14px 16px 28px}}
+</style>
+</head>
+<body>
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <div class="rk-app" id="app">
+    <main class="rk-main">
+      <div class="rk-top"><div class="rk-h1"><span>Matriz de Risco + Mitigação</span><span id="rk-info"></span></div></div>
+      <div class="rk-body" id="rk-body"></div>
+    </main>
+  </div>
+
+  <div class="rk-back" id="rk-back"></div>
+  <div class="rk-pop" id="rk-pop" role="dialog" aria-label="Como priorizamos"></div>
+
+  <script src="ui.js"></script>
+  <script>
+  (function () {
+  'use strict';
+
+  /* ============================================================
+     MATRIZ DE RISCO + MITIGAÇÃO (Protocolo A · aba 3)
+     Priorização Pareto: score = impacto × probabilidade (1–5 cada);
+     lista ordenada do maior para o menor — os primeiros itens
+     concentram a maior parte do dano possível.
+     ============================================================ */
+
+  /* [titulo, impacto 1-5, probabilidade 1-5, descrição leiga, mitigação] */
+  var RISCOS = [
+    ['Perda de dados por edição sobre versão velha', 5, 4,
+      'Alguém sobe ao GitHub um arquivo antigo por cima do atual e apaga trabalho já feito. Já quase aconteceu no projeto — é a causa nº 1 de retrabalho.',
+      'Regra "nunca editar sobre versão velha": toda sessão começa clonando o repositório real; entrega consolidada única no fim (cada arquivo 1×); SHA256 registrado dos arquivos protegidos (ui.js, components.css) antes e depois.'],
+    ['Regras do Firestore desatualizadas (banco exposto ou tela quebrada)', 5, 3,
+      'O código novo usa uma coleção que as Regras ainda não liberaram → tela quebra com "sem permissão". Pior: regra aberta demais deixaria qualquer pessoa ler/escrever.',
+      'Regras POR COLEÇÃO com catch-all final que NEGA tudo; blocos novos pré-provisionados junto do código; roteiro de deploy sempre inclui "publicar Regras no Console"; erro de permissão tem mensagem própria apontando as Regras.'],
+    ['Sigla de setor alterada em uso (dados órfãos)', 4, 3,
+      'Atividades, eventos e indicadores acoplam ao setor pela SIGLA. Trocar a sigla de um setor em uso deixa tudo apontando para um setor que "não existe mais".',
+      'Acoplamento por sigla é decisão consciente (Princípio 18) com regra operacional: sigla é ESTÁVEL — para renomear o setor, muda-se o NOME, nunca a sigla; o Glossário avisa; futura trava de edição de sigla com dados vinculados.'],
+    ['Importação sobrescrevendo dados bons', 5, 2,
+      'Uma planilha errada importada "por cima" apagaria títulos, datas e responsáveis corretos.',
+      'Importação é DELTA, nunca sobrescrita total: célula vazia PRESERVA o valor atual; de-para crítico BLOQUEIA (sem coluna "codigo" não importa); preview obrigatório antes de gravar; teto de 200 linhas; tudo registrado no atividade_log com rótulo de importação.'],
+    ['Estouro de cota do Firebase (plano gratuito)', 4, 2,
+      'O plano gratuito tem teto diário de leituras/escritas. Uma tela mal feita que lê a coleção inteira várias vezes derruba o sistema para todo mundo no resto do dia.',
+      'Disciplina where()+limit() em TODA query (teto por consulta); importação por delta (só grava o que mudou); snapshot diário idempotente (1 doc/dia, 1 tentativa/sessão); zero listener em tempo real desnecessário.'],
+    ['Fuso horário errando o dia (Salvador, UTC−3)', 4, 2,
+      'Datas tratadas em UTC "viram o dia" 3 horas antes: atividade de segunda apareceria como domingo à noite, atraso contado errado.',
+      'Todo o motor de recorrência e KPIs usa DIA CIVIL LOCAL: datas trafegam como texto AAAA-MM-DD e viram Date sempre no horário local — decisão validada por bateria de testes (harness 27/27).'],
+    ['Perfil errado com poder demais (RBAC furado)', 5, 1,
+      'Um Visualizador conseguindo editar, ou um Editor aprovando a própria mudança de data, quebraria a governança.',
+      'RBAC imposto em DUAS camadas: a tela esconde/bloqueia botões E as Regras do Firestore recusam a escrita no banco (canWrite/isAdmin). Aprovação de data: Admin ou dono da atividade; Editor não auto-aprova.'],
+    ['Indicador mentindo (número certo, leitura errada)', 3, 3,
+      'Um KPI mal calculado ou sem contexto leva a decisão errada — pior que não ter número.',
+      'Matemática dos KPIs validada em bateria de testes (27/27) ANTES de ir à tela; "i" obrigatório em todo número (fórmula + dados + conta do dia); sem previstas → "—" (nunca inventa 0%); sem medição retroativa declarada em banner; card sem foto não mostra tendência.'],
+    ['Dependência de uma pessoa só (fator ônibus)', 3, 3,
+      'O conhecimento do sistema concentrado numa pessoa: se ela sai, ninguém sabe operar nem evoluir.',
+      'HANDOFF documentado ao fim de cada sessão de build; Glossário em linguagem leiga; arquitetura registrada nos ARCH_*.md dentro do próprio repositório; repo público clonável em qualquer sessão.'],
+    ['Excesso de recorrências gerando ruído', 2, 3,
+      'Rotinas demais cadastradas viram uma parede de pendências que ninguém olha — o sistema perde credibilidade.',
+      'Indicador de aderência por setor expõe rotina morta; "pular ocorrência" para exceções legítimas; disciplina de 3–5 indicadores em destaque; revisão nas reuniões de líderes com a pauta gerada pelo sistema.'],
+    ['Evento com custo digitado errado (centavos)', 2, 2,
+      'Valores com vírgula guardados como número quebrado geram somas erradas no projeto (R$ 0,10 + R$ 0,20 ≠ R$ 0,30 em ponto flutuante).',
+      'Custo guardado em CENTAVOS (número inteiro) — decisão registrada no ARCH de Eventos; máscara R$ na digitação; o "i" do card de custos declara a regra.'],
+    ['Navegador antigo sem suporte a módulos', 1, 2,
+      'Um computador muito antigo na escola pode não rodar as partes modernas (import de módulos do Firebase).',
+      'Código ES5 em tudo que é lógica própria; Firebase via CDN oficial; requisito operacional declarado: Chrome atualizado (padrão da escola).']
+  ];
+
+  function nivel(score) { return score >= 12 ? 'red' : score >= 6 ? 'amber' : 'green'; }
+  function nivelTxt(score) { return score >= 12 ? 'ALTO' : score >= 6 ? 'MÉDIO' : 'BAIXO'; }
+
+  var POP, BACK;
+  function boot(USER) {
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Riscos', user: USER }), app.firstChild);
+    POP = document.getElementById('rk-pop');
+    BACK = document.getElementById('rk-back');
+    BACK.addEventListener('click', function () { POP.classList.remove('on'); BACK.classList.remove('on'); });
+
+    var ib = document.createElement('button');
+    ib.className = 'rk-i'; ib.type = 'button'; ib.setAttribute('aria-label', 'Como priorizamos');
+    ib.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>';
+    ib.addEventListener('click', function () {
+      POP.innerHTML = '';
+      var t = document.createElement('div'); t.className = 'rk-pop-t'; t.textContent = 'Como priorizamos (Pareto)';
+      POP.appendChild(t);
+      [['Fórmula', 'Score do risco = Impacto (1–5) × Probabilidade (1–5). Lista ordenada do maior score para o menor: os primeiros itens concentram a maior parte do dano possível (regra 80/20).'],
+       ['Níveis', 'ALTO ≥ 12 (vermelho) · MÉDIO 6–11 (amarelo) · BAIXO < 6 (verde).'],
+       ['Fonte', 'Riscos levantados do próprio histórico do projeto (incidentes reais e quase-incidentes) + fundamentos das decisões de arquitetura registradas nos ARCH.']].forEach(function (r) {
+        var v = document.createElement('div'); v.className = 'rk-pop-v';
+        v.textContent = r[0] + ': ' + r[1];
+        POP.appendChild(v);
+      });
+      POP.classList.add('on'); BACK.classList.add('on');
+      var r = ib.getBoundingClientRect();
+      POP.style.top = (r.bottom + 8) + 'px';
+      POP.style.left = Math.max(12, Math.min(r.left, window.innerWidth - 316)) + 'px';
+    });
+    document.getElementById('rk-info').appendChild(ib);
+
+    var body = document.getElementById('rk-body');
+    var intro = document.createElement('div'); intro.className = 'rk-intro';
+    intro.textContent = 'Os riscos da operação do Sistema A, ordenados por Pareto (impacto × probabilidade — os primeiros concentram a maior parte do dano possível). Cada risco tem a sua mitigação: o que JÁ está feito ou combinado para ele não acontecer.';
+    body.appendChild(intro);
+
+    var lista = RISCOS.map(function (r) {
+      return { t: r[0], imp: r[1], prob: r[2], desc: r[3], mit: r[4], score: r[1] * r[2] };
+    }).sort(function (a, b) { return b.score - a.score; });
+
+    lista.forEach(function (r, i) {
+      var lv = nivel(r.score);
+      var card = document.createElement('div'); card.className = 'rk-card ' + lv;
+      var h = document.createElement('div'); h.className = 'rk-h';
+      var rk = document.createElement('div'); rk.className = 'rk-rank'; rk.textContent = '#' + (i + 1);
+      var t = document.createElement('div'); t.className = 'rk-t'; t.textContent = r.t;
+      var bd = document.createElement('span'); bd.className = 'rk-badge';
+      bd.textContent = nivelTxt(r.score) + ' · ' + r.score;
+      bd.style.color = 'var(--' + lv + ')';
+      h.appendChild(rk); h.appendChild(t); h.appendChild(bd);
+      card.appendChild(h);
+      var meta = document.createElement('div'); meta.className = 'rk-meta';
+      meta.textContent = 'Impacto ' + r.imp + '/5 × Probabilidade ' + r.prob + '/5 = ' + r.score;
+      card.appendChild(meta);
+      var d = document.createElement('div'); d.className = 'rk-desc'; d.textContent = r.desc;
+      card.appendChild(d);
+      var m = document.createElement('div'); m.className = 'rk-mit';
+      var mk = document.createElement('div'); mk.className = 'rk-mit-k'; mk.textContent = 'Mitigação';
+      var mv = document.createElement('div'); mv.className = 'rk-mit-v'; mv.textContent = r.mit;
+      m.appendChild(mk); m.appendChild(mv);
+      card.appendChild(m);
+      body.appendChild(card);
+    });
+  }
+
+  Guard.onReady(boot);
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

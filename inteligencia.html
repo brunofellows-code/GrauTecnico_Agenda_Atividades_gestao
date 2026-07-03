@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inteligência — Sistema A</title>
+<title>Inteligência — GERA</title>
 
 <link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
@@ -231,6 +233,7 @@
   var USER = { name: '—', profile: 'Visualizador', initials: '—' };
   var PERIODO = 'band';   /* band = atrasadas + 30 dias (padrão) | 'semana' | 'mes' */
   var MODELO = null;      /* último retorno de KPI.computar */
+  var BOARD = [];         /* M2: board expandido retido p/ agrupar gargalos multi-setor */
   var SNAPSHOTS = [];     /* N2: fotos diárias (kpi_snapshots) p/ Δ7d + sparkline */
   var SNAP_TENTADO = false; /* N2: gravação idempotente — 1 tentativa por sessão */
   var HOJE = null;        /* N2: dia civil local do último computar */
@@ -515,13 +518,53 @@
     card.appendChild(h);
     var list = el('<div class="pf-plano"></div>');
     var itens = [];
-    /* N2: gargalos NOMEADOS do detector validado (regra explícita no "i") */
-    KPI._gargalos(setoresParaScore(m)).forEach(function (g) {
+    /* N2: gargalos NOMEADOS do detector validado (regra explícita no "i").
+       M2: quando a MESMA(S) atividade(s) multi-setor atrasada(s) explica(m)
+       o gargalo de N setores, agrupa num item só (menos ruído). Regra:
+       setores cujas atrasadas são TODAS multi-setor e idênticas entre si. */
+    var gargalos = KPI._gargalos(setoresParaScore(m));
+    var siglasGargalo = {};                       /* M1: setores já cobertos */
+    var atrPorSig = {};                           /* sigla -> ids de atividades atrasadas + flag só-multi */
+    BOARD.forEach(function (o) {
+      if (!o.atrasada) { return; }
+      var sigs = KPI.setoresDe(o.act, m.setores); if (!sigs.length) { sigs = ['—']; }
+      var multi = sigs.length > 1;
+      sigs.forEach(function (sig) {
+        var b = atrPorSig[sig] || (atrPorSig[sig] = { ids: {}, soMulti: true });
+        b.ids[o.act.id] = true;
+        if (!multi) { b.soMulti = false; }
+      });
+    });
+    function chaveIds(sig) {
+      var b = atrPorSig[sig];
+      if (!b || !b.soMulti) { return null; }
+      var ids = Object.keys(b.ids).sort();
+      return ids.length ? ids.join('|') : null;
+    }
+    var grupos = {}; var soltos = [];
+    gargalos.forEach(function (g) {
+      siglasGargalo[g.sigla] = true;
+      var k = chaveIds(g.sigla);
+      if (k) { (grupos[k] = grupos[k] || []).push(g); } else { soltos.push(g); }
+    });
+    Object.keys(grupos).forEach(function (k) {
+      var gs = grupos[k];
+      if (gs.length >= 2) {
+        var nAtiv = k.split('|').length;
+        itens.push({ sev: 'red',
+          txt: nAtiv + ' atividade(s) multi-setor atrasada(s) afeta(m) ' + gs.length + ' setores (' +
+            gs.map(function (g) { return g.sigla; }).join(', ') + ')',
+          act: 'Resolver a atividade multi-setor destrava todos os setores de uma vez.' });
+      } else {
+        soltos.push(gs[0]);
+      }
+    });
+    soltos.forEach(function (g) {
       itens.push({ sev: 'red', txt: 'Gargalo: ' + g.sigla + ' — ' + g.motivo,
         act: 'Levar à reunião de líderes: causa raiz e replanejamento do setor.' });
     });
     m.porSetor.forEach(function (s) {
-      if (s.atrasadas > 0) {
+      if (s.atrasadas > 0 && !siglasGargalo[s.sig]) { /* M1: gargalo não repete como atrasadas */
         itens.push({ sev: s.atrasadas >= 5 ? 'red' : 'amber',
           txt: KPI.nomeSetor(s.sig, m.setores) + ': ' + s.atrasadas + ' atrasada(s) · aderência ' + (s.aderencia == null ? '—' : s.aderencia + '%'),
           act: 'Repriorizar e redistribuir as vencidas mais antigas primeiro.' });
@@ -604,7 +647,7 @@
   function carregar() {
     showState('Carregando indicadores…', 'Lendo as ocorrências da janela.');
     Promise.all([
-      KPI.carregar(PERIODO).then(KPI.computar),
+      KPI.carregar(PERIODO).then(function (ctx) { BOARD = ctx.board; return KPI.computar(ctx); }),
       KPI.lerSnapshots(window.GrautRecorrencia.hojeISO()) /* degrada p/ [] se as regras ainda não foram publicadas */
     ]).then(function (r) {
       var m = r[0];
@@ -649,5 +692,6 @@
 
   Guard.onReady(function (u) { USER = u; renderShell(); });
   </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>

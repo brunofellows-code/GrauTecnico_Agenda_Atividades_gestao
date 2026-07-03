@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Entrar · Grau Técnico FSA</title>
+  <title>Entrar · GERA</title>
   <link rel="stylesheet" href="theme.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#090B10">
   <script src="theme.js"></script>
   <style>
     /* cor 100% via token do theme.css — zero hex */
@@ -47,9 +49,9 @@
     <div class="lg-card">
       <div class="lg-brand">
         <span class="lg-logo">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg>
+          <img src="icon-192.png" alt="GERA" width="22" height="22" style="display:block;border-radius:22%">
         </span>
-        <span class="lg-bname">Grau Técnico FSA<span>Sistema A</span></span>
+        <span class="lg-bname">GERA<span>Grau Técnico FSA</span></span>
       </div>
 
       <h1 class="lg-title">Entrar</h1>
@@ -138,5 +140,6 @@
     /* Já está logado? Pula a tela de login e vai pro app. */
     onAuthStateChanged(auth, function (u) { if (u) { window.location.replace('hoje.html'); } });
   </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>

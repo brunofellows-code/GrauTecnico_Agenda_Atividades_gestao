@@ -38,7 +38,7 @@
 
   /* destinos LIVE (telas que já existem no repo do Grau).
      Qualquer item da sidebar fora desta lista mostra "em breve". */
-  var LIVE = { 'Hoje': 'hoje.html', 'Atividades': 'atividades.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
+  var LIVE = { 'Hoje': 'hoje.html', 'Projetos': 'projetos.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
 
   /* ---------- iniciais a partir do nome ---------- */
   function initialsOf(name) {
@@ -114,6 +114,41 @@
      Chamado após os callbacks construírem a sidebar no DOM.
      ============================================================ */
   function wireChrome() {
+    /* injeta o item "Eventos" na sidebar (ui.js é APPEND-ONLY: o array de
+       grupos fica no meio do arquivo; a navegação já é responsabilidade
+       deste arquivo via LIVE). Idempotente. */
+    (function injectEventos() {
+      if (document.querySelector('.ui-nav[data-nav="Eventos"]')) { return; }
+      var ref = document.querySelector('.ui-nav[data-nav="Atividades"]');
+      if (!ref || !ref.parentNode) { return; }
+      var item = document.createElement('div');
+      var ativo = window.location.pathname.indexOf('eventos.html') >= 0;
+      item.className = 'ui-nav' + (ativo ? ' active' : '');
+      item.setAttribute('data-nav', 'Eventos');
+      item.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path></svg><span>Eventos</span>';
+      ref.parentNode.insertBefore(item, ref.nextSibling);
+    })();
+    /* C2: injeta "Glossário" e "Riscos" depois de Performance (mesma regra
+       do Eventos — ui.js append-only; navegação mora aqui). Idempotente. */
+    (function injectC2() {
+      var ref = document.querySelector('.ui-nav[data-nav="Performance"]');
+      if (!ref || !ref.parentNode) { return; }
+      var defs = [
+        ['Glossário', '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>'],
+        ['Riscos', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path>']
+      ];
+      var after = ref;
+      defs.forEach(function (d) {
+        if (document.querySelector('.ui-nav[data-nav="' + d[0] + '"]')) { return; }
+        var item = document.createElement('div');
+        var ativo = window.location.pathname.indexOf(LIVE[d[0]]) >= 0;
+        item.className = 'ui-nav' + (ativo ? ' active' : '');
+        item.setAttribute('data-nav', d[0]);
+        item.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d[1] + '</svg><span>' + d[0] + '</span>';
+        after.parentNode.insertBefore(item, after.nextSibling);
+        after = item;
+      });
+    })();
     /* itens de navegação: data-nav = rótulo */
     var navs = document.querySelectorAll('.ui-nav[data-nav]');
     Array.prototype.forEach.call(navs, function (item) {

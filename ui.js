@@ -112,8 +112,8 @@
     var brand = h('div', { class: 'ui-brand' }, [
       h('div', { class: 'ui-logo' }, 'G'),
       h('div', { style: 'line-height:1.1' }, [
-        h('div', { class: 'ui-bt' }, 'Grau Técnico'),
-        h('div', { class: 'ui-bs' }, 'FSA · SISTEMA A')
+        h('div', { class: 'ui-bt' }, 'GERA'),
+        h('div', { class: 'ui-bs' }, 'GRAU TÉCNICO FSA')
       ])
     ]);
     var user = h('div', { class: 'ui-usercard' }, [

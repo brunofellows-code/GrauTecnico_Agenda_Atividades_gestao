@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projetos — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+
+<style>
+/* casca padrão (mesma da Inteligência/Performance) — namespace pj- */
+.pj-app{display:flex;min-height:100vh;background:var(--bg)}
+.pj-app>.ui-side{position:sticky;top:0;height:100vh}
+.pj-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.pj-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.pj-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pj-top-r{display:flex;align-items:center;gap:12px}
+.pj-seg{display:inline-flex;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.pj-seg-b{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer}
+.pj-seg-b.on{background:var(--cta);color:var(--ctaText)}
+.pj-body{padding:18px 32px 32px}
+.pj-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
+.pj-card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.pj-card-t{font-size:14px;font-weight:800}
+.pj-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.pj-i:hover{color:var(--greenText)}
+.pj-i svg{display:block}
+.pj-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:340px;padding:40px 20px}
+.pj-state-t{font-size:16px;font-weight:800;color:var(--text)}
+.pj-state-s{font-size:13px;color:var(--muted);max-width:440px;line-height:1.5}
+.pj-empty2{font-size:12.5px;color:var(--muted);padding:14px 4px}
+/* popover do "i" */
+.pj-backdrop{position:fixed;inset:0;z-index:40;display:none}
+.pj-backdrop.on{display:block}
+.pj-pop{position:fixed;z-index:41;display:none;width:300px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.pj-pop.on{display:block}
+.pj-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.pj-pop-row{margin-bottom:8px}
+.pj-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.pj-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
+/* lista de projetos */
+.pj-row{display:flex;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid var(--border);cursor:pointer}
+.pj-row:first-child{border-top:0}
+.pj-row:hover{background:var(--s2)}
+.pj-row-main{flex:1;min-width:0}
+.pj-row-nome{font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-row-sub{font-size:11.5px;font-weight:600;color:var(--muted2);margin-top:2px}
+.pj-bar{width:180px;flex:none;display:flex;align-items:center;gap:9px}
+.pj-track{flex:1;height:11px;background:var(--track);border-radius:6px;overflow:hidden}
+.pj-fill{height:100%;border-radius:6px}
+.pj-pct{width:38px;text-align:right;font-size:13px;font-weight:800}
+.pj-status{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:4px 10px;border-radius:12px;border:1px solid var(--border)}
+/* detalhe */
+.pj-back{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:0}
+.pj-back:hover{color:var(--text)}
+.pj-dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:13px}
+.pj-dm{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.pj-dm-k{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:6px}
+.pj-dm-v{font-size:20px;font-weight:800;margin-top:6px}
+.pj-dm-s{font-size:11px;font-weight:600;color:var(--muted2);margin-top:3px}
+/* atividade dentro do detalhe */
+.pj-arow{border-top:1px solid var(--border);padding:12px 4px}
+.pj-arow:first-child{border-top:0}
+.pj-arow-h{display:flex;align-items:center;gap:12px;cursor:pointer}
+.pj-arow-t{flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-arow-meta{font-size:11px;font-weight:600;color:var(--muted2)}
+.pj-subs{margin:10px 0 4px 14px;border-left:2px solid var(--border);padding-left:14px}
+.pj-sub{display:flex;align-items:center;gap:10px;padding:6px 0}
+.pj-sub-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-sub-sel{appearance:none;font-family:inherit;font-size:12px;font-weight:700;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer}
+.pj-sub-x{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:2px;display:inline-flex}
+.pj-sub-x:hover{color:var(--red)}
+.pj-addsub{display:flex;gap:8px;margin-top:8px}
+.pj-addsub .ui-input{flex:1}
+/* reuniões */
+.pj-rrow{border-top:1px solid var(--border);padding:13px 4px}
+.pj-rrow:first-child{border-top:0}
+.pj-rrow-h{display:flex;align-items:center;gap:12px;cursor:pointer}
+.pj-rrow-t{flex:1;min-width:0;font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-rrow-meta{font-size:11px;font-weight:600;color:var(--muted2)}
+.pj-dec{display:flex;align-items:flex-start;gap:10px;padding:8px 0 8px 14px;border-left:2px solid var(--border);margin-left:2px}
+.pj-dec-main{flex:1;min-width:0}
+.pj-dec-t{font-size:12.5px;font-weight:600;line-height:1.4}
+.pj-dec-m{font-size:11px;font-weight:600;color:var(--muted2);margin-top:2px}
+.pj-dec-b{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.pj-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border)}
+.pj-roll{margin-bottom:10px;padding:10px 12px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border);font-size:11.5px;font-weight:700;color:var(--muted)}
+/* eventos do projeto */
+.pj-evrow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid var(--border)}
+.pj-evrow:first-child{border-top:0}
+.pj-ev-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.pj-ev-t{flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-ev-m{font-size:11px;font-weight:600;color:var(--muted2);white-space:nowrap}
+/* pauta */
+.pj-pauta{width:100%;min-height:280px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px}
+@media (max-width:760px){
+  .pj-top{padding:14px 16px}
+  .pj-body{padding:14px 16px 28px}
+  .pj-bar{width:120px}
+  .pj-row-sub{display:none}
+}
+</style>
+</head>
+<body>
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <div class="pj-app" id="app">
+    <main class="pj-main">
+      <div class="pj-top">
+        <div>
+          <div class="pj-h1" id="pj-title">Projetos</div>
+        </div>
+        <div class="pj-top-r" id="pj-actions"></div>
+      </div>
+      <div class="pj-body" id="pj-body"></div>
+    </main>
+  </div>
+
+  <div class="pj-backdrop" id="pj-backdrop"></div>
+  <div class="pj-pop" id="pj-pop" role="dialog" aria-label="Como calculamos"></div>
+
+  <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script src="cascade.js"></script>
+  <script src="kpi.js"></script>
+  <script type="module">
+  (function () {
+  'use strict';
+
+  /* ============================================================
+     PROJETOS + REUNIÕES (N4-A) · Sistema A · Grau Técnico FSA
+     ------------------------------------------------------------
+     Fonte de dados: KPI.carregar('band') (board expandido — decisão
+     C1 §2.8) + 1 query global de subtarefas (ativo==true limit 1000,
+     agrupada por atividadeId no cliente) — zero índice composto.
+     Cascade: GrautCascade (média subtarefas → atividade → projeto);
+     única sem sub = 100 se concluída senão 0; recorrente sem sub = 0
+     (decisão §2.9 — declarado no "i").
+     Status do projeto DERIVADO (nunca gravado — decisão §2.10).
+     Decisão de reunião → atividade única em 1 clique (aberta:false,
+     origem preservada — decisão §2.11); rollforward = exibição (§2.12).
+     Toda mutação registra em atividade_log. Soft-delete sempre.
+     ============================================================ */
+
+  var R = window.GrautRecorrencia;
+  var C = window.GrautCascade;
+
+  var USER = null;
+  function CAN_WRITE() { var p = (USER && USER.profile) || ''; return p === 'Admin' || p === 'Editor'; }
+
+  /* ---------- Firestore (mesmo padrão do atividades.html) ---------- */
+  var _fb = null;
+  function fb() {
+    if (!_fb) {
+      _fb = Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+    }
+    return _fb;
+  }
+  function ferr(e) {
+    var code = (e && e.code) || '';
+    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão. Confirme seu perfil e que as Regras do Firestore foram publicadas.'), { code: code }); }
+    if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
+    return Object.assign(new Error((e && e.message) || 'Erro ao acessar os dados.'), { code: code });
+  }
+  function mapDocs(snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); }); return a; }
+
+  var Store = {
+    listProjetos: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'projetos'), f.where('ativo', '==', true), f.limit(200));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function (e) { throw ferr(e); });
+    },
+    criarProjeto: function (data) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var doc = Object.assign({}, data, { ativo: true, donoUid: USER.uid, criadoEm: now, atualizadoEm: now });
+        return f.addDoc(f.collection(db, 'projetos'), doc).then(function (ref) {
+          Store.log({ acao: 'criar_projeto', entidade: 'projeto', refId: ref.id, antes: null, depois: doc });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    atualizarProjeto: function (id, patch, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        return f.updateDoc(f.doc(db, 'projetos', id), up).then(function () {
+          Store.log({ acao: 'editar_projeto', entidade: 'projeto', refId: id, antes: antes || null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    inativarProjeto: function (id) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        return f.updateDoc(f.doc(db, 'projetos', id), { ativo: false, atualizadoEm: Date.now() }).then(function () {
+          Store.log({ acao: 'inativar_projeto', entidade: 'projeto', refId: id, antes: { ativo: true }, depois: { ativo: false } });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    listReunioes: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'reunioes'), f.where('ativo', '==', true), f.limit(500));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function (e) { throw ferr(e); });
+    },
+    criarReuniao: function (data) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var doc = Object.assign({}, data, { ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now });
+        return f.addDoc(f.collection(db, 'reunioes'), doc).then(function (ref) {
+          Store.log({ acao: 'criar_reuniao', entidade: 'reuniao', refId: ref.id, antes: null, depois: { titulo: doc.titulo, data: doc.data } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    atualizarReuniao: function (id, patch, acao, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        return f.updateDoc(f.doc(db, 'reunioes', id), up).then(function () {
+          Store.log({ acao: acao || 'editar_reuniao', entidade: 'reuniao', refId: id, antes: antes || null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    /* 1 query GLOBAL (decisão §2.8): agrupa por atividadeId no cliente. */
+    listSubtarefas: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'subtarefas'), f.where('ativo', '==', true), f.limit(1000));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function (e) { throw ferr(e); });
+    },
+    criarSubtarefa: function (atividadeId, texto, ordem) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var doc = { atividadeId: atividadeId, texto: texto, pct: 0, ordem: ordem, ativo: true, criadoEm: Date.now() };
+        return f.addDoc(f.collection(db, 'subtarefas'), doc).then(function (ref) {
+          Store.log({ acao: 'criar_subtarefa', entidade: 'subtarefa', refId: ref.id, antes: null, depois: doc });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    atualizarSubtarefa: function (id, patch, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        return f.updateDoc(f.doc(db, 'subtarefas', id), patch).then(function () {
+          Store.log({ acao: 'editar_subtarefa', entidade: 'subtarefa', refId: id, antes: antes || null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    inativarSubtarefa: function (id) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        return f.updateDoc(f.doc(db, 'subtarefas', id), { ativo: false }).then(function () {
+          Store.log({ acao: 'inativar_subtarefa', entidade: 'subtarefa', refId: id, antes: { ativo: true }, depois: { ativo: false } });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    listUsuariosAtivos: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(1000));
+        return f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { a.push({ uid: d.id, nome: (d.data() || {}).nome || '(sem nome)' }); });
+          a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+          return a;
+        });
+      }).catch(function () { return []; }); /* Editor pode não listar usuários — degrada */
+    },
+    listSolicPendentes: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'solicitacoes'), f.where('status', '==', 'pendente'), f.limit(200));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function () { return []; });
+    },
+    listEventosDoProjeto: function (projetoId) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'eventos'), f.where('projetoId', '==', projetoId), f.limit(200));
+        return f.getDocs(q).then(mapDocs).then(function (a) {
+          /* `ativo` filtrado NO CLIENTE (decisão §2.6 — evita índice composto) */
+          return a.filter(function (e) { return e.ativo !== false; });
+        });
+      }).catch(function () { return []; });
+    },
+    criarEvento: function (data) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var doc = Object.assign({}, data, { realizado: false, custoRealizado: null, ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now });
+        return f.addDoc(f.collection(db, 'eventos'), doc).then(function (ref) {
+          Store.log({ acao: 'criar_evento', entidade: 'evento', refId: ref.id, antes: null, depois: { titulo: doc.titulo, data: doc.data, projetoId: doc.projetoId } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    /* decisão → atividade ÚNICA (decisão §2.11) */
+    criarAtividadeDeDecisao: function (dec, reuniao, setorSigla) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var doc = {
+          titulo: dec.texto,
+          descricao: 'Decisão da reunião "' + (reuniao.titulo || reuniao.data) + '" (' + reuniao.data + ').',
+          setorSigla: setorSigla,
+          setorSiglas: [setorSigla],
+          todosSetores: false,
+          responsavelUid: dec.donoUid || USER.uid,
+          responsavelNome: dec.donoNome || '',
+          recorrencia: 'unico',
+          horario: null, diasSemana: null, diaMes: null,
+          data: dec.prazo,
+          deslizante: false, dataInicio: null, dataFim: null,
+          projetoId: reuniao.projetoId || null,
+          origem: { tipo: 'reuniao', reuniaoId: reuniao.id },
+          projetoSigla: null, ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now
+        };
+        return f.addDoc(f.collection(db, 'atividades'), doc).then(function (ref) {
+          Store.log({ acao: 'decisao_para_atividade', entidade: 'atividade', refId: ref.id, antes: null, depois: { titulo: doc.titulo, reuniaoId: reuniao.id } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    log: function (entry) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var row = Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry);
+        return f.addDoc(f.collection(db, 'atividade_log'), row);
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[projetos] log falhou', e); } });
+    }
+  };
+
+  /* ===================== DOM util ===================== */
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+  function toast(msg, kind) {
+    var t = txt('div', 'ui-toast' + (kind === 'err' ? ' err' : ''), msg);
+    t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:11px;box-shadow:var(--cardShadow)';
+    document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
+  }
+  var ISVG = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>';
+
+  /* popover "i" */
+  var POP, BACK;
+  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+  function openPop(anchor, title, rows) {
+    POP.innerHTML = '';
+    POP.appendChild(txt('div', 'pj-pop-t', title));
+    rows.forEach(function (r) {
+      var d = txt('div', 'pj-pop-row', '');
+      d.appendChild(txt('div', 'pj-pop-k', r[0]));
+      d.appendChild(txt('div', 'pj-pop-v', r[1]));
+      POP.appendChild(d);
+    });
+    POP.classList.add('on'); BACK.classList.add('on');
+    var r = anchor.getBoundingClientRect();
+    var top = r.bottom + 8, left = Math.min(r.left, window.innerWidth - 316);
+    if (top + POP.offsetHeight > window.innerHeight - 12) { top = Math.max(12, r.top - POP.offsetHeight - 8); }
+    POP.style.top = top + 'px'; POP.style.left = Math.max(12, left) + 'px';
+  }
+  function iBtn(title, rows) {
+    var b = el('<button class="pj-i" type="button" aria-label="Como calculamos">' + ISVG + '</button>');
+    b.addEventListener('click', function (e) { e.stopPropagation(); openPop(b, title, rows); });
+    return b;
+  }
+
+  function fmtBR(iso) { if (!iso) { return '—'; } var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function fmtBRL(cents) {
+    if (cents == null) { return '—'; }
+    var v = (Number(cents) || 0) / 100;
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function parseBRL(str) {
+    var d = String(str || '').replace(/\D/g, '');
+    return d ? parseInt(d, 10) : 0;
+  }
+
+  /* ===================== ESTADO ===================== */
+  var CTX = null;         /* resultado de KPI.carregar('band') */
+  var PROJ = [];          /* projetos ativos */
+  var REUN = [];          /* reuniões ativas (todas — filtra por projeto na tela) */
+  var SUBS = {};          /* atividadeId -> [subtarefas] */
+  var USERS = [];         /* usuários ativos (pode vir vazio) */
+  var PENDS = [];         /* solicitações pendentes (p/ pauta) */
+  var ROOT_TAB = 'projetos';   /* projetos | reunioes */
+  var DET_TAB = 'visao';       /* visao | atividades | reunioes | eventos */
+  var bodyEl, titleEl, actionsEl;
+
+  function hashProj() {
+    var m = /#p=([^&]+)/.exec(window.location.hash || '');
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  /* ===================== CASCADE (decisão §2.9) ===================== */
+  /* status da ÚNICA vem do board (já expandido — zero query nova) */
+  function unicaConcluida(actId) {
+    var b = CTX.board;
+    for (var i = 0; i < b.length; i++) {
+      if (b[i].act.id === actId && b[i].status === 'concluida') { return true; }
+    }
+    return false;
+  }
+  function pctAtividade(act) {
+    var subs = SUBS[act.id] || [];
+    if (subs.length) { return C.pctAtividade({ subtarefas: subs }); }
+    if (act.recorrencia === 'unico') { return unicaConcluida(act.id) ? 100 : 0; }
+    return 0; /* recorrente sem sub — declarado no "i" */
+  }
+  function ativsDoProjeto(pid) {
+    return CTX.ativ.filter(function (a) { return a.projetoId === pid; });
+  }
+  function projetoCalc(p) {
+    var ats = ativsDoProjeto(p.id);
+    var pcts = ats.map(function (a) { return { pct: pctAtividade(a) }; });
+    var pct = ats.length ? C.pctProjeto({ atividades: pcts }) : 0;
+    var temAtrasada = CTX.board.some(function (o) { return o.atrasada && o.act.projetoId === p.id; });
+    var status, tom;
+    if (ats.length && pct === 100) { status = 'Concluído'; tom = 'green'; }
+    else if (temAtrasada) { status = 'Atrasado'; tom = 'red'; }
+    else { status = 'Em dia'; tom = 'doing'; }
+    return { ats: ats, pct: pct, status: status, tom: tom, temAtrasada: temAtrasada };
+  }
+  function tomVar(t) { return t === 'red' ? 'var(--red)' : t === 'doing' ? 'var(--doing)' : 'var(--green)'; }
+
+  var I_PCT = [
+    ['Fórmula', '% do projeto = média dos % das atividades vinculadas. % da atividade = média das subtarefas; atividade ÚNICA sem subtarefa = 100 se a ocorrência foi concluída, senão 0; atividade RECORRENTE sem subtarefa = 0 (vincule únicas ou crie subtarefas para medir).'],
+    ['Dados', 'Coleções: atividades (projetoId), subtarefas (pct 0–100), ocorrências da janela padrão do board (kpi.js).']
+  ];
+  var I_STATUS = [
+    ['Regra', 'Concluído = % 100 com ao menos 1 atividade (verde) · Atrasado = ≥1 atividade vinculada com ocorrência vencida em aberto no board (vermelho) · Em dia = o restante (azul). Status é DERIVADO, nunca gravado.'],
+    ['Dados', 'Board de ocorrências da janela padrão (kpi.js) + atividades.projetoId.']
+  ];
+
+  /* ===================== RENDER: RAIZ ===================== */
+  function segRoot() {
+    var seg = el('<div class="pj-seg"></div>');
+    [['projetos', 'Projetos'], ['reunioes', 'Reuniões']].forEach(function (t) {
+      var b = txt('button', 'pj-seg-b' + (ROOT_TAB === t[0] ? ' on' : ''), t[1]);
+      b.type = 'button';
+      b.addEventListener('click', function () { ROOT_TAB = t[0]; renderRoot(); });
+      seg.appendChild(b);
+    });
+    return seg;
+  }
+
+  function renderRoot() {
+    titleEl.textContent = 'Projetos';
+    actionsEl.innerHTML = '';
+    actionsEl.appendChild(segRoot());
+    if (CAN_WRITE()) {
+      var nb = UI.button({ label: ROOT_TAB === 'projetos' ? 'Novo projeto' : 'Nova reunião', icon: 'plus', onClick: function () { ROOT_TAB === 'projetos' ? modalProjeto(null) : modalReuniao(null); } });
+      actionsEl.appendChild(nb);
+    }
+    bodyEl.innerHTML = '';
+    if (ROOT_TAB === 'projetos') { renderListaProjetos(); } else { renderListaReunioes(); }
+  }
+
+  function renderListaProjetos() {
+    var card = el('<div class="pj-card"></div>');
+    var h = el('<div class="pj-card-h"></div>');
+    var tt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+    tt.appendChild(txt('div', 'pj-card-t', 'Todos os projetos (' + PROJ.length + ')'));
+    tt.appendChild(iBtn('% e status do projeto', I_PCT.concat(I_STATUS)));
+    h.appendChild(tt);
+    card.appendChild(h);
+
+    if (!PROJ.length) {
+      card.appendChild(txt('div', 'pj-empty2', CAN_WRITE() ? 'Nenhum projeto ainda — clique em "Novo projeto" para criar o primeiro.' : 'Nenhum projeto ainda.'));
+    } else {
+      var ord = PROJ.slice().sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || '', 'pt-BR'); });
+      ord.forEach(function (p) {
+        var c = projetoCalc(p);
+        var row = el('<div class="pj-row" role="button" tabindex="0"></div>');
+        var main = el('<div class="pj-row-main"></div>');
+        main.appendChild(txt('div', 'pj-row-nome', p.nome || '(sem nome)'));
+        main.appendChild(txt('div', 'pj-row-sub', c.ats.length + ' atividade(s) · ' + ((p.siglaSetores || []).join(', ') || 'sem setor')));
+        row.appendChild(main);
+        var bar = el('<div class="pj-bar"></div>');
+        var track = el('<div class="pj-track"></div>');
+        var fill = el('<div class="pj-fill"></div>');
+        fill.style.width = c.pct + '%'; fill.style.background = tomVar(c.tom);
+        track.appendChild(fill); bar.appendChild(track);
+        bar.appendChild(txt('div', 'pj-pct', c.pct + '%'));
+        row.appendChild(bar);
+        var st = txt('div', 'pj-status', c.status);
+        st.style.color = tomVar(c.tom);
+        row.appendChild(st);
+        function go() { window.location.hash = '#p=' + encodeURIComponent(p.id); }
+        row.addEventListener('click', go);
+        row.addEventListener('keydown', function (e) { if (e.key === 'Enter') { go(); } });
+        card.appendChild(row);
+      });
+    }
+    bodyEl.appendChild(card);
+  }
+
+  /* ===================== RENDER: REUNIÕES (raiz e detalhe) ===================== */
+  function nomeUser(uid) {
+    var u = USERS.filter(function (x) { return x.uid === uid; })[0];
+    return u ? u.nome : '';
+  }
+
+  function decisoesAbertasAnteriores(reuniao, escopoProjId) {
+    /* rollforward por EXIBIÇÃO (decisão §2.12): decisões aberta:true de
+       reuniões ANTERIORES do mesmo escopo (mesmo projeto, ou soltas). */
+    var out = [];
+    REUN.forEach(function (r) {
+      if (r.id === reuniao.id) { return; }
+      if ((r.projetoId || null) !== (escopoProjId || null)) { return; }
+      if (r.data >= reuniao.data) { return; }
+      (r.decisoes || []).forEach(function (d) {
+        if (d.aberta === true) { out.push({ dec: d, reuniao: r }); }
+      });
+    });
+    return out;
+  }
+
+  function renderReuniaoRow(r, container) {
+    var row = el('<div class="pj-rrow"></div>');
+    var head = el('<div class="pj-rrow-h"></div>');
+    head.appendChild(txt('div', 'pj-rrow-t', (r.titulo || 'Reunião') + ' — ' + fmtBR(r.data)));
+    var nAb = (r.decisoes || []).filter(function (d) { return d.aberta === true; }).length;
+    head.appendChild(txt('div', 'pj-rrow-meta', (r.decisoes || []).length + ' decisão(ões) · ' + nAb + ' aberta(s)'));
+    row.appendChild(head);
+
+    var open = false;
+    var box = el('<div style="display:none;margin-top:8px"></div>');
+    head.addEventListener('click', function () {
+      open = !open; box.style.display = open ? 'block' : 'none';
+      if (open && !box.childNodes.length) { fillReuniao(r, box); }
+    });
+    row.appendChild(box);
+    container.appendChild(row);
+  }
+
+  function fillReuniao(r, box) {
+    /* rollforward */
+    var ant = decisoesAbertasAnteriores(r, r.projetoId || null);
+    if (ant.length) {
+      var roll = el('<div class="pj-roll"></div>');
+      roll.appendChild(txt('div', '', 'Pendências de reuniões anteriores (' + ant.length + '):'));
+      ant.forEach(function (a) {
+        roll.appendChild(txt('div', '', '• ' + a.dec.texto + ' — ' + fmtBR(a.reuniao.data)));
+      });
+      box.appendChild(roll);
+    }
+    var decs = r.decisoes || [];
+    if (!decs.length) { box.appendChild(txt('div', 'pj-empty2', 'Sem decisões registradas nesta reunião.')); }
+    decs.forEach(function (d, idx) { box.appendChild(renderDecisao(r, d, idx)); });
+    if (CAN_WRITE()) {
+      var add = UI.button({ label: 'Adicionar decisão', icon: 'plus', variant: 'ghost' });
+      add.addEventListener('click', function () { modalDecisao(r); });
+      var wrap = el('<div style="margin-top:8px"></div>'); wrap.appendChild(add); box.appendChild(wrap);
+    }
+  }
+
+  function renderDecisao(r, d, idx) {
+    var line = el('<div class="pj-dec"></div>');
+    var main = el('<div class="pj-dec-main"></div>');
+    main.appendChild(txt('div', 'pj-dec-t', d.texto || '(sem texto)'));
+    var dono = d.donoNome || nomeUser(d.donoUid) || '—';
+    main.appendChild(txt('div', 'pj-dec-m', 'Dono: ' + dono + ' · Prazo: ' + fmtBR(d.prazo)));
+    line.appendChild(main);
+    var btns = el('<div class="pj-dec-b"></div>');
+
+    if (d.atividadeId) {
+      var b1 = txt('span', 'pj-badge', 'Virou atividade'); b1.style.color = 'var(--doing)';
+      btns.appendChild(b1);
+    } else if (d.aberta === false) {
+      var b2 = txt('span', 'pj-badge', 'Resolvida'); b2.style.color = 'var(--green)';
+      btns.appendChild(b2);
+    } else {
+      var b3 = txt('span', 'pj-badge', 'Aberta'); b3.style.color = 'var(--orange)';
+      btns.appendChild(b3);
+      if (CAN_WRITE()) {
+        var toAct = UI.button({ label: '→ Atividade', variant: 'ghost' });
+        toAct.addEventListener('click', function () { converterDecisao(r, d, idx); });
+        btns.appendChild(toAct);
+        var res = UI.button({ label: 'Marcar resolvida', variant: 'ghost' });
+        res.addEventListener('click', function () { marcarResolvida(r, idx); });
+        btns.appendChild(res);
+      }
+    }
+    line.appendChild(btns);
+    return line;
+  }
+
+  function salvarDecisoes(r, novaLista, acao) {
+    return Store.atualizarReuniao(r.id, { decisoes: novaLista }, acao)
+      .then(function () { r.decisoes = novaLista; });
+  }
+
+  function marcarResolvida(r, idx) {
+    var lista = (r.decisoes || []).map(function (d, i) {
+      return i === idx ? Object.assign({}, d, { aberta: false }) : d;
+    });
+    salvarDecisoes(r, lista, 'resolver_decisao')
+      .then(function () { toast('Decisão marcada como resolvida.'); rerender(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+
+  function converterDecisao(r, d, idx) {
+    /* setor: do projeto quando houver; senão pede (decisão §2.11) */
+    var sigProj = null;
+    if (r.projetoId) {
+      var p = PROJ.filter(function (x) { return x.id === r.projetoId; })[0];
+      if (p && p.siglaSetores && p.siglaSetores.length) { sigProj = p.siglaSetores[0]; }
+    }
+    function criar(sig) {
+      Store.criarAtividadeDeDecisao(d, r, sig)
+        .then(function (atId) {
+          var lista = (r.decisoes || []).map(function (x, i) {
+            return i === idx ? Object.assign({}, x, { atividadeId: atId, aberta: false }) : x;
+          });
+          return salvarDecisoes(r, lista, 'decisao_para_atividade');
+        })
+        .then(function () { toast('Atividade criada a partir da decisão.'); return reload(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+    if (sigProj) { criar(sigProj); return; }
+    /* reunião SEM projeto (ou projeto sem setor) → modal pede o setor */
+    var opts = CTX.setores.filter(function (s) { return s.ativo !== false; })
+      .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
+    var sel = UI.select({ placeholder: 'Escolha o setor', options: opts });
+    var m = UI.modal({
+      title: 'Setor da nova atividade', width: 420,
+      body: [txt('div', 'pj-empty2', 'Esta reunião não está vinculada a um projeto com setor — escolha o setor responsável pela atividade.'), UI.field({ label: 'Setor', required: true, control: sel })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Criar atividade', icon: 'check', onClick: function () {
+            if (!sel.value) { toast('Escolha o setor.', 'err'); return; }
+            close(); criar(sel.value);
+          } })];
+      }
+    });
+  }
+
+  function modalDecisao(r) {
+    var txtInp = UI.input({ placeholder: 'O que foi decidido' });
+    var donoOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
+    var donoSel = UI.select({ placeholder: USERS.length ? 'Escolha o dono' : '(eu mesmo)', options: donoOpts });
+    var przInp = UI.input({ placeholder: 'AAAA-MM-DD' });
+    przInp.type = 'date';
+    UI.modal({
+      title: 'Nova decisão', width: 480,
+      body: [
+        UI.field({ label: 'Decisão', required: true, control: txtInp }),
+        UI.field({ label: 'Dono', control: donoSel, hint: USERS.length ? '' : 'Sem lista de usuários — você será o dono.' }),
+        UI.field({ label: 'Prazo', required: true, control: przInp })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Adicionar', icon: 'check', onClick: function () {
+            var t = txtInp.value.trim();
+            if (!t) { toast('Escreva a decisão.', 'err'); return; }
+            if (!R.isISO(przInp.value)) { toast('Informe o prazo.', 'err'); return; }
+            var dono = donoSel.value || USER.uid;
+            var nova = { texto: t, donoUid: dono, donoNome: nomeUser(dono) || USER.name, prazo: przInp.value, atividadeId: null, aberta: true };
+            var lista = (r.decisoes || []).concat([nova]);
+            salvarDecisoes(r, lista, 'criar_decisao')
+              .then(function () { close(); toast('Decisão adicionada.'); rerender(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function modalReuniao(projetoIdFixo) {
+    var titInp = UI.input({ placeholder: 'Ex.: Reunião de líderes' });
+    var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = R.hojeISO();
+    var projOpts = PROJ.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; });
+    var projSel = UI.select({ value: projetoIdFixo || '', placeholder: '— Sem projeto —', options: projOpts, disabled: !!projetoIdFixo });
+    UI.modal({
+      title: 'Nova reunião', width: 480,
+      body: [
+        UI.field({ label: 'Título', required: true, control: titInp }),
+        UI.field({ label: 'Data', required: true, control: dtInp }),
+        UI.field({ label: 'Projeto (opcional)', control: projSel, hint: 'Decisões abertas de reuniões anteriores do mesmo escopo reaparecem aqui (rollforward).' })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Criar reunião', icon: 'check', onClick: function () {
+            var t = titInp.value.trim();
+            if (!t) { toast('Informe o título.', 'err'); return; }
+            if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
+            Store.criarReuniao({ titulo: t, data: dtInp.value, projetoId: (projetoIdFixo || projSel.value) || null, participantesUids: [], decisoes: [] })
+              .then(function () { close(); toast('Reunião criada.'); return reload(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function renderListaReunioes() {
+    /* botão de pauta */
+    var pcard = el('<div class="pj-card"></div>');
+    var ph = el('<div class="pj-card-h"></div>');
+    var pt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+    pt.appendChild(txt('div', 'pj-card-t', 'Pauta da reunião de líderes'));
+    pt.appendChild(iBtn('O que entra na pauta', [
+      ['Conteúdo', 'Atrasadas por setor (kpi.js, janela padrão) + gargalos nomeados (score 50/30/20) + decisões ABERTAS de todas as reuniões + solicitações de data PENDENTES.'],
+      ['Uso', 'Gere, copie e cole onde a reunião acontece (modelo L10/EOS: métricas → pendências → ações).']
+    ]));
+    ph.appendChild(pt);
+    var gen = UI.button({ label: 'Gerar pauta', icon: 'check' });
+    gen.addEventListener('click', modalPauta);
+    ph.appendChild(gen);
+    pcard.appendChild(ph);
+    pcard.appendChild(txt('div', 'pj-empty2', 'Texto pronto com atrasadas por setor, gargalos, decisões abertas e aprovações pendentes.'));
+    bodyEl.appendChild(pcard);
+
+    var card = el('<div class="pj-card"></div>');
+    var h = el('<div class="pj-card-h"></div>');
+    h.appendChild(txt('div', 'pj-card-t', 'Todas as reuniões (' + REUN.length + ')'));
+    card.appendChild(h);
+    if (!REUN.length) {
+      card.appendChild(txt('div', 'pj-empty2', CAN_WRITE() ? 'Nenhuma reunião ainda — clique em "Nova reunião".' : 'Nenhuma reunião ainda.'));
+    } else {
+      REUN.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })
+        .forEach(function (r) { renderReuniaoRow(r, card); });
+    }
+    bodyEl.appendChild(card);
+  }
+
+  /* ===================== PAUTA ===================== */
+  function textoPauta() {
+    var m = KPI.computar(CTX);
+    var L = [];
+    L.push('PAUTA — REUNIÃO DE LÍDERES · ' + fmtBR(R.hojeISO()));
+    L.push('Janela dos indicadores: ' + fmtBR(m.janela.jIni) + ' a ' + fmtBR(m.janela.jFim));
+    L.push('');
+    L.push('1) ATRASADAS POR SETOR (' + m.totais.atrasadas + ' no total)');
+    var comAtraso = m.porSetor.filter(function (s) { return s.atrasadas > 0; });
+    if (!comAtraso.length) { L.push('   — nenhuma atrasada. '); }
+    comAtraso.forEach(function (s) {
+      L.push('   · ' + KPI.nomeSetor(s.sig, m.setores) + ' (' + s.sig + '): ' + s.atrasadas +
+        ' atrasada(s) · aderência ' + (s.aderencia == null ? '—' : s.aderencia + '%') +
+        ' · aging médio ' + String(s.agingMedio).replace('.', ',') + 'd');
+    });
+    L.push('');
+    L.push('2) GARGALOS (score 50/30/20)');
+    var base = m.porSetor.filter(function (s) { return s.sig !== '—' && s.previstas > 0; }).map(function (s) {
+      return { sigla: s.sig, ader: s.aderencia == null ? 0 : s.aderencia, atrasadas: s.atrasadas, agingMedio: s.agingMedio || 0, carga: s.carga || 0 };
+    });
+    var gg = KPI._gargalos(base);
+    if (!gg.length) { L.push('   — nenhum gargalo detectado.'); }
+    gg.forEach(function (g) { L.push('   · ' + g.sigla + ' — ' + g.motivo); });
+    L.push('');
+    L.push('3) DECISÕES ABERTAS (rollforward)');
+    var nAb = 0;
+    REUN.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (r) {
+      (r.decisoes || []).forEach(function (d) {
+        if (d.aberta === true) {
+          nAb++;
+          L.push('   · ' + d.texto + ' — dono: ' + (d.donoNome || nomeUser(d.donoUid) || '—') +
+            ' · prazo ' + fmtBR(d.prazo) + ' · reunião ' + fmtBR(r.data));
+        }
+      });
+    });
+    if (!nAb) { L.push('   — nenhuma decisão aberta.'); }
+    L.push('');
+    L.push('4) APROVAÇÕES DE DATA PENDENTES (' + PENDS.length + ')');
+    if (!PENDS.length) { L.push('   — nenhuma pendente.'); }
+    PENDS.forEach(function (s) {
+      L.push('   · ' + (s.tituloAtividade || s.atividadeId) + ': ' + fmtBR(s.dataAtual) + ' → ' + fmtBR(s.dataProposta) +
+        ' (' + (s.solicitanteNome || '—') + ')');
+    });
+    return L.join('\n');
+  }
+
+  function modalPauta() {
+    var ta = document.createElement('textarea');
+    ta.className = 'pj-pauta';
+    ta.value = textoPauta();
+    UI.modal({
+      title: 'Pauta da reunião de líderes', width: 640,
+      body: [ta],
+      footer: function (close) {
+        return [UI.button({ label: 'Fechar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Copiar', icon: 'check', onClick: function () {
+            ta.select();
+            try {
+              if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(ta.value); }
+              else { document.execCommand('copy'); }
+              toast('Pauta copiada.');
+            } catch (e) { toast('Selecione o texto e copie com Cmd+C.', 'err'); }
+          } })];
+      }
+    });
+  }
+
+  /* ===================== MODAL: PROJETO ===================== */
+  function modalProjeto(p) {
+    var editing = !!p;
+    var nomeInp = UI.input({ value: editing ? p.nome : '', placeholder: 'Ex.: Semana pedagógica 2026' });
+    var descTa = document.createElement('textarea');
+    descTa.className = 'ui-input'; descTa.rows = 3; descTa.style.resize = 'vertical';
+    descTa.value = editing ? (p.descricao || '') : '';
+    var marc = {};
+    (editing ? (p.siglaSetores || []) : []).forEach(function (s) { marc[s] = true; });
+    var chips = el('<div style="display:flex;flex-wrap:wrap;gap:8px"></div>');
+    CTX.setores.filter(function (s) { return s.ativo !== false; }).forEach(function (s) {
+      var b = txt('button', 'pj-status', s.sigla);
+      b.type = 'button'; b.style.cursor = 'pointer';
+      function paint() { b.style.color = marc[s.sigla] ? 'var(--greenText)' : 'var(--muted)'; b.style.background = marc[s.sigla] ? 'var(--activeBg)' : 'transparent'; }
+      paint();
+      b.addEventListener('click', function () { marc[s.sigla] = !marc[s.sigla]; paint(); });
+      chips.appendChild(b);
+    });
+    UI.modal({
+      title: editing ? 'Editar projeto' : 'Novo projeto', width: 520,
+      body: [
+        UI.field({ label: 'Nome', required: true, control: nomeInp }),
+        UI.field({ label: 'Descrição', control: descTa }),
+        UI.field({ label: 'Setores envolvidos', control: chips, hint: 'O 1º setor marcado vira o setor padrão das atividades criadas a partir de decisões.' })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: editing ? 'Salvar' : 'Criar projeto', icon: 'check', onClick: function () {
+            var nome = nomeInp.value.trim();
+            if (!nome) { toast('Informe o nome.', 'err'); return; }
+            var sigs = Object.keys(marc).filter(function (k) { return marc[k]; });
+            var data = { nome: nome, descricao: descTa.value.trim(), siglaSetores: sigs };
+            var pr = editing ? Store.atualizarProjeto(p.id, data, { nome: p.nome }) : Store.criarProjeto(data);
+            pr.then(function () { close(); toast(editing ? 'Projeto salvo.' : 'Projeto criado.'); return reload(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  /* ===================== RENDER: DETALHE ===================== */
+  function segDetail() {
+    var seg = el('<div class="pj-seg"></div>');
+    [['visao', 'Visão'], ['atividades', 'Atividades'], ['reunioes', 'Reuniões'], ['eventos', 'Eventos']].forEach(function (t) {
+      var b = txt('button', 'pj-seg-b' + (DET_TAB === t[0] ? ' on' : ''), t[1]);
+      b.type = 'button';
+      b.addEventListener('click', function () { DET_TAB = t[0]; renderDetail(); });
+      seg.appendChild(b);
+    });
+    return seg;
+  }
+
+  function renderDetail() {
+    var pid = hashProj();
+    var p = PROJ.filter(function (x) { return x.id === pid; })[0];
+    if (!p) { window.location.hash = ''; return; }
+    var c = projetoCalc(p);
+
+    titleEl.textContent = p.nome || 'Projeto';
+    actionsEl.innerHTML = '';
+    actionsEl.appendChild(segDetail());
+    if (CAN_WRITE()) {
+      var eb = UI.button({ label: 'Editar', icon: 'gear', variant: 'ghost', onClick: function () { modalProjeto(p); } });
+      actionsEl.appendChild(eb);
+    }
+
+    bodyEl.innerHTML = '';
+    var back = el('<button class="pj-back" type="button">‹ Todos os projetos</button>');
+    back.addEventListener('click', function () { window.location.hash = ''; });
+    var bw = el('<div style="margin-bottom:12px"></div>'); bw.appendChild(back); bodyEl.appendChild(bw);
+
+    if (DET_TAB === 'visao') { renderVisao(p, c); }
+    else if (DET_TAB === 'atividades') { renderAtividadesTab(p, c); }
+    else if (DET_TAB === 'reunioes') { renderReunioesTab(p); }
+    else { renderEventosTab(p); }
+  }
+
+  function renderVisao(p, c) {
+    var grid = el('<div class="pj-dgrid"></div>');
+    function dm(k, v, s, iRows) {
+      var d = el('<div class="pj-dm"></div>');
+      var kk = el('<div class="pj-dm-k"></div>');
+      kk.appendChild(txt('span', '', k));
+      if (iRows) { kk.appendChild(iBtn(k, iRows)); }
+      d.appendChild(kk);
+      d.appendChild(txt('div', 'pj-dm-v', v));
+      if (s) { d.appendChild(txt('div', 'pj-dm-s', s)); }
+      return d;
+    }
+    grid.appendChild(dm('Progresso', c.pct + '%', c.ats.length + ' atividade(s) vinculada(s)', I_PCT));
+    var st = dm('Status', c.status, null, I_STATUS);
+    st.querySelector('.pj-dm-v').style.color = tomVar(c.tom);
+    grid.appendChild(st);
+    var nAtr = CTX.board.filter(function (o) { return o.atrasada && o.act.projetoId === p.id; }).length;
+    grid.appendChild(dm('Atrasadas', String(nAtr), 'ocorrências vencidas em aberto', [
+      ['Fórmula', 'Ocorrências das atividades vinculadas com prazo < hoje e status aberto (pendente / em andamento / reprogramada), na janela padrão do board.'],
+      ['Dados', 'kpi.js · janela padrão (−45/+30 dias) · dia civil local.']
+    ]));
+    bodyEl.appendChild(grid);
+
+    var card = el('<div class="pj-card"></div>');
+    card.appendChild(txt('div', 'pj-card-t', 'Descrição'));
+    card.appendChild(txt('div', 'pj-empty2', p.descricao || 'Sem descrição.'));
+    bodyEl.appendChild(card);
+  }
+
+  /* ---------- aba Atividades (com subtarefas) ---------- */
+  function renderAtividadesTab(p, c) {
+    var card = el('<div class="pj-card"></div>');
+    var h = el('<div class="pj-card-h"></div>');
+    var tt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+    tt.appendChild(txt('div', 'pj-card-t', 'Atividades vinculadas (' + c.ats.length + ')'));
+    tt.appendChild(iBtn('% da atividade', I_PCT));
+    h.appendChild(tt);
+    h.appendChild(txt('div', 'pj-empty2', 'Vincule mais atividades pelo campo "Projeto" na tela Atividades.'));
+    card.appendChild(h);
+
+    if (!c.ats.length) {
+      card.appendChild(txt('div', 'pj-empty2', 'Nenhuma atividade vinculada — abra Atividades e escolha este projeto no campo "Projeto (opcional)".'));
+    }
+    c.ats.slice().sort(function (a, b) { return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'); })
+      .forEach(function (a) { card.appendChild(renderAtivRow(a)); });
+    bodyEl.appendChild(card);
+  }
+
+  function renderAtivRow(a) {
+    var row = el('<div class="pj-arow"></div>');
+    var head = el('<div class="pj-arow-h"></div>');
+    var pct = pctAtividade(a);
+    head.appendChild(txt('div', 'pj-arow-t', a.titulo || '(sem título)'));
+    var subs = SUBS[a.id] || [];
+    var metaTxt = pct + '% · ' + (subs.length ? subs.length + ' subtarefa(s)' : (a.recorrencia === 'unico' ? 'única' : 'recorrente — crie subtarefas p/ medir'));
+    head.appendChild(txt('div', 'pj-arow-meta', metaTxt));
+    row.appendChild(head);
+
+    var open = false;
+    var box = el('<div style="display:none"></div>');
+    head.addEventListener('click', function () {
+      open = !open; box.style.display = open ? 'block' : 'none';
+      if (open) { fillSubs(a, box); }
+    });
+    row.appendChild(box);
+    return row;
+  }
+
+  function fillSubs(a, box) {
+    box.innerHTML = '';
+    var wrap = el('<div class="pj-subs"></div>');
+    var subs = (SUBS[a.id] || []).slice().sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0); });
+    if (!subs.length) { wrap.appendChild(txt('div', 'pj-empty2', 'Sem subtarefas.')); }
+    subs.forEach(function (s) {
+      var line = el('<div class="pj-sub"></div>');
+      line.appendChild(txt('div', 'pj-sub-t', s.texto || '(sem texto)'));
+      var sel = document.createElement('select');
+      sel.className = 'pj-sub-sel';
+      [0, 25, 50, 75, 100].forEach(function (v) {
+        var o = document.createElement('option'); o.value = String(v); o.textContent = v + '%';
+        sel.appendChild(o);
+      });
+      sel.value = String(s.pct || 0);
+      sel.disabled = !CAN_WRITE();
+      sel.addEventListener('change', function () {
+        var novo = parseInt(sel.value, 10);
+        Store.atualizarSubtarefa(s.id, { pct: novo }, { pct: s.pct })
+          .then(function () { s.pct = novo; toast('Subtarefa atualizada.'); rerender(); })
+          .catch(function (e) { toast(e.message, 'err'); });
+      });
+      line.appendChild(sel);
+      if (CAN_WRITE()) {
+        var x = el('<button class="pj-sub-x" type="button" aria-label="Remover"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>');
+        x.addEventListener('click', function () {
+          Store.inativarSubtarefa(s.id)
+            .then(function () { SUBS[a.id] = (SUBS[a.id] || []).filter(function (z) { return z.id !== s.id; }); toast('Subtarefa removida.'); rerender(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        });
+        line.appendChild(x);
+      }
+      wrap.appendChild(line);
+    });
+    if (CAN_WRITE()) {
+      var addWrap = el('<div class="pj-addsub"></div>');
+      var inp = UI.input({ placeholder: 'Nova subtarefa…' });
+      var add = UI.button({ label: 'Adicionar', variant: 'ghost' });
+      add.addEventListener('click', function () {
+        var t = inp.value.trim();
+        if (!t) { return; }
+        var ordem = subs.length ? (subs[subs.length - 1].ordem || 0) + 1 : 1;
+        Store.criarSubtarefa(a.id, t, ordem)
+          .then(function (id) {
+            SUBS[a.id] = (SUBS[a.id] || []).concat([{ id: id, atividadeId: a.id, texto: t, pct: 0, ordem: ordem, ativo: true }]);
+            toast('Subtarefa criada.'); rerender();
+          })
+          .catch(function (e) { toast(e.message, 'err'); });
+      });
+      addWrap.appendChild(inp); addWrap.appendChild(add);
+      wrap.appendChild(addWrap);
+    }
+    box.appendChild(wrap);
+  }
+
+  /* ---------- aba Reuniões do projeto ---------- */
+  function renderReunioesTab(p) {
+    var card = el('<div class="pj-card"></div>');
+    var h = el('<div class="pj-card-h"></div>');
+    var lista = REUN.filter(function (r) { return r.projetoId === p.id; });
+    h.appendChild(txt('div', 'pj-card-t', 'Reuniões do projeto (' + lista.length + ')'));
+    if (CAN_WRITE()) {
+      var nb = UI.button({ label: 'Nova reunião', icon: 'plus', variant: 'ghost' });
+      nb.addEventListener('click', function () { modalReuniao(p.id); });
+      h.appendChild(nb);
+    }
+    card.appendChild(h);
+    if (!lista.length) { card.appendChild(txt('div', 'pj-empty2', 'Nenhuma reunião deste projeto ainda.')); }
+    lista.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })
+      .forEach(function (r) { renderReuniaoRow(r, card); });
+    bodyEl.appendChild(card);
+  }
+
+  /* ---------- aba Eventos do projeto (D3: Σ previsto × realizado) ---------- */
+  function renderEventosTab(p) {
+    var holder = el('<div></div>');
+    holder.appendChild(txt('div', 'pj-empty2', 'Carregando eventos…'));
+    bodyEl.appendChild(holder);
+    Store.listEventosDoProjeto(p.id).then(function (evs) {
+      holder.innerHTML = '';
+      var sp = 0, sr = 0;
+      evs.forEach(function (e) { sp += Number(e.custoPrevisto) || 0; if (e.custoRealizado != null) { sr += Number(e.custoRealizado) || 0; } });
+
+      var grid = el('<div class="pj-dgrid"></div>');
+      var d = el('<div class="pj-dm"></div>');
+      var kk = el('<div class="pj-dm-k"></div>');
+      kk.appendChild(txt('span', '', 'Custos dos eventos'));
+      kk.appendChild(iBtn('Custos dos eventos', [
+        ['Fórmula', 'Σ custo previsto × Σ custo realizado dos eventos vinculados a este projeto. Valores guardados em CENTAVOS (inteiro — evita erro de vírgula); exibidos em R$.'],
+        ['Dados', 'Coleção eventos · projetoId = este projeto · ativos.']
+      ]));
+      d.appendChild(kk);
+      d.appendChild(txt('div', 'pj-dm-v', fmtBRL(sp) + ' × ' + (sr ? fmtBRL(sr) : 'R$ 0,00')));
+      d.appendChild(txt('div', 'pj-dm-s', 'previsto × realizado · ' + evs.length + ' evento(s)'));
+      grid.appendChild(d);
+      holder.appendChild(grid);
+
+      var card = el('<div class="pj-card"></div>');
+      var h = el('<div class="pj-card-h"></div>');
+      h.appendChild(txt('div', 'pj-card-t', 'Eventos do projeto (' + evs.length + ')'));
+      if (CAN_WRITE()) {
+        var nb = UI.button({ label: 'Novo evento', icon: 'plus', variant: 'ghost' });
+        nb.addEventListener('click', function () { modalEventoDoProjeto(p, function () { renderDetail(); }); });
+        h.appendChild(nb);
+      }
+      card.appendChild(h);
+      if (!evs.length) { card.appendChild(txt('div', 'pj-empty2', 'Nenhum evento vinculado — crie aqui ou vincule pelo calendário (Eventos).')); }
+      evs.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (e) {
+        var row = el('<div class="pj-evrow"></div>');
+        var dot = el('<div class="pj-ev-dot"></div>');
+        dot.style.background = 'var(--' + KPI.corSetor(e.siglaSetor, CTX.setores) + ')';
+        row.appendChild(dot);
+        row.appendChild(txt('div', 'pj-ev-t', e.titulo || '(sem título)'));
+        row.appendChild(txt('div', 'pj-ev-m', fmtBR(e.data) + (e.hora ? ' ' + e.hora : '') + ' · ' + fmtBRL(e.custoPrevisto) + ' × ' + (e.custoRealizado != null ? fmtBRL(e.custoRealizado) : '—') + ' · ' + (e.realizado ? 'Realizado' : 'Previsto')));
+        card.appendChild(row);
+      });
+      holder.appendChild(card);
+    });
+  }
+
+  function modalEventoDoProjeto(p, done) {
+    var titInp = UI.input({ placeholder: 'Ex.: Formatura turma 12' });
+    var dtInp = UI.input({}); dtInp.type = 'date';
+    var hrInp = UI.input({}); hrInp.type = 'time';
+    var setOpts = CTX.setores.filter(function (s) { return s.ativo !== false; })
+      .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
+    var setSel = UI.select({ placeholder: 'Escolha o setor', options: setOpts });
+    var custoInp = UI.input({ placeholder: 'R$ 0,00' });
+    custoInp.addEventListener('input', function () { custoInp.value = fmtBRL(parseBRL(custoInp.value)); });
+    var obsTa = document.createElement('textarea');
+    obsTa.className = 'ui-input'; obsTa.rows = 2; obsTa.style.resize = 'vertical';
+    UI.modal({
+      title: 'Novo evento — ' + (p.nome || 'projeto'), width: 500,
+      body: [
+        UI.field({ label: 'Título', required: true, control: titInp }),
+        UI.field({ label: 'Data', required: true, control: dtInp }),
+        UI.field({ label: 'Hora (opcional)', control: hrInp }),
+        UI.field({ label: 'Setor', required: true, control: setSel }),
+        UI.field({ label: 'Custo previsto', control: custoInp, hint: 'Guardado em centavos (evita erro de vírgula).' }),
+        UI.field({ label: 'Observações', control: obsTa })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Criar evento', icon: 'check', onClick: function () {
+            if (!titInp.value.trim()) { toast('Informe o título.', 'err'); return; }
+            if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
+            if (!setSel.value) { toast('Escolha o setor.', 'err'); return; }
+            Store.criarEvento({
+              titulo: titInp.value.trim(), data: dtInp.value, hora: hrInp.value || null,
+              siglaSetor: setSel.value, projetoId: p.id, local: null,
+              obs: obsTa.value.trim() || null, custoPrevisto: parseBRL(custoInp.value)
+            }).then(function () { close(); toast('Evento criado.'); if (done) { done(); } })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  /* ===================== ESTADOS / BOOT ===================== */
+  function renderLoading() {
+    bodyEl.innerHTML = '';
+    var s = el('<div class="pj-state"><div class="pj-state-t">Carregando…</div><div class="pj-state-s">Buscando projetos, reuniões e o board de atividades.</div></div>');
+    bodyEl.appendChild(s);
+  }
+  function renderError(e) {
+    bodyEl.innerHTML = '';
+    var s = el('<div class="pj-state"></div>');
+    s.appendChild(txt('div', 'pj-state-t', 'Não deu para carregar'));
+    s.appendChild(txt('div', 'pj-state-s', (e && e.message) || 'Erro desconhecido.'));
+    var rb = UI.button({ label: 'Tentar de novo', icon: 'upload' });
+    rb.addEventListener('click', reload);
+    s.appendChild(rb);
+    bodyEl.appendChild(s);
+  }
+
+  function rerender() { hashProj() ? renderDetail() : renderRoot(); }
+
+  function reload() {
+    renderLoading();
+    return Promise.all([
+      KPI.carregar('band'),
+      Store.listProjetos(),
+      Store.listReunioes(),
+      Store.listSubtarefas(),
+      Store.listUsuariosAtivos(),
+      Store.listSolicPendentes()
+    ]).then(function (r) {
+      CTX = r[0]; PROJ = r[1]; REUN = r[2];
+      SUBS = {};
+      r[3].forEach(function (s) { (SUBS[s.atividadeId] = SUBS[s.atividadeId] || []).push(s); });
+      USERS = r[4]; PENDS = r[5];
+      rerender();
+    }).catch(function (e) { renderError(e); });
+  }
+
+  function boot() {
+    POP = document.getElementById('pj-pop');
+    BACK = document.getElementById('pj-backdrop');
+    BACK.addEventListener('click', closePop);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    titleEl = document.getElementById('pj-title');
+    actionsEl = document.getElementById('pj-actions');
+    bodyEl = document.getElementById('pj-body');
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Projetos', user: USER }), app.firstChild);
+    window.addEventListener('hashchange', function () { DET_TAB = 'visao'; rerender(); });
+    reload();
+  }
+
+  Guard.onReady(function (u) { USER = u; boot(); });
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

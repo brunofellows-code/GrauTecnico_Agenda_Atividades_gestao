@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Grau Técnico FSA · Sistema A</title>
+  <title>GERA · Grau Técnico FSA</title>
   <link rel="stylesheet" href="theme.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#090B10">
   <script src="theme.js"></script>
   <script src="guard.js"></script>
   <style>
@@ -62,9 +64,9 @@
     <header class="ix-head">
       <div class="ix-brand">
         <span class="ix-logo">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 8l9 5 9-5z"></path><path d="M3 13l9 5 9-5"></path></svg>
+          <img src="icon-192.png" alt="GERA" width="24" height="24" style="display:block;border-radius:22%">
         </span>
-        <span class="ix-name">Grau Técnico FSA<span>Sistema A</span></span>
+        <span class="ix-name">GERA<span>Grau Técnico FSA</span></span>
       </div>
       <button class="ix-themebtn" type="button" data-theme-toggle aria-label="Alternar tema">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
@@ -72,7 +74,7 @@
       </button>
     </header>
 
-    <h1 class="ix-title">Bem-vindo ao Sistema A</h1>
+    <h1 class="ix-title">Bem-vindo ao GERA</h1>
     <p class="ix-sub">Agenda, projetos e atividades do Grau Técnico FSA. Escolha por onde começar.</p>
 
     <section class="ix-grid">
@@ -126,7 +128,8 @@
       <span class="ix-chip" title="Em construção">Configurações</span>
     </section>
 
-    <footer class="ix-foot">Grau Técnico FSA · Sistema A — Agenda + Projetos + Atividades</footer>
+    <footer class="ix-foot">GERA · Grau Técnico FSA — Gestão, Equipe, Rotinas e Atividades</footer>
   </main>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>
