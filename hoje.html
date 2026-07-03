@@ -108,6 +108,21 @@
   .hj-tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:80px;background:var(--s1);border-top:1px solid var(--border);align-items:flex-start;justify-content:space-around;padding:11px 14px 0;z-index:20}
   .hj-dev{bottom:94px}
 }
+
+/* ---- Meu Dia: adições ---- */
+.hj-scope{display:inline-flex;gap:4px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:16px}
+.hj-seg-b{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer}
+.hj-seg-b.on{background:var(--s1);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.hj-act{border:1px solid var(--border);background:var(--s1);color:var(--text);font:inherit;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer}
+.hj-act:hover{background:var(--s2)}
+.hj-act.ok{color:var(--greenText);border-color:var(--green)}
+.hj-rowacts{display:flex;gap:6px;margin-top:9px}
+.hj-empty{font-size:12.5px;color:var(--muted);padding:8px 2px}
+.hj-state{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px;padding:40px 20px}
+.hj-state-t{font-size:16px;font-weight:800;color:var(--text)}
+.hj-state-s{font-size:13px;color:var(--muted);max-width:460px;line-height:1.5}
+.hj-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.hj-toast.err{border-color:var(--red);color:var(--red)}
 </style>
 </head>
 <body>
@@ -128,7 +143,7 @@
 
       <div class="hj-top">
         <div style="line-height:1.2">
-          <div class="hj-hi">Bom dia, Mariana</div>
+          <div class="hj-hi">Olá</div>
           <div class="hj-dd">Quinta-feira, 26 de junho de 2026 · Agenda do dia</div>
         </div>
         <div class="hj-topactions">
@@ -142,14 +157,16 @@
 
       <div class="hj-mhead">
         <div>
-          <div class="hj-mg">Bom dia, Mariana</div>
+          <div class="hj-mg">Olá</div>
           <div class="hj-md">Quinta, 26 de junho · 12 atividades</div>
         </div>
         <span id="hj-mav"></span>
       </div>
 
       <div class="hj-content">
-        <div class="hj-kpis" id="hj-kpis"></div>
+        <div class="hj-scope" id="hj-scope"></div>
+      <div class="hj-state" id="hj-state"></div>
+      <div class="hj-kpis" id="hj-kpis"></div>
 
         <div class="hj-cols">
           <div class="hj-card">
@@ -186,112 +203,282 @@
   </div>
 
   <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script src="kpi.js"></script>
   <script>
-  /* ===== DADOS (mock Seção 10) — forma = contrato do Firestore ===== */
-  var DATA = {
-    user: { name: 'Mariana Souza', profile: 'Admin', initials: 'MS' },
-    kpis: [
-      { label: 'Atividades de hoje', value: '12', sub: '+3 vs ontem', tone: 'green' },
-      { label: 'Aderência da semana', value: '87%', sub: 'meta 90%', tone: 'amber' },
-      { label: 'Atrasadas / críticas', value: '4', sub: '2 críticas', tone: 'red' },
-      { label: 'Concluídas hoje', value: '5', sub: '42% do dia', tone: 'green' },
-      { label: 'Em andamento', value: '7', sub: '3 setores', tone: 'amber' },
-      { label: 'Projetos ativos', value: '9', sub: '2 em risco', tone: 'green' }
-    ],
-    timeline: [
-      { time: '08:00', title: 'Reunião de coordenação pedagógica', tag: 'Reunião', sector: 'Coordenação', state: 'done' },
-      { time: '09:30', title: 'Visita técnica — Laboratório de Enfermagem', tag: 'Visita', sector: 'Infraestrutura', state: 'done' },
-      { time: '11:00', title: 'Conferir documentação SENAI / MEC', tag: 'Atividade', sector: 'Secretaria', state: 'now' },
-      { time: '13:30', title: 'Atendimento a responsáveis — Matrículas 2026.2', tag: 'Atendimento', sector: 'Captação', state: 'todo' },
-      { time: '15:00', title: 'Atualizar planilha de evasão', tag: 'Atividade', sector: 'Acadêmico', state: 'todo' },
-      { time: '16:30', title: 'Banca de TCC — Técnico em Informática', tag: 'Banca', sector: 'Coordenação', state: 'todo' }
-    ],
-    dayTasks: [
-      { title: 'Conferência de presença diária', freq: 'Diário', done: true },
-      { title: 'Backup do sistema acadêmico', freq: 'Diário', done: true },
-      { title: 'Conferir documentação SENAI/MEC', freq: 'Único', done: false },
-      { title: 'Atualizar planilha de evasão', freq: 'Semanal', done: false },
-      { title: 'Postar comunicado no portal', freq: 'Único', done: false }
-    ],
-    atrasadas: [
-      { title: 'Inventário — Lab. de Informática', days: 11, sector: 'TI' },
-      { title: 'Relatório de frequência — Maio', days: 6, sector: 'Secretaria' },
-      { title: 'Renovar contrato de estágio', days: 3, sector: 'Coordenação' },
-      { title: 'Aprovar material do Vestibulinho', days: 2, sector: 'Captação' }
-    ]
+  /* ================= MEU DIA — dados REAIS (zero mock) =================
+     Carrega via KPI.carregar (mesmo motor validado da Inteligência) e
+     filtra pelo usuário logado. Ações de 1 toque gravam override em
+     `ocorrencias` (idempotente) + atividade_log, igual ao atividades.html. */
+  var CURRENT_USER = null;
+  var MODO = 'minhas';          /* 'minhas' | 'todas' */
+  var MODELO = null;            /* último KPI.carregar */
+  var R = window.GrautRecorrencia;
+  var RECOR_LABEL = { diario: 'Diário', semanal: 'Semanal', quinzenal: 'Quinzenal', mensal: 'Mensal', unico: 'Único' };
+
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+
+  /* ---------- Firestore (mesmo padrão do atividades/kpi) ---------- */
+  var _fb = null;
+  function fb() {
+    if (!_fb) {
+      _fb = Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+    }
+    return _fb;
+  }
+  function ferr(e) {
+    var code = (e && e.code) || '';
+    if (code === 'permission-denied') { return new Error('Sem permissão para gravar. Confirme seu perfil e as Regras publicadas.'); }
+    return new Error((e && e.message) || 'Erro ao falar com o banco.');
+  }
+
+  var Store = {
+    log: function (entry) {
+      return fb().then(function (c) {
+        var row = Object.assign({ ts: Date.now(), uid: (CURRENT_USER && CURRENT_USER.uid) || null }, entry);
+        return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), row);
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[hoje] log falhou', e); } });
+    },
+    setOcorrencia: function (act, origData, patch, acao) {
+      return fb().then(function (c) {
+        var idoc = R.docIdOcorrencia(act.id, origData);
+        var base = {
+          atividadeId: act.id,
+          setorSigla: act.setorSigla,
+          responsavelUid: act.responsavelUid || null,
+          data: origData,
+          prazoOriginal: origData
+        };
+        var body = Object.assign(base, patch);
+        return c.f.setDoc(c.f.doc(c.db, 'ocorrencias', idoc), body, { merge: true }).then(function () {
+          Store.log({ acao: acao, entidade: 'ocorrencia', refId: idoc, antes: null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    }
   };
 
-  /* monta um elemento a partir de string HTML (dados mock confiáveis) */
-  function el(html) {
-    var t = document.createElement('template');
-    t.innerHTML = html.trim();
-    return t.content.firstChild;
+  /* ---------- toast ---------- */
+  function toast(msg, kind) {
+    var t = el('<div class="hj-toast' + (kind === 'err' ? ' err' : '') + '"></div>');
+    t.textContent = msg; document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
   }
 
-  function tlRow(ev) {
-    var tagColor = ev.tag === 'Atividade' ? 'var(--brand)' : 'var(--muted2)';
-    var timeClass = ev.state === 'now' ? 'tcol-now' : ev.state === 'done' ? 'tcol-done' : 'tcol-todo';
-    var titleClass = ev.state === 'done' ? 'ttl-done' : 'ttl-live';
-    var cardClass = ev.state === 'now' ? 'now' : 'std';
-    return el(
-      '<div class="hj-tlrow">' +
-        '<div class="hj-time ' + timeClass + '">' + ev.time + '</div>' +
-        '<div class="hj-rail"><div class="hj-seg" style="height:14px"></div><div class="node ' + ev.state + '"></div><div class="hj-seg" style="flex:1"></div></div>' +
-        '<div class="hj-ev"><div class="hj-evcard ' + cardClass + '">' +
-          '<div class="hj-evmeta"><span class="hj-tag" style="color:' + tagColor + '">' + ev.tag + '</span><span class="hj-evsec">' + ev.sector + '</span></div>' +
-          '<div class="hj-evt ' + titleClass + '">' + ev.title + '</div>' +
-        '</div></div>' +
-      '</div>'
-    );
+  /* ---------- mutações (1 toque) ---------- */
+  function CAN_WRITE() { var p = (CURRENT_USER && CURRENT_USER.profile) || ''; return p === 'Admin' || p === 'Editor'; }
+  function mutar(o, patch, acao, msg) {
+    if (!CAN_WRITE()) { toast('Seu perfil só visualiza.', 'err'); return; }
+    Store.setOcorrencia(o.act, o.origData, patch, acao)
+      .then(function () { toast(msg); refresh(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function concluir(o) { mutar(o, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia', 'Concluída. ✔'); }
+  function reabrir(o) { mutar(o, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia', 'Reaberta.'); }
+  function iniciar(o) { mutar(o, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia', 'Em andamento.'); }
+
+  /* ---------- helpers de exibição ---------- */
+  function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+  function saudacao() { var h = new Date().getHours(); return h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
+  function dataLonga(iso) {
+    var M = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    var D = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    var d = R.fromISO(iso);
+    return D[d.getDay()] + ', ' + d.getDate() + ' de ' + M[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+  function chipSetor(act) {
+    if (act.todosSetores) { var a = txt('span', 'hj-tag', 'Todos'); a.style.color = 'var(--muted2)'; return a; }
+    var sig = KPI.setoresDe(act, MODELO.setores)[0] || '—';
+    var c = KPI.corSetor(sig, MODELO.setores);
+    var s = txt('span', 'hj-tag', sig); s.style.color = 'var(--' + c + ')';
+    return s;
+  }
+  function miniBtn(label, fn, tone) {
+    var b = el('<button type="button" class="hj-act' + (tone ? ' ' + tone : '') + '"></button>');
+    b.textContent = label;
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); fn(); });
+    return b;
   }
 
-  function lateRow(a) {
-    var sev = a.days > 7 ? { t: 'red', l: 'Crítico' } : a.days > 3 ? { t: 'orange', l: 'Alto' } : { t: 'amber', l: 'Médio' };
+  /* ---------- derivação das seções (puro, testável) ---------- */
+  function derivar(board, hoje) {
+    var doHoje = [], atras = [];
+    board.forEach(function (o) {
+      if (o.atrasada) { atras.push(o); }
+      if (o.effDate === hoje && o.status !== 'pulada') { doHoje.push(o); }
+    });
+    atras.sort(function (a, b) { return a.effDate < b.effDate ? -1 : 1; });
+    var comHora = doHoje.filter(function (o) { return !!o.horario; })
+      .sort(function (a, b) { return (a.horario || '') < (b.horario || '') ? -1 : 1; });
+    var semHora = doHoje.filter(function (o) { return !o.horario; })
+      .sort(function (a, b) { return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
+    var feitasHoje = doHoje.filter(function (o) { return o.status === 'concluida'; }).length;
+    return { doHoje: doHoje, atras: atras, comHora: comHora, semHora: semHora, feitasHoje: feitasHoje };
+  }
+
+  /* ---------- linhas ---------- */
+  function tlRow(o, agoraHM) {
+    var state = o.status === 'concluida' ? 'done' : (o.status === 'em_andamento' ? 'now' : 'todo');
+    var timeClass = state === 'now' ? 'tcol-now' : state === 'done' ? 'tcol-done' : 'tcol-todo';
+    var row = el('<div class="hj-tlrow"></div>');
+    row.appendChild(txt('div', 'hj-time ' + timeClass, o.horario || ''));
+    row.appendChild(el('<div class="hj-rail"><div class="hj-seg" style="height:14px"></div><div class="node ' + state + '"></div><div class="hj-seg" style="flex:1"></div></div>'));
+    var ev = el('<div class="hj-ev"></div>');
+    var card = el('<div class="hj-evcard ' + (state === 'now' ? 'now' : 'std') + '"></div>');
+    var meta = el('<div class="hj-evmeta"></div>');
+    meta.appendChild(chipSetor(o.act));
+    meta.appendChild(txt('span', 'hj-evsec', RECOR_LABEL[o.act.recorrencia] || ''));
+    if (o.status === 'em_andamento') { var em = txt('span', 'hj-evsec', 'em andamento'); em.style.color = 'var(--doing)'; meta.appendChild(em); }
+    card.appendChild(meta);
+    card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), o.titulo));
+    if (CAN_WRITE()) {
+      var acts = el('<div class="hj-rowacts"></div>');
+      if (state === 'done') { acts.appendChild(miniBtn('Reabrir', function () { reabrir(o); })); }
+      else {
+        acts.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok'));
+        if (state !== 'now') { acts.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
+      }
+      card.appendChild(acts);
+    }
+    ev.appendChild(card); row.appendChild(ev);
+    return row;
+  }
+
+  function dayRow(o) {
+    var row = el('<div class="hj-daytask"></div>');
+    var done = o.status === 'concluida';
+    row.appendChild(UI.checkbox({
+      checked: done, label: o.titulo,
+      onToggle: function () { if (!CAN_WRITE()) { toast('Seu perfil só visualiza.', 'err'); refresh(); return; } if (done) { reabrir(o); } else { concluir(o); } }
+    }));
+    if (o.status === 'em_andamento') { var em = txt('span', 'hj-freq', 'Em andamento'); em.style.color = 'var(--doing)'; row.appendChild(em); }
+    else if (!done && CAN_WRITE()) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
+    row.appendChild(txt('span', 'hj-freq', RECOR_LABEL[o.act.recorrencia] || ''));
+    return row;
+  }
+
+  function lateRow(o, hoje) {
+    var days = R.diasEntre(o.effDate, hoje);
+    var sev = days >= 8 ? { t: 'red', l: 'Crítico' } : days >= 4 ? { t: 'orange', l: 'Alto' } : { t: 'amber', l: 'Médio' };
     var row = el('<div class="hj-late" style="--tone:var(--' + sev.t + ')"></div>');
-    row.innerHTML =
-      '<div class="hj-late-days"><div class="hj-late-dn">' + a.days + '</div><div class="hj-late-dl">DIAS</div></div>' +
-      '<div class="hj-late-main"><div class="hj-late-t">' + a.title + '</div><div class="hj-late-s">' + a.sector + '</div></div>';
+    var dd = el('<div class="hj-late-days"></div>');
+    dd.appendChild(txt('div', 'hj-late-dn', String(days)));
+    dd.appendChild(txt('div', 'hj-late-dl', days === 1 ? 'DIA' : 'DIAS'));
+    row.appendChild(dd);
+    var main = el('<div class="hj-late-main"></div>');
+    main.appendChild(txt('div', 'hj-late-t', o.titulo));
+    var sigs = o.act.todosSetores ? 'Todos os setores' : KPI.setoresDe(o.act, MODELO.setores).join(' · ');
+    main.appendChild(txt('div', 'hj-late-s', sigs + (o.responsavel ? ' · ' + o.responsavel : '')));
+    row.appendChild(main);
+    if (CAN_WRITE()) { row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok')); }
     row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
     return row;
   }
 
-  function render(d) {
-    // sidebar (desktop) — entra como primeiro filho do app
-    var app = document.getElementById('app');
-    app.insertBefore(UI.sidebar({ active: 'Hoje', user: d.user }), app.firstChild);
+  /* ---------- estados ---------- */
+  function setState(msg, sub) {
+    var st = document.getElementById('hj-state');
+    var cols = document.querySelector('.hj-cols'); var kp = document.getElementById('hj-kpis');
+    if (!msg) { st.style.display = 'none'; cols.style.display = ''; kp.style.display = ''; return; }
+    st.style.display = ''; cols.style.display = 'none'; kp.style.display = 'none';
+    st.innerHTML = '';
+    st.appendChild(txt('div', 'hj-state-t', msg));
+    if (sub) { st.appendChild(txt('div', 'hj-state-s', sub)); }
+  }
 
-    // CTA e avatar mobile via primitivos
-    document.getElementById('hj-cta').appendChild(UI.button({ label: 'Nova atividade', icon: 'plus' }));
-    document.getElementById('hj-mav').appendChild(UI.avatar({ initials: d.user.initials, size: 42 }));
+  /* ---------- pintura ---------- */
+  function paint() {
+    var m = MODELO, hoje = m.hoje;
+    var board = (MODO === 'minhas')
+      ? m.board.filter(function (o) { return o.act.responsavelUid === CURRENT_USER.uid; })
+      : m.board;
+    var d = derivar(board, hoje);
 
-    // KPIs
-    var kg = document.getElementById('hj-kpis');
-    d.kpis.forEach(function (k) { kg.appendChild(UI.kpiCard(k)); });
+    /* escopo vazio didático */
+    if (MODO === 'minhas' && !board.length && m.board.length) {
+      setState('Nada atribuído a você nesta janela.',
+        'Use o seletor acima para ver as atividades de toda a escola, ou peça ao Admin para te definir como responsável.');
+      var kp0 = document.getElementById('hj-kpis'); kp0.style.display = 'none';
+      return;
+    }
+    if (!m.board.length) {
+      setState('Ainda não há atividades cadastradas.', 'Crie a primeira em Atividades — os indicadores nascem daí.');
+      return;
+    }
+    setState(null);
 
-    // timeline
-    var tl = document.getElementById('hj-timeline');
-    d.timeline.forEach(function (ev) { tl.appendChild(tlRow(ev)); });
+    var mm = KPI.computar({ board: board, hoje: hoje, setores: m.setores, ativ: m.ativ, janela: m.janela, periodo: m.periodo });
 
-    // atividades do dia
-    var dt = document.getElementById('hj-daytasks');
-    d.dayTasks.forEach(function (task) {
-      var row = el('<div class="hj-daytask"></div>');
-      row.appendChild(UI.checkbox({ checked: task.done, label: task.title, onToggle: function () {} }));
-      row.appendChild(el('<span class="hj-freq">' + task.freq + '</span>'));
-      dt.appendChild(row);
+    /* KPIs do topo */
+    var kg = document.getElementById('hj-kpis'); kg.innerHTML = '';
+    var pctDia = d.doHoje.length ? Math.round(d.feitasHoje / d.doHoje.length * 100) : 0;
+    var kpis = [
+      { label: 'Para hoje', value: String(d.doHoje.length), sub: d.feitasHoje + ' concluída(s)', tone: d.doHoje.length ? 'green' : 'amber' },
+      { label: 'Concluídas hoje', value: String(d.feitasHoje), sub: pctDia + '% do dia', tone: pctDia >= 60 ? 'green' : 'amber' },
+      { label: 'Atrasadas', value: String(d.atras.length), sub: d.atras.length ? 'resolver primeiro' : 'nada vencido', tone: d.atras.length ? 'red' : 'green' },
+      { label: 'Em andamento', value: String(mm.totais.andamento), sub: 'já iniciadas', tone: mm.totais.andamento ? 'amber' : 'green' },
+      { label: 'Aderência (janela)', value: mm.aderencia == null ? '—' : mm.aderencia + '%', sub: 'meta 90%', tone: mm.aderencia == null ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red') },
+      { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green' }
+    ];
+    kpis.forEach(function (k) { kg.appendChild(UI.kpiCard(k)); });
+
+    /* timeline (com horário) */
+    var agora = new Date(); var agoraHM = pad2(agora.getHours()) + ':' + pad2(agora.getMinutes());
+    var nb = document.querySelector('.hj-nowbadge'); if (nb) { nb.lastChild.nodeValue = ' agora ' + agoraHM; }
+    var tl = document.getElementById('hj-timeline'); tl.innerHTML = '';
+    if (d.comHora.length) { d.comHora.forEach(function (o) { tl.appendChild(tlRow(o, agoraHM)); }); }
+    else { tl.appendChild(txt('div', 'hj-empty', 'Nenhuma atividade com horário hoje.')); }
+
+    /* atividades do dia (sem horário) */
+    var dt = document.getElementById('hj-daytasks'); dt.innerHTML = '';
+    var rc = document.querySelector('.hj-rcount'); if (rc) { rc.textContent = d.feitasHoje + ' de ' + d.doHoje.length; }
+    if (d.semHora.length) { d.semHora.forEach(function (o) { dt.appendChild(dayRow(o)); }); }
+    else { dt.appendChild(txt('div', 'hj-empty', 'Nada sem horário hoje.')); }
+
+    /* atrasadas */
+    var at = document.getElementById('hj-atrasadas'); at.innerHTML = '';
+    var lb = document.querySelector('.hj-late-badge'); if (lb) { lb.textContent = d.atras.length + ' pendente(s)'; }
+    if (d.atras.length) { d.atras.forEach(function (o) { at.appendChild(lateRow(o, hoje)); }); }
+    else { at.appendChild(txt('div', 'hj-empty', 'Nenhuma atrasada. 🎯')); }
+  }
+
+  /* ---------- escopo (Minhas / Todas) ---------- */
+  function pintarScope() {
+    var sc = document.getElementById('hj-scope'); sc.innerHTML = '';
+    [['minhas', 'Minhas'], ['todas', 'Toda a escola']].forEach(function (p) {
+      var b = el('<button type="button" class="hj-seg-b' + (MODO === p[0] ? ' on' : '') + '"></button>');
+      b.textContent = p[1];
+      b.addEventListener('click', function () { if (MODO !== p[0]) { MODO = p[0]; pintarScope(); paint(); } });
+      sc.appendChild(b);
     });
+  }
 
-    // atrasadas
-    var at = document.getElementById('hj-atrasadas');
-    d.atrasadas.forEach(function (a) { at.appendChild(lateRow(a)); });
+  /* ---------- carga ---------- */
+  function refresh() {
+    KPI.carregar('band').then(function (m) { MODELO = m; paint(); })
+      .catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
   }
 
   Guard.onReady(function (USER) {
-    DATA.user = USER;                                  // identidade real (sidebar + avatar)
+    CURRENT_USER = USER;
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Hoje', user: USER }), app.firstChild);
+    var cta = UI.button({ label: 'Nova atividade', icon: 'plus' });
+    cta.addEventListener('click', function () { window.location.href = 'atividades.html'; });
+    document.getElementById('hj-cta').appendChild(cta);
+    document.getElementById('hj-mav').appendChild(UI.avatar({ initials: USER.initials, size: 42 }));
     var fn = String(USER.name || '').trim().split(/\s+/)[0] || USER.name;
-    var g1 = document.querySelector('.hj-hi'); if (g1) { g1.textContent = 'Bom dia, ' + fn; }
-    var g2 = document.querySelector('.hj-mg'); if (g2) { g2.textContent = 'Bom dia, ' + fn; }
-    render(DATA);
+    var g1 = document.querySelector('.hj-hi'); if (g1) { g1.textContent = saudacao() + ', ' + fn; }
+    var g2 = document.querySelector('.hj-mg'); if (g2) { g2.textContent = saudacao() + ', ' + fn; }
+    var hojeISO = R.hojeISO();
+    var d1 = document.querySelector('.hj-dd'); if (d1) { d1.textContent = dataLonga(hojeISO); }
+    var d2 = document.querySelector('.hj-md'); if (d2) { d2.textContent = dataLonga(hojeISO); }
+    pintarScope();
+    setState('Carregando o seu dia…', 'Lendo atividades e ocorrências.');
+    refresh();
   });
   </script>
 </body>
