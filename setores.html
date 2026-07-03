@@ -176,7 +176,7 @@
        (mesma estratégia da tela Hoje). Trocar por auth real depois.
        Perfis: 'Admin' | 'Editor' | 'Visualizador' | 'Consultor Externo'
        ========================================================= */
-    var CURRENT_USER = { name: 'Mariana Souza', profile: 'Admin', initials: 'MS' };
+    var CURRENT_USER = { name: '', profile: 'Visualizador', initials: '' }; /* placeholder NEUTRO: Guard.onReady injeta o usuário real ANTES do mount() (fim do script) */
     var CAN_WRITE = CURRENT_USER.profile === 'Admin';
     var CAN_VIEW  = CURRENT_USER.profile !== 'Consultor Externo';
 

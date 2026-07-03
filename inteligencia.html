@@ -144,6 +144,24 @@
 .pf-plano-txt{font-size:13.5px;font-weight:700;color:var(--text)}
 .pf-plano-act{font-size:12px;color:var(--muted);margin-top:2px}
 .pf-plano-ok{font-size:13.5px;font-weight:700;color:var(--green);padding:14px 2px}
+
+/* ---- N2: tendência (Δ7d + sparkline) e score por setor ---- */
+.pf-delta{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;margin-top:8px}
+.pf-delta .lbl{color:var(--muted2);font-weight:700}
+.pf-delta.ok{color:var(--green)}
+.pf-delta.bad{color:var(--red)}
+.pf-delta.flat{color:var(--muted2)}
+.pf-colet{display:inline-block;font-size:10px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);padding:2px 8px;border-radius:20px;margin-top:9px}
+.pf-sparkwrap{margin-top:9px;height:26px}
+.pf-sparkwrap svg{display:block;width:100%;height:26px;overflow:visible}
+.pf-ss-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--border)}
+.pf-ss-row:first-child{border-top:0}
+.pf-ss-nome{width:170px;flex:none;font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-ss-track{flex:1;height:12px;background:var(--track);border-radius:6px;overflow:hidden}
+.pf-ss-fill{height:100%;border-radius:6px}
+.pf-ss-num{width:36px;text-align:right;font-size:13px;font-weight:800}
+.pf-ss-dot{width:9px;height:9px;border-radius:50%;flex:none}
+@media(max-width:900px){.pf-ss-nome{width:96px}}
 </style>
 </head>
 <body>
@@ -213,6 +231,9 @@
   var USER = { name: '—', profile: 'Visualizador', initials: '—' };
   var PERIODO = 'band';   /* band = atrasadas + 30 dias (padrão) | 'semana' | 'mes' */
   var MODELO = null;      /* último retorno de KPI.computar */
+  var SNAPSHOTS = [];     /* N2: fotos diárias (kpi_snapshots) p/ Δ7d + sparkline */
+  var SNAP_TENTADO = false; /* N2: gravação idempotente — 1 tentativa por sessão */
+  var HOJE = null;        /* N2: dia civil local do último computar */
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function haloOf(tone) { return 'halo' + tone.charAt(0).toUpperCase() + tone.slice(1); }
@@ -265,6 +286,25 @@
     c.appendChild(top);
     c.appendChild(el('<div class="pf-val">' + k.value + '</div>'));
     if (k.sub) { c.appendChild(el('<div class="pf-sub2">' + k.sub + '</div>')); }
+    /* N2: tendência real por fotos diárias — só na janela padrão (as fotos
+       são gravadas nela; comparar com semana/mês misturaria métricas). */
+    if (PERIODO === 'band' && k.trendKey && HOJE) {
+      var t = KPI._trend(SNAPSHOTS, k.trendKey, HOJE);
+      if (!t.suficiente) {
+        c.appendChild(el('<span class="pf-colet">coletando ' + t.coletando + ' dias</span>'));
+      } else {
+        var df = KPI._deltaFmt(t.delta7, !!k.menorMelhor);
+        var seta = t.delta7 > 0 ? '▲' : (t.delta7 < 0 ? '▼' : '·');
+        c.appendChild(el('<div class="pf-delta ' + df.tom + '"><span class="pf-tri">' + seta + '</span><span>' + df.texto + '</span><span class="lbl">vs 7d</span></div>'));
+      }
+      var serie = SNAPSHOTS.map(function (s) { return s[k.trendKey]; }).filter(function (v) { return v != null; });
+      var pts = KPI._sparkPoints(serie, 100, 24);
+      if (pts) {
+        var sw = el('<div class="pf-sparkwrap" style="color:var(--' + k.tone + ')"></div>');
+        sw.innerHTML = '<svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>';
+        c.appendChild(sw);
+      }
+    }
     return c;
   }
 
@@ -328,13 +368,16 @@
     return [
       { label: 'Aderência à rotina', value: fmtPct(m.aderencia), tone: toneAder(m.aderencia),
         sub: t.concluidasAteHoje + ' de ' + t.previstasAteHoje + ' previstas até hoje',
-        info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
+        trendKey: 'aderencia', menorMelhor: false,
+        info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas. Δ7d e linha: fotos diárias (kpi_snapshots) da janela padrão', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
       { label: 'Atividades atrasadas', value: String(t.atrasadas), tone: t.atrasadas ? 'red' : 'green',
         sub: 'vencidas e ainda abertas',
-        info: { title: 'Atividades atrasadas', formula: 'ocorrências abertas (pendente, em andamento ou reprogramada) com data efetiva < hoje', dados: 'ocorrências da janela + override de data', numeros: t.atrasadas + ' atrasada(s) agora' } },
+        trendKey: 'atrasadas', menorMelhor: true,
+        info: { title: 'Atividades atrasadas', formula: 'ocorrências abertas (pendente, em andamento ou reprogramada) com data efetiva < hoje', dados: 'ocorrências da janela + override de data. Δ7d (queda = verde) e linha: fotos diárias (kpi_snapshots)', numeros: t.atrasadas + ' atrasada(s) agora' } },
       { label: 'Em andamento', value: String(t.andamento), tone: t.andamento ? 'doing' : 'muted2',
         sub: 'já iniciadas, não concluídas',
-        info: { title: 'Trabalho em andamento (WIP)', formula: 'ocorrências com status = em andamento', dados: 'ocorrências: override de status', numeros: t.andamento + ' em andamento' } },
+        trendKey: 'andamento', menorMelhor: true,
+        info: { title: 'Trabalho em andamento (WIP)', formula: 'ocorrências com status = em andamento', dados: 'ocorrências: override de status. Δ7d (queda = verde: menos WIP parado) e linha: fotos diárias (kpi_snapshots)', numeros: t.andamento + ' em andamento' } },
       { label: 'Concluídas na janela', value: String(t.concluidas), tone: 'green',
         sub: rotuloPeriodo(m.periodo),
         info: { title: 'Concluídas na janela', formula: 'ocorrências com status = concluída dentro da janela', dados: 'ocorrências: override de status', numeros: t.concluidas + ' concluída(s)' } }
@@ -417,15 +460,66 @@
       barsH(itens, { max: max, meta: cap / max * 100, metaLabel: '1,5× mediana' }), 'pf-carga');
   }
 
+  /* ---------- N2: score composto por setor (pesos 50/30/20) ---------- */
+  function tomToken(t) { return t === 'ok' ? 'green' : t === 'warn' ? 'amber' : 'red'; }
+  function setoresParaScore(m) {
+    /* só setores mensuráveis (com previstas): aderência existe. Sem previstas
+       → sem score (evita gargalo falso por aderência “0” inexistente). */
+    return m.porSetor.filter(function (s) { return s.sig !== '—' && s.previstas > 0; }).map(function (s) {
+      return { sigla: s.sig, ader: s.aderencia == null ? 0 : s.aderencia, atrasadas: s.atrasadas, agingMedio: s.agingMedio || 0, carga: s.carga || 0 };
+    });
+  }
+  function scoreSetores(m) {
+    var base = setoresParaScore(m);
+    if (!base.length) { return null; }
+    var calc = base.map(function (s) {
+      var pctAtr = s.carga ? Math.round(s.atrasadas / s.carga * 100) : 0;
+      return { sigla: s.sigla, sc: KPI._score(s.ader, pctAtr, s.agingMedio) };
+    }).sort(function (a, b) { return a.sc.score - b.sc.score; }); /* pior primeiro = onde agir */
+    var nums = calc.map(function (x) { return x.sigla + ': A' + x.sc.compA + ' B' + x.sc.compB + ' C' + x.sc.compC + ' → ' + x.sc.score; }).join(' · ');
+    var card = el('<div class="pf-card" style="margin-bottom:13px"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Score por setor (0–100)</div>'));
+    h.appendChild(infoBtn({
+      title: 'Score composto por setor',
+      formula: 'score = 0,5×A + 0,3×B + 0,2×C. A = aderência% (peso 50) · B = 100 − %atrasadas (atrasadas ÷ abertas do setor; peso 30) · C = 100 − aging×12,5 (0d=100 · 4d=50 · 8d+=0; peso 20). Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.',
+      dados: 'ocorrências por setor até hoje (aderência, atrasadas, aging) + abertas por setor (carga). Multi-setor conta em cada área.',
+      numeros: nums
+    }));
+    card.appendChild(h);
+    var list = el('<div></div>');
+    calc.forEach(function (x) {
+      var tok = tomToken(x.sc.tom);
+      var row = el('<div class="pf-ss-row"></div>');
+      row.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok) + ')"></span>'));
+      var nome = el('<span class="pf-ss-nome"></span>');
+      nome.textContent = KPI.nomeSetor(x.sigla, m.setores);
+      nome.title = x.sigla;
+      row.appendChild(nome);
+      var tr = el('<div class="pf-ss-track"></div>');
+      tr.appendChild(el('<div class="pf-ss-fill" style="width:' + x.sc.score + '%;background:var(--' + tok + ')"></div>'));
+      row.appendChild(tr);
+      row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + ')">' + x.sc.score + '</span>'));
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+    return card;
+  }
+
   /* ---------- plano de ação (priorização) ---------- */
   function planoAcao(m) {
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
     h.appendChild(el('<div class="pf-card-t">Plano de ação — o que atacar primeiro</div>'));
-    h.appendChild(infoBtn({ title: 'Plano de ação', formula: 'priorização por impacto: setores com mais atrasadas, pessoas sobrecarregadas e itens sem dono', dados: 'derivado dos indicadores acima', numeros: 'ordenado pelo nº de atrasadas' }));
+    h.appendChild(infoBtn({ title: 'Plano de ação', formula: 'priorização por impacto: gargalos do detector (aderência < 80% OU atrasadas + aging ≥ 4d + carga > 1,5×mediana), setores com mais atrasadas, pessoas sobrecarregadas e itens sem dono', dados: 'derivado dos indicadores acima', numeros: 'gargalos primeiro, depois pelo nº de atrasadas' }));
     card.appendChild(h);
     var list = el('<div class="pf-plano"></div>');
     var itens = [];
+    /* N2: gargalos NOMEADOS do detector validado (regra explícita no "i") */
+    KPI._gargalos(setoresParaScore(m)).forEach(function (g) {
+      itens.push({ sev: 'red', txt: 'Gargalo: ' + g.sigla + ' — ' + g.motivo,
+        act: 'Levar à reunião de líderes: causa raiz e replanejamento do setor.' });
+    });
     m.porSetor.forEach(function (s) {
       if (s.atrasadas > 0) {
         itens.push({ sev: s.atrasadas >= 5 ? 'red' : 'amber',
@@ -480,7 +574,23 @@
     var row2 = el('<div class="pf-row2"></div>');
     row2.appendChild(chartThroughput(m)); row2.appendChild(chartCarga(m));
     body.appendChild(row2);
+    var ss = scoreSetores(m);
+    if (ss) { body.appendChild(ss); }
     body.appendChild(planoAcao(m));
+  }
+
+  /* ---------- N2: foto do dia (idempotente; falha nunca quebra o painel) ---------- */
+  function gravarFotoDoDia(m) {
+    if (SNAP_TENTADO || PERIODO !== 'band') { return; }             /* fotos SÓ da janela padrão (comparável dia a dia) */
+    if (!USER || (USER.profile !== 'Admin' && USER.profile !== 'Editor')) { return; }
+    SNAP_TENTADO = true;
+    var ja = SNAPSHOTS.some(function (s) { return s.data === m.hoje; });
+    if (ja) { return; }
+    KPI.gravarSnapshotHoje(m, USER.uid).then(function (res) {
+      if (res && res.gravado) { SNAPSHOTS.push(KPI.snapshotDoc(m)); } /* cache local coerente p/ o resto da sessão */
+    }).catch(function (e) {
+      if (window.console && console.warn) { console.warn('[inteligencia] foto do dia não gravada (painel segue normal):', (e && e.message) || e); }
+    });
   }
 
   function showState(title, sub) {
@@ -493,13 +603,20 @@
 
   function carregar() {
     showState('Carregando indicadores…', 'Lendo as ocorrências da janela.');
-    KPI.carregar(PERIODO).then(KPI.computar).then(function (m) {
+    Promise.all([
+      KPI.carregar(PERIODO).then(KPI.computar),
+      KPI.lerSnapshots(window.GrautRecorrencia.hojeISO()) /* degrada p/ [] se as regras ainda não foram publicadas */
+    ]).then(function (r) {
+      var m = r[0];
+      SNAPSHOTS = r[1] || [];
+      HOJE = m.hoje;
       if (!m.totais.atividadesAtivas) {
         document.getElementById('pf-stamp').textContent = 'Sem atividades ativas.';
         showState('Ainda não há atividades', 'Cadastre atividades para ver os indicadores de gestão.');
         return;
       }
       paint(m);
+      gravarFotoDoDia(m);
     }).catch(function (e) {
       showState('Não consegui carregar os indicadores', (e && e.message) || 'Erro ao ler o banco.');
     });
