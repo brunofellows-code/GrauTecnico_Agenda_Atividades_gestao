@@ -1,16 +1,8 @@
 rules_version = '2';
 
 // ============================================================
-// Sistema A · Grau Técnico FSA — Regras do Firestore (Fase 1)
-// ------------------------------------------------------------
-// Princípios:
-//  - NUNCA banco aberto: o match coringa final nega tudo.
-//  - RBAC pela coleção `usuarios` (docId = UID): { email, nome,
-//    perfil, ativo }. Perfis: Admin | Editor | Visualizador |
-//    Consultor Externo.
-//  - O guard.js precisa que CADA usuário leia o PRÓPRIO doc de
-//    usuarios para descobrir se está ativo — por isso a leitura
-//    do próprio doc é liberada por DONO (não exige `ativo`).
+// Sistema A · Grau Técnico FSA — Regras do Firestore
+// Fase 1 (base) + Bloco 2 (ocorrencias, solicitacoes)
 // ============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -37,43 +29,62 @@ service cloud.firestore {
     function isAdmin() {
       return isActive() && perfil() == 'Admin';
     }
-    // escrita "padrão" do sistema: Admin ou Editor
     function canWrite() {
       return isActive() && (perfil() == 'Admin' || perfil() == 'Editor');
+    }
+    function donoAtividade(aid) {
+      return signedIn()
+          && exists(/databases/$(database)/documents/atividades/$(aid))
+          && get(/databases/$(database)/documents/atividades/$(aid)).data.criadoPor == request.auth.uid;
     }
 
     // ---------- usuarios (RBAC) ----------
     match /usuarios/{uid} {
-      // dono lê o próprio doc (necessário ao guard) ou Admin lê qualquer um
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow list: if isAdmin();
-      // só Admin cria/edita/remove usuários
       allow write: if isAdmin();
     }
 
     // ---------- setores ----------
     match /setores/{sigla} {
-      allow read: if isActive();      // qualquer ativo consulta
-      allow write: if isAdmin();      // só Admin cadastra/edita setores
+      allow read: if isActive();
+      allow write: if isAdmin();
     }
 
     // ---------- projetos ----------
     match /projetos/{id} {
       allow read: if isActive();
-      allow write: if canWrite();     // Admin/Editor
+      allow write: if canWrite();
     }
 
     // ---------- atividades ----------
     match /atividades/{id} {
       allow read: if isActive();
-      allow write: if canWrite();     // Admin/Editor
+      allow write: if canWrite();
+    }
+
+    // ---------- ocorrencias ----------
+    match /ocorrencias/{id} {
+      allow read: if isActive();
+      allow create, update: if canWrite();
+      allow delete: if false;
+    }
+
+    // ---------- solicitacoes ----------
+    match /solicitacoes/{id} {
+      allow read: if isActive();
+      allow create: if canWrite()
+                    && request.resource.data.solicitanteUid == request.auth.uid
+                    && request.resource.data.status == 'pendente';
+      allow update: if isAdmin() || donoAtividade(resource.data.atividadeId);
+      allow delete: if false;
     }
 
     // ---------- atividade_log (append-only) ----------
     match /atividade_log/{id} {
       allow read: if isActive();
-      allow create: if canWrite();    // só registra; nunca altera/apaga
-      allow update, delete: if false; // histórico imutável
+      allow create: if canWrite();
+      allow update, delete: if false;
     }
 
     // ---------- tudo o mais: NEGA ----------
