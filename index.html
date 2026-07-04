@@ -49,6 +49,25 @@
     .graut-gate__msg{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
     .graut-gate__btn{margin-top:4px;font:inherit;font-size:13.5px;font-weight:800;color:var(--ctaText);background:var(--cta);border:0;border-radius:11px;padding:11px 18px;cursor:pointer}
     .graut-gate__btn:hover{filter:brightness(1.05)}
+    /* ---------- C4-adendo: sigla + benefício + "i" nos cards ---------- */
+    .ix-acr{margin:0 0 8px;font-size:20px;font-weight:600;letter-spacing:.01em;color:var(--greenText);line-height:1.3}
+    .ix-acr b{font-weight:800}                 /* iniciais destacadas por peso — mesmo verde, contraste garantido nos 2 temas */
+    .ix-benefit{margin:2px 0 30px;font-size:14.5px;color:var(--text);opacity:.92;line-height:1.55;max-width:62ch}
+    .ix-cw{position:relative;display:flex}
+    .ix-cw>.ix-card{flex:1 1 auto;min-width:0}
+    .ix-i{position:absolute;top:13px;right:13px;z-index:2;width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted2);background:var(--s2);border:1px solid var(--border);cursor:pointer;padding:0;transition:color .12s ease,border-color .12s ease,background .12s ease}
+    .ix-i:hover{color:var(--brand);border-color:var(--brand);background:var(--activeBg)}
+    .ix-i:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+    /* modal do "i" (página-local; esta tela não usa ui.js/components.css) */
+    .ix-mov{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(2,6,23,.55)}
+    .ix-modal{width:100%;max-width:460px;background:var(--s1);border:1px solid var(--border);border-radius:16px;box-shadow:var(--cardShadow);padding:22px}
+    .ix-mh{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .ix-mt{font-size:18px;font-weight:800;letter-spacing:-.01em}
+    .ix-mx{flex:none;width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+    .ix-mx:hover{background:var(--s3);color:var(--text)}
+    .ix-md{font-size:14px;color:var(--muted);line-height:1.6}
+    .ix-mu{margin-top:12px;font-size:13.5px;color:var(--text);background:var(--activeBg);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+    .ix-mu b{color:var(--greenText)}
   </style>
 </head>
 <body>
@@ -75,50 +94,52 @@
     </header>
 
     <h1 class="ix-title">Bem-vindo ao GERA</h1>
+    <p class="ix-acr" aria-label="GERA: Gestão, Equipe, Rotinas e Atividades"><b>G</b>estão&nbsp;·&nbsp;<b>E</b>quipe&nbsp;·&nbsp;<b>R</b>otinas&nbsp;·&nbsp;<b>A</b>tividades</p>
     <p class="ix-sub">Agenda, projetos e atividades do Grau Técnico FSA. Escolha por onde começar.</p>
+    <p class="ix-benefit" id="ix-benefit">Vamos organizar o seu dia — um passo de cada vez.</p>
 
     <section class="ix-grid">
-      <a class="ix-card" href="hoje.html">
+      <div class="ix-cw"><a class="ix-card" href="hoje.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>
         <span class="ix-ct">Hoje</span>
         <span class="ix-cd">Painel do dia: compromissos, atividades, atrasadas e críticas num lugar só.</span>
         <span class="ix-go">Abrir →</span>
-      </a>
+      </a><button class="ix-i" type="button" data-info="hoje" aria-label="O que é Hoje?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
-      <a class="ix-card" href="setores.html">
+      <div class="ix-cw"><a class="ix-card" href="setores.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
         <span class="ix-ct">Setores</span>
         <span class="ix-cd">Áreas da escola e suas siglas — o registro central que conecta projetos e atividades.</span>
         <span class="ix-go">Abrir →</span>
-      </a>
+      </a><button class="ix-i" type="button" data-info="setores" aria-label="O que é Setores?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
-      <a class="ix-card" href="performance.html">
+      <div class="ix-cw"><a class="ix-card" href="performance.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-4 4 3 5-7"></path></svg></span>
         <span class="ix-ct">Performance</span>
         <span class="ix-cd">Indicadores de gestão das atividades: aderência, atrasos, ciclo e carga.</span>
         <span class="ix-go">Abrir →</span>
-      </a>
+      </a><button class="ix-i" type="button" data-info="performance" aria-label="O que é Performance?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
-      <a class="ix-card" href="usuarios.html">
+      <div class="ix-cw"><a class="ix-card" href="usuarios.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
         <span class="ix-ct">Usuários</span>
         <span class="ix-cd">Quem acessa o sistema e com qual perfil. Apenas o Admin gerencia.</span>
         <span class="ix-go">Abrir →</span>
-      </a>
+      </a><button class="ix-i" type="button" data-info="usuarios" aria-label="O que é Usuários?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
-      <a class="ix-card" href="atividades.html">
+      <div class="ix-cw"><a class="ix-card" href="atividades.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
         <span class="ix-ct">Atividades</span>
         <span class="ix-cd">Rotinas e tarefas com recorrência. Visões por setor, série, Kanban e quadro.</span>
         <span class="ix-go">Abrir →</span>
-      </a>
+      </a><button class="ix-i" type="button" data-info="atividades" aria-label="O que é Atividades?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
-      <a class="ix-card" href="inteligencia.html">
+      <div class="ix-cw"><a class="ix-card" href="inteligencia.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .9 1.6H15c.1-.6.4-1.2.9-1.6A7 7 0 0 0 12 2z"></path></svg></span>
         <span class="ix-ct">Inteligência</span>
         <span class="ix-cd">Indicadores de gestão com plano de ação: aderência, atrasadas, aging e carga.</span>
         <span class="ix-go">Abrir →</span>
-      </a>
+      </a><button class="ix-i" type="button" data-info="inteligencia" aria-label="O que é Inteligência?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
     </section>
 
     <div class="ix-soon-h">Em breve</div>
@@ -130,6 +151,72 @@
 
     <footer class="ix-foot">GERA · Grau Técnico FSA — Gestão, Equipe, Rotinas e Atividades</footer>
   </main>
+<script>
+/* C4-adendo: saudação por período + benefício rotativo (por DIA, sem timer, sem storage)
+   + modal do "i" (página-local, ES5). Datas em horário local do dispositivo (Salvador p/ a escola). */
+(function () {
+  var now = new Date(), hh = now.getHours();
+  var saud = hh < 12 ? 'Bom dia' : (hh < 18 ? 'Boa tarde' : 'Boa noite');
+  var BEN = [
+    'o dia inteiro cabe numa tela — nada importante escapa da sua vista.',
+    'cada tarefa concluída fica registrada; o seu progresso não se perde.',
+    'o que vence hoje aparece na hora certa — menos coisa atrasando.',
+    'você decide com número na mão, não no achismo.',
+    'a rotina da equipe fica organizada, sem planilha solta.',
+    'de relance você vê o quanto já andou e o quanto ainda falta.'
+  ];
+  var bi = (now.getFullYear() * 372 + now.getMonth() * 31 + now.getDate()) % BEN.length;
+  var be = document.getElementById('ix-benefit');
+  if (be) { be.textContent = saud + '! Com o GERA, ' + BEN[bi]; }
+
+  var INFO = {
+    hoje: { t: 'Hoje', d: 'Seu dia numa tela só: os compromissos com hora marcada, as atividades que vencem hoje, as que já estão atrasadas e as mais críticas.', u: 'Abra para começar o dia sabendo o que não pode escapar.' },
+    setores: { t: 'Setores', d: 'O cadastro das áreas da escola (Pedagógico, Secretaria, CRA…) e suas siglas. É o registro central: toda atividade e todo projeto se liga a um setor por aqui.', u: 'Abra para criar, renomear ou organizar setores e subsetores.' },
+    performance: { t: 'Performance', d: 'Como cada pessoa está entregando: aderência à rotina, conclusão no prazo, tempo de ciclo e carga de trabalho por responsável. Clique num nome para ver os itens por trás de cada número.', u: 'Abra para saber quem precisa de ajuda ou de redistribuição.' },
+    usuarios: { t: 'Usuários', d: 'Quem tem acesso ao sistema e com qual perfil (Admin, Editor, Visualizador, Consultor). Só o Admin cria e edita.', u: 'Abra para liberar ou remover o acesso de alguém.' },
+    atividades: { t: 'Atividades', d: 'As rotinas e tarefas, com recorrência (diária, semanal, quinzenal, mensal). Marque como feito por ocorrência sem perder o histórico. Visões por setor, série, Kanban e quadro.', u: 'Abra para cadastrar e acompanhar o que a equipe faz.' },
+    inteligencia: { t: 'Inteligência', d: 'O raio-x da gestão: prioriza o que atacar primeiro, mostra aderência, atrasadas, aging e carga, e entrega um plano de ação. Clique em qualquer número para ver os itens que o formam.', u: 'Abra para decidir onde agir primeiro.' }
+  };
+
+  var ICON_X = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>';
+  var overlay = null, prevFocus = null;
+  function close() {
+    if (!overlay) { return; }
+    document.removeEventListener('keydown', onKey, true);
+    if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+    overlay = null;
+    try { if (prevFocus && prevFocus.focus) { prevFocus.focus(); } } catch (e) {}
+  }
+  function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
+  function abrir(key, origin) {
+    var d = INFO[key]; if (!d) { return; }
+    prevFocus = origin || document.activeElement;
+    overlay = document.createElement('div');
+    overlay.className = 'ix-mov'; overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true');
+    var card = document.createElement('div'); card.className = 'ix-modal'; card.setAttribute('tabindex', '-1');
+    card.innerHTML =
+      '<div class="ix-mh"><div class="ix-mt"></div>' +
+      '<button class="ix-mx" type="button" aria-label="Fechar">' + ICON_X + '</button></div>' +
+      '<div class="ix-md"></div>' +
+      '<div class="ix-mu"><b>Para que serve:</b> </div>';
+    card.querySelector('.ix-mt').textContent = d.t;
+    card.querySelector('.ix-md').textContent = d.d;
+    card.querySelector('.ix-mu').appendChild(document.createTextNode(d.u));
+    card.querySelector('.ix-mx').addEventListener('click', close);
+    overlay.appendChild(card);
+    overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) { close(); } });
+    document.addEventListener('keydown', onKey, true);
+    document.body.appendChild(overlay);
+    try { card.focus(); } catch (e) {}
+  }
+  var botoes = document.querySelectorAll('.ix-i');
+  for (var i = 0; i < botoes.length; i++) {
+    (function (b) {
+      b.addEventListener('click', function () { abrir(b.getAttribute('data-info'), b); });
+    })(botoes[i]);
+  }
+})();
+</script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>
