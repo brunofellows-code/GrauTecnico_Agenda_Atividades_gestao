@@ -102,6 +102,20 @@
   .pf-pgrid{grid-template-columns:1fr}
   .pf-dev{bottom:20px}
 }
+/* ---------- C4: drill-down — itens que compõem cada métrica ---------- */
+.pf-pm.dd-click,.pf-ss-row.dd-click{cursor:pointer}
+.pf-pm.dd-click:hover{border-color:var(--brand)}
+.pf-pm.dd-click.on{border-color:var(--brand);background:var(--activeBg)}
+.pf-ss-row.dd-click:hover .pf-ss-nome{color:var(--text)}
+.dd-count{font-size:12px;color:var(--muted);margin:0 0 8px}
+.dd-list{display:flex;flex-direction:column;gap:6px;max-height:34vh;overflow:auto}
+.dd-row{display:flex;align-items:center;gap:10px;padding:8px 11px;border:1px solid var(--border);border-radius:10px;background:var(--s1);min-width:0}
+.dd-tit{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-sig{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 6px;white-space:nowrap}
+.dd-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.dd-late{color:var(--red);font-weight:700}
+.dd-more,.dd-empty{font-size:12px;color:var(--muted2);text-align:center;padding:8px}
+@media(max-width:700px){.dd-row{flex-wrap:wrap}.dd-tit{flex-basis:100%;white-space:normal}}
 </style>
 </head>
 <body>
@@ -165,6 +179,8 @@
   var PP = null;          /* último retorno de computarPorPessoa */
   var MODELO = null;      /* último retorno de computar (seção por setor) */
   var LOG = [];           /* atividade_log recente (query global única) */
+  var BOARD = [];         /* C4: board expandido retido p/ o drill-down (zero query extra) */
+  var HOJE = null;        /* C4: dia civil LOCAL da última carga */
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function haloOf(tone) { return 'halo' + tone.charAt(0).toUpperCase() + tone.slice(1); }
@@ -260,6 +276,75 @@
   }
   function passaFiltro(p) { return FILTRO === 'TODOS' || p.setores.indexOf(FILTRO) >= 0; }
 
+  /* ============================================================
+     C4 · DRILL-DOWN — filtro client-side do BOARD retido em
+     memória (mesmo motor dos KPIs) — ZERO query extra.
+     ============================================================ */
+  var DD_TETO = 60;
+  var DD_STATUS = {
+    pendente:     { l: 'Pendente',     t: 'amber'  },
+    em_andamento: { l: 'Em andamento', t: 'doing'  },
+    reprogramada: { l: 'Reprogramada', t: 'orange' },
+    concluida:    { l: 'Concluída',    t: 'green'  },
+    pulada:       { l: 'Pulada',       t: 'muted2' }
+  };
+  function ddDias(iso, hoje) {              /* dias de atraso em DIA CIVIL LOCAL */
+    var a = iso.split('-'), b = hoje.split('-');
+    var d1 = new Date(+a[0], +a[1] - 1, +a[2]), d2 = new Date(+b[0], +b[1] - 1, +b[2]);
+    return Math.round((d2 - d1) / 86400000);
+  }
+  function ddAberta(o) { return o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada'; }
+  function ddOrdData(a, b) { return a.effDate < b.effDate ? -1 : a.effDate > b.effDate ? 1 : 0; }
+  function ddOrdAtrasoTopo(a, b) { return ((b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0)) || ddOrdData(a, b); }
+  function ddRow(o) {
+    var st = DD_STATUS[o.status] || { l: o.status, t: 'muted2' };
+    var r = el('<div class="dd-row"></div>');
+    r.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + st.t + ')"></span>'));
+    var tit = el('<span class="dd-tit"></span>');
+    tit.textContent = (o.act && o.act.titulo) || '(sem título)'; tit.title = tit.textContent;
+    r.appendChild(tit);
+    var sigs = KPI.setoresDe(o.act, MODELO.setores);
+    var sig = el('<span class="dd-sig"></span>'); sig.textContent = sigs.length ? sigs.join('·') : '—';
+    r.appendChild(sig);
+    var dt = el('<span class="dd-meta' + (o.atrasada ? ' dd-late' : '') + '"></span>');
+    dt.textContent = brData(o.effDate) + (o.atrasada ? ' · ' + ddDias(o.effDate, HOJE) + 'd' : '');
+    r.appendChild(dt);
+    r.appendChild(el('<span class="dd-meta">' + st.l + '</span>'));
+    return r;
+  }
+  function ddPintar(wrap, itens, rotulo) {
+    wrap.innerHTML = '';
+    wrap.appendChild(el('<div class="dd-count">' + rotulo + ' · ' + itens.length + ' item(ns)' +
+      (itens.length > DD_TETO ? ' · mostrando os ' + DD_TETO + ' primeiros' : '') + '</div>'));
+    if (!itens.length) {
+      wrap.appendChild(el('<div class="dd-empty">Nenhum item neste recorte.</div>'));
+      return;
+    }
+    var list = el('<div class="dd-list"></div>');
+    itens.slice(0, DD_TETO).forEach(function (o) { list.appendChild(ddRow(o)); });
+    wrap.appendChild(list);
+    if (itens.length > DD_TETO) {
+      wrap.appendChild(el('<div class="dd-more">+ ' + (itens.length - DD_TETO) + ' item(ns) — refine na tela de Atividades.</div>'));
+    }
+  }
+  /* drill de setor (linhas do Score por setor) */
+  function abrirDrillSetor(sig, setores) {
+    var itens = BOARD.filter(function (o) {
+      var s = KPI.setoresDe(o.act, setores); if (!s.length) { s = ['—']; }
+      return s.indexOf(sig) >= 0;
+    }).sort(ddOrdAtrasoTopo);
+    UI.modal({
+      title: 'Setor ' + KPI.nomeSetor(sig, setores) + ' — ocorrências da janela',
+      width: 640,
+      body: function () {
+        var box = document.createElement('div');
+        ddPintar(box, itens, 'Atrasadas primeiro');
+        return box;
+      },
+      footer: function (close) { return [UI.button({ label: 'Fechar', variant: 'ghost', onClick: close })]; }
+    });
+  }
+
   /* ---------- painel da pessoa (modal padrão) ---------- */
   function abrirPessoa(p) {
     UI.modal({
@@ -268,22 +353,50 @@
       body: function () {
         var box = document.createElement('div');
         var grid = el('<div class="pf-pgrid"></div>');
-        function pm(k, v, f) {
+        /* C4: ocorrências da PESSOA (mesma chave do computarPorPessoa: uid ou bucket sem-uid) */
+        var occ = BOARD.filter(function (o) { return p.uid ? o.uid === p.uid : !o.uid; });
+        var ddWrap = el('<div></div>');
+        var FILTROS = {
+          abertas:       { r: 'Abertas (carga)',            f: function (o) { return ddAberta(o); } },
+          previstas:     { r: 'Previstas até hoje',         f: function (o) { return o.effDate <= HOJE && o.status !== 'pulada'; } },
+          concluidas:    { r: 'Concluídas',                 f: function (o) { return o.status === 'concluida'; } },
+          ciclo:         { r: 'Concluídas com par medido',  f: function (o) { return o.status === 'concluida' && o.ov && o.ov.iniciadaEm && o.ov.concluidaEm; } },
+          reprogramadas: { r: 'Reprogramadas',              f: function (o) { return o.status === 'reprogramada'; } },
+          atrasadas:     { r: 'Atrasadas',                  f: function (o) { return o.atrasada; } }
+        };
+        var atual = null;
+        function aplicar(chave, cardEl) {
+          atual = chave;
+          var fl = FILTROS[chave];
+          ddPintar(ddWrap, occ.filter(fl.f).sort(ddOrdAtrasoTopo), fl.r);
+          var marcados = grid.querySelectorAll('.pf-pm.on');
+          for (var i = 0; i < marcados.length; i++) { marcados[i].classList.remove('on'); }
+          if (cardEl) { cardEl.classList.add('on'); }
+        }
+        function pm(k, v, f, chave) {
           var d = el('<div class="pf-pm"></div>');
           d.appendChild(el('<div class="k">' + k + '</div>'));
           d.appendChild(el('<div class="v">' + v + '</div>'));
           d.appendChild(el('<div class="f">' + f + '</div>'));
+          if (chave) {                       /* C4: métrica clicável filtra a lista abaixo */
+            d.classList.add('dd-click');
+            d.title = 'Clique para ver os itens desta métrica';
+            d.addEventListener('click', function () { aplicar(chave, d); });
+          }
           return d;
         }
         grid.appendChild(pm('Score', p.score == null ? '—' : p.score, p.score == null ? 'sem previstas na janela' : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC));
-        grid.appendChild(pm('Aderência', fmtPct(p.ader), p.concluidasAteHoje + ' ÷ ' + p.previstas + ' previstas até hoje'));
-        grid.appendChild(pm('No prazo', fmtPct(p.pctNoPrazo), p.noPrazo + ' de ' + p.concluidasTotal + ' concluída(s), por dia civil local'));
-        grid.appendChild(pm('Ciclo', fmtDias(p.cicloDias), p.pares ? p.pares + ' par(es) iniciada→concluída' : 'sem par iniciada/concluída — não inventa'));
-        grid.appendChild(pm('Carga (WIP)', String(p.carga), 'abertas atribuídas na janela'));
-        grid.appendChild(pm('Reprogramação', p.reprogPct + '%', p.reprogramadas + ' ÷ ' + p.total + ' ocorrências'));
-        grid.appendChild(pm('Atrasadas', String(p.atrasadas), p.atrasadas ? 'aging médio ' + fmtNum(p.agingMedio) + ' d' : 'nenhuma agora'));
-        grid.appendChild(pm('Throughput', fmtNum(p.thr4) + '/sem', p.thr4n + ' concluída(s) nos últimos 28 dias ÷ 4'));
+        grid.appendChild(pm('Aderência', fmtPct(p.ader), p.concluidasAteHoje + ' ÷ ' + p.previstas + ' previstas até hoje', 'previstas'));
+        grid.appendChild(pm('No prazo', fmtPct(p.pctNoPrazo), p.noPrazo + ' de ' + p.concluidasTotal + ' concluída(s), por dia civil local', 'concluidas'));
+        grid.appendChild(pm('Ciclo', fmtDias(p.cicloDias), p.pares ? p.pares + ' par(es) iniciada→concluída' : 'sem par iniciada/concluída — não inventa', 'ciclo'));
+        grid.appendChild(pm('Carga (WIP)', String(p.carga), 'abertas atribuídas na janela', 'abertas'));
+        grid.appendChild(pm('Reprogramação', p.reprogPct + '%', p.reprogramadas + ' ÷ ' + p.total + ' ocorrências', 'reprogramadas'));
+        grid.appendChild(pm('Atrasadas', String(p.atrasadas), p.atrasadas ? 'aging médio ' + fmtNum(p.agingMedio) + ' d' : 'nenhuma agora', 'atrasadas'));
+        grid.appendChild(pm('Throughput', fmtNum(p.thr4) + '/sem', p.thr4n + ' concluída(s) nos últimos 28 dias ÷ 4', 'concluidas'));
         box.appendChild(grid);
+        box.appendChild(el('<div class="pf-acoes-t">Ocorrências da pessoa — clique numa métrica acima para trocar o recorte</div>'));
+        box.appendChild(ddWrap);
+        aplicar('abertas', null);            /* recorte inicial: o mais acionável */
         box.appendChild(el('<div class="pf-acoes-t">Últimas ações (atividade_log)</div>'));
         if (!p.uid) {
           box.appendChild(el('<div class="pf-acoes-note">Sem pessoa vinculada — atribua um responsável às atividades.</div>'));
@@ -324,7 +437,11 @@
     card.appendChild(h);
     calc.forEach(function (x) {
       var tok = tomToken(x.sc.tom);
-      var row = el('<div class="pf-ss-row"></div>');
+      var row = el('<div class="pf-ss-row dd-click"></div>');
+      row.title = 'Clique para ver as ocorrências do setor';
+      (function (sig) {                     /* C4: drill do setor */
+        row.addEventListener('click', function () { abrirDrillSetor(sig, m.setores); });
+      })(x.sigla);
       row.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok) + ')"></span>'));
       var nome = el('<span class="pf-ss-nome"></span>'); nome.textContent = KPI.nomeSetor(x.sigla, m.setores); nome.title = x.sigla;
       row.appendChild(nome);
@@ -427,6 +544,8 @@
       LOG = r[1] || [];
       MODELO = KPI.computar(ctx);
       PP = KPI.computarPorPessoa(ctx);
+      BOARD = ctx.board;                    /* C4: retido p/ drill-down */
+      HOJE = MODELO.hoje;
       document.getElementById('pf-stamp').textContent =
         'Janela: ' + rotuloPeriodo(PERIODO) + ' (' + brData(ctx.janela.jIni) + ' a ' + brData(ctx.janela.jFim) + ') · ' +
         PP.pessoas.length + ' pessoa(s) com ocorrências · ' + ctx.board.length + ' ocorrências.';

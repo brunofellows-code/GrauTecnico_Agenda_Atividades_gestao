@@ -164,6 +164,21 @@
 .pf-ss-num{width:36px;text-align:right;font-size:13px;font-weight:800}
 .pf-ss-dot{width:9px;height:9px;border-radius:50%;flex:none}
 @media(max-width:900px){.pf-ss-nome{width:96px}}
+/* ---------- C4: drill-down — lista dos itens que compõem o número ---------- */
+.pf-big.dd-click,.pf-small.dd-click,.pf-ss-row.dd-click{cursor:pointer}
+.pf-big.dd-click:hover,.pf-small.dd-click:hover{border-color:var(--brand)}
+.pf-ss-row.dd-click:hover .pf-ss-nome{color:var(--text)}
+.dd-count{font-size:12px;color:var(--muted);margin:0 0 10px}
+.dd-list{display:flex;flex-direction:column;gap:6px;max-height:56vh;overflow:auto}
+.dd-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--s1);min-width:0}
+.dd-tit{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dd-sig{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 6px;white-space:nowrap}
+.dd-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.dd-late{color:var(--red);font-weight:700}
+.dd-more,.dd-empty{font-size:12px;color:var(--muted2);text-align:center;padding:10px}
+.dd-go{font-size:12.5px;font-weight:700;color:var(--greenText);text-decoration:none;margin-right:auto;align-self:center}
+.dd-go:hover{text-decoration:underline}
+@media(max-width:700px){.dd-row{flex-wrap:wrap}.dd-tit{flex-basis:100%;white-space:normal}}
 </style>
 </head>
 <body>
@@ -282,6 +297,11 @@
   /* ---------- card de KPI (sem tendência: ainda não há histórico real) ---------- */
   function kpiCard(k, big) {
     var c = el('<div class="' + (big ? 'pf-big' : 'pf-small') + '"></div>');
+    if (k.drill) {                          /* C4: clique no card abre a lista dos itens */
+      c.classList.add('dd-click');
+      c.title = 'Clique para ver os itens que compõem este número';
+      c.addEventListener('click', function () { abrirDrill(k.drillTitle || (k.label + ' — itens'), k.drill()); });
+    }
     var top = el('<div class="pf-card-top"></div>');
     top.appendChild(el('<span class="pf-dot" style="background:var(--' + k.tone + ');box-shadow:0 0 0 3px var(--' + haloOf(k.tone) + ')"></span>'));
     top.appendChild(el('<span class="pf-label">' + k.label + '</span>'));
@@ -364,6 +384,94 @@
   function rotuloSemana(iso) { var p = iso.split('-'); return p[2] + '/' + p[1]; }
   function rotuloPeriodo(p) { return ({ band: 'atrasadas + 30 dias', semana: 'esta semana', mes: 'este mês' })[p] || p; }
 
+  /* ============================================================
+     C4 · DRILL-DOWN — o "i" prova a fórmula; o drill mostra os
+     ITENS que compõem o número. Filtro client-side do BOARD já
+     em memória (mesmo motor dos KPIs) — ZERO query extra.
+     ============================================================ */
+  var DD_TETO = 100;
+  var DD_STATUS = {
+    pendente:     { l: 'Pendente',     t: 'amber'  },
+    em_andamento: { l: 'Em andamento', t: 'doing'  },
+    reprogramada: { l: 'Reprogramada', t: 'orange' },
+    concluida:    { l: 'Concluída',    t: 'green'  },
+    pulada:       { l: 'Pulada',       t: 'muted2' }
+  };
+  function ddDias(iso, hoje) {            /* dias de atraso em DIA CIVIL LOCAL */
+    var a = iso.split('-'), b = hoje.split('-');
+    var d1 = new Date(+a[0], +a[1] - 1, +a[2]), d2 = new Date(+b[0], +b[1] - 1, +b[2]);
+    return Math.round((d2 - d1) / 86400000);
+  }
+  function ddRow(o, hoje) {
+    var st = DD_STATUS[o.status] || { l: o.status, t: 'muted2' };
+    var r = el('<div class="dd-row"></div>');
+    r.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + st.t + ')"></span>'));
+    var tit = el('<span class="dd-tit"></span>');
+    tit.textContent = (o.act && o.act.titulo) || '(sem título)'; tit.title = tit.textContent;
+    r.appendChild(tit);
+    var sigs = KPI.setoresDe(o.act, MODELO.setores);
+    var sig = el('<span class="dd-sig"></span>'); sig.textContent = sigs.length ? sigs.join('·') : '—';
+    r.appendChild(sig);
+    var resp = el('<span class="dd-meta"></span>'); resp.textContent = o.responsavel || 'sem responsável';
+    r.appendChild(resp);
+    var dt = el('<span class="dd-meta' + (o.atrasada ? ' dd-late' : '') + '"></span>');
+    dt.textContent = brData(o.effDate) + (o.atrasada ? ' · ' + ddDias(o.effDate, hoje) + 'd' : '');
+    r.appendChild(dt);
+    r.appendChild(el('<span class="dd-meta">' + st.l + '</span>'));
+    return r;
+  }
+  function abrirDrill(titulo, itens) {
+    UI.modal({
+      title: titulo,
+      width: 640,
+      body: function () {
+        var box = document.createElement('div');
+        box.appendChild(el('<div class="dd-count">' + itens.length + ' item(ns)' +
+          (itens.length > DD_TETO ? ' · mostrando os ' + DD_TETO + ' primeiros' : '') +
+          ' · janela: ' + rotuloPeriodo(PERIODO) + '</div>'));
+        if (!itens.length) {
+          box.appendChild(el('<div class="dd-empty">Nenhum item compõe este número agora.</div>'));
+          return box;
+        }
+        var list = el('<div class="dd-list"></div>');
+        itens.slice(0, DD_TETO).forEach(function (o) { list.appendChild(ddRow(o, HOJE)); });
+        box.appendChild(list);
+        if (itens.length > DD_TETO) {
+          box.appendChild(el('<div class="dd-more">+ ' + (itens.length - DD_TETO) + ' item(ns) — refine na tela de Atividades.</div>'));
+        }
+        return box;
+      },
+      footer: function (close) {
+        return [el('<a class="dd-go" href="atividades.html">Abrir tela de Atividades →</a>'),
+                UI.button({ label: 'Fechar', variant: 'ghost', onClick: close })];
+      }
+    });
+  }
+  /* ordenações: mais antigas primeiro; abertas antes de concluídas/puladas */
+  function ddOrdData(a, b) { return a.effDate < b.effDate ? -1 : a.effDate > b.effDate ? 1 : 0; }
+  function ddOrdPend(a, b) {
+    var pa = (a.status === 'concluida' || a.status === 'pulada') ? 1 : 0;
+    var pb = (b.status === 'concluida' || b.status === 'pulada') ? 1 : 0;
+    return (pa - pb) || ddOrdData(a, b);
+  }
+  function ddAberta(o) { return o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada'; }
+  var DD = {
+    previstas:     function () { return BOARD.filter(function (o) { return o.effDate <= HOJE && o.status !== 'pulada'; }).sort(ddOrdPend); },
+    atrasadas:     function () { return BOARD.filter(function (o) { return o.atrasada; }).sort(ddOrdData); },
+    andamento:     function () { return BOARD.filter(function (o) { return o.status === 'em_andamento'; }).sort(ddOrdData); },
+    concluidas:    function () { return BOARD.filter(function (o) { return o.status === 'concluida'; }).sort(ddOrdData); },
+    reprogramadas: function () { return BOARD.filter(function (o) { return o.status === 'reprogramada'; }).sort(ddOrdData); },
+    puladas:       function () { return BOARD.filter(function (o) { return o.status === 'pulada'; }).sort(ddOrdData); },
+    semResp:       function () { return BOARD.filter(function (o) { return o.semResp && ddAberta(o); }).sort(ddOrdData); },
+    abertas:       function () { return BOARD.filter(ddAberta).sort(ddOrdData); },
+    setor:         function (sig) {
+      return BOARD.filter(function (o) {
+        var s = KPI.setoresDe(o.act, MODELO.setores); if (!s.length) { s = ['—']; }
+        return s.indexOf(sig) >= 0;
+      }).sort(function (a, b) { return ((b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0)) || ddOrdData(a, b); });
+    }
+  };
+
   /* ---------- KPIs de topo (grandes) ---------- */
   function toneAder(v) { return v == null ? 'muted2' : v >= 90 ? 'green' : v >= 80 ? 'amber' : 'red'; }
   function focusKPIs(m) {
@@ -372,17 +480,21 @@
       { label: 'Aderência à rotina', value: fmtPct(m.aderencia), tone: toneAder(m.aderencia),
         sub: t.concluidasAteHoje + ' de ' + t.previstasAteHoje + ' previstas até hoje',
         trendKey: 'aderencia', menorMelhor: false,
+        drill: function () { return DD.previstas(); }, drillTitle: 'Aderência — previstas até hoje (abertas primeiro)',
         info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas. Δ7d e linha: fotos diárias (kpi_snapshots) da janela padrão', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
       { label: 'Atividades atrasadas', value: String(t.atrasadas), tone: t.atrasadas ? 'red' : 'green',
         sub: 'vencidas e ainda abertas',
         trendKey: 'atrasadas', menorMelhor: true,
+        drill: function () { return DD.atrasadas(); }, drillTitle: 'Atrasadas — mais antigas primeiro',
         info: { title: 'Atividades atrasadas', formula: 'ocorrências abertas (pendente, em andamento ou reprogramada) com data efetiva < hoje', dados: 'ocorrências da janela + override de data. Δ7d (queda = verde) e linha: fotos diárias (kpi_snapshots)', numeros: t.atrasadas + ' atrasada(s) agora' } },
       { label: 'Em andamento', value: String(t.andamento), tone: t.andamento ? 'doing' : 'muted2',
         sub: 'já iniciadas, não concluídas',
         trendKey: 'andamento', menorMelhor: true,
+        drill: function () { return DD.andamento(); },
         info: { title: 'Trabalho em andamento (WIP)', formula: 'ocorrências com status = em andamento', dados: 'ocorrências: override de status. Δ7d (queda = verde: menos WIP parado) e linha: fotos diárias (kpi_snapshots)', numeros: t.andamento + ' em andamento' } },
       { label: 'Concluídas na janela', value: String(t.concluidas), tone: 'green',
         sub: rotuloPeriodo(m.periodo),
+        drill: function () { return DD.concluidas(); }, drillTitle: 'Concluídas na janela',
         info: { title: 'Concluídas na janela', formula: 'ocorrências com status = concluída dentro da janela', dados: 'ocorrências: override de status', numeros: t.concluidas + ' concluída(s)' } }
     ];
   }
@@ -395,16 +507,22 @@
     var cargaStr = cargaMedia == null ? '—' : String(cargaMedia).replace('.', ',');
     return [
       { label: 'Previstas até hoje', value: String(t.previstasAteHoje), tone: 'muted2',
+        drill: function () { return DD.previstas(); },
         info: { title: 'Previstas até hoje', formula: 'ocorrências da janela com data ≤ hoje, menos as puladas', dados: 'ocorrências da janela', numeros: t.previstasAteHoje + ' previstas' } },
       { label: 'Aging médio', value: t.atrasadas ? fmtDias(m.agingMedio) : '—', tone: t.atrasadas ? 'amber' : 'green',
+        drill: function () { return DD.atrasadas(); }, drillTitle: 'Atrasadas por idade — mais antigas primeiro',
         info: { title: 'Aging médio das atrasadas', formula: 'média de (hoje − data efetiva) das atrasadas', dados: 'atrasadas: data efetiva', numeros: t.atrasadas ? ('soma de dias ÷ ' + t.atrasadas + ' = ' + fmtDias(m.agingMedio)) : 'sem atrasadas' } },
       { label: 'Reprogramação', value: m.reprogPct + '%', tone: m.reprogPct > 20 ? 'orange' : 'green',
+        drill: function () { return DD.reprogramadas(); },
         info: { title: 'Evasão de prazo (reprogramação)', formula: 'reprogramadas ÷ total de ocorrências × 100', dados: 'ocorrências: status reprogramada', numeros: t.reprogramadas + ' ÷ ' + t.ocorrencias + ' = ' + m.reprogPct + '%' } },
       { label: 'Puladas', value: String(t.puladas), tone: t.puladas ? 'amber' : 'green',
+        drill: function () { return DD.puladas(); },
         info: { title: 'Ocorrências puladas', formula: 'ocorrências com status = pulada', dados: 'ocorrências: override de status', numeros: t.puladas + ' pulada(s)' } },
       { label: 'Sem responsável', value: String(t.semResp), tone: t.semResp ? 'red' : 'green',
+        drill: function () { return DD.semResp(); }, drillTitle: 'Abertas sem responsável',
         info: { title: 'Abertas sem responsável', formula: 'ocorrências abertas cujo responsável está vazio', dados: 'atividade: responsavelNome', numeros: t.semResp + ' sem responsável' } },
       { label: 'Carga média / pessoa', value: cargaStr, tone: 'muted2',
+        drill: function () { return DD.abertas(); }, drillTitle: 'Abertas (carga) — todas as pessoas',
         info: { title: 'Carga média por pessoa', formula: 'abertas ÷ nº de responsáveis com carga', dados: 'abertas + responsáveis distintos', numeros: pessoas ? (t.abertas + ' ÷ ' + pessoas + ' = ' + cargaStr) : 'sem responsáveis' } }
     ];
   }
@@ -493,7 +611,13 @@
     var list = el('<div></div>');
     calc.forEach(function (x) {
       var tok = tomToken(x.sc.tom);
-      var row = el('<div class="pf-ss-row"></div>');
+      var row = el('<div class="pf-ss-row dd-click"></div>');
+      row.title = 'Clique para ver as ocorrências do setor';
+      (function (sig) {                     /* C4: drill do setor */
+        row.addEventListener('click', function () {
+          abrirDrill('Setor ' + KPI.nomeSetor(sig, m.setores) + ' — ocorrências da janela (atrasadas primeiro)', DD.setor(sig));
+        });
+      })(x.sigla);
       row.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok) + ')"></span>'));
       var nome = el('<span class="pf-ss-nome"></span>');
       nome.textContent = KPI.nomeSetor(x.sigla, m.setores);
