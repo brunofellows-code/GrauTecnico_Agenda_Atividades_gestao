@@ -40,6 +40,14 @@
      Qualquer item da sidebar fora desta lista mostra "em breve". */
   var LIVE = { 'Hoje': 'hoje.html', 'Projetos': 'projetos.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
 
+  /* Fase 1 RBAC — nav visível por PERFIL (papel novo). Rótulos = data-nav (iguais
+     ao LIVE). 'gestor' NÃO entra no mapa => vê tudo. Recorte é por EXIBIÇÃO
+     (Caminho C): a borda de escrita real fica nas Regras do Firestore. */
+  var NAV_BY_PERFIL = {
+    lider:   { 'Hoje': 1, 'Atividades': 1, 'Projetos': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Glossário': 1 },
+    usuario: { 'Hoje': 1, 'Atividades': 1, 'Projetos': 1, 'Eventos': 1, 'Glossário': 1 }
+  };
+
   /* ---------- iniciais a partir do nome ---------- */
   function initialsOf(name) {
     var s = String(name || '').trim();
@@ -47,6 +55,26 @@
     var parts = s.split(/\s+/);
     if (parts.length === 1) { return parts[0].slice(0, 2).toUpperCase(); }
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }
+
+  /* ---------- perfil (Fase 1 RBAC) ----------
+     normalizePerfil: valor do doc -> PAPEL novo (gestor|lider|usuario).
+       Legados: Admin->gestor · Editor->lider · demais->usuario.
+     capabilityOf: papel -> tier de CAPACIDADE legado (Admin|Editor|Visualizador)
+       que as telas já existentes checam via USER.profile. Assim o RBAC troca o
+       MODELO sem reescrever as 7 telas que gateiam por 'Admin'/'Editor'
+       (patch cirúrgico + não-regressivo; a borda de escrita real segue nas Regras). */
+  function normalizePerfil(raw) {
+    var p = String(raw || '').trim();
+    if (p === 'gestor' || p === 'lider' || p === 'usuario') { return p; }
+    if (p === 'Admin') { return 'gestor'; }
+    if (p === 'Editor') { return 'lider'; }
+    return 'usuario';
+  }
+  function capabilityOf(perfil) {
+    if (perfil === 'gestor') { return 'Admin'; }
+    if (perfil === 'lider') { return 'Editor'; }
+    return 'Visualizador';
   }
 
   /* ============================================================
@@ -191,6 +219,20 @@
         });
       }
     }
+
+    /* ---- recorte de navegação por perfil (Fase 1 RBAC · exibição) ----
+       Remove da sidebar os itens fora do conjunto do perfil. Idempotente.
+       'gestor' não está no NAV_BY_PERFIL => nada é removido (vê tudo). */
+    (function filtrarNav() {
+      var perf = (user && user.perfil) || 'usuario';
+      var permit = NAV_BY_PERFIL[perf];
+      if (!permit) { return; }
+      var itens = document.querySelectorAll('.ui-nav[data-nav]');
+      Array.prototype.forEach.call(itens, function (it) {
+        var label = it.getAttribute('data-nav');
+        if (!permit[label] && it.parentNode) { it.parentNode.removeChild(it); }
+      });
+    })();
   }
 
   /* confirmação de saída — usa UI.modal se disponível (mesmo padrão
@@ -222,15 +264,21 @@
      ============================================================ */
   function grant(authUser, data) {
     var nome = (data && data.nome) || (data && data.email) || authUser.email || 'Usuário';
-    var perfil = (data && data.perfil) || 'Visualizador';
+    var perfilRaw = (data && data.perfil) || 'Visualizador';
+    var perfil = normalizePerfil(perfilRaw);            /* papel: gestor|lider|usuario */
+    var setoresLid = (data && Array.isArray(data.setoresLiderados)) ? data.setoresLiderados.slice() : [];
     user = {
       uid: authUser.uid,
       email: (data && data.email) || authUser.email || '',
       nome: nome,
-      perfil: perfil,
-      /* aliases para UI.sidebar (espera name/profile/initials) */
+      perfil: perfil,                 /* papel novo — código novo (nav; escopo na Fase 1-B) */
+      perfilRaw: perfilRaw,           /* valor cru do doc (pode ser legado) */
+      setoresLiderados: setoresLid,   /* siglas que o Líder lidera */
+      /* aliases para UI.sidebar + telas existentes (espera name/profile/initials).
+         profile = tier de CAPACIDADE legado (Admin|Editor|Visualizador): as telas
+         que checam 'Admin'/'Editor' seguem funcionando sem tocar nelas. */
       name: nome,
-      profile: perfil,
+      profile: capabilityOf(perfil),
       initials: initialsOf(nome)
     };
     window.GRAUT_USER = user;
@@ -276,6 +324,9 @@
     },
     get user() { return user; },
     isReady: function () { return ready; },
+    isGestor: function () { return !!user && user.perfil === 'gestor'; },
+    isLider: function () { return !!user && user.perfil === 'lider'; },
+    isUsuario: function () { return !!user && user.perfil === 'usuario'; },
     signOut: function () {
       settled = true;
       var done = function () { window.location.replace('login.html'); };

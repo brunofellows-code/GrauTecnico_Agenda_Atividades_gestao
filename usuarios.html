@@ -84,6 +84,7 @@
 .us-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
 
 .us-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
+.us-lidgrid{display:flex;flex-direction:column;gap:8px;padding:4px 2px}
 
 @media (max-width:900px){
   .us-app>.ui-side{display:none}
@@ -146,10 +147,33 @@
 
     /* Placeholder até a guarda entregar a identidade real (Guard.onReady). */
     var CURRENT_USER = { uid: '', name: '', profile: 'Visualizador', initials: '' };
-    var CAN_VIEW = false; /* só Admin vê esta tela (recomputado no onReady) */
+    var CAN_VIEW = false; /* só Gestor vê esta tela (recomputado no onReady) */
 
-    var PERFIS = ['Admin', 'Editor', 'Visualizador', 'Consultor Externo'];
-    var PERFIL_HINT = 'Admin: tudo. Editor: cria/edita atividades. Visualizador: só lê. Consultor Externo: acesso restrito.';
+    /* Fase 1 RBAC — 3 perfis (papel). Legados (Admin/Editor/Visualizador/Consultor
+       Externo) ainda aparecem em docs não migrados, mas o editor grava só os 3. */
+    var PERFIS = [
+      { value: 'gestor', label: 'Gestor' },
+      { value: 'lider', label: 'Líder' },
+      { value: 'usuario', label: 'Usuário' }
+    ];
+    var PERFIL_VALS = ['gestor', 'lider', 'usuario'];
+    /* aceitos para GRAVAÇÃO: os 3 novos + legados (preserva doc não migrado numa
+       edição que não mexe no perfil, ex.: ativar/desativar). '' é rejeitado. */
+    var PERFIL_STORABLE = ['gestor', 'lider', 'usuario', 'Admin', 'Editor', 'Visualizador', 'Consultor Externo'];
+    var PERFIL_HINT = 'Gestor: acesso total. Líder: cria/edita no(s) seu(s) setor(es). Usuário: acompanha e conclui as próprias.';
+    function perfilLabel(v) {
+      for (var i = 0; i < PERFIS.length; i++) { if (PERFIS[i].value === v) { return PERFIS[i].label; } }
+      return v || '—'; /* legado exibe o valor cru */
+    }
+    function perfilLegado(v) { return !!v && PERFIL_VALS.indexOf(v) < 0; }
+    /* ao editar um doc legado, sugere o papel novo. Editor -> '' (o Gestor decide
+       Gestor vs Líder). Admin -> gestor. Visualizador/Consultor -> usuario. */
+    function sugerePerfil(v) {
+      if (PERFIL_VALS.indexOf(v) >= 0) { return v; }
+      if (v === 'Admin') { return 'gestor'; }
+      if (v === 'Visualizador' || v === 'Consultor Externo') { return 'usuario'; }
+      return '';
+    }
     var RX_UID = /^[A-Za-z0-9_-]{6,128}$/;
     var RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -176,7 +200,7 @@
       function ferr(e) {
         var code = (e && e.code) || '';
         if (code === 'permission-denied') {
-          return Object.assign(new Error('Sem permissão. Apenas o perfil Admin gerencia usuários, e as Regras do Firestore precisam estar publicadas.'), { field: 'geral' });
+          return Object.assign(new Error('Sem permissão. Apenas o perfil Gestor gerencia usuários, e as Regras do Firestore precisam estar publicadas.'), { field: 'geral' });
         }
         if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
           return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });
@@ -217,17 +241,22 @@
           var email = (d.email || '').trim();
           var nome = (d.nome || '').trim();
           var perfil = d.perfil || '';
+          var setoresLiderados = (perfil === 'lider' && Array.isArray(d.setoresLiderados)) ? d.setoresLiderados.slice() : [];
           return fb().then(function (ctx) {
             return readAll(ctx).then(function (arr) {
               if (!RX_UID.test(uid)) { throw vErr('UID inválido. Cole o UID exatamente como aparece no Authentication.', 'uid'); }
               if (arr.some(function (u) { return u.uid === uid; })) { throw vErr('Já existe um usuário com este UID.', 'uid'); }
               if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
               if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
-              if (PERFIS.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
+              if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
               var now = Date.now();
-              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, ativo: true, criadoEm: now, atualizadoEm: now };
+              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, setoresLiderados: setoresLiderados, ativo: true, criadoEm: now, atualizadoEm: now };
               var db = ctx.db, f = ctx.f;
-              return f.setDoc(f.doc(db, COL, uid), novo).then(function () { return novo; });
+              return f.setDoc(f.doc(db, COL, uid), novo).then(function () {
+                api.log({ acao: 'criar_usuario', entidade: 'usuario', refId: uid, antes: null,
+                  depois: { nome: novo.nome, email: novo.email, perfil: novo.perfil, setoresLiderados: novo.setoresLiderados, ativo: novo.ativo } });
+                return novo;
+              });
             });
           }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         },
@@ -240,17 +269,55 @@
               var nome = patch.nome != null ? patch.nome.trim() : cur.nome;
               var perfil = patch.perfil != null ? patch.perfil : cur.perfil;
               var ativo = patch.ativo !== undefined ? !!patch.ativo : (cur.ativo !== false);
+              var setoresLiderados;
+              if (patch.setoresLiderados !== undefined) { setoresLiderados = Array.isArray(patch.setoresLiderados) ? patch.setoresLiderados.slice() : []; }
+              else { setoresLiderados = Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados.slice() : []; }
+              if (perfil !== 'lider') { setoresLiderados = []; } /* só Líder guarda setores */
               if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
               if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
-              if (PERFIS.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
-              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, ativo: ativo,
+              if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
+              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, setoresLiderados: setoresLiderados, ativo: ativo,
                 criadoEm: cur.criadoEm || Date.now(), atualizadoEm: Date.now() };
               var db = ctx.db, f = ctx.f;
-              return f.setDoc(f.doc(db, COL, uid), updated).then(function () { return updated; });
+              return f.setDoc(f.doc(db, COL, uid), updated).then(function () {
+                var wasAtivo = (cur.ativo !== false);
+                var acao = (wasAtivo && updated.ativo === false) ? 'inativar_usuario'
+                         : ((!wasAtivo && updated.ativo === true) ? 'reativar_usuario' : 'editar_usuario');
+                api.log({ acao: acao, entidade: 'usuario', refId: cur.uid,
+                  antes: { perfil: cur.perfil, ativo: wasAtivo, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [] },
+                  depois: { perfil: updated.perfil, ativo: updated.ativo, setoresLiderados: updated.setoresLiderados } });
+                return updated;
+              });
             });
           }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         },
-        setAtivo: function (uid, ativo) { return api.update(uid, { ativo: !!ativo }); }
+        setAtivo: function (uid, ativo) { return api.update(uid, { ativo: !!ativo }); },
+        /* setores RAIZ ativos (para o multi-select de "setores liderados").
+           where('ativo','==',true) + limit; filtro de raiz no cliente. */
+        setoresRaiz: function () {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            var q = f.query(f.collection(db, 'setores'), f.where('ativo', '==', true), f.limit(500));
+            return f.getDocs(q).then(function (snap) {
+              var a = [];
+              snap.forEach(function (d) {
+                var s = d.data() || {};
+                if (!s.setorPaiSigla) { a.push({ sigla: (s.sigla || d.id), nome: s.nome || d.id }); } /* raiz */
+              });
+              a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+              return a;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+        /* atividade_log (best-effort; falha não quebra a operação) — mesmo shape
+           das demais telas: { ts, uid, acao, entidade, refId, antes, depois }. */
+        log: function (entry) {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            var row = Object.assign({ ts: Date.now(), uid: (CURRENT_USER && CURRENT_USER.uid) || null }, entry);
+            return f.addDoc(f.collection(db, 'atividade_log'), row);
+          }).catch(function () {});
+        }
       };
       return api;
     })();
@@ -349,12 +416,14 @@
       var box = txt('div', 'us-msg');
       var ic = txt('div', 'us-msg-ic'); ic.appendChild(ico(PATH.lock, 22)); box.appendChild(ic);
       box.appendChild(txt('div', 'us-msg-t', 'Acesso restrito'));
-      box.appendChild(txt('div', 'us-msg-p', 'Apenas o perfil Admin pode gerenciar usuários. Se precisar de acesso, fale com um administrador.'));
+      box.appendChild(txt('div', 'us-msg-p', 'Apenas o perfil Gestor pode gerenciar usuários. Se precisar de acesso, fale com um gestor.'));
       stage.appendChild(box);
     }
 
     function badge(perfil) {
-      var b = txt('span', 'us-badge' + (perfil === 'Admin' ? ' adm' : ''), perfil || '—');
+      var novo = PERFIL_VALS.indexOf(perfil) >= 0;
+      var b = txt('span', 'us-badge' + (perfil === 'gestor' ? ' adm' : ''), perfilLabel(perfil) + (novo ? '' : ' · legado'));
+      if (!novo) { b.title = 'Perfil antigo — edite este usuário para migrar para Gestor/Líder/Usuário.'; }
       return b;
     }
     function statusTag(ativo) {
@@ -448,10 +517,47 @@
       var nomeInput = UI.input({ value: editing ? cur.nome : '', placeholder: 'Ex: Maria Silva' });
       var nomeField = UI.field({ label: 'Nome', required: true, control: nomeInput });
 
-      var perfilOpts = PERFIS.map(function (p) { return { value: p, label: p }; });
-      var perfilSelect = UI.select({ value: editing ? cur.perfil : '', placeholder: '— Selecione o perfil —', options: perfilOpts, disabled: isSelf });
-      var perfilField = UI.field({ label: 'Perfil', required: true, control: perfilSelect,
-        hint: isSelf ? 'Você não pode alterar o seu próprio perfil.' : PERFIL_HINT });
+      var perfilOpts = PERFIS.map(function (p) { return { value: p.value, label: p.label }; });
+      var perfilInicial = editing ? sugerePerfil(cur.perfil) : '';
+      var perfilSelect = UI.select({ value: perfilInicial, placeholder: '— Selecione o perfil —', options: perfilOpts, disabled: isSelf,
+        onChange: function (v) { updateLiderVisibility(v); } });
+      var perfilHintTxt = isSelf ? 'Você não pode alterar o seu próprio perfil.'
+        : ((editing && perfilLegado(cur.perfil)) ? ('Perfil atual: "' + cur.perfil + '" (antigo). Escolha um dos 3 para migrar. ' + PERFIL_HINT) : PERFIL_HINT);
+      var perfilField = UI.field({ label: 'Perfil', required: true, control: perfilSelect, hint: perfilHintTxt });
+
+      /* ----- setores liderados (aparece só quando o perfil é Líder) ----- */
+      var liderState = (editing && Array.isArray(cur.setoresLiderados)) ? cur.setoresLiderados.slice() : [];
+      var liderBox = document.createElement('div');
+      var liderField = UI.field({ label: 'Setores que lidera', control: liderBox,
+        hint: 'Marque o(s) setor(es) sob esta liderança. O Líder enxerga e cobra as atividades desses setores.' });
+      liderField.style.display = 'none';
+      var setoresCarregados = null; /* cache dos setores raiz (carrega ao virar Líder) */
+      function renderLiderCheckboxes() {
+        liderBox.innerHTML = '';
+        if (setoresCarregados === null) {
+          liderBox.appendChild(txt('div', 'us-em', 'Carregando setores…'));
+          Store.setoresRaiz().then(function (arr) { setoresCarregados = arr; renderLiderCheckboxes(); })
+            .catch(function () { liderBox.innerHTML = ''; liderBox.appendChild(txt('div', 'us-em', 'Não consegui carregar os setores agora. Salve e tente de novo.')); });
+          return;
+        }
+        if (!setoresCarregados.length) {
+          liderBox.appendChild(txt('div', 'us-em', 'Nenhum setor cadastrado ainda. Cadastre em Setores antes de definir a liderança.'));
+          return;
+        }
+        var grid = txt('div', 'us-lidgrid');
+        setoresCarregados.forEach(function (s) {
+          var on = liderState.indexOf(s.sigla) >= 0;
+          grid.appendChild(UI.checkbox({ checked: on, label: s.nome + ' (' + s.sigla + ')', onToggle: function (v) {
+            var i = liderState.indexOf(s.sigla);
+            if (v && i < 0) { liderState.push(s.sigla); } else if (!v && i >= 0) { liderState.splice(i, 1); }
+          } }));
+        });
+        liderBox.appendChild(grid);
+      }
+      function updateLiderVisibility(perfilVal) {
+        if (perfilVal === 'lider') { liderField.style.display = ''; renderLiderCheckboxes(); }
+        else { liderField.style.display = 'none'; }
+      }
 
       var ativoState = editing ? (cur.ativo !== false) : true;
       var ativoField = null;
@@ -460,7 +566,7 @@
         ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos não conseguem entrar; o registro é preservado.' });
       }
 
-      var bodyFields = [uidField, nomeField, emailField, perfilField]; if (ativoField) { bodyFields.push(ativoField); }
+      var bodyFields = [uidField, nomeField, emailField, perfilField, liderField]; if (ativoField) { bodyFields.push(ativoField); }
 
       var saveBtn = null;
       var m = UI.modal({
@@ -478,6 +584,7 @@
       uidInput.addEventListener('keydown', submitOnEnter);
       emailInput.addEventListener('keydown', submitOnEnter);
       nomeInput.addEventListener('keydown', submitOnEnter);
+      updateLiderVisibility(perfilInicial); /* mostra setores se já for Líder ao abrir */
 
       function onSave() {
         clearErrs(m.card);
@@ -485,17 +592,18 @@
         var email = emailInput.value.trim();
         var nome = nomeInput.value.trim();
         var perfil = isSelf ? cur.perfil : (perfilSelect.value || '');
+        var setoresLid = (perfil === 'lider') ? liderState.slice() : [];
         var ok = true;
         if (!editing && !RX_UID.test(uidVal)) { setErr(uidField, 'Cole um UID válido (sem espaços).'); ok = false; }
         if (!RX_EMAIL.test(email)) { setErr(emailField, 'Informe um e-mail válido.'); ok = false; }
         if (nome.length < 2) { setErr(nomeField, 'Informe um nome com 2+ caracteres.'); ok = false; }
-        if (PERFIS.indexOf(perfil) < 0) { setErr(perfilField, 'Selecione um perfil.'); ok = false; }
+        if (PERFIL_STORABLE.indexOf(perfil) < 0) { setErr(perfilField, 'Selecione um perfil.'); ok = false; }
         if (!ok) { return; }
 
         if (saveBtn) { saveBtn.disabled = true; }
         var op = editing
-          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, ativo: isSelf ? true : ativoState })
-          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil });
+          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, ativo: isSelf ? true : ativoState, setoresLiderados: setoresLid })
+          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil, setoresLiderados: setoresLid });
 
         op.then(function () {
           m.close();
@@ -516,7 +624,7 @@
     /* ===================== identidade real ===================== */
     Guard.onReady(function (u) {
       CURRENT_USER = u;
-      CAN_VIEW = CURRENT_USER.profile === 'Admin';
+      CAN_VIEW = (CURRENT_USER.perfil === 'gestor'); /* só Gestor gerencia usuários */
       mount();
     });
   })();
