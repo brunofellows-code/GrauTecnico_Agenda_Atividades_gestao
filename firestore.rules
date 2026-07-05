@@ -27,10 +27,13 @@ service cloud.firestore {
       return me().perfil;
     }
     function isAdmin() {
-      return isActive() && perfil() == 'Admin';
+      // Transição 4->3 perfis (lockout-safe): aceita legado 'Admin' E o novo 'gestor'.
+      return isActive() && (perfil() == 'Admin' || perfil() == 'gestor');
     }
     function canWrite() {
-      return isActive() && (perfil() == 'Admin' || perfil() == 'Editor');
+      // Transição 4->3 perfis: legados 'Admin'/'Editor' E novos 'gestor'/'lider'.
+      return isActive() && (perfil() == 'Admin' || perfil() == 'Editor'
+                            || perfil() == 'gestor' || perfil() == 'lider');
     }
     function donoAtividade(aid) {
       return signedIn()
