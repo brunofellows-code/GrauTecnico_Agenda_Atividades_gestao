@@ -404,15 +404,26 @@
   /* ---------- pintura ---------- */
   function paint() {
     var m = MODELO, hoje = m.hoje;
+    /* F1-B: o escopo do papel é o PISO — gestor vê tudo, líder só seus setores,
+       usuário só as suas. O toggle Minhas/Todas atua DENTRO desse escopo. */
+    var escopo = m.board.filter(function (o) { return KPI.visivelPara(o.act, CURRENT_USER, m.setores); });
     var board = (MODO === 'minhas')
-      ? m.board.filter(function (o) { return o.act.responsavelUid === CURRENT_USER.uid; })
-      : m.board;
+      ? escopo.filter(function (o) { return o.act.responsavelUid === CURRENT_USER.uid; })
+      : escopo;
     var d = derivar(board, hoje);
 
-    /* escopo vazio didático */
-    if (MODO === 'minhas' && !board.length && m.board.length) {
+    /* F1-B: nada no escopo do papel (líder sem setores com atividade / usuário sem atribuições) */
+    if (!escopo.length && m.board.length) {
+      setState('Nada no seu escopo.',
+        (Guard.isLider && Guard.isLider())
+          ? 'Você vê apenas as atividades dos setores que lidera.'
+          : 'Você vê apenas as atividades atribuídas a você. Peça ao gestor para te definir como responsável.');
+      return;
+    }
+    /* escopo vazio didático (dentro do escopo, nada é SEU) */
+    if (MODO === 'minhas' && !board.length && escopo.length) {
       setState('Nada atribuído a você nesta janela.',
-        'Use o seletor acima para ver as atividades de toda a escola, ou peça ao Admin para te definir como responsável.');
+        'Use o seletor acima para ver o restante do seu escopo.');
       var kp0 = document.getElementById('hj-kpis'); kp0.style.display = 'none';
       return;
     }
@@ -460,7 +471,11 @@
   /* ---------- escopo (Minhas / Todas) ---------- */
   function pintarScope() {
     var sc = document.getElementById('hj-scope'); sc.innerHTML = '';
-    [['minhas', 'Minhas'], ['todas', 'Toda a escola']].forEach(function (p) {
+    /* F1-B: usuário só enxerga as suas — o toggle não faz sentido, some.
+       Líder vê "seus setores" (não a escola inteira); gestor vê a escola. */
+    if (Guard.isUsuario && Guard.isUsuario()) { sc.style.display = 'none'; return; }
+    var rotuloTodas = (Guard.isGestor && Guard.isGestor()) ? 'Toda a escola' : 'Meus setores';
+    [['minhas', 'Minhas'], ['todas', rotuloTodas]].forEach(function (p) {
       var b = el('<button type="button" class="hj-seg-b' + (MODO === p[0] ? ' on' : '') + '"></button>');
       b.textContent = p[1];
       b.addEventListener('click', function () { if (MODO !== p[0]) { MODO = p[0]; pintarScope(); paint(); } });

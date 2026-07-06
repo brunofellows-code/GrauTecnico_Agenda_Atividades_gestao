@@ -738,6 +738,24 @@
     }
     function uniqSig(a) { var seen = {}, out = []; a.forEach(function (x) { if (x && !seen[x]) { seen[x] = 1; out.push(x); } }); return out; }
 
+    /* F1-B · escopo de visibilidade por papel (RBAC de conteúdo).
+       gestor: tudo · líder: interseção com setoresLiderados (todos→visível) ·
+       usuário: só as suas (responsavelUid). Reaproveita o setoresDe local. */
+    function visivelPara(act, u) {
+      if (!u) { return false; }
+      if (u.perfil === 'gestor') { return true; }
+      if (u.perfil === 'lider') {
+        var lid = Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [];
+        if (!lid.length) { return false; }
+        if (act && act.todosSetores) { return true; }
+        var sigs = setoresDe(act);
+        for (var i = 0; i < sigs.length; i++) { if (lid.indexOf(sigs[i]) !== -1) { return true; } }
+        return false;
+      }
+      if (u.perfil === 'usuario') { return !!(act && act.responsavelUid && u.uid && act.responsavelUid === u.uid); }
+      return false;
+    }
+
     function renderToolbar() {
       toolbarEl.innerHTML = '';
       var bar = el('<div class="at-toolbar"></div>');
@@ -840,6 +858,7 @@
       var out = [];
 
       ATIV.forEach(function (act) {
+        if (!visivelPara(act, CURRENT_USER)) { return; }   /* F1-B: escopo por papel */
         if (selSetor && !act.todosSetores && setoresDe(act).indexOf(selSetor) === -1) { return; }
         var ovs = OCC_BY_ATIV[act.id] || [];
         var occs = R.ocorrenciasNaJanela(act, w.jIni, w.jFim, ovs, hoje);
@@ -890,8 +909,17 @@
       if (!BOARD.length) {
         var box = el('<div class="at-msg"></div>');
         var icw = el('<div class="at-msg-ic"></div>'); icw.appendChild(ico(PATH.calendar, 22)); box.appendChild(icw);
-        box.appendChild(el('<div class="at-msg-t">Nada na janela selecionada</div>'));
-        box.appendChild(txt('div', 'at-msg-p', (search.trim() || selSetor) ? 'Nenhuma ocorrência bate com o filtro/busca atual. Limpe o filtro ou troque o período.' : 'Não há ocorrências para este período. Troque o período acima ou crie uma atividade.'));
+        /* F1-B: distinguir "vazio por escopo" de "vazio por período/filtro" */
+        var algumVisivel = ATIV.some(function (a) { return visivelPara(a, CURRENT_USER); });
+        if (ATIV.length && !algumVisivel) {
+          box.appendChild(el('<div class="at-msg-t">Nada no seu escopo</div>'));
+          box.appendChild(txt('div', 'at-msg-p', (Guard.isLider && Guard.isLider())
+            ? 'Você vê apenas as atividades dos setores que lidera.'
+            : 'Você vê apenas as atividades atribuídas a você.'));
+        } else {
+          box.appendChild(el('<div class="at-msg-t">Nada na janela selecionada</div>'));
+          box.appendChild(txt('div', 'at-msg-p', (search.trim() || selSetor) ? 'Nenhuma ocorrência bate com o filtro/busca atual. Limpe o filtro ou troque o período.' : 'Não há ocorrências para este período. Troque o período acima ou crie uma atividade.'));
+        }
         stage.appendChild(box);
         return;
       }

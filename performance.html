@@ -535,12 +535,18 @@
   }
 
   function carregar() {
+    /* F1-B: painel de gestão. Usuário não tem no menu; se chegar por URL, barra. */
+    if (Guard.isUsuario && Guard.isUsuario()) {
+      var stmp = document.getElementById('pf-stamp'); if (stmp) { stmp.textContent = 'Restrito.'; }
+      showState('Sem conteúdo para o seu perfil', 'A Performance é um painel de gestão. Sua agenda está em Hoje e suas tarefas em Atividades.');
+      return;
+    }
     showState('Calculando desempenho…', 'Lendo as ocorrências e o log de ações.');
     Promise.all([
       KPI.carregar(PERIODO),
       KPI.lerLogRecente()
     ]).then(function (r) {
-      var ctx = r[0];
+      var ctx = KPI.recortarContexto(r[0], USER);   /* F1-B: gestor=tudo · líder=seus setores */
       LOG = r[1] || [];
       MODELO = KPI.computar(ctx);
       PP = KPI.computarPorPessoa(ctx);
@@ -550,7 +556,10 @@
         'Janela: ' + rotuloPeriodo(PERIODO) + ' (' + brData(ctx.janela.jIni) + ' a ' + brData(ctx.janela.jFim) + ') · ' +
         PP.pessoas.length + ' pessoa(s) com ocorrências · ' + ctx.board.length + ' ocorrências.';
       if (!ctx.ativ.length) {
-        showState('Ainda não há atividades', 'Cadastre atividades com responsável para medir o desempenho.');
+        var ehLider = Guard.isLider && Guard.isLider();
+        showState(ehLider ? 'Nada no seu escopo' : 'Ainda não há atividades',
+          ehLider ? 'Não há atividades ativas nos setores que você lidera nesta janela.'
+                  : 'Cadastre atividades com responsável para medir o desempenho.');
         return;
       }
       render();

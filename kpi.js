@@ -92,6 +92,44 @@
   }
   function nomeSetor(sig, setores) { var s = setores.filter(function (x) { return x.sigla === sig; })[0]; return s ? (s.nome || sig) : sig; }
 
+  /* ---------- F1-B · ESCOPO DE VISIBILIDADE POR PAPEL (RBAC de conteúdo) ----------
+     Predicado PURO: esta atividade é visível para este usuário?
+       gestor  -> tudo.
+       líder   -> se algum setor da atividade ∈ setoresLiderados
+                  (atividade "todos os setores" conta como visível).
+       usuário -> só se ele é o responsável (responsavelUid === uid).
+     Acoplamento por SIGLA (Princípio 18); zero leitura extra de banco. */
+  function visivelPara(act, user, setores) {
+    if (!user) { return false; }
+    if (user.perfil === 'gestor') { return true; }
+    if (user.perfil === 'lider') {
+      var lid = Array.isArray(user.setoresLiderados) ? user.setoresLiderados : [];
+      if (!lid.length) { return false; }
+      if (act && act.todosSetores) { return true; }
+      var sigs = setoresDe(act, setores);
+      for (var i = 0; i < sigs.length; i++) { if (lid.indexOf(sigs[i]) !== -1) { return true; } }
+      return false;
+    }
+    if (user.perfil === 'usuario') {
+      return !!(act && act.responsavelUid && user.uid && act.responsavelUid === user.uid);
+    }
+    return false; /* papel desconhecido -> nada (fail-safe) */
+  }
+
+  /* Recorta um contexto de KPI.carregar() ao escopo do usuário: filtra board
+     E ativ pelo MESMO predicado, de modo que porSetor, totais, carga, aging e
+     ranking por pessoa saiam todos coerentes com o escopo. Gestor -> devolve o
+     ctx intacto (custo zero). Não muta o ctx original (devolve cópia rasa). */
+  function recortarContexto(ctx, user) {
+    if (!ctx || !user || user.perfil === 'gestor') { return ctx; }
+    var setores = ctx.setores;
+    return {
+      board: (ctx.board || []).filter(function (o) { return visivelPara(o.act, user, setores); }),
+      ativ: (ctx.ativ || []).filter(function (a) { return visivelPara(a, user, setores); }),
+      setores: ctx.setores, janela: ctx.janela, hoje: ctx.hoje, periodo: ctx.periodo
+    };
+  }
+
   /* ---------- EXPANSÃO: board de ocorrências (idêntico ao buildOccurrences) ---------- */
   function buildBoard(ativ, occDocs, w, hoje) {
     var byAtiv = {};
@@ -249,6 +287,8 @@
      conforme o contrato do ARCH_N2N3N4_NOTURNO.md.
      ============================================================ */
   var K = window.KPI;
+  K.visivelPara = visivelPara;              /* F1-B: predicado de visibilidade por papel */
+  K.recortarContexto = recortarContexto;    /* F1-B: recorte de ctx (board+ativ) ao escopo do papel */
 
   /* SCORE DE SETOR 0–100 · pesos DECLARADOS no "i": aderência 50 ·
      atrasadas 30 · aging 20.
