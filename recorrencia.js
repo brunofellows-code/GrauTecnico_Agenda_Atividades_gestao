@@ -8,11 +8,13 @@
        (concluir / pular / reprogramar / editar esta).
      - Ocorrência nunca tocada NÃO tem doc → ausência = pendente.
 
-   5 tipos (decisões travadas):
+   7 tipos (decisões travadas):
      diario     — todo dia, de dataInicio até dataFim (ou aberto)
      semanal    — dias da semana em `diasSemana` (0=Dom … 6=Sáb)
      quinzenal  — dias FIXOS 1 e 15 de cada mês
      mensal     — dia `diaMes`; 29–31 CLAMPA p/ o último dia do mês
+     bimestral  — dia `diaMes`, a cada 2 meses; âncora = mês da dataInicio
+     trimestral — dia `diaMes`, a cada 3 meses; âncora = mês da dataInicio
      unico      — uma data; `deslizante` é política de tela (Hoje)
 
    DATAS = strings civis 'YYYY-MM-DD', SEM fuso. Toda aritmética
@@ -34,9 +36,9 @@
    * @property {string} [id]
    * @property {string} titulo
    * @property {string} setorSigla
-   * @property {'diario'|'semanal'|'quinzenal'|'mensal'|'unico'} recorrencia
+   * @property {'diario'|'semanal'|'quinzenal'|'mensal'|'bimestral'|'trimestral'|'unico'} recorrencia
    * @property {number[]} [diasSemana]  // semanal: 0..6
-   * @property {number}   [diaMes]      // mensal: 1..31
+   * @property {number}   [diaMes]      // mensal/bimestral/trimestral: 1..31
    * @property {string}   [data]        // unico: 'YYYY-MM-DD'
    * @property {boolean}  [deslizante]  // unico: rola em Hoje até concluir
    * @property {string}   [dataInicio]  // âncora (recorrentes)
@@ -54,9 +56,11 @@
     SEMANAL: 'semanal',
     QUINZENAL: 'quinzenal',
     MENSAL: 'mensal',
+    BIMESTRAL: 'bimestral',
+    TRIMESTRAL: 'trimestral',
     UNICO: 'unico'
   };
-  var RECORRENCIAS_VALIDAS = ['diario', 'semanal', 'quinzenal', 'mensal', 'unico'];
+  var RECORRENCIAS_VALIDAS = ['diario', 'semanal', 'quinzenal', 'mensal', 'bimestral', 'trimestral', 'unico'];
 
   // ---------------- helpers de data civil (sem fuso) ----------------
 
@@ -155,7 +159,7 @@
         e.push('diasSemana deve conter inteiros de 0 a 6');
       }
     }
-    if (tipo === RECORRENCIAS.MENSAL) {
+    if (tipo === RECORRENCIAS.MENSAL || tipo === RECORRENCIAS.BIMESTRAL || tipo === RECORRENCIAS.TRIMESTRAL) {
       if (typeof ativ.diaMes !== 'number' || ativ.diaMes < 1 || ativ.diaMes > 31) {
         e.push('diaMes deve ser um inteiro de 1 a 31');
       }
@@ -215,6 +219,19 @@
       eachMonth(ini, fim, function (ano, mes) {
         var iso = ymd(ano, mes, clampDiaMes(ano, mes, ativ.diaMes));
         if (inRange(iso, ini, fim)) { out.push(iso); }
+      });
+    } else if (tipo === RECORRENCIAS.BIMESTRAL || tipo === RECORRENCIAS.TRIMESTRAL) {
+      // Como o mensal, mas só nos meses múltiplos do passo a partir do mês da
+      // dataInicio (âncora): bimestral = a cada 2, trimestral = a cada 3.
+      var passo = (tipo === RECORRENCIAS.TRIMESTRAL) ? 3 : 2;
+      var aI = parseInt(ativ.dataInicio.slice(0, 4), 10), mI = parseInt(ativ.dataInicio.slice(5, 7), 10);
+      var idxA = aI * 12 + (mI - 1);
+      eachMonth(ini, fim, function (ano, mes) {
+        var delta = (ano * 12 + (mes - 1)) - idxA;
+        if (delta >= 0 && delta % passo === 0) {
+          var iso = ymd(ano, mes, clampDiaMes(ano, mes, ativ.diaMes));
+          if (inRange(iso, ini, fim)) { out.push(iso); }
+        }
       });
     }
     return out;

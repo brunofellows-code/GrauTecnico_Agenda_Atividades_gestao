@@ -578,7 +578,7 @@
       return { jIni: R.addDias(hoje, -45), jFim: R.addDias(hoje, 30) };
     }
     var PERIODO_LABEL = { band: 'atrasadas + 30 dias', semana: 'esta semana', mes: 'este mês' };
-    var RECOR_LABEL = { diario: 'Diária', semanal: 'Semanal', quinzenal: 'Quinzenal', mensal: 'Mensal', unico: 'Única' };
+    var RECOR_LABEL = { diario: 'Diária', semanal: 'Semanal', quinzenal: 'Quinzenal', mensal: 'Mensal', bimestral: 'Bimestral', trimestral: 'Trimestral', unico: 'Única' };
 
     var CAP = 300; /* teto de cartões renderizados por vez */
 
@@ -1170,7 +1170,7 @@
       /* 2) agrupa séries por frequência de recorrência */
       var fmap = {};
       slist.forEach(function (s) { var f = s.act.recorrencia || 'unico'; (fmap[f] = fmap[f] || []).push(s); });
-      var FREQ_ORDER = ['diario', 'semanal', 'quinzenal', 'mensal', 'unico'];
+      var FREQ_ORDER = ['diario', 'semanal', 'quinzenal', 'mensal', 'bimestral', 'trimestral', 'unico'];
       var wrap = el('<div class="at-list"></div>');
       FREQ_ORDER.forEach(function (f) {
         var arr = fmap[f]; if (!arr || !arr.length) { return; }
@@ -1496,6 +1496,7 @@
       var dmSelect = UI.select({ value: editing && act.diaMes ? String(act.diaMes) : '', placeholder: '— Escolha o dia —', options: dmOpts });
       var grpMensal = el('<div class="at-grp"></div>');
       grpMensal.appendChild(UI.field({ label: 'Dia do mês', required: true, control: dmSelect, hint: '29, 30 ou 31 caem no último dia nos meses mais curtos.' }));
+      grpMensal.appendChild(txt('div', 'at-note', 'Bimestral/Trimestral usam este mesmo dia, a cada 2/3 meses, contados a partir da data de Início.'));
 
       var grpQuinz = el('<div class="at-grp"></div>');
       grpQuinz.appendChild(txt('div', 'at-note', 'Quinzenal = dias fixos 1 e 15 de cada mês (entre Início e Fim).'));
@@ -1520,14 +1521,14 @@
       function setRecVis(t) {
         show(grpRecDates, t && t !== 'unico');
         show(grpSemanal, t === 'semanal');
-        show(grpMensal, t === 'mensal');
+        show(grpMensal, t === 'mensal' || t === 'bimestral' || t === 'trimestral');
         show(grpQuinz, t === 'quinzenal');
         show(grpUnico, t === 'unico');
       }
 
       var recSelect = UI.select({
         value: editing ? act.recorrencia : '', placeholder: '— Selecione —',
-        options: [{ value: 'diario', label: 'Diária' }, { value: 'semanal', label: 'Semanal' }, { value: 'quinzenal', label: 'Quinzenal (dias 1 e 15)' }, { value: 'mensal', label: 'Mensal' }, { value: 'unico', label: 'Data única' }],
+        options: [{ value: 'diario', label: 'Diária' }, { value: 'semanal', label: 'Semanal' }, { value: 'quinzenal', label: 'Quinzenal (dias 1 e 15)' }, { value: 'mensal', label: 'Mensal' }, { value: 'bimestral', label: 'Bimestral (a cada 2 meses)' }, { value: 'trimestral', label: 'Trimestral (a cada 3 meses)' }, { value: 'unico', label: 'Data única' }],
         onChange: function (v) { setRecVis(v); }
       });
       var recField = UI.field({ label: 'Recorrência', required: true, control: recSelect });
@@ -1561,7 +1562,7 @@
         if (!setor) { errs.push('Escolha o setor.'); }
         if (!tipo) { errs.push('Escolha a recorrência.'); }
         if (tipo === 'semanal' && !selDias.length) { errs.push('Marque ao menos um dia da semana.'); }
-        if (tipo === 'mensal' && !dmSelect.value) { errs.push('Escolha o dia do mês.'); }
+        if ((tipo === 'mensal' || tipo === 'bimestral' || tipo === 'trimestral') && !dmSelect.value) { errs.push('Escolha o dia do mês.'); }
         if (tipo === 'unico' && !R.isISO(unInp.value)) { errs.push('Escolha a data única.'); }
         if (tipo && tipo !== 'unico' && !R.isISO(diInp.value)) { errs.push('Escolha a data de início.'); }
         if (errs.length) { showBanner(errs[0]); return; }
@@ -1579,7 +1580,7 @@
           recorrencia: tipo,
           horario: hrInp.value || null,
           diasSemana: tipo === 'semanal' ? selDias.slice().sort(function (a, b) { return a - b; }) : null,
-          diaMes: tipo === 'mensal' ? parseInt(dmSelect.value, 10) : null,
+          diaMes: (tipo === 'mensal' || tipo === 'bimestral' || tipo === 'trimestral') ? parseInt(dmSelect.value, 10) : null,
           data: tipo === 'unico' ? unInp.value : null,
           deslizante: tipo === 'unico' ? !!deslizState : null,
           dataInicio: tipo !== 'unico' ? diInp.value : null,

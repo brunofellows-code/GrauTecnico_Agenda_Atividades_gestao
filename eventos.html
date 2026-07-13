@@ -271,6 +271,37 @@
     return p ? (p.nome || '(sem nome)') : null;
   }
 
+  /* ===================== F1-C · RECORTE POR PAPEL (RBAC de conteúdo) =====================
+     Eventos têm 1 setor RAIZ ('siglaSetor') — subsetor nunca entra em evento.
+     Reverte o calendário "escola-inteira": cada papel vê só os seus eventos.
+       gestor  -> tudo.
+       líder   -> eventos cujo setor está no conjunto de RAÍZES que ele lidera
+                  (líder de subsetor herda a raiz-pai — ex.: líder de Faltosos vê PED).
+       usuário -> eventos do SEU setor (raiz do setor de lotação; subsetor cai na raiz-pai).
+     Acoplamento por SIGLA (Princípio 18); zero leitura extra de banco. */
+  function raizDe(sig) {
+    var s = SETORES.filter(function (x) { return x.sigla === sig; })[0];
+    if (!s) { return sig; }                                   /* desconhecido: usa a própria */
+    return s.setorPaiSigla ? s.setorPaiSigla : s.sigla;       /* subsetor -> pai; raiz -> ela */
+  }
+  function raizesVisiveis(u) {
+    var set = {};
+    if (!u) { return set; }
+    if (u.perfil === 'lider') {
+      (Array.isArray(u.setoresLiderados) ? u.setoresLiderados : []).forEach(function (sig) { if (sig) { set[raizDe(sig)] = true; } });
+    } else if (u.perfil === 'usuario') {
+      if (u.setor) { set[raizDe(u.setor)] = true; }
+    }
+    return set;
+  }
+  function eventoVisivel(e) {
+    if (!USER) { return false; }
+    if (USER.perfil === 'gestor') { return true; }
+    if (USER.perfil !== 'lider' && USER.perfil !== 'usuario') { return false; } /* fail-safe */
+    var raizes = raizesVisiveis(USER);
+    return !!(e && e.siglaSetor && raizes[e.siglaSetor]);
+  }
+
   /* ===================== calendário ===================== */
   function iniFimMes(y, m) {
     return { ini: y + '-' + pad2(m) + '-01', fim: y + '-' + pad2(m) + '-' + pad2(R.ultimoDiaMes(y, m)) };
@@ -455,7 +486,7 @@
     var titInp = UI.input({ value: editing ? e.titulo : '', placeholder: 'Ex.: Feira de profissões' });
     var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = editing ? e.data : (isoFixo || HOJE);
     var hrInp = UI.input({}); hrInp.type = 'time'; if (editing && e.hora) { hrInp.value = e.hora; }
-    var setOpts = SETORES.map(function (s) { return { value: s.sigla, label: (s.nome || s.sigla) + ' (' + s.sigla + ')' }; });
+    var setOpts = SETORES.filter(function (s) { return !s.setorPaiSigla; }).map(function (s) { return { value: s.sigla, label: (s.nome || s.sigla) + ' (' + s.sigla + ')' }; }); /* F1-C: só raiz — subsetor nunca em evento */
     var setSel = UI.select({ value: editing ? e.siglaSetor : '', placeholder: 'Escolha o setor', options: setOpts });
     var projOpts = PROJETOS.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; });
     var projSel = UI.select({ value: (editing && e.projetoId) ? e.projetoId : '', placeholder: '— Sem projeto —', options: projOpts });
@@ -520,7 +551,7 @@
     renderLoading();
     var w = iniFimMes(ANO, MES);
     Store.listEventosMes(w.ini, w.fim)
-      .then(function (evs) { EVTS = evs; renderTudo(); })
+      .then(function (evs) { EVTS = evs.filter(eventoVisivel); renderTudo(); }) /* F1-C: recorte por papel */
       .catch(renderError);
   }
 
@@ -545,7 +576,7 @@
     var ib = el('<button class="ev-i" type="button" aria-label="Como funciona"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
     ib.addEventListener('click', function () {
       openPop(ib, 'Agenda de Eventos', [
-        ['O que mostra', 'Eventos ATIVOS do mês visível, de TODOS os setores (pedido explícito). A cor do chip vem do setor.'],
+        ['O que mostra', 'Os eventos ATIVOS do SEU setor no mês. Gestor vê a escola inteira; líder vê os setores que lidera; usuário vê o seu setor. A cor do chip vem do setor.'],
         ['Pulso no Meu Dia', 'O botão "Agenda de Eventos" pulsa quando há evento novo/alterado depois da sua última visita (guardado neste aparelho). Abrir esta tela zera o aviso.'],
         ['Custos', 'Previsto e realizado guardados em CENTAVOS (número inteiro — evita erro de centavos); exibidos em R$. Projeto vinculado soma previsto × realizado.']
       ]);

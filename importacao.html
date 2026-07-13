@@ -156,13 +156,14 @@
 
   /* ===================== modelo ===================== */
   var COLS_CRITICAS = ['codigo', 'titulo'];
-  var COLS_OPCIONAIS = ['descricao', 'setor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario'];
+  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao'];
   var COLS_TODAS = COLS_CRITICAS.concat(COLS_OPCIONAIS);
   var MODELO_CSV = COLS_TODAS.join(';') + '\n' +
-    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;semanal;;2026-07-06;;1;;08:00\n' +
-    'SEC-010;Fechar caixa do dia;;SEC;diario;;2026-07-06;;;;17:30\n' +
-    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;mensal;;2026-07-01;;;5;\n' +
-    'COM-002;Visita à escola parceira;;COM;unico;2026-07-15;;;;;09:00';
+    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;2026-07-06;;1;;08:00;;\n' +
+    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;2026-07-06;;;;17:30;;\n' +
+    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;2026-07-01;;;5;;;\n' +
+    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;2026-07-15;;;15;;Alta;Ligar e convocar o responsável\n' +
+    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;';
 
   /* ===================== parser CSV (; ou ,) ===================== */
   function parseCSV(text) {
@@ -228,6 +229,16 @@
     var up = sig.toUpperCase();
     return SETORES.some(function (s) { return s.sigla === up; }) ? up : undefined; /* undefined = inválida */
   }
+  /* valida a sigla de subsetor: null=ausente · undefined=não existe ·
+     false=existe mas é setor raiz (não subsetor) · senão o objeto do subsetor. */
+  function normSubsetor(sig) {
+    if (!sig) { return null; }
+    var up = sig.toUpperCase();
+    var achou = SETORES.filter(function (s) { return s.sigla === up; })[0];
+    if (!achou) { return undefined; }
+    if (!achou.setorPaiSigla) { return false; }
+    return achou;
+  }
 
   function montarPlano(parsed, audit) {
     var porCodigo = {};
@@ -247,10 +258,16 @@
       var setorNorm = setor == null ? null : normSetor(setor);
       if (setorNorm === undefined) { plano.rejeitar.push({ linha: linha, motivo: 'setor "' + setor + '" não existe (sigla inválida)' }); return; }
 
+      var subRaw = valOf(row, audit.mapa, 'subsetor');
+      var subObj = subRaw == null ? null : normSubsetor(subRaw);
+      if (subObj === undefined) { plano.rejeitar.push({ linha: linha, motivo: 'subsetor "' + subRaw + '" não existe' }); return; }
+      if (subObj === false) { plano.rejeitar.push({ linha: linha, motivo: '"' + subRaw + '" é um setor raiz, não um subsetor' }); return; }
+      if (subObj && setorNorm && subObj.setorPaiSigla !== setorNorm) { plano.rejeitar.push({ linha: linha, motivo: 'subsetor "' + subObj.sigla + '" não pertence ao setor ' + setorNorm }); return; }
+
       var rec = valOf(row, audit.mapa, 'recorrencia');
       if (rec != null) {
         rec = rec.toLowerCase();
-        if (['diario', 'semanal', 'quinzenal', 'mensal', 'unico'].indexOf(rec) < 0) {
+        if (['diario', 'semanal', 'quinzenal', 'mensal', 'bimestral', 'trimestral', 'unico'].indexOf(rec) < 0) {
           plano.rejeitar.push({ linha: linha, motivo: 'recorrencia "' + rec + '" inválida' }); return;
         }
       }
@@ -287,6 +304,11 @@
       if (diaMesN != null) { cand.diaMes = diaMesN; }
       var hora = valOf(row, audit.mapa, 'horario');
       if (hora != null) { cand.horario = hora; }
+      if (subObj) { cand.subsetorSigla = subObj.sigla; }
+      var prio = valOf(row, audit.mapa, 'prioridade');
+      if (prio != null) { cand.prioridade = prio; }
+      var mit = valOf(row, audit.mapa, 'mitigacao');
+      if (mit != null) { cand.mitigacao = mit; }
 
       var existente = porCodigo[codigo];
       if (existente) {
@@ -308,7 +330,7 @@
         if (rec == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem recorrencia' }); return; }
         var doc = Object.assign({
           codigo: codigo, descricao: '', horario: null, diasSemana: null, diaMes: null,
-          data: null, deslizante: false, dataInicio: null, dataFim: null,
+          data: null, deslizante: false, dataInicio: null, dataFim: null, subsetorSigla: null,
           responsavelUid: USER.uid, responsavelNome: USER.name,
           projetoId: null, projetoSigla: null, todosSetores: false
         }, cand);

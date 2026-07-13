@@ -92,13 +92,38 @@
   }
   function nomeSetor(sig, setores) { var s = setores.filter(function (x) { return x.sigla === sig; })[0]; return s ? (s.nome || sig) : sig; }
 
-  /* ---------- F1-B · ESCOPO DE VISIBILIDADE POR PAPEL (RBAC de conteúdo) ----------
+  /* ---------- F1-C · ESCOPO DE VISIBILIDADE POR PAPEL — 4 NÍVEIS (RBAC de conteúdo) ----------
      Predicado PURO: esta atividade é visível para este usuário?
-       gestor  -> tudo.
-       líder   -> se algum setor da atividade ∈ setoresLiderados
-                  (atividade "todos os setores" conta como visível).
-       usuário -> só se ele é o responsável (responsavelUid === uid).
-     Acoplamento por SIGLA (Princípio 18); zero leitura extra de banco. */
+       gestor           -> tudo.
+       líder de RAIZ     -> a raiz que lidera + TODOS os subsetores filhos dela
+                            (coordenador do setor inteiro).
+       líder de SUBSETOR -> só o subsetor que lidera (nada das genéricas do pai).
+       usuário           -> só se é o responsável (responsavelUid === uid).
+     A atividade "todos os setores" conta como visível para qualquer líder.
+     Acoplamento por SIGLA (Princípio 18); zero leitura extra de banco.
+
+     Contrato do dado (HEAD 68fa849): a atividade grava setorSigla/setorSiglas (raiz)
+     e, opcional, subsetorSigla; o subsetor é um doc de 'setores' com setorPaiSigla != null. */
+
+  /* Expande as siglas lideradas para o CONJUNTO efetivo que o líder enxerga:
+     - sigla RAIZ     -> inclui a própria + toda sigla cujo setorPaiSigla === ela.
+     - sigla SUBSETOR -> inclui só ela (subsetor não tem filhos).
+     Devolve um mapa { sigla: true } (busca O(1)). */
+  function escopoLider(lidSiglas, setores) {
+    var set = {};
+    var lid = Array.isArray(lidSiglas) ? lidSiglas : [];
+    var sets = Array.isArray(setores) ? setores : [];
+    for (var i = 0; i < lid.length; i++) {
+      var sig = lid[i];
+      if (!sig) { continue; }
+      set[sig] = true;
+      for (var j = 0; j < sets.length; j++) {
+        if (sets[j] && sets[j].setorPaiSigla === sig) { set[sets[j].sigla] = true; }
+      }
+    }
+    return set;
+  }
+
   function visivelPara(act, user, setores) {
     if (!user) { return false; }
     if (user.perfil === 'gestor') { return true; }
@@ -106,8 +131,12 @@
       var lid = Array.isArray(user.setoresLiderados) ? user.setoresLiderados : [];
       if (!lid.length) { return false; }
       if (act && act.todosSetores) { return true; }
+      var esc = escopoLider(lid, setores);
+      /* raiz(es) da atividade caem no escopo? (líder de raiz cobre as suas) */
       var sigs = setoresDe(act, setores);
-      for (var i = 0; i < sigs.length; i++) { if (lid.indexOf(sigs[i]) !== -1) { return true; } }
+      for (var i = 0; i < sigs.length; i++) { if (esc[sigs[i]]) { return true; } }
+      /* subsetor exato da atividade cai no escopo? (líder de subsetor cobre só o seu) */
+      if (act && act.subsetorSigla && esc[act.subsetorSigla]) { return true; }
       return false;
     }
     if (user.perfil === 'usuario') {
@@ -287,8 +316,9 @@
      conforme o contrato do ARCH_N2N3N4_NOTURNO.md.
      ============================================================ */
   var K = window.KPI;
-  K.visivelPara = visivelPara;              /* F1-B: predicado de visibilidade por papel */
+  K.visivelPara = visivelPara;              /* F1-B: predicado de visibilidade por papel (F1-C: subsetor) */
   K.recortarContexto = recortarContexto;    /* F1-B: recorte de ctx (board+ativ) ao escopo do papel */
+  K.escopoLider = escopoLider;              /* F1-C: expande siglas lideradas (raiz -> + filhos) */
 
   /* SCORE DE SETOR 0–100 · pesos DECLARADOS no "i": aderência 50 ·
      atrasadas 30 · aging 20.

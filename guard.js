@@ -267,6 +267,7 @@
     var perfilRaw = (data && data.perfil) || 'Visualizador';
     var perfil = normalizePerfil(perfilRaw);            /* papel: gestor|lider|usuario */
     var setoresLid = (data && Array.isArray(data.setoresLiderados)) ? data.setoresLiderados.slice() : [];
+    var setorU = (data && data.setor) ? String(data.setor) : '';   /* F1-C: setor de lotação (âncora p/ calendário/eventos do usuário) */
     user = {
       uid: authUser.uid,
       email: (data && data.email) || authUser.email || '',
@@ -274,6 +275,7 @@
       perfil: perfil,                 /* papel novo — código novo (nav; escopo na Fase 1-B) */
       perfilRaw: perfilRaw,           /* valor cru do doc (pode ser legado) */
       setoresLiderados: setoresLid,   /* siglas que o Líder lidera */
+      setor: setorU,                  /* F1-C: sigla do setor do usuário ('' se não definido/legado) */
       /* aliases para UI.sidebar + telas existentes (espera name/profile/initials).
          profile = tier de CAPACIDADE legado (Admin|Editor|Visualizador): as telas
          que checam 'Admin'/'Editor' seguem funcionando sem tocar nelas. */

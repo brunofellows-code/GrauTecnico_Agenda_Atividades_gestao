@@ -184,13 +184,26 @@
 
     /* estrutura inicial sugerida (editável depois) */
     var SETORES_INICIAIS = [
-      { sigla: 'PED', nome: 'Pedagógico' },
-      { sigla: 'SEC', nome: 'Secretaria' },
-      { sigla: 'CRA', nome: 'CRA' },
-      { sigla: 'GES', nome: 'Gestão' },
-      { sigla: 'QLD', nome: 'Qualidade' },
-      { sigla: 'AGE', nome: 'Agência de Emprego' },
-      { sigla: 'COM', nome: 'Comercial' }
+      { sigla: 'PED', nome: 'Pedagógico', pai: null, cor: 'setor1' },
+      { sigla: 'PAD', nome: 'Ped. Administrativo', pai: 'PED', cor: 'setor1' },
+      { sigla: 'PAT', nome: 'Ped. Atendimento', pai: 'PED', cor: 'setor1' },
+      { sigla: 'ENF', nome: 'Estágio Enfermagem', pai: 'PED', cor: 'setor1' },
+      { sigla: 'RAD', nome: 'Estágio Radiologia', pai: 'PED', cor: 'setor1' },
+      { sigla: 'SEC', nome: 'Secretaria', pai: null, cor: 'setor2' },
+      { sigla: 'ADM', nome: 'Administrativo', pai: 'SEC', cor: 'setor2' },
+      { sigla: 'FIN', nome: 'Financeiro', pai: 'SEC', cor: 'setor2' },
+      { sigla: 'BEM', nome: 'Bem-estar', pai: 'SEC', cor: 'setor2' },
+      { sigla: 'TI', nome: 'TI', pai: 'SEC', cor: 'setor2' },
+      { sigla: 'MAN', nome: 'Manutenção', pai: 'SEC', cor: 'setor2' },
+      { sigla: 'CRA', nome: 'Central de Relacionamento', pai: null, cor: 'setor3' },
+      { sigla: 'GES', nome: 'Gestão', pai: null, cor: 'setor4' },
+      { sigla: 'CSA', nome: 'Central de Sucesso do Aluno', pai: null, cor: 'setor5' },
+      { sigla: 'AGE', nome: 'Agência', pai: 'CSA', cor: 'setor5' },
+      { sigla: 'PVE', nome: 'Pós-venda', pai: 'CSA', cor: 'setor5' },
+      { sigla: 'RET', nome: 'Retenção', pai: 'CSA', cor: 'setor5' },
+      { sigla: 'EVA', nome: 'Evasão', pai: 'CSA', cor: 'setor5' },
+      { sigla: 'COM', nome: 'Comercial', pai: null, cor: 'setor6' },
+      { sigla: 'SOC', nome: 'Sócios', pai: null, cor: 'setor7' }
     ];
 
     /* =========================================================
@@ -307,6 +320,62 @@
           }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         },
         setAtivo: function (sigla, ativo) { return api.update(sigla, { ativo: !!ativo }); },
+        /* F1-C · migração idempotente para a taxonomia oficial (CSA + subsetores).
+           Aditiva e reversível: cria os setores que faltam, converte AGE em
+           subsetor de CSA, desativa QLD (soft-delete) e remapeia as atividades
+           que ainda apontam para QLD/AGE (setorSigla único). Roda quantas vezes
+           quiser sem duplicar. Registra o resumo em atividade_log. Atividades com
+           setorSiglas (array multi-setor) não são tocadas — reveja manualmente se houver. */
+        migrarTaxonomia: function () {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            return readAll(ctx).then(function (arr) {
+              var bySig = {}; arr.forEach(function (s) { bySig[s.sigla] = s; });
+              var now = Date.now();
+              var ord = nextOrdem(arr);
+              var ops = [];
+              var resumo = { criados: [], convertidos: [], desativados: [], atividades: 0 };
+              function existe(sig) { return !!bySig[sig]; }
+              function corDe(sig, fbCor) { return (bySig[sig] && /^setor[1-8]$/.test(bySig[sig].cor)) ? bySig[sig].cor : (fbCor || 'setor1'); }
+              function criar(sig, nome, pai, cor) {
+                if (existe(sig)) { return; }
+                var novo = { sigla: sig, nome: nome, setorPaiSigla: pai || null, ativo: true, cor: cor, ordem: ord++, criadoEm: now, atualizadoEm: now };
+                ops.push(f.setDoc(f.doc(db, COL, sig), novo)); bySig[sig] = novo; resumo.criados.push(sig);
+              }
+              // garante toda a taxonomia oficial (idempotente; cria só o que falta — cobre banco vazio)
+              var corCSA = corDe('CSA', 'setor5');
+              SETORES_INICIAIS.forEach(function (s) { criar(s.sigla, s.nome, s.pai, corDe(s.sigla, s.cor)); });
+              // AGE vinda de raiz antiga → subsetor de CSA
+              if (existe('AGE') && bySig['AGE'].setorPaiSigla !== 'CSA') {
+                var age = bySig['AGE'];
+                var ageUp = { sigla: 'AGE', nome: (age.nome === 'Agência de Emprego' ? 'Agência' : (age.nome || 'Agência')), setorPaiSigla: 'CSA', ativo: age.ativo !== false, cor: corCSA, ordem: age.ordem || ord++, criadoEm: age.criadoEm || now, atualizadoEm: now };
+                ops.push(f.setDoc(f.doc(db, COL, 'AGE'), ageUp)); bySig['AGE'] = ageUp; resumo.convertidos.push('AGE');
+              }
+              if (existe('QLD') && bySig['QLD'].ativo !== false) {
+                var q = bySig['QLD'];
+                var qUp = { sigla: 'QLD', nome: q.nome || 'Qualidade', setorPaiSigla: q.setorPaiSigla || null, ativo: false, cor: q.cor || 'setor1', ordem: q.ordem || ord++, criadoEm: q.criadoEm || now, atualizadoEm: now };
+                ops.push(f.setDoc(f.doc(db, COL, 'QLD'), qUp)); bySig['QLD'] = qUp; resumo.desativados.push('QLD');
+              }
+              return f.getDocs(f.query(f.collection(db, 'atividades'), f.where('setorSigla', 'in', ['QLD', 'AGE']), f.limit(3000)))
+                .then(function (snap) {
+                  snap.forEach(function (d) {
+                    var a = d.data() || {}, patch = null;
+                    if (a.setorSigla === 'QLD') { patch = { setorSigla: 'CSA', atualizadoEm: now }; }
+                    else if (a.setorSigla === 'AGE') { patch = { setorSigla: 'CSA', subsetorSigla: 'AGE', atualizadoEm: now }; }
+                    if (patch) { ops.push(f.updateDoc(f.doc(db, 'atividades', d.id), patch)); resumo.atividades++; }
+                  });
+                })
+                .catch(function () { /* coleção pode não existir ainda — segue sem remapear */ })
+                .then(function () {
+                  return Promise.all(ops).then(function () {
+                    var _uid = (typeof CURRENT_USER !== 'undefined' && CURRENT_USER) ? (CURRENT_USER.uid || null) : null;
+                    f.addDoc(f.collection(db, 'atividade_log'), { ts: now, uid: _uid, acao: 'migrar_taxonomia', entidade: 'setores', refId: 'taxonomia', antes: null, depois: resumo }).catch(function () {});
+                    return resumo;
+                  });
+                });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
         seedIniciais: function () {
           return fb().then(function (ctx) {
             return readAll(ctx).then(function (arr) {
@@ -314,7 +383,7 @@
               var now = Date.now();
               var db = ctx.db, f = ctx.f;
               var seeded = SETORES_INICIAIS.map(function (s, idx) {
-                return { sigla: s.sigla, nome: s.nome, setorPaiSigla: null, ativo: true, cor: 'setor' + ((idx % 8) + 1), ordem: idx + 1, criadoEm: now, atualizadoEm: now };
+                return { sigla: s.sigla, nome: s.nome, setorPaiSigla: s.pai || null, ativo: true, cor: (/^setor[1-8]$/.test(s.cor) ? s.cor : ('setor' + ((idx % 8) + 1))), ordem: idx + 1, criadoEm: now, atualizadoEm: now };
               });
               return Promise.all(seeded.map(function (s) { return f.setDoc(f.doc(db, COL, s.sigla), s); }))
                 .then(function () { return seeded.slice(); });
@@ -394,6 +463,23 @@
       }).catch(function (e) { renderError(e); });
     }
 
+    /* F1-C · aplica a taxonomia oficial (idempotente). Confirmação simples: a
+       operação é aditiva e reversível (soft-delete), pode rodar mais de uma vez. */
+    function aplicarTaxonomia() {
+      if (!CAN_WRITE) { return; }
+      if (!window.confirm('Aplicar a estrutura oficial de setores?\n\nCria CSA e os subsetores (Administrativo, Financeiro, Agência, Pós-venda, Retenção, Evasão), converte Agência em subsetor de CSA e desativa Qualidade. É seguro rodar mais de uma vez.')) { return; }
+      toast('Aplicando taxonomia…');
+      Store.migrarTaxonomia().then(function (r) {
+        var p = [];
+        if (r.criados.length) { p.push(r.criados.length + ' criado(s)'); }
+        if (r.convertidos.length) { p.push(r.convertidos.length + ' convertido(s)'); }
+        if (r.desativados.length) { p.push(r.desativados.length + ' desativado(s)'); }
+        if (r.atividades) { p.push(r.atividades + ' atividade(s) remapeada(s)'); }
+        toast(p.length ? ('Taxonomia aplicada: ' + p.join(' · ')) : 'Nada a fazer — já está na estrutura oficial.');
+        refresh();
+      }).catch(function (e) { toast((e && e.message) || 'Falha ao aplicar a taxonomia.', 'err'); });
+    }
+
     /* ===================== estados ===================== */
     function renderLoading() {
       stage.innerHTML = '';
@@ -437,7 +523,7 @@
       SETORES_INICIAIS.forEach(function (s) {
         var chip = el('<span class="st-chip"></span>');
         chip.appendChild(txt('span', 'sg', s.sigla));
-        chip.appendChild(document.createTextNode(s.nome));
+        chip.appendChild(document.createTextNode((s.pai ? '↳ ' : '') + s.nome));
         prev.appendChild(chip);
       });
       box.appendChild(prev);
@@ -445,8 +531,8 @@
       if (CAN_WRITE) {
         var actions = el('<div class="st-onb-actions"></div>');
         actions.appendChild(UI.button({
-          label: 'Usar estrutura inicial (7 setores)', icon: 'check',
-          onClick: function () { Store.seedIniciais().then(function () { toast('Estrutura inicial criada: 7 setores.'); refresh(); }).catch(function (e) { toast(e.message, 'err'); }); }
+          label: 'Usar estrutura oficial (6 setores + subsetores)', icon: 'check',
+          onClick: function () { Store.seedIniciais().then(function () { toast('Estrutura oficial criada: 6 setores e 6 subsetores.'); refresh(); }).catch(function (e) { toast(e.message, 'err'); }); }
         }));
         actions.appendChild(UI.button({ label: 'Criar do zero', variant: 'ghost', icon: 'plus', onClick: function () { openEditor(null, null); } }));
         box.appendChild(actions);
@@ -482,6 +568,11 @@
       sw.appendChild(UI.checkbox({ checked: showInactive, label: 'Mostrar inativos', onToggle: function (v) { showInactive = v; renderTree(); } }));
 
       var nb = document.getElementById('st-newbtn'); nb.innerHTML = '';
+      if (CAN_WRITE) {
+        var mig = UI.button({ label: 'Aplicar taxonomia oficial', variant: 'ghost', icon: 'repeat', onClick: aplicarTaxonomia });
+        mig.setAttribute('title', 'Cria CSA + subsetores e converte a estrutura antiga. Idempotente.');
+        nb.appendChild(mig);
+      }
       var btn = UI.button({ label: 'Novo setor', icon: 'plus', onClick: function () { if (CAN_WRITE) { openEditor(null, null); } } });
       if (!CAN_WRITE) { btn.classList.add('st-disabled'); btn.setAttribute('title', 'Apenas o perfil Admin cadastra setores.'); }
       nb.appendChild(btn);

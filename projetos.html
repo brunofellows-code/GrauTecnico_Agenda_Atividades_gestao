@@ -464,6 +464,36 @@
     return seg;
   }
 
+  /* ===================== recorte por papel (F1-C · B2-Projetos) =====================
+     1 motor, 3 lentes — mesmas telas, projeção por papel:
+       gestor  -> todos os projetos.
+       líder   -> projetos cujo siglaSetores cruza o escopo. Líder de RAIZ expande
+                  para os subsetores filhos (KPI.escopoLider, do B1); líder de
+                  subsetor cobre só o seu.
+       usuário -> projetos onde ele tem ao menos UMA atividade sua.
+     Recorta a LISTA e barra o acesso direto por URL (renderDetail). */
+  function escopoUser() {
+    var u = USER || {};
+    if (u.perfil === 'gestor') { return { tipo: 'gestor' }; }
+    if (u.perfil === 'lider') {
+      return { tipo: 'lider', esc: KPI.escopoLider(u.setoresLiderados || [], (CTX && CTX.setores) || []) };
+    }
+    return { tipo: 'usuario' };
+  }
+  function projetoVisivel(p) {
+    var e = escopoUser();
+    if (e.tipo === 'gestor') { return true; }
+    if (e.tipo === 'lider') {
+      var sigs = (p && p.siglaSetores) || [];
+      for (var i = 0; i < sigs.length; i++) { if (e.esc[sigs[i]]) { return true; } }
+      return false;
+    }
+    var uid = (USER && USER.uid) || null;
+    if (!uid || !p || !CTX) { return false; }
+    return CTX.ativ.some(function (a) { return a.projetoId === p.id && a.responsavelUid === uid; });
+  }
+  function projVisiveis() { return PROJ.filter(projetoVisivel); }
+
   function renderRoot() {
     titleEl.textContent = 'Projetos';
     actionsEl.innerHTML = '';
@@ -477,18 +507,19 @@
   }
 
   function renderListaProjetos() {
+    var LP = projVisiveis();
     var card = el('<div class="pj-card"></div>');
     var h = el('<div class="pj-card-h"></div>');
     var tt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
-    tt.appendChild(txt('div', 'pj-card-t', 'Todos os projetos (' + PROJ.length + ')'));
+    tt.appendChild(txt('div', 'pj-card-t', 'Todos os projetos (' + LP.length + ')'));
     tt.appendChild(iBtn('% e status do projeto', I_PCT.concat(I_STATUS)));
     h.appendChild(tt);
     card.appendChild(h);
 
-    if (!PROJ.length) {
-      card.appendChild(txt('div', 'pj-empty2', CAN_WRITE() ? 'Nenhum projeto ainda — clique em "Novo projeto" para criar o primeiro.' : 'Nenhum projeto ainda.'));
+    if (!LP.length) {
+      card.appendChild(txt('div', 'pj-empty2', PROJ.length ? 'Nenhum projeto no seu escopo de setor.' : (CAN_WRITE() ? 'Nenhum projeto ainda — clique em "Novo projeto" para criar o primeiro.' : 'Nenhum projeto ainda.')));
     } else {
-      var ord = PROJ.slice().sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || '', 'pt-BR'); });
+      var ord = LP.slice().sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || '', 'pt-BR'); });
       ord.forEach(function (p) {
         var c = projetoCalc(p);
         var row = el('<div class="pj-row" role="button" tabindex="0"></div>');
@@ -866,6 +897,19 @@
     var pid = hashProj();
     var p = PROJ.filter(function (x) { return x.id === pid; })[0];
     if (!p) { window.location.hash = ''; return; }
+    if (!projetoVisivel(p)) {
+      titleEl.textContent = 'Projeto';
+      actionsEl.innerHTML = '';
+      bodyEl.innerHTML = '';
+      var bwSP = el('<div style="margin-bottom:12px"></div>');
+      var backSP = el('<button class="pj-back" type="button">‹ Todos os projetos</button>');
+      backSP.addEventListener('click', function () { window.location.hash = ''; });
+      bwSP.appendChild(backSP); bodyEl.appendChild(bwSP);
+      var cardSP = el('<div class="pj-card"></div>');
+      cardSP.appendChild(txt('div', 'pj-empty2', 'Você não tem acesso a este projeto — ele está fora do seu escopo de setor.'));
+      bodyEl.appendChild(cardSP);
+      return;
+    }
     var c = projetoCalc(p);
 
     titleEl.textContent = p.nome || 'Projeto';

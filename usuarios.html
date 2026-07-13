@@ -241,6 +241,7 @@
           var email = (d.email || '').trim();
           var nome = (d.nome || '').trim();
           var perfil = d.perfil || '';
+          var setor = (d.setor || '').trim();   /* F1-C: setor de lotação (obrigatório) */
           var setoresLiderados = (perfil === 'lider' && Array.isArray(d.setoresLiderados)) ? d.setoresLiderados.slice() : [];
           return fb().then(function (ctx) {
             return readAll(ctx).then(function (arr) {
@@ -249,12 +250,13 @@
               if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
               if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
               if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
+              if (!setor) { throw vErr('Escolha o setor do usuário.', 'setor'); }
               var now = Date.now();
-              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, setoresLiderados: setoresLiderados, ativo: true, criadoEm: now, atualizadoEm: now };
+              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, ativo: true, criadoEm: now, atualizadoEm: now };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, uid), novo).then(function () {
                 api.log({ acao: 'criar_usuario', entidade: 'usuario', refId: uid, antes: null,
-                  depois: { nome: novo.nome, email: novo.email, perfil: novo.perfil, setoresLiderados: novo.setoresLiderados, ativo: novo.ativo } });
+                  depois: { nome: novo.nome, email: novo.email, perfil: novo.perfil, setor: novo.setor, setoresLiderados: novo.setoresLiderados, ativo: novo.ativo } });
                 return novo;
               });
             });
@@ -268,6 +270,7 @@
               var email = patch.email != null ? patch.email.trim() : cur.email;
               var nome = patch.nome != null ? patch.nome.trim() : cur.nome;
               var perfil = patch.perfil != null ? patch.perfil : cur.perfil;
+              var setor = patch.setor != null ? patch.setor.trim() : (cur.setor || '');   /* F1-C */
               var ativo = patch.ativo !== undefined ? !!patch.ativo : (cur.ativo !== false);
               var setoresLiderados;
               if (patch.setoresLiderados !== undefined) { setoresLiderados = Array.isArray(patch.setoresLiderados) ? patch.setoresLiderados.slice() : []; }
@@ -276,7 +279,8 @@
               if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
               if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
               if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
-              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, setoresLiderados: setoresLiderados, ativo: ativo,
+              if (!setor) { throw vErr('Escolha o setor do usuário.', 'setor'); }
+              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, ativo: ativo,
                 criadoEm: cur.criadoEm || Date.now(), atualizadoEm: Date.now() };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, uid), updated).then(function () {
@@ -284,8 +288,8 @@
                 var acao = (wasAtivo && updated.ativo === false) ? 'inativar_usuario'
                          : ((!wasAtivo && updated.ativo === true) ? 'reativar_usuario' : 'editar_usuario');
                 api.log({ acao: acao, entidade: 'usuario', refId: cur.uid,
-                  antes: { perfil: cur.perfil, ativo: wasAtivo, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [] },
-                  depois: { perfil: updated.perfil, ativo: updated.ativo, setoresLiderados: updated.setoresLiderados } });
+                  antes: { perfil: cur.perfil, setor: (cur.setor || ''), ativo: wasAtivo, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [] },
+                  depois: { perfil: updated.perfil, setor: updated.setor, ativo: updated.ativo, setoresLiderados: updated.setoresLiderados } });
                 return updated;
               });
             });
@@ -306,6 +310,27 @@
               });
               a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
               return a;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+        /* F1-C: setores ATIVOS (raiz + subsetores), já ordenados por hierarquia:
+           cada raiz seguida dos seus subsetores. Item = { sigla, nome, pai }.
+           Alimenta o campo "Setor" do usuário e os checkboxes de "setores liderados". */
+        setoresTodos: function () {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            var q = f.query(f.collection(db, 'setores'), f.where('ativo', '==', true), f.limit(500));
+            return f.getDocs(q).then(function (snap) {
+              var all = [];
+              snap.forEach(function (d) { var s = d.data() || {}; all.push({ sigla: (s.sigla || d.id), nome: s.nome || d.id, pai: s.setorPaiSigla || null }); });
+              var byName = function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); };
+              var raizes = all.filter(function (s) { return !s.pai; }).sort(byName);
+              var out = [];
+              raizes.forEach(function (r) {
+                out.push(r);
+                all.filter(function (s) { return s.pai === r.sigla; }).sort(byName).forEach(function (k) { out.push(k); });
+              });
+              return out;
             });
           }).catch(function (e) { throw ferr(e); });
         },
@@ -440,6 +465,10 @@
       var meta = txt('div', 'us-meta');
       meta.appendChild(txt('div', 'us-nm', u.nome || '(sem nome)'));
       meta.appendChild(txt('div', 'us-em', u.email || ''));
+      var lin = [];
+      if (u.setor) { lin.push('Setor: ' + u.setor); }
+      if (u.perfil === 'lider' && Array.isArray(u.setoresLiderados) && u.setoresLiderados.length) { lin.push('Lidera: ' + u.setoresLiderados.join(', ')); }
+      if (lin.length) { meta.appendChild(txt('div', 'us-em', lin.join('  ·  '))); }
       r.appendChild(meta);
 
       if (isSelf) { r.appendChild(txt('span', 'us-you', 'VOCÊ')); }
@@ -525,29 +554,63 @@
         : ((editing && perfilLegado(cur.perfil)) ? ('Perfil atual: "' + cur.perfil + '" (antigo). Escolha um dos 3 para migrar. ' + PERFIL_HINT) : PERFIL_HINT);
       var perfilField = UI.field({ label: 'Perfil', required: true, control: perfilSelect, hint: perfilHintTxt });
 
+      /* ----- F1-C: cache compartilhado de setores (raiz + subsetores, hierárquico) ----- */
+      var setoresCache = null;
+      function carregarSetores(then) {
+        if (setoresCache !== null) { then(true); return; }
+        Store.setoresTodos().then(function (arr) { setoresCache = arr; then(true); }).catch(function () { then(false); });
+      }
+      function rotuloSetor(s) { return s.pai ? ('↳ ' + s.nome + ' (' + s.sigla + ')') : (s.nome + ' (' + s.sigla + ')'); }
+
+      /* ----- F1-C: SETOR de lotação (obrigatório para TODO perfil) ----- */
+      var setorSel = null; /* <select> vivo (montado após carregar o cache) */
+      var setorInicial = editing ? (cur.setor || '') : '';
+      var setorBox = document.createElement('div');
+      var setorField = UI.field({ label: 'Setor', required: true, control: setorBox,
+        hint: 'Setor de lotação — define o que o usuário enxerga no calendário. Pode ser um setor ou um subsetor.' });
+      function renderSetorSelect() {
+        setorBox.innerHTML = '';
+        if (setoresCache === null) {
+          setorBox.appendChild(txt('div', 'us-em', 'Carregando setores…'));
+          carregarSetores(function (ok) {
+            if (!ok) { setorBox.innerHTML = ''; setorBox.appendChild(txt('div', 'us-em', 'Não consegui carregar os setores agora. Tente de novo.')); return; }
+            renderSetorSelect();
+          });
+          return;
+        }
+        if (!setoresCache.length) {
+          setorBox.appendChild(txt('div', 'us-em', 'Nenhum setor cadastrado ainda. Cadastre em Setores primeiro.'));
+          return;
+        }
+        var opts = setoresCache.map(function (s) { return { value: s.sigla, label: rotuloSetor(s) }; });
+        setorSel = UI.select({ value: setorInicial, placeholder: '— Escolha o setor —', options: opts });
+        setorBox.appendChild(setorSel);
+      }
+
       /* ----- setores liderados (aparece só quando o perfil é Líder) ----- */
       var liderState = (editing && Array.isArray(cur.setoresLiderados)) ? cur.setoresLiderados.slice() : [];
       var liderBox = document.createElement('div');
       var liderField = UI.field({ label: 'Setores que lidera', control: liderBox,
-        hint: 'Marque o(s) setor(es) sob esta liderança. O Líder enxerga e cobra as atividades desses setores.' });
+        hint: 'Marque a RAIZ para liderar o setor inteiro (inclui todos os subsetores), ou marque subsetores específicos. O Líder enxerga e cobra as atividades desses escopos.' });
       liderField.style.display = 'none';
-      var setoresCarregados = null; /* cache dos setores raiz (carrega ao virar Líder) */
       function renderLiderCheckboxes() {
         liderBox.innerHTML = '';
-        if (setoresCarregados === null) {
+        if (setoresCache === null) {
           liderBox.appendChild(txt('div', 'us-em', 'Carregando setores…'));
-          Store.setoresRaiz().then(function (arr) { setoresCarregados = arr; renderLiderCheckboxes(); })
-            .catch(function () { liderBox.innerHTML = ''; liderBox.appendChild(txt('div', 'us-em', 'Não consegui carregar os setores agora. Salve e tente de novo.')); });
+          carregarSetores(function (ok) {
+            if (!ok) { liderBox.innerHTML = ''; liderBox.appendChild(txt('div', 'us-em', 'Não consegui carregar os setores agora. Salve e tente de novo.')); return; }
+            renderLiderCheckboxes();
+          });
           return;
         }
-        if (!setoresCarregados.length) {
+        if (!setoresCache.length) {
           liderBox.appendChild(txt('div', 'us-em', 'Nenhum setor cadastrado ainda. Cadastre em Setores antes de definir a liderança.'));
           return;
         }
         var grid = txt('div', 'us-lidgrid');
-        setoresCarregados.forEach(function (s) {
+        setoresCache.forEach(function (s) {
           var on = liderState.indexOf(s.sigla) >= 0;
-          grid.appendChild(UI.checkbox({ checked: on, label: s.nome + ' (' + s.sigla + ')', onToggle: function (v) {
+          grid.appendChild(UI.checkbox({ checked: on, label: rotuloSetor(s), onToggle: function (v) {
             var i = liderState.indexOf(s.sigla);
             if (v && i < 0) { liderState.push(s.sigla); } else if (!v && i >= 0) { liderState.splice(i, 1); }
           } }));
@@ -558,6 +621,7 @@
         if (perfilVal === 'lider') { liderField.style.display = ''; renderLiderCheckboxes(); }
         else { liderField.style.display = 'none'; }
       }
+      renderSetorSelect(); /* F1-C: campo Setor visível para todo perfil, desde a abertura */
 
       var ativoState = editing ? (cur.ativo !== false) : true;
       var ativoField = null;
@@ -566,7 +630,7 @@
         ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos não conseguem entrar; o registro é preservado.' });
       }
 
-      var bodyFields = [uidField, nomeField, emailField, perfilField, liderField]; if (ativoField) { bodyFields.push(ativoField); }
+      var bodyFields = [uidField, nomeField, emailField, perfilField, setorField, liderField]; if (ativoField) { bodyFields.push(ativoField); }
 
       var saveBtn = null;
       var m = UI.modal({
@@ -592,18 +656,20 @@
         var email = emailInput.value.trim();
         var nome = nomeInput.value.trim();
         var perfil = isSelf ? cur.perfil : (perfilSelect.value || '');
+        var setorVal = setorSel ? (setorSel.value || '') : '';
         var setoresLid = (perfil === 'lider') ? liderState.slice() : [];
         var ok = true;
         if (!editing && !RX_UID.test(uidVal)) { setErr(uidField, 'Cole um UID válido (sem espaços).'); ok = false; }
         if (!RX_EMAIL.test(email)) { setErr(emailField, 'Informe um e-mail válido.'); ok = false; }
         if (nome.length < 2) { setErr(nomeField, 'Informe um nome com 2+ caracteres.'); ok = false; }
         if (PERFIL_STORABLE.indexOf(perfil) < 0) { setErr(perfilField, 'Selecione um perfil.'); ok = false; }
+        if (!setorVal) { setErr(setorField, 'Escolha o setor do usuário.'); ok = false; }
         if (!ok) { return; }
 
         if (saveBtn) { saveBtn.disabled = true; }
         var op = editing
-          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, ativo: isSelf ? true : ativoState, setoresLiderados: setoresLid })
-          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil, setoresLiderados: setoresLid });
+          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, setor: setorVal, ativo: isSelf ? true : ativoState, setoresLiderados: setoresLid })
+          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil, setor: setorVal, setoresLiderados: setoresLid });
 
         op.then(function () {
           m.close();
@@ -616,6 +682,7 @@
           else if (f === 'email') { setErr(emailField, e.message); }
           else if (f === 'nome') { setErr(nomeField, e.message); }
           else if (f === 'perfil') { setErr(perfilField, e.message); }
+          else if (f === 'setor') { setErr(setorField, e.message); }
           else { toast((e && e.message) || 'Erro ao salvar.', 'err'); }
         });
       }
