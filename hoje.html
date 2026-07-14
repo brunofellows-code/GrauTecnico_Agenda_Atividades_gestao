@@ -226,7 +226,12 @@
   var MODO = 'minhas';          /* 'minhas' | 'todas' */
   var MODELO = null;            /* último KPI.carregar */
   var R = window.GrautRecorrencia;
-  var RECOR_LABEL = { diario: 'Diário', semanal: 'Semanal', quinzenal: 'Quinzenal', mensal: 'Mensal', unico: 'Único' };
+  var RECOR_LABEL = { diario: 'Diário', semanal: 'Semanal', quinzenal: 'Quinzenal', mensal: 'Mensal', bimestral: 'Bimestral', trimestral: 'Trimestral', unico: 'Único' };
+  /* P2: camada do organograma (Sócio = gestão indireta · Gestor = direta · Operacional = líder+assistente).
+     Atividade antiga sem o campo: sem etiqueta; no filtro conta como 'operacional' (mesmo default do import). */
+  var CAMADA_LABEL = { socio: 'Sócio', gestor: 'Gestor', operacional: 'Operacional' };
+  var CAMADA_COR = { socio: 'brand', gestor: 'orange', operacional: 'muted2' };
+  var FCAMADA = 'todas';          /* 'todas' | 'socio' | 'gestor' | 'operacional' */
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
@@ -308,6 +313,13 @@
     var s = txt('span', 'hj-tag', sig); s.style.color = 'var(--' + c + ')';
     return s;
   }
+  function chipCamada(act) {
+    var c = act && act.camada;
+    if (!c || !CAMADA_LABEL[c]) { return null; }
+    var s = txt('span', 'hj-tag', CAMADA_LABEL[c]);
+    s.style.color = 'var(--' + (CAMADA_COR[c] || 'muted2') + ')';
+    return s;
+  }
   function miniBtn(label, fn, tone) {
     var b = el('<button type="button" class="hj-act' + (tone ? ' ' + tone : '') + '"></button>');
     b.textContent = label;
@@ -343,6 +355,7 @@
     var meta = el('<div class="hj-evmeta"></div>');
     meta.appendChild(chipSetor(o.act));
     meta.appendChild(txt('span', 'hj-evsec', RECOR_LABEL[o.act.recorrencia] || ''));
+    var camTl = chipCamada(o.act); if (camTl) { meta.appendChild(camTl); }
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-evsec', 'em andamento'); em.style.color = 'var(--doing)'; meta.appendChild(em); }
     card.appendChild(meta);
     card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), o.titulo));
@@ -368,6 +381,7 @@
     }));
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-freq', 'Em andamento'); em.style.color = 'var(--doing)'; row.appendChild(em); }
     else if (!done && CAN_WRITE()) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
+    var camDia = chipCamada(o.act); if (camDia) { row.appendChild(camDia); }
     row.appendChild(txt('span', 'hj-freq', RECOR_LABEL[o.act.recorrencia] || ''));
     return row;
   }
@@ -383,7 +397,8 @@
     var main = el('<div class="hj-late-main"></div>');
     main.appendChild(txt('div', 'hj-late-t', o.titulo));
     var sigs = o.act.todosSetores ? 'Todos os setores' : KPI.setoresDe(o.act, MODELO.setores).join(' · ');
-    main.appendChild(txt('div', 'hj-late-s', sigs + (o.responsavel ? ' · ' + o.responsavel : '')));
+    var camTx = (o.act.camada && CAMADA_LABEL[o.act.camada]) ? ' · ' + CAMADA_LABEL[o.act.camada] : '';
+    main.appendChild(txt('div', 'hj-late-s', sigs + camTx + (o.responsavel ? ' · ' + o.responsavel : '')));
     row.appendChild(main);
     if (CAN_WRITE()) { row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok')); }
     row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
@@ -410,6 +425,10 @@
     var board = (MODO === 'minhas')
       ? escopo.filter(function (o) { return o.act.responsavelUid === CURRENT_USER.uid; })
       : escopo;
+    /* P2: filtro por camada — atividade sem o campo conta como 'operacional' (default do import) */
+    if (FCAMADA !== 'todas') {
+      board = board.filter(function (o) { return (o.act.camada || 'operacional') === FCAMADA; });
+    }
     var d = derivar(board, hoje);
 
     /* F1-B: nada no escopo do papel (líder sem setores com atividade / usuário sem atribuições) */
@@ -480,6 +499,19 @@
       b.textContent = p[1];
       b.addEventListener('click', function () { if (MODO !== p[0]) { MODO = p[0]; pintarScope(); paint(); } });
       sc.appendChild(b);
+    });
+    /* P2: seletor de camada (Sócio × Gestor × Operacional) ao lado do de escopo */
+    var cs = document.getElementById('hj-camada');
+    if (!cs) {
+      cs = el('<div class="hj-scope" id="hj-camada" style="margin-left:8px"></div>');
+      sc.parentNode.insertBefore(cs, sc.nextSibling);
+    }
+    cs.innerHTML = '';
+    [['todas', 'Todas as camadas'], ['socio', 'Sócio'], ['gestor', 'Gestor'], ['operacional', 'Operacional']].forEach(function (c) {
+      var cb = el('<button type="button" class="hj-seg-b' + (FCAMADA === c[0] ? ' on' : '') + '"></button>');
+      cb.textContent = c[1];
+      cb.addEventListener('click', function () { if (FCAMADA !== c[0]) { FCAMADA = c[0]; pintarScope(); paint(); } });
+      cs.appendChild(cb);
     });
   }
 

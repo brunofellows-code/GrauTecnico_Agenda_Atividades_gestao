@@ -156,14 +156,15 @@
 
   /* ===================== modelo ===================== */
   var COLS_CRITICAS = ['codigo', 'titulo'];
-  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao'];
+  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao', 'camada'];
+  var CAMADAS_VALIDAS = ['socio', 'gestor', 'operacional']; /* P1: organograma Sócios → Gestor → Operacional */
   var COLS_TODAS = COLS_CRITICAS.concat(COLS_OPCIONAIS);
   var MODELO_CSV = COLS_TODAS.join(';') + '\n' +
-    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;2026-07-06;;1;;08:00;;\n' +
-    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;2026-07-06;;;;17:30;;\n' +
-    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;2026-07-01;;;5;;;\n' +
-    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;2026-07-15;;;15;;Alta;Ligar e convocar o responsável\n' +
-    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;';
+    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;;;1;;08:00;;;operacional\n' +
+    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;;;;;17:30;;;operacional\n' +
+    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;;;;5;;;;gestor\n' +
+    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;;;;15;;Alta;Ligar e convocar o responsável;operacional\n' +
+    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;;socio';
 
   /* ===================== parser CSV (; ou ,) ===================== */
   function parseCSV(text) {
@@ -199,6 +200,7 @@
   }
 
   var SETORES = [], ATIV = [], PLANO = null;
+  var DATA_OPER = null; /* P1: carimbo da data de início da operação (definida no passo 1) */
   var bodyEl, POP, BACK;
 
   /* ===================== auditoria de-para ===================== */
@@ -243,7 +245,7 @@
   function montarPlano(parsed, audit) {
     var porCodigo = {};
     ATIV.forEach(function (a) { if (a.codigo) { porCodigo[a.codigo] = a; } });
-    var plano = { criar: [], atualizar: [], pular: 0, rejeitar: [] };
+    var plano = { criar: [], atualizar: [], pular: 0, rejeitar: [], avisos: [] };
     var vistos = {};
 
     parsed.rows.forEach(function (row, li) {
@@ -300,6 +302,10 @@
       if (data != null) { cand.data = data; }
       if (dIni != null) { cand.dataInicio = dIni; }
       if (dFim != null) { cand.dataFim = dFim; }
+      /* P1(b): motor de data de operação — recorrente declarada na planilha e SEM
+         data_inicio herda a data digitada no passo 1; 'unico' mantém a própria data.
+         Vale para criar E atualizar (reimportar com outra data reancora via delta). */
+      if (rec != null && rec !== 'unico' && dIni == null && DATA_OPER) { cand.dataInicio = DATA_OPER; }
       if (diasArr != null) { cand.diasSemana = diasArr; }
       if (diaMesN != null) { cand.diaMes = diaMesN; }
       var hora = valOf(row, audit.mapa, 'horario');
@@ -309,6 +315,16 @@
       if (prio != null) { cand.prioridade = prio; }
       var mit = valOf(row, audit.mapa, 'mitigacao');
       if (mit != null) { cand.mitigacao = mit; }
+      /* P1(a): camada do organograma — inválida vira 'operacional' COM aviso no preview */
+      var cam = valOf(row, audit.mapa, 'camada');
+      if (cam != null) {
+        cam = cam.toLowerCase();
+        if (CAMADAS_VALIDAS.indexOf(cam) < 0) {
+          plano.avisos.push('linha ' + linha + ' (' + codigo + '): camada "' + cam + '" inválida — assumida "operacional"');
+          cam = 'operacional';
+        }
+        cand.camada = cam;
+      }
 
       var existente = porCodigo[codigo];
       if (existente) {
@@ -328,10 +344,14 @@
         if (!titulo) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem titulo' }); return; }
         if (setorNorm == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem setor' }); return; }
         if (rec == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem recorrencia' }); return; }
+        if (cam == null) { plano.avisos.push('linha ' + linha + ' (' + codigo + '): camada ausente — assumida "operacional"'); }
+        /* P1: responsável NASCE null no import — atribuição individual é feita depois,
+           na tela; usar USER.uid inflaria a carga (WIP) de quem importou. */
         var doc = Object.assign({
           codigo: codigo, descricao: '', horario: null, diasSemana: null, diaMes: null,
           data: null, deslizante: false, dataInicio: null, dataFim: null, subsetorSigla: null,
-          responsavelUid: USER.uid, responsavelNome: USER.name,
+          camada: 'operacional',
+          responsavelUid: null, responsavelNome: null,
           projetoId: null, projetoSigla: null, todosSetores: false
         }, cand);
         var verr = R.validar(doc);
@@ -397,6 +417,17 @@
     ta.className = 'im-ta';
     ta.placeholder = COLS_TODAS.join(';') + '\nPED-001;Planejar aula da semana;…';
     card.appendChild(ta);
+    /* P1(b): a virada de chave — o gestor digita UMA data e toda recorrente sem
+       data_inicio na planilha passa a valer a partir dela. */
+    var opLbl = txt('div', 'im-hint', 'Data de início da operação — atividades recorrentes SEM "data_inicio" na planilha começam a valer nesta data. Atividades de data única ("unico") mantêm a própria data.');
+    opLbl.style.marginTop = '10px';
+    card.appendChild(opLbl);
+    var opInput = document.createElement('input');
+    opInput.type = 'date';
+    opInput.id = 'im-dataoper';
+    opInput.value = R.hojeISO();
+    opInput.style.cssText = 'background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;margin-top:6px;display:block';
+    card.appendChild(opInput);
     var row = el('<div class="im-row"></div>');
     var down = UI.button({ label: 'Baixar planilha-modelo (CSV)', icon: 'upload', variant: 'ghost' });
     down.addEventListener('click', function () {
@@ -410,6 +441,8 @@
     row.appendChild(down);
     var next = UI.button({ label: 'Auditar arquivo', icon: 'check' });
     next.addEventListener('click', function () {
+      var di = document.getElementById('im-dataoper');
+      DATA_OPER = (di && R.isISO(di.value)) ? di.value : R.hojeISO();
       var parsed = parseCSV(ta.value);
       if (!parsed.header.length || !parsed.rows.length) { toast('Cole o conteúdo com cabeçalho + ao menos 1 linha.', 'err'); return; }
       if (parsed.rows.length > 200) { toast('Teto de 200 linhas por importação (quota). Divida o arquivo.', 'err'); return; }
@@ -498,6 +531,19 @@
       sum.appendChild(d);
     });
     card.appendChild(sum);
+
+    if (DATA_OPER) {
+      var od = el('<div class="im-banner ok"></div>');
+      od.textContent = 'Data de início da operação aplicada às recorrentes sem data_inicio: ' + DATA_OPER + '.';
+      card.appendChild(od);
+    }
+    if (plano.avisos && plano.avisos.length) {
+      var av = el('<div class="im-banner warn"></div>');
+      var mostra = plano.avisos.slice(0, 5).join(' · ');
+      if (plano.avisos.length > 5) { mostra += ' · … e mais ' + (plano.avisos.length - 5) + ' aviso(s)'; }
+      av.textContent = 'Avisos (' + plano.avisos.length + '): ' + mostra;
+      card.appendChild(av);
+    }
 
     var L = [];
     if (plano.criar.length) {

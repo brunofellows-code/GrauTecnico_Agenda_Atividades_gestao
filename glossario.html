@@ -58,20 +58,25 @@
      ============================================================ */
 
   var SECOES = [
-    ['Siglas dos setores', [
-      ['PED — Pedagógico', 'Setor que cuida das aulas, professores e do conteúdo dos cursos.'],
-      ['SEC — Secretaria', 'Setor que cuida de matrículas, documentos e atendimento ao aluno.'],
-      ['CRA — Central de Relacionamento com o Aluno', 'Setor que acompanha o aluno durante o curso: dúvidas, avisos e retenção.'],
+    ['Siglas dos setores (taxonomia oficial: 7 setores-raiz + 13 subsetores)', [
+      ['PED — Pedagógico', 'Setor que cuida das aulas, professores e do conteúdo dos cursos. Subsetores: PAD (Pedagógico Administrativo), PAT (Pedagógico Atendimento), ENF (Estágio Enfermagem) e RAD (Estágio Radiologia).'],
+      ['SEC — Secretaria', 'Setor que cuida de matrículas, documentos e atendimento ao aluno. Subsetores: ADM (Administrativo), FIN (Financeiro), BEM (Bem-estar), TI (Tecnologia da Informação) e MAN (Manutenção).'],
+      ['CRA — Central de Relacionamento com o Aluno', 'Setor que acompanha o aluno durante o curso: dúvidas, avisos, cobrança e retenção.'],
       ['GES — Gestão', 'Direção e administração da escola: decisões, finanças e pessoas.'],
-      ['QLD — Qualidade', 'Setor que verifica se os processos estão sendo seguidos e melhora o que não está funcionando.'],
-      ['AGE — Agência de Emprego', 'Setor que conecta alunos formados a vagas de trabalho.'],
+      ['CSA — Central de Sucesso do Aluno', 'Setor que cuida da experiência do aluno de ponta a ponta. Subsetores: AGE (Agência de Emprego — conecta alunos a vagas), PVE (Pós-venda — os primeiros dias após a matrícula), RET (Retenção — evita cancelamentos) e EVA (Evasão — traz de volta quem sumiu).'],
       ['COM — Comercial', 'Setor que capta novos alunos: vendas, campanhas e visitas.'],
-      ['SIGLA', 'Código curto e ESTÁVEL de cada setor (ex.: PED). É por ela que o sistema liga atividades, eventos e indicadores ao setor — por isso mudar a sigla de um setor em uso é perigoso.']
+      ['SOC — Sócios', 'Os donos do negócio: as rotinas de prestação de contas e decisão que sobem do gestor para os sócios.'],
+      ['Subsetor', 'Uma divisão dentro de um setor-raiz (ex.: FIN dentro da SEC). Tem sigla própria e permite dar a um líder o acesso a só uma fatia do setor.'],
+      ['SIGLA', 'Código curto e ESTÁVEL de cada setor ou subsetor (ex.: PED, FIN). É por ela que o sistema liga atividades, eventos e indicadores ao setor — por isso mudar a sigla de um setor em uso é perigoso.']
     ]],
     ['Termos do dia a dia', [
       ['Atividade', 'Uma tarefa cadastrada no sistema. Pode acontecer uma vez só (única) ou se repetir (recorrente).'],
       ['Ocorrência', 'CADA vez que uma atividade acontece. Uma atividade "limpar sala toda segunda" gera uma ocorrência por segunda-feira. O check de feito/não-feito é por ocorrência — assim o histórico não se perde.'],
-      ['Recorrência', 'A regra de repetição: Diária, Semanal, Quinzenal (2× por mês, a cada ~15 dias), Mensal ou Única.'],
+      ['Recorrência', 'A regra de repetição: Diária, Semanal, Quinzenal (2× por mês, a cada ~15 dias), Mensal, Bimestral, Trimestral ou Única.'],
+      ['Bimestral', 'Repete a cada 2 meses, sempre no mesmo dia do mês (ex.: dia 15 de julho, setembro, novembro…). O mês de partida é o da data de início.'],
+      ['Trimestral', 'Repete a cada 3 meses, sempre no mesmo dia do mês (ex.: dia 1º de julho, outubro, janeiro…). O mês de partida é o da data de início.'],
+      ['Camada', 'Em que nível do organograma a rotina vive: SÓCIO (gestão indireta — o que sobe para os donos), GESTOR (gestão direta — os rituais do gestor da unidade) e OPERACIONAL (líder e assistente de cada setor executando o dia a dia).'],
+      ['Data de início da operação', 'A "virada de chave": na importação, o gestor digita UMA data e todas as rotinas recorrentes sem data própria passam a valer a partir dela — sem precisar datar linha por linha.'],
       ['Data deslizante', 'Só para atividade única: se não foi feita, a pendência "desliza" e continua aparecendo até ser concluída.'],
       ['Reprogramada', 'Ocorrência cuja data foi adiada com aprovação. Conta no indicador de reprogramação.'],
       ['Pulada', 'Ocorrência marcada como "não vai acontecer desta vez" (ex.: feriado). Não conta como atraso nem entra na aderência.'],
