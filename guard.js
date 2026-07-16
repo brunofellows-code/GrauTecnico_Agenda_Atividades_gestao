@@ -220,6 +220,20 @@
       }
     }
 
+    /* ---- F1-D(D2): remove itens de navegação SEM destino ----
+       `ui.js` é append-only e o array de grupos da sidebar vive no meio do
+       arquivo — por isso a poda acontece aqui, onde a navegação já mora.
+       Regra: item que não está em LIVE não tem tela; item que clica e não
+       responde ensina que o sistema falha (pior que a ausência). Quando a
+       tela nascer, basta entrar em LIVE e o item volta sozinho. Idempotente. */
+    (function podarSemDestino() {
+      var itens = document.querySelectorAll('.ui-nav[data-nav]');
+      Array.prototype.forEach.call(itens, function (it) {
+        var label = it.getAttribute('data-nav');
+        if (!LIVE[label] && it.parentNode) { it.parentNode.removeChild(it); }
+      });
+    })();
+
     /* ---- recorte de navegação por perfil (Fase 1 RBAC · exibição) ----
        Remove da sidebar os itens fora do conjunto do perfil. Idempotente.
        'gestor' não está no NAV_BY_PERFIL => nada é removido (vê tudo). */
@@ -326,6 +340,16 @@
     },
     get user() { return user; },
     isReady: function () { return ready; },
+    /* F1-D(D3): fonte ÚNICA de visibilidade de navegação — a mesma tabela que
+       recorta a sidebar decide os cards da home. Evita a divergência entre as
+       duas superfícies (foi exatamente o bug do index "Em breve").
+       PURO e testável. Perfil desconhecido/ausente => true (fail-open: mantém
+       o comportamento de hoje; o bloqueio real é da rule do Firestore). */
+    podeVer: function (label, perfil) {
+      var permit = NAV_BY_PERFIL[perfil || (user && user.perfil)];
+      if (!permit) { return true; }
+      return !!permit[label];
+    },
     isGestor: function () { return !!user && user.perfil === 'gestor'; },
     isLider: function () { return !!user && user.perfil === 'lider'; },
     isUsuario: function () { return !!user && user.perfil === 'usuario'; },
