@@ -114,6 +114,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---------- pauta_sugestoes (F1-F: cascata de pauta entre reunioes) ----------
+    // Sugestao encaminhada de uma reuniao para a pauta de outra (tipo/setor).
+    // Soft-delete via status 'descartada' (nunca delete fisico).
+    // Perfil 'usuario' NAO grava (canWrite) — limitacao DECLARADA no HANDOFF F1-F.
+    match /pauta_sugestoes/{id} {
+      allow read: if isActive();
+      allow create, update: if canWrite();
+      allow delete: if false;
+    }
+
     // ---------- subtarefas ----------
     match /subtarefas/{id} {
       allow read: if isActive();

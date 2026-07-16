@@ -773,7 +773,9 @@
         if (u.setor && esc[u.setor]) { add(u); }
       });
     }
-    /* 'instrutor' e 'lideres_turma': só o criador (externos entram à mão). */
+    /* 'instrutor' e 'lideres_turma': só o criador (externos entram à mão).
+       F1-F: 'resultado_mensal' idem — default (c) PROVISÓRIO até o Bruno
+       cravar a letra (a/b/c/d); mudar aqui é 1 ramo (ver HANDOFF F1-F). */
     return out;
   };
   K.ehSocio = ehSocio;
@@ -826,5 +828,86 @@
     var aviso = '\n…resumo completo no GERA.';
     if (t.length <= m) { return t; }
     return t.slice(0, Math.max(0, m - aviso.length)) + aviso;
+  };
+
+  /* ============================================================
+     F1-F · REUNIÕES-COCKPIT — helpers PUROS (harness_f1f.js)
+     ============================================================ */
+
+  /* STATUS DERIVADO da reunião (F1-F · B7) — nunca gravado.
+       encerradaEm                    -> 'encerrada'
+       horaInicioReal (sem encerrar)  -> 'andamento'
+       senão                          -> 'agendada'               */
+  K.statusReuniao = function (r) {
+    if (r && r.encerradaEm) { return { chave: 'encerrada', rotulo: 'Encerrada' }; }
+    if (r && r.horaInicioReal) { return { chave: 'andamento', rotulo: 'Em andamento' }; }
+    return { chave: 'agendada', rotulo: 'Agendada' };
+  };
+
+  /* ROLLFORWARD 2.0 (F1-F · B5): decisões NÃO FECHADAS de reuniões
+     ANTERIORES do MESMO ESCOPO reaparecem na reunião alvo.
+       anterior     = data estritamente menor que a do alvo.
+       mesmo escopo = mesmo tipo
+                      + mesmo setorSigla (quando tipo departamento)
+                      + mesmo projetoId (null conta como igual).
+       não fechada  = statusDe(dec) em {aberta, vencida} — INCLUI a
+         decisão convertida em atividade ainda não feita (a v1 só
+         olhava d.aberta e perdia exatamente essas).
+     statusDe é injetado (o chamador resolve a ocorrência da
+     atividade-filha) — a função fica pura e testável no harness. */
+  K.rollforward2 = function (reunioes, alvo, statusDe) {
+    var out = [];
+    if (!alvo || !alvo.data) { return out; }
+    (reunioes || []).forEach(function (r) {
+      if (!r || r.id === alvo.id) { return; }
+      if ((r.data || '') >= alvo.data) { return; }
+      if ((r.tipo || null) !== (alvo.tipo || null)) { return; }
+      if (alvo.tipo === 'departamento' && (r.setorSigla || null) !== (alvo.setorSigla || null)) { return; }
+      if ((r.projetoId || null) !== (alvo.projetoId || null)) { return; }
+      (r.decisoes || []).forEach(function (d, idx) {
+        var st = statusDe(d);
+        if (st && (st.chave === 'aberta' || st.chave === 'vencida')) {
+          out.push({ dec: d, reuniao: r, idx: idx, st: st });
+        }
+      });
+    });
+    out.sort(function (a, b) { return (a.reuniao.data || '').localeCompare(b.reuniao.data || ''); });
+    return out;
+  };
+
+  /* VENCIDAS EM ABERTO FORA DA JANELA (F1-F · B2, emenda 1): o board
+     'band' corta em hoje−45 — atividade ÚNICA com prazo mais antigo
+     (caso real: 400 dias) sumiria do painel de execução. Esta varredura
+     cobre o buraco SEM omissão silenciosa:
+       entra: recorrencia 'unico' + data < jIni + ativo != false.
+       status: resolvido pelas MESMAS regras do board
+               (R.ocorrenciasNaJanela na data única + occs antigas).
+       sai:   só o ABERTO vencido — concluída, pulada e reprogramada
+              p/ hoje ou futuro NÃO entram (dataOverride respeitado).
+     Rotinas recorrentes ficam FORA de propósito: débito histórico de
+     rotina é medido pela ADERÊNCIA, não item a item — declarado no i. */
+  K.vencidasUnicasAntigas = function (ativ, occAntigas, jIni, hoje) {
+    var byAtiv = {};
+    (occAntigas || []).forEach(function (o) {
+      if (o && o.atividadeId) { (byAtiv[o.atividadeId] = byAtiv[o.atividadeId] || []).push(o); }
+    });
+    var out = [];
+    (ativ || []).forEach(function (act) {
+      if (!act || act.recorrencia !== 'unico' || !act.data) { return; }
+      if (act.ativo === false) { return; }
+      if (R.compareISO(act.data, jIni) >= 0) { return; } /* na janela: o board já cobre */
+      var occs = R.ocorrenciasNaJanela(act, act.data, act.data, byAtiv[act.id] || [], hoje);
+      occs.forEach(function (oc) {
+        var ov = oc.override || null;
+        var eff = (ov && ov.dataOverride) || oc.data;
+        var aberto = (oc.status === 'pendente' || oc.status === 'reprogramada' || oc.status === 'em_andamento');
+        if (aberto && R.compareISO(eff, hoje) < 0) {
+          out.push({ act: act, origData: oc.data, effDate: eff, status: oc.status,
+            responsavel: (act.responsavelNome || '').trim(), semResp: !(act.responsavelNome || '').trim(),
+            uid: act.responsavelUid || null, ov: ov, atrasada: true, foraJanela: true });
+        }
+      });
+    });
+    return out;
   };
 })();

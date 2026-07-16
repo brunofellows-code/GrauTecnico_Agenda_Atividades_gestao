@@ -1014,6 +1014,7 @@
       var main = el('<div class="at-cmain"></div>');
       main.appendChild(txt('div', 'at-ctitle', o.titulo));
       var meta = el('<div class="at-cmeta"></div>'); metaChips(o, meta); main.appendChild(meta);
+      if (o.act && o.act.observacoes) { main.appendChild(txt('div', 'at-cmeta', 'Obs.: ' + o.act.observacoes)); } /* F1-F */
       card.appendChild(main);
 
       if (CAN_WRITE) {
@@ -1416,6 +1417,12 @@
       var descTa = el('<textarea class="at-textarea" placeholder="Detalhes, instruções, checklist… (opcional)"></textarea>');
       if (editing && act.descricao) { descTa.value = act.descricao; }
       var descField = UI.field({ label: 'Descrição (opcional)', control: descTa });
+      /* F1-F: observações operacionais — anotações vivas da atividade
+         (o que aconteceu, combinados, contexto). Diferente da descrição
+         (o que É a atividade). Aparece no card da lista.               */
+      var obsTa = el('<textarea class="at-textarea" placeholder="Anotações do andamento, combinados, contexto… (opcional)"></textarea>');
+      if (editing && act.observacoes) { obsTa.value = act.observacoes; }
+      var obsField = UI.field({ label: 'Observações (opcional)', control: obsTa });
 
       /* setor (raízes ativas; preserva o atual se inativo) */
       var setorOpts = setoresRaiz().map(function (s) { return { value: s.sigla, label: s.sigla + ' · ' + s.nome }; });
@@ -1577,7 +1584,7 @@
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, setorField, subField, multiField, respField, camField, projField, recField, recBox, hrField, banner],
+        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, projField, recField, recBox, hrField, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -1605,6 +1612,7 @@
         var payload = {
           titulo: titulo,
           descricao: descTa.value.trim(),
+          observacoes: obsTa.value.trim(), /* F1-F */
           setorSigla: setor,
           setorSiglas: siglas,
           todosSetores: !!todosState,

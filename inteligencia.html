@@ -818,6 +818,73 @@
     CTX_MONTADO = true;
   }
 
+  /* ---------- F1-F · candidatos a indicador (fila da cascata) ----------
+     Fonte: pauta_sugestoes com candidatoIndicador = true (marcado no
+     formulário de pauta ou ao encaminhar decisão). Fila de ENTRADA do
+     catálogo (KPIMAX): virar indicador de verdade exige fórmula + dado +
+     decisão que dispara — trabalho de sessão (F1-G), não automático.
+     Query própria: where ativo==true + limit 100; filtro fino no cliente
+     (padrão §2.6 — evita índice composto). Recarrega a cada pintura. */
+  var CAND_TOKEN = 0;
+  function candidatosIndicador() {
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Candidatos a indicador — vindos das reuniões</div>'));
+    h.appendChild(infoBtn({
+      title: 'Candidatos a indicador',
+      formula: 'lista de pauta_sugestoes com candidatoIndicador = true (marcado no formulário de pauta ou ao encaminhar uma decisão)',
+      dados: 'coleção pauta_sugestoes · where ativo == true · limit 100 · filtro candidatoIndicador no navegador',
+      numeros: 'cada item mostra o texto, a reunião de origem e a data de registro, do mais novo p/ o mais velho',
+      nota: 'Fila de entrada do catálogo: virar indicador exige fórmula + dado + decisão que dispara (próxima fase) — nada vira KPI sozinho.'
+    }));
+    card.appendChild(h);
+    var list = el('<div class="pf-plano"></div>');
+    list.appendChild(el('<div class="pf-plano-act">Carregando…</div>'));
+    card.appendChild(list);
+    var meu = ++CAND_TOKEN;
+    Promise.all([
+      import('./firebase.js'),
+      import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+    ]).then(function (mods) {
+      var db = mods[0].db, f = mods[1];
+      var q = f.query(f.collection(db, 'pauta_sugestoes'), f.where('ativo', '==', true), f.limit(100));
+      return f.getDocs(q);
+    }).then(function (snap) {
+      if (meu !== CAND_TOKEN) { return; }
+      var itens = [];
+      snap.forEach(function (d) {
+        var g = d.data();
+        if (g && g.candidatoIndicador === true) { itens.push(g); }
+      });
+      itens.sort(function (a, b) { return (b.criadoEm || 0) - (a.criadoEm || 0); });
+      list.innerHTML = '';
+      if (!itens.length) {
+        list.appendChild(el('<div class="pf-plano-act">Nenhum candidato ainda — marque "candidato a indicador" no formulário de pauta ou ao encaminhar uma decisão.</div>'));
+        return;
+      }
+      itens.forEach(function (g) {
+        var item = el('<div class="pf-plano-item"></div>');
+        item.appendChild(el('<span class="pf-plano-dot" style="background:var(--doing)"></span>'));
+        var c = el('<div class="pf-plano-c"></div>');
+        var t = el('<div class="pf-plano-txt"></div>');
+        t.textContent = g.texto || '(sem texto)';
+        c.appendChild(t);
+        var org = g.origem || {};
+        var a = el('<div class="pf-plano-act"></div>');
+        var quando = g.criadoEm ? brData(window.GrautRecorrencia.toISO(new Date(Number(g.criadoEm)))) : '—';
+        a.textContent = 'Origem: ' + (org.titulo ? org.titulo + ' · ' : '') + (org.data ? brData(org.data) : '—') + ' · registrado em ' + quando;
+        c.appendChild(a);
+        item.appendChild(c);
+        list.appendChild(item);
+      });
+    }).catch(function (e) {
+      if (meu !== CAND_TOKEN) { return; }
+      list.innerHTML = '';
+      list.appendChild(el('<div class="pf-plano-act">Não consegui ler os candidatos agora (' + ((e && e.message) || 'erro') + ').</div>'));
+    });
+    return card;
+  }
+
   function paint(m) {
     MODELO = m;
     montarCtx(m);
@@ -835,6 +902,9 @@
     focusKPIs(m).forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
     body.appendChild(focus);
     body.appendChild(planoAcao(m));
+    var cand = candidatosIndicador();
+    cand.style.marginTop = '13px';
+    body.appendChild(cand); /* F1-F */
     var ss = scoreSetores(m);
     if (ss) { ss.style.marginTop = '13px'; body.appendChild(ss); }
     var bk = backlogCard(m);
