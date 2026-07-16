@@ -76,6 +76,7 @@
   <div class="im-pop" id="im-pop" role="dialog" aria-label="Como funciona"></div>
 
   <script src="ui.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><!-- F1-D: leitura de .xlsx/.xls no navegador -->
   <script src="recorrencia.js"></script>
   <script type="module">
   (function () {
@@ -417,6 +418,57 @@
     ta.className = 'im-ta';
     ta.placeholder = COLS_TODAS.join(';') + '\nPED-001;Planejar aula da semana;…';
     card.appendChild(ta);
+    /* F1-D(a): escolher arquivo — .csv lê como texto; .xlsx/.xls via SheetJS.
+       O arquivo só PREENCHE o campo acima; o pipeline (parseCSV → auditoria →
+       delta) é EXATAMENTE o mesmo do colar. */
+    var fileWrap = el('<div class="im-row" style="margin-top:8px;align-items:center"></div>');
+    var fileInp = document.createElement('input');
+    fileInp.type = 'file';
+    fileInp.accept = '.csv,.xlsx,.xls,.txt';
+    fileInp.id = 'im-file';
+    fileInp.style.cssText = 'display:none';
+    var fileBtn = UI.button({ label: 'Escolher arquivo (.csv / .xlsx)', icon: 'upload', variant: 'ghost' });
+    fileBtn.addEventListener('click', function () { fileInp.click(); });
+    var fileName = txt('span', 'im-hint', 'ou cole o conteúdo acima');
+    fileName.style.margin = '0';
+    fileWrap.appendChild(fileBtn); fileWrap.appendChild(fileInp); fileWrap.appendChild(fileName);
+    card.appendChild(fileWrap);
+    fileInp.addEventListener('change', function () {
+      var f = fileInp.files && fileInp.files[0];
+      if (!f) { return; }
+      var nome = f.name || 'arquivo';
+      var ext = nome.toLowerCase().split('.').pop();
+      if (f.size === 0) { toast('Arquivo vazio — nada para importar.', 'err'); fileInp.value = ''; return; }
+      var rd = new FileReader();
+      rd.onerror = function () { toast('Não consegui ler o arquivo. Tente salvar como CSV e colar.', 'err'); fileInp.value = ''; };
+      if (ext === 'xlsx' || ext === 'xls') {
+        if (!window.XLSX) { toast('Leitor de Excel não carregou (sem internet no CDN?). Salve como CSV e cole.', 'err'); fileInp.value = ''; return; }
+        rd.onload = function () {
+          try {
+            var wb = window.XLSX.read(new Uint8Array(rd.result), { type: 'array' });
+            var first = wb.SheetNames && wb.SheetNames[0];
+            if (!first) { toast('Planilha sem abas legíveis.', 'err'); return; }
+            var csv = window.XLSX.utils.sheet_to_csv(wb.Sheets[first], { FS: ';', blankrows: false });
+            if (!csv.trim()) { toast('A primeira aba está vazia.', 'err'); return; }
+            ta.value = csv;
+            var nl = csv.split('\n').filter(function (l) { return l.trim() !== ''; }).length;
+            fileName.textContent = nome + ' · ' + (nl - 1) + ' linha(s) de dado (1ª aba)';
+            toast('Arquivo lido. Confira e clique em "Auditar arquivo".');
+          } catch (e) { toast('Excel ilegível: ' + ((e && e.message) || 'formato não suportado') + '. Salve como CSV.', 'err'); }
+        };
+        rd.readAsArrayBuffer(f);
+      } else {
+        rd.onload = function () {
+          var texto = String(rd.result || '');
+          if (!texto.trim()) { toast('Arquivo vazio — nada para importar.', 'err'); return; }
+          ta.value = texto.replace(/^\ufeff/, '');
+          var nl2 = texto.split('\n').filter(function (l) { return l.trim() !== ''; }).length;
+          fileName.textContent = nome + ' · ' + (nl2 - 1) + ' linha(s) de dado';
+          toast('Arquivo lido. Confira e clique em "Auditar arquivo".');
+        };
+        rd.readAsText(f, 'utf-8');
+      }
+    });
     /* P1(b): a virada de chave — o gestor digita UMA data e toda recorrente sem
        data_inicio na planilha passa a valer a partir dela. */
     var opLbl = txt('div', 'im-hint', 'Data de início da operação — atividades recorrentes SEM "data_inicio" na planilha começam a valer nesta data. Atividades de data única ("unico") mantêm a própria data.');
@@ -451,6 +503,151 @@
     row.appendChild(next);
     card.appendChild(row);
     bodyEl.appendChild(card);
+    renderManutencao(); /* F1-D(d): zona de manutenção (gestor) abaixo do passo 1 */
+  }
+
+  /* ============================================================
+     F1-D(d) · ZONA DE MANUTENÇÃO (Gestor) — limpar dados de TESTE
+     para a estreia começar com histórico limpo.
+     1) Zerar checks de um período: as ocorrências gravadas no
+        intervalo voltam a 'pendente' (concluidaEm/iniciadaEm/
+        dataOverride limpos). NÃO apaga atividades nem docs.
+     2) Desativar atividades de teste por SIGLA (soft-delete
+        ativo:false) — inclui siglas órfãs/desativadas.
+     Ambas: preview + confirmação em modal + 1 registro-resumo no
+     atividade_log (quota-são). Teto 400 escritas por rodada.
+     ============================================================ */
+  function ehGestor() { return !!(USER && (USER.perfil === 'gestor' || USER.profile === 'Admin')); }
+
+  function renderManutencao() {
+    if (!ehGestor()) { return; }
+    var card = el('<div class="im-card" style="margin-top:16px"></div>');
+    card.appendChild(txt('div', 'im-step', 'Zona de manutenção · Gestor'));
+    card.appendChild(txt('div', 'im-card-t', 'Limpar dados de teste'));
+    card.appendChild(txt('div', 'im-hint', 'Para a estreia começar limpa após o treino. Toda limpeza mostra um preview, pede confirmação e registra um resumo no histórico (atividade_log). Nada é apagado de verdade: checks voltam a "pendente" e atividades são desativadas (reversível em "Inativas").'));
+
+    /* --- ação 1: zerar checks de um período --- */
+    var r1 = el('<div class="im-row" style="align-items:center;flex-wrap:wrap;margin-top:10px"></div>');
+    r1.appendChild(txt('span', 'im-hint', 'Zerar checks de teste no período:'));
+    var d1 = document.createElement('input'); d1.type = 'date';
+    var d2 = document.createElement('input'); d2.type = 'date';
+    d1.style.cssText = d2.style.cssText = 'background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 9px;font:inherit;font-size:12.5px';
+    d2.value = R.hojeISO(); d1.value = R.addDias(R.hojeISO(), -45);
+    r1.appendChild(d1); r1.appendChild(d2);
+    var b1 = UI.button({ label: 'Ver o que será zerado', variant: 'ghost', icon: 'check' });
+    b1.addEventListener('click', function () { previewZerarChecks(d1.value, d2.value); });
+    r1.appendChild(b1);
+    card.appendChild(r1);
+
+    /* --- ação 2: desativar atividades por sigla --- */
+    var r2 = el('<div class="im-row" style="align-items:center;flex-wrap:wrap;margin-top:8px"></div>');
+    r2.appendChild(txt('span', 'im-hint', 'Desativar atividades de teste da sigla:'));
+    var sel = document.createElement('select');
+    sel.style.cssText = 'background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 9px;font:inherit;font-size:12.5px';
+    var vistos = {}, ativasSig = {};
+    SETORES.forEach(function (s) { if (s && s.ativo) { ativasSig[s.sigla] = true; } });
+    var op0 = document.createElement('option'); op0.value = ''; op0.textContent = '— escolha a sigla —'; sel.appendChild(op0);
+    ATIV.forEach(function (a) {
+      var sig = a && a.setorSigla; if (!sig || vistos[sig]) { return; } vistos[sig] = true;
+      var op = document.createElement('option'); op.value = sig;
+      op.textContent = sig + (ativasSig[sig] ? '' : ' · (setor desativado)');
+      sel.appendChild(op);
+    });
+    r2.appendChild(sel);
+    var b2 = UI.button({ label: 'Ver o que será desativado', variant: 'ghost', icon: 'check' });
+    b2.addEventListener('click', function () { if (!sel.value) { toast('Escolha a sigla.', 'err'); return; } previewDesativarSigla(sel.value); });
+    r2.appendChild(b2);
+    card.appendChild(r2);
+    bodyEl.appendChild(card);
+  }
+
+  function modalConfirmar(titulo, linhas, aviso, onOk) {
+    var body = [];
+    var box = el('<div></div>');
+    linhas.slice(0, 20).forEach(function (l) { box.appendChild(txt('div', 'im-hint', '• ' + l)); });
+    if (linhas.length > 20) { box.appendChild(txt('div', 'im-hint', '… e mais ' + (linhas.length - 20) + ' item(ns).')); }
+    body.push(box);
+    var av = txt('div', 'im-hint', aviso); av.style.color = 'var(--red)'; av.style.fontWeight = '700'; av.style.marginTop = '8px';
+    body.push(av);
+    var okBtn = null;
+    var mm = UI.modal({
+      title: titulo, width: 520, body: body,
+      footer: function (close) {
+        var c = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+        okBtn = UI.button({ label: 'Confirmar limpeza', icon: 'check', onClick: function () { okBtn.disabled = true; onOk(mm); } });
+        return [c, okBtn];
+      }
+    });
+    return mm;
+  }
+
+  function previewZerarChecks(ini, fim) {
+    if (!R.isISO(ini) || !R.isISO(fim) || ini > fim) { toast('Período inválido.', 'err'); return; }
+    fb().then(function (c) {
+      var q = c.f.query(c.f.collection(c.db, 'ocorrencias'),
+        c.f.where('data', '>=', ini), c.f.where('data', '<=', fim), c.f.limit(400));
+      return c.f.getDocs(q).then(function (snap) {
+        var docs = [];
+        snap.forEach(function (d) {
+          var x = d.data() || {};
+          if (x.status && x.status !== 'pendente') { docs.push({ id: d.id, data: x.data, status: x.status }); }
+        });
+        if (!docs.length) { toast('Nenhum check gravado no período — nada a zerar.'); return; }
+        var porStatus = {};
+        docs.forEach(function (x) { porStatus[x.status] = (porStatus[x.status] || 0) + 1; });
+        var resumo = Object.keys(porStatus).map(function (k) { return porStatus[k] + ' ' + k; }).join(' · ');
+        modalConfirmar(
+          'Zerar checks de ' + ini + ' a ' + fim,
+          docs.slice(0, 20).map(function (x) { return x.data + ' · ' + x.status; }),
+          docs.length + ' registro(s) voltarão a "pendente" (' + resumo + '). As atividades e o cadastro NÃO são tocados. Esta ação fica no histórico.',
+          function (mm) { executarZerar(docs, ini, fim, mm); }
+        );
+      });
+    }).catch(function (e) { toast(ferr(e).message, 'err'); });
+  }
+
+  function executarZerar(docs, ini, fim, mm) {
+    fb().then(function (c) {
+      var i = 0;
+      function passo() {
+        if (i >= docs.length) {
+          return Store.log({ acao: 'limpeza_teste_checks', entidade: 'ocorrencia', refId: ini + '..' + fim,
+            antes: { total: docs.length }, depois: { status: 'pendente', periodo: ini + ' a ' + fim } })
+            .then(function () { mm.close(); toast(docs.length + ' check(s) zerados. Estreia limpa. ✔'); });
+        }
+        var d = docs[i]; i++;
+        return c.f.setDoc(c.f.doc(c.db, 'ocorrencias', d.id),
+          { status: 'pendente', concluidaEm: null, iniciadaEm: null, dataOverride: null }, { merge: true }).then(passo);
+      }
+      return passo();
+    }).catch(function (e) { mm.close(); toast('Limpeza interrompida: ' + ferr(e).message + ' Rode de novo para continuar (é idempotente).', 'err'); });
+  }
+
+  function previewDesativarSigla(sig) {
+    var alvo = ATIV.filter(function (a) { return a && a.setorSigla === sig && a.ativo !== false; });
+    if (!alvo.length) { toast('Nenhuma atividade ativa com a sigla ' + sig + '.'); return; }
+    modalConfirmar(
+      'Desativar atividades de ' + sig,
+      alvo.map(function (a) { return a.titulo || a.id; }),
+      alvo.length + ' atividade(s) serão desativadas (soft-delete ativo:false). Reversível em Atividades → Inativas. Fica no histórico.',
+      function (mm) { executarDesativar(alvo, sig, mm); }
+    );
+  }
+
+  function executarDesativar(alvo, sig, mm) {
+    fb().then(function (c) {
+      var i = 0;
+      function passo() {
+        if (i >= alvo.length) {
+          return Store.log({ acao: 'limpeza_teste_atividades', entidade: 'atividade', refId: sig,
+            antes: { total: alvo.length }, depois: { ativo: false, sigla: sig } })
+            .then(function () { mm.close(); toast(alvo.length + ' atividade(s) desativadas. ✔'); boot2(); });
+        }
+        var a = alvo[i]; i++;
+        return c.f.setDoc(c.f.doc(c.db, 'atividades', a.id), { ativo: false, atualizadoEm: Date.now() }, { merge: true }).then(passo);
+      }
+      return passo();
+    }).catch(function (e) { mm.close(); toast('Interrompido: ' + ferr(e).message + ' Rode de novo (idempotente).', 'err'); });
   }
 
   function renderPasso2(parsed) {

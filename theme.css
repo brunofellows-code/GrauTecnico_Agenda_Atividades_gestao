@@ -146,3 +146,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ============================================================
+   F1-D · TOKENS DE MOVIMENTO E PROFUNDIDADE (append)
+   Consumidos pelas telas; nenhum valor anterior foi alterado.
+   ============================================================ */
+:root {
+  --easeSwift: cubic-bezier(.22,.8,.32,1); /* saída rápida, chegada macia */
+  --shadowSoft: 0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.06);
+}

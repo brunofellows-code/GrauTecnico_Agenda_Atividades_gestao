@@ -297,6 +297,8 @@
 
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
+  <script src="kpi.js"></script>
+  <script src="ctx.js"></script>
   <script>
   (function () {
     'use strict';
@@ -359,9 +361,10 @@
           }).catch(function (e) { throw ferr(e); });
         },
 
-        /* Usuários ativos para o picker de responsável. Requer perfil Admin
-           pela rule de `list`. Quem não for Admin recebe permission-denied —
-           o chamador trata com fallback (auto-atribuição). */
+        /* Usuários ativos para o picker de responsável. Rule de 'list':
+           gestor E líder (F1-D). O líder é recortado ao escopo no cliente
+           (KPI.usuariosNoEscopo). Demais perfis: permission-denied →
+           fallback (auto-atribuição). */
         listUsuariosAtivos: function () {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
@@ -652,7 +655,12 @@
       toolbarEl.innerHTML = '';
       renderLoading();
       Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers(), safeProjetos()])
-        .then(function (res) { SETORES = res[0]; ATIV = res[1]; USERS = res[2]; PROJETOS = res[3]; return loadBoardData(); })
+        .then(function (res) {
+          SETORES = res[0]; ATIV = res[1]; PROJETOS = res[3];
+          /* F1-D(b): líder enxerga só os liderados do escopo; gestor vê todos. */
+          USERS = KPI.usuariosNoEscopo(res[2], CURRENT_USER, SETORES);
+          return loadBoardData();
+        })
         .then(function () { renderAll(); })
         .catch(function (e) { renderError(e); });
     }
@@ -765,6 +773,12 @@
       var count = txt('div', 'at-count', '');
       count.innerHTML = '<b>' + BOARD.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo];
       left.appendChild(count);
+      /* F1-D(j): contexto global de setor — 1 escolha vale em Hoje/Atividades/Inteligência */
+      if (window.GrautCtx) {
+        GrautCtx.mount(left, { setores: SETORES, user: CURRENT_USER,
+          rotuloTudo: (Guard.isLider && Guard.isLider()) ? 'Meu escopo' : 'Toda a escola',
+          onChange: function () { renderBoard(); updateCount(); } });
+      }
       bar.appendChild(left);
 
       /* ---- direita: filtros e ações ---- */
@@ -859,6 +873,7 @@
 
       ATIV.forEach(function (act) {
         if (!visivelPara(act, CURRENT_USER)) { return; }   /* F1-B: escopo por papel */
+        if (window.GrautCtx && !GrautCtx.aplicaAtividade(act, GrautCtx.sanear(GrautCtx.get(), SETORES, CURRENT_USER))) { return; } /* F1-D(j): pré-filtro global */
         if (selSetor && !act.todosSetores && setoresDe(act).indexOf(selSetor) === -1) { return; }
         var ovs = OCC_BY_ATIV[act.id] || [];
         var occs = R.ocorrenciasNaJanela(act, w.jIni, w.jFim, ovs, hoje);
@@ -1455,8 +1470,19 @@
         var o = respOpts.filter(function (x) { return x.value === uid; })[0]; return o ? o.label.replace(' (você)', '') : '';
       }
       var respSelect = UI.select({ value: editing ? act.responsavelUid : (CURRENT_USER.uid || ''), placeholder: '— Escolha o responsável —', options: respOpts });
-      var respHint = USERS.length ? 'Quem responde por esta rotina.' : 'Lista de usuários indisponível (precisa de perfil Admin). Atribuída a você por padrão.';
+      var respHint = USERS.length
+        ? ((Guard.isLider && Guard.isLider()) ? 'Escolha entre os liderados do seu escopo.' : 'Quem responde por esta rotina.')
+        : 'Lista de usuários indisponível para o seu perfil. Atribuída a você por padrão.';
       var respField = UI.field({ label: 'Responsável', required: true, control: respSelect, hint: respHint });
+
+      /* F1-D(c): camada do organograma no modal (antes só vinha do import).
+         Default 'operacional' — mesmo default do importador e do filtro do Hoje.
+         Doc antigo sem o campo segue funcionando (leitura trata ausência). */
+      var camSelect = UI.select({
+        value: (editing && act.camada) ? act.camada : 'operacional',
+        options: [{ value: 'socio', label: 'Sócio (gestão indireta)' }, { value: 'gestor', label: 'Gestor (gestão direta)' }, { value: 'operacional', label: 'Operacional (líder + assistente)' }]
+      });
+      var camField = UI.field({ label: 'Camada', control: camSelect, hint: 'Organograma: define em qual lente (Sócio/Gestor/Operacional) a rotina aparece.' });
 
       /* N4: vínculo OPCIONAL a projeto (o % da atividade cascateia p/ o projeto).
          `origem` (decisão de reunião) nunca é editada aqui — só preservada. */
@@ -1543,7 +1569,7 @@
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, setorField, subField, multiField, respField, projField, recField, recBox, hrField, banner],
+        body: [titField, descField, setorField, subField, multiField, respField, camField, projField, recField, recBox, hrField, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -1577,6 +1603,7 @@
           subsetorSigla: (subSelect && subSelect.value) ? subSelect.value : null,
           responsavelUid: respUid,
           responsavelNome: respNomeOf(respUid),
+          camada: camSelect.value || 'operacional', /* F1-D(c) */
           recorrencia: tipo,
           horario: hrInp.value || null,
           diasSemana: tipo === 'semanal' ? selDias.slice().sort(function (a, b) { return a - b; }) : null,

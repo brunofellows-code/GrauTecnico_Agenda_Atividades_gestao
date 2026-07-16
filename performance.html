@@ -385,7 +385,7 @@
           }
           return d;
         }
-        grid.appendChild(pm('Score', p.score == null ? '—' : p.score, p.score == null ? 'sem previstas na janela' : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC));
+        grid.appendChild(pm('Score', p.score == null ? (p.coletando ? '— coletando' : '—') : p.score, p.score == null ? (p.coletando ? 'nada venceu ainda — a medição começa quando a primeira rotina vence' : 'sem previstas na janela') : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC));
         grid.appendChild(pm('Aderência', fmtPct(p.ader), p.concluidasAteHoje + ' ÷ ' + p.previstas + ' previstas até hoje', 'previstas'));
         grid.appendChild(pm('No prazo', fmtPct(p.pctNoPrazo), p.noPrazo + ' de ' + p.concluidasTotal + ' concluída(s), por dia civil local', 'concluidas'));
         grid.appendChild(pm('Ciclo', fmtDias(p.cicloDias), p.pares ? p.pares + ' par(es) iniciada→concluída' : 'sem par iniciada/concluída — não inventa', 'ciclo'));
@@ -421,10 +421,14 @@
 
   /* ---------- score por setor (mesmos dados/render do N2) ---------- */
   function scoreSetores(m) {
-    var base = m.porSetor.filter(function (s) { return s.sig !== '—' && s.previstas > 0; }).map(function (s) {
+    /* F1-D: mesma régua honesta da Inteligência — só sigla ATIVA com previstas
+       VENCIDAS entra no score (partida fria não vira vermelho falso). */
+    function sigAtiva(sig) { var s = (m.setores || []).filter(function (x) { return x.sigla === sig; })[0]; return !!(s && s.ativo); }
+    var base = m.porSetor.filter(function (s) { return s.sig !== '—' && sigAtiva(s.sig) && s.prevVencidas > 0; }).map(function (s) {
       return { sigla: s.sig, ader: s.aderencia == null ? 0 : s.aderencia, atrasadas: s.atrasadas, agingMedio: s.agingMedio || 0, carga: s.carga || 0 };
     });
-    if (!base.length) { return null; }
+    var colet = m.porSetor.filter(function (s) { return s.sig !== '—' && sigAtiva(s.sig) && s.previstas + (s.carga || 0) > 0 && s.prevVencidas === 0; });
+    if (!base.length && !colet.length) { return null; }
     var calc = base.map(function (s) {
       var pctAtr = s.carga ? Math.round(s.atrasadas / s.carga * 100) : 0;
       return { sigla: s.sigla, sc: KPI._score(s.ader, pctAtr, s.agingMedio) };
@@ -450,6 +454,19 @@
       row.appendChild(tr);
       row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + ')">' + x.sc.score + '</span>'));
       card.appendChild(row);
+    });
+    /* F1-D: setores em partida — neutro, nunca vermelho */
+    colet.forEach(function (s) {
+      var row = el('<div class="pf-ss-row" style="opacity:.85"></div>');
+      row.appendChild(el('<span class="pf-ss-dot" style="background:var(--muted2)"></span>'));
+      var nome = el('<span class="pf-ss-nome"></span>'); nome.textContent = KPI.nomeSetor(s.sig, m.setores); nome.title = s.sig;
+      row.appendChild(nome);
+      row.appendChild(el('<span class="pf-ss-track"></span>'));
+      var tg = el('<span></span>');
+      tg.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 9px';
+      tg.textContent = '— coletando';
+      card.appendChild(row);
+      row.appendChild(tg);
     });
     return card;
   }
@@ -506,7 +523,7 @@
       var tok = tomToken(p.tom);
       var sc = el('<span class="pf-scorecell"></span>');
       sc.appendChild(el('<span class="pf-scoredot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok === 'muted2' ? 'green' : tok) + ')"></span>'));
-      sc.appendChild(el('<span style="color:var(--' + tok + ')">' + (p.score == null ? '—' : p.score) + '</span>'));
+      sc.appendChild(el('<span style="color:var(--' + tok + ')">' + (p.score == null ? (p.coletando ? '— coletando' : '—') : p.score) + '</span>'));
       tdS.appendChild(sc); tr.appendChild(tdS);
       [fmtPct(p.ader), fmtPct(p.pctNoPrazo), fmtDias(p.cicloDias), String(p.carga), p.reprogPct + '%'].forEach(function (v) {
         var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);

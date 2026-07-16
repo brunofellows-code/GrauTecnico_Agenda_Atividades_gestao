@@ -45,7 +45,7 @@
 /* KPI cards (foco + scorecard) */
 .pf-focus{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:13px}
 .pf-score{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:22px}
-.pf-big,.pf-small{background:var(--s1);border:1px solid var(--border);border-radius:15px}
+.pf-big,.pf-small{background:var(--s1);border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadowSoft)}
 .pf-big{padding:16px 16px 14px}
 .pf-small{padding:13px}
 .pf-card-top{display:flex;align-items:center;gap:8px;margin-bottom:12px}
@@ -179,6 +179,19 @@
 .dd-go{font-size:12.5px;font-weight:700;color:var(--greenText);text-decoration:none;margin-right:auto;align-self:center}
 .dd-go:hover{text-decoration:underline}
 @media(max-width:700px){.dd-row{flex-wrap:wrap}.dd-tit{flex-basis:100%;white-space:normal}}
+
+/* ---------- F1-D: partida fria + backlog sem dono ---------- */
+.pf-banner{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--brand);border-radius:12px;padding:12px 16px;margin-bottom:13px;font-size:12.5px;color:var(--muted);font-weight:600}
+.pf-banner b{color:var(--text)}
+.pf-colet-row{opacity:.85}
+.pf-colet-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 9px}
+.pf-orfa{font-size:12px;color:var(--muted2);border-top:1px dashed var(--border);margin-top:10px;padding-top:9px}
+.pf-backlog{display:flex;align-items:center;gap:14px;background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:15px;padding:14px 18px;margin-bottom:13px;flex-wrap:wrap}
+.pf-backlog-n{font-size:24px;font-weight:800;color:var(--amber);line-height:1}
+.pf-backlog-t{font-size:13px;font-weight:700;color:var(--text)}
+.pf-backlog-s{font-size:12px;color:var(--muted);font-weight:600}
+.pf-backlog a{color:var(--greenText);font-weight:800;font-size:12.5px;text-decoration:none;margin-left:auto}
+.pf-backlog a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -243,12 +256,14 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="ctx.js"></script>
   <script>
   /* ===== Inteligência: KPIs REAIS via kpi.js (motor validado à mão). Zero mock. ===== */
   var USER = { name: '—', profile: 'Visualizador', initials: '—' };
   var PERIODO = 'band';   /* band = atrasadas + 30 dias (padrão) | 'semana' | 'mes' */
   var MODELO = null;      /* último retorno de KPI.computar */
   var BOARD = [];         /* M2: board expandido retido p/ agrupar gargalos multi-setor */
+  var DATA_OPER_MIN = null; /* F1-D: menor dataInicio recorrente — âncora do banner de partida */
   var SNAPSHOTS = [];     /* N2: fotos diárias (kpi_snapshots) p/ Δ7d + sparkline */
   var SNAP_TENTADO = false; /* N2: gravação idempotente — 1 tentativa por sessão */
   var HOJE = null;        /* N2: dia civil local do último computar */
@@ -477,8 +492,11 @@
   function focusKPIs(m) {
     var t = m.totais;
     return [
-      { label: 'Aderência à rotina', value: fmtPct(m.aderencia), tone: toneAder(m.aderencia),
-        sub: t.concluidasAteHoje + ' de ' + t.previstasAteHoje + ' previstas até hoje',
+      { label: 'Aderência à rotina',
+        /* F1-D(e): nada venceu ainda → neutro "coletando" (0% falso não existe) */
+        value: t.previstasVencidas === 0 ? '—' : fmtPct(m.aderencia),
+        tone: t.previstasVencidas === 0 ? 'muted2' : toneAder(m.aderencia),
+        sub: t.previstasVencidas === 0 ? 'coletando — mede quando a 1ª rotina vencer' : (t.concluidasAteHoje + ' de ' + t.previstasAteHoje + ' previstas até hoje'),
         trendKey: 'aderencia', menorMelhor: false,
         drill: function () { return DD.previstas(); }, drillTitle: 'Aderência — previstas até hoje (abertas primeiro)',
         info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas. Δ7d e linha: fotos diárias (kpi_snapshots) da janela padrão', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
@@ -530,12 +548,13 @@
   /* ---------- gráficos ---------- */
   function aderCor(v) { return v == null ? 'var(--muted2)' : v >= 90 ? 'var(--green)' : v >= 80 ? 'var(--amber)' : 'var(--red)'; }
   function chartAderencia(m) {
-    var itens = m.porSetor.filter(function (s) { return s.previstas > 0; }).map(function (s) {
+    /* F1-D(e): barra só de quem JÁ TEM rotina vencida — partida fria não pinta 0% vermelho */
+    var itens = m.porSetor.filter(function (s) { return s.prevVencidas > 0; }).map(function (s) {
       return { l: KPI.nomeSetor(s.sig, m.setores), v: s.aderencia == null ? 0 : s.aderencia, c: aderCor(s.aderencia) };
     });
     var body = itens.length
       ? barsH(itens, { max: 100, suffix: '%', meta: 90, metaLabel: 'meta 90%', rowClass: 'pf-ader-row' })
-      : el('<div class="pf-empty2">Nenhuma ocorrência prevista até hoje.</div>');
+      : el('<div class="pf-empty2">Nada venceu ainda — a aderência aparece quando a primeira rotina vencer.</div>');
     return chartCard('Aderência por setor',
       { title: 'Aderência por setor', formula: 'concluídas ÷ previstas × 100, por setor (até hoje)', dados: 'ocorrências agrupadas por setor (multi-setor conta em cada um)', numeros: 'linha = meta 90%; ordem: pior para melhor' },
       body, 'pf-aderencia');
@@ -565,13 +584,16 @@
       barsV(itens, { max: max }), 'pf-throughput');
   }
   function chartCarga(m) {
-    var top = m.carga.slice(0, 8);
+    /* F1-D(f): '(sem responsável)' NÃO entra no gráfico de pessoas — vira o
+       card "Backlog sem dono" (acionável). Aqui só gente real. */
+    var reais = m.carga.filter(function (x) { return x.nome !== '(sem responsável)'; });
+    var top = reais.slice(0, 8);
     if (!top.length) {
       return chartCard('Carga por responsável',
-        { title: 'Carga por responsável', formula: 'abertas por pessoa', dados: 'abertas: pendente + em andamento + reprogramada', numeros: 'nada aberto' },
-        el('<div class="pf-empty2">Nada aberto no momento.</div>'), 'pf-carga');
+        { title: 'Carga por responsável', formula: 'abertas por pessoa (sem contar o backlog sem dono)', dados: 'abertas: pendente + em andamento + reprogramada', numeros: 'nenhuma pessoa com carga' },
+        el('<div class="pf-empty2">Nenhuma pessoa com carga atribuída.</div>'), 'pf-carga');
     }
-    var vals = m.carga.map(function (x) { return x.n; }).sort(function (a, b) { return a - b; });
+    var vals = reais.map(function (x) { return x.n; }).sort(function (a, b) { return a - b; });
     var mediana = vals[Math.floor(vals.length / 2)] || 0;
     var cap = Math.max(1, Math.round(mediana * 1.5));
     var max = Math.max.apply(null, top.map(function (x) { return x.n; }).concat([cap]));
@@ -583,16 +605,37 @@
 
   /* ---------- N2: score composto por setor (pesos 50/30/20) ---------- */
   function tomToken(t) { return t === 'ok' ? 'green' : t === 'warn' ? 'amber' : 'red'; }
+  function sigAtiva(sig, setores) {
+    var s = (setores || []).filter(function (x) { return x.sigla === sig; })[0];
+    return !!(s && s.ativo);
+  }
   function setoresParaScore(m) {
-    /* só setores mensuráveis (com previstas): aderência existe. Sem previstas
-       → sem score (evita gargalo falso por aderência “0” inexistente). */
-    return m.porSetor.filter(function (s) { return s.sig !== '—' && s.previstas > 0; }).map(function (s) {
+    /* F1-D: mensurável = sigla ATIVA no cadastro + previstas VENCIDAS > 0
+       (só o que já devia ter acontecido pode ser cobrado — partida fria
+       não entra no score; evita 0% falso no dia 1). */
+    return m.porSetor.filter(function (s) { return s.sig !== '—' && sigAtiva(s.sig, m.setores) && s.prevVencidas > 0; }).map(function (s) {
       return { sigla: s.sig, ader: s.aderencia == null ? 0 : s.aderencia, atrasadas: s.atrasadas, agingMedio: s.agingMedio || 0, carga: s.carga || 0 };
     });
   }
+  function setoresColetando(m) {
+    /* ativos com atividade na janela mas NADA vencido ainda → "coletando" (neutro) */
+    return m.porSetor.filter(function (s) { return s.sig !== '—' && sigAtiva(s.sig, m.setores) && (s.previstas + (s.carga || 0)) > 0 && s.prevVencidas === 0; });
+  }
+  function setoresOrfaos(m) {
+    /* siglas desativadas/inexistentes ainda apontadas por atividades */
+    var tot = 0, sigs = [];
+    m.porSetor.forEach(function (s) {
+      if (s.sig === '—' || sigAtiva(s.sig, m.setores)) { return; }
+      tot += (s.previstas || 0) + (s.carga || 0);
+      sigs.push(s.sig);
+    });
+    return { total: tot, sigs: sigs };
+  }
   function scoreSetores(m) {
     var base = setoresParaScore(m);
-    if (!base.length) { return null; }
+    var colet = setoresColetando(m);
+    var orfa = setoresOrfaos(m);
+    if (!base.length && !colet.length && !orfa.sigs.length) { return null; }
     var calc = base.map(function (s) {
       var pctAtr = s.carga ? Math.round(s.atrasadas / s.carga * 100) : 0;
       return { sigla: s.sigla, sc: KPI._score(s.ader, pctAtr, s.agingMedio) };
@@ -629,8 +672,48 @@
       row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + ')">' + x.sc.score + '</span>'));
       list.appendChild(row);
     });
+    /* F1-D(e): setores em partida — tom NEUTRO, nunca vermelho */
+    colet.forEach(function (s) {
+      var row = el('<div class="pf-ss-row pf-colet-row"></div>');
+      row.appendChild(el('<span class="pf-ss-dot" style="background:var(--muted2)"></span>'));
+      var nome = el('<span class="pf-ss-nome"></span>');
+      nome.textContent = KPI.nomeSetor(s.sig, m.setores);
+      nome.title = s.sig;
+      row.appendChild(nome);
+      row.appendChild(el('<span class="pf-ss-track"></span>'));
+      row.appendChild(el('<span class="pf-colet-tag">— coletando</span>'));
+      list.appendChild(row);
+    });
     card.appendChild(list);
+    /* F1-D(g): siglas desativadas/inexistentes — fora do score, com ação */
+    if (orfa.sigs.length) {
+      var of = el('<div class="pf-orfa"></div>');
+      of.textContent = '(setor desativado — reatribuir): ' + orfa.total + ' ocorrência(s) em ' + orfa.sigs.join(', ') + '. Reatribua o setor dessas atividades na tela Atividades.';
+      card.appendChild(of);
+    }
     return card;
+  }
+
+  /* ---------- F1-D(f): card de backlog sem dono (acionável) ---------- */
+  function backlogCard(m) {
+    var t = m.totais;
+    if (!t.semResp && !t.ativSemResp) { return null; }
+    var card = el('<div class="pf-backlog"></div>');
+    card.appendChild(el('<div class="pf-backlog-n">' + t.semResp + '</div>'));
+    var mid = el('<div></div>');
+    mid.appendChild(el('<div class="pf-backlog-t">Backlog sem dono: ' + t.semResp + ' ocorrência(s) · ' + t.ativSemResp + ' atividade(s)</div>'));
+    mid.appendChild(el('<div class="pf-backlog-s">Rotina sem responsável não é cobrada de ninguém. Atribua os responsáveis para os números valerem.</div>'));
+    card.appendChild(mid);
+    card.appendChild(el('<a href="atividades.html">Atribuir na tela Atividades →</a>'));
+    return card;
+  }
+
+  /* ---------- F1-D(e): banner de partida (medição nasce do uso) ---------- */
+  function bannerPartida(m) {
+    if (m.totais.previstasVencidas > 0 || !m.totais.ocorrencias) { return null; }
+    var dtStr = '';
+    if (DATA_OPER_MIN) { dtStr = ' Início da operação: <b>' + DATA_OPER_MIN.slice(8, 10) + '/' + DATA_OPER_MIN.slice(5, 7) + '</b>.'; }
+    return el('<div class="pf-banner">Medição em partida — os indicadores nascem do uso: cada número começa a contar quando a primeira rotina vence.' + dtStr + ' Volte amanhã para ver o primeiro número — nada aqui é ruim ainda; é cedo.</div>');
   }
 
   /* ---------- plano de ação (priorização) ---------- */
@@ -694,7 +777,9 @@
           act: 'Repriorizar e redistribuir as vencidas mais antigas primeiro.' });
       }
     });
-    var vals = m.carga.map(function (x) { return x.n; }).sort(function (a, b) { return a - b; });
+    /* F1-D(f): a mediana da régua sai só de PESSOAS REAIS — o backlog sem dono
+       (milhares de ocorrências) distorceria o corte de sobrecarga. */
+    var vals = m.carga.filter(function (x) { return x.nome !== '(sem responsável)'; }).map(function (x) { return x.n; }).sort(function (a, b) { return a - b; });
     var mediana = vals[Math.floor(vals.length / 2)] || 0; var cap = Math.max(1, Math.round(mediana * 1.5));
     m.carga.forEach(function (c) {
       if (c.nome !== '(sem responsável)' && c.n > cap) {
@@ -722,17 +807,40 @@
   }
 
   /* ---------- render + estados + boot ---------- */
+  var CTX_MONTADO = false;
+  function montarCtx(m) {
+    /* F1-D(j): seletor global de setor — só depois do 1º load (precisa das siglas reais) */
+    if (CTX_MONTADO || !window.GrautCtx) { return; }
+    var exp = document.getElementById('pf-export');
+    if (!exp) { return; }
+    var w = GrautCtx.mount(exp, { setores: m.setores, user: USER, rotuloTudo: 'Toda a escola', onChange: carregar });
+    if (w) { exp.insertBefore(w, exp.firstChild); }
+    CTX_MONTADO = true;
+  }
+
   function paint(m) {
     MODELO = m;
+    montarCtx(m);
     document.getElementById('pf-stamp').textContent =
       'Janela: ' + rotuloPeriodo(m.periodo) + ' (' + brData(m.janela.jIni) + ' a ' + brData(m.janela.jFim) + ') · ' +
       m.totais.atividadesAtivas + ' atividades ativas · ' + m.totais.ocorrencias + ' ocorrências.';
     var body = document.getElementById('pf-body');
     body.innerHTML = '';
+    /* F1-D(h): "abrir e saber o que fazer" — banner (se partida) → KPIs de foco →
+       PLANO DE AÇÃO → score por setor → backlog sem dono → KPIs pequenos → gráficos.
+       Só reordenação de blocos; zero lógica nova nos cálculos. */
+    var bp = bannerPartida(m);
+    if (bp) { body.appendChild(bp); }
     var focus = el('<div class="pf-focus"></div>');
     focusKPIs(m).forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
     body.appendChild(focus);
+    body.appendChild(planoAcao(m));
+    var ss = scoreSetores(m);
+    if (ss) { ss.style.marginTop = '13px'; body.appendChild(ss); }
+    var bk = backlogCard(m);
+    if (bk) { bk.style.marginTop = '13px'; body.appendChild(bk); }
     var score = el('<div class="pf-score"></div>');
+    score.style.marginTop = '13px';
     scoreKPIs(m).forEach(function (k) { score.appendChild(kpiCard(k, false)); });
     body.appendChild(score);
     var row1 = el('<div class="pf-row1"></div>');
@@ -741,9 +849,6 @@
     var row2 = el('<div class="pf-row2"></div>');
     row2.appendChild(chartThroughput(m)); row2.appendChild(chartCarga(m));
     body.appendChild(row2);
-    var ss = scoreSetores(m);
-    if (ss) { body.appendChild(ss); }
-    body.appendChild(planoAcao(m));
   }
 
   /* ---------- N2: foto do dia (idempotente; falha nunca quebra o painel) ---------- */
@@ -777,7 +882,19 @@
     }
     showState('Carregando indicadores…', 'Lendo as ocorrências da janela.');
     Promise.all([
-      KPI.carregar(PERIODO).then(function (ctx) { ctx = KPI.recortarContexto(ctx, USER); BOARD = ctx.board; return KPI.computar(ctx); }),
+      KPI.carregar(PERIODO).then(function (ctx) {
+        ctx = KPI.recortarContexto(ctx, USER);
+        /* F1-D(j): pré-filtro global de setor — mesmos números das outras telas */
+        if (window.GrautCtx) {
+          var cxSig = GrautCtx.sanear(GrautCtx.get(), ctx.setores, USER);
+          if (cxSig) {
+            ctx = { board: ctx.board.filter(function (o) { return GrautCtx.aplicaAtividade(o.act, cxSig); }),
+                    ativ: ctx.ativ.filter(function (a) { return GrautCtx.aplicaAtividade(a, cxSig); }),
+                    setores: ctx.setores, janela: ctx.janela, hoje: ctx.hoje, periodo: ctx.periodo };
+          }
+        }
+        BOARD = ctx.board; DATA_OPER_MIN = KPI.minDataInicio(ctx.ativ); return KPI.computar(ctx);
+      }),
       KPI.lerSnapshots(window.GrautRecorrencia.hojeISO()) /* degrada p/ [] se as regras ainda não foram publicadas */
     ]).then(function (r) {
       var m = r[0];

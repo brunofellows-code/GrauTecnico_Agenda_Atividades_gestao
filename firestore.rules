@@ -35,6 +35,13 @@ service cloud.firestore {
       return isActive() && (perfil() == 'Admin' || perfil() == 'Editor'
                             || perfil() == 'gestor' || perfil() == 'lider');
     }
+    function isLider() {
+      // F1-D: líder precisa LISTAR usuários para atribuir responsável aos
+      // liderados. O recorte fino (só o escopo dele) é aplicado no cliente
+      // via KPI.usuariosNoEscopo — a rule dá o piso (nome/perfil/setor de
+      // usuários ativos; nada sensível além do que a sidebar já mostra).
+      return isActive() && (perfil() == 'lider' || perfil() == 'Editor');
+    }
     function donoAtividade(aid) {
       return signedIn()
           && exists(/databases/$(database)/documents/atividades/$(aid))
@@ -44,7 +51,7 @@ service cloud.firestore {
     // ---------- usuarios (RBAC) ----------
     match /usuarios/{uid} {
       allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow list: if isAdmin();
+      allow list: if isAdmin() || isLider(); // F1-D: líder lista para atribuir no escopo
       allow write: if isAdmin();
     }
 

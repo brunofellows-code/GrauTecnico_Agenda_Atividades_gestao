@@ -59,6 +59,33 @@
 .hj-evcard.std{background:var(--s2);border:1px solid var(--border)}
 .hj-evmeta{display:flex;align-items:center;gap:9px;margin-bottom:5px}
 .hj-tag{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:6px;background:var(--chipBg);border:1px solid var(--border)}
+/* F1-D(i): blocos colapsáveis por setor na lista "Atividades do dia" */
+.hj-grp{border:1px solid var(--border);border-radius:12px;background:var(--s1);margin-bottom:8px;overflow:hidden}
+.hj-grphd{display:flex;align-items:center;gap:9px;width:100%;background:transparent;border:0;font-family:inherit;cursor:pointer;padding:10px 12px;text-align:left}
+.hj-grphd:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;border-radius:12px}
+.hj-grpcaret{display:inline-flex;color:var(--muted2);transition:transform .18s ease}
+.hj-grp.closed .hj-grpcaret{transform:rotate(-90deg)}
+.hj-grpnome{font-size:12.5px;font-weight:800;color:var(--text)}
+.hj-grpline{flex:1;height:1px;background:var(--border)}
+.hj-grpcount{font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap}
+.hj-grpcount b{color:var(--text)}
+.hj-grpbody{padding:2px 10px 8px}
+.hj-grp.closed .hj-grpbody{display:none}
+@media(prefers-reduced-motion:reduce){.hj-grpcaret{transition:none}}
+/* F1-D(m): régua do dia — progresso vivo no topo */
+.hj-prog{background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:12px 16px;margin-bottom:14px;box-shadow:var(--shadowSoft)}
+.hj-prog-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.hj-prog-t{font-size:12.5px;font-weight:800;color:var(--text)}
+.hj-prog-t b{font-size:15px}
+.hj-prog-s{font-size:11.5px;font-weight:700;color:var(--muted2)}
+.hj-prog-track{height:7px;border-radius:20px;background:var(--chipBg);overflow:hidden}
+.hj-prog-fill{height:100%;border-radius:20px;background:var(--green);transition:width .45s var(--easeSwift),background .3s ease;min-width:0}
+@media(prefers-reduced-motion:reduce){.hj-prog-fill{transition:none}}
+/* F1-D(n): microrrespostas nas linhas do dia */
+.hj-daytask{border-radius:9px;padding:5px 7px;margin:0 -7px;transition:background .15s ease}
+.hj-daytask:hover{background:var(--chipBg)}
+.hj-grp{box-shadow:var(--shadowSoft)}
+.hj-grphd:hover .hj-grpnome{color:var(--greenText)}
 .hj-evsec{font-size:11px;font-weight:600;color:var(--muted2)}
 .hj-evt{font-size:14px;font-weight:700}
 
@@ -178,6 +205,7 @@
       <div class="hj-content">
         <div class="hj-scope" id="hj-scope"></div>
       <div class="hj-state" id="hj-state"></div>
+      <div id="hj-prog"></div>
       <div class="hj-kpis" id="hj-kpis"></div>
 
         <div class="hj-cols">
@@ -217,6 +245,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="ctx.js"></script>
   <script>
   /* ================= MEU DIA — dados REAIS (zero mock) =================
      Carrega via KPI.carregar (mesmo motor validado da Inteligência) e
@@ -232,6 +261,7 @@
   var CAMADA_LABEL = { socio: 'Sócio', gestor: 'Gestor', operacional: 'Operacional' };
   var CAMADA_COR = { socio: 'brand', gestor: 'orange', operacional: 'muted2' };
   var FCAMADA = 'todas';          /* 'todas' | 'socio' | 'gestor' | 'operacional' */
+  var HJ_ABERTO = {};             /* F1-D(i): colapso por setor (memória da sessão; false = fechado) */
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
@@ -409,22 +439,31 @@
   function setState(msg, sub) {
     var st = document.getElementById('hj-state');
     var cols = document.querySelector('.hj-cols'); var kp = document.getElementById('hj-kpis');
-    if (!msg) { st.style.display = 'none'; cols.style.display = ''; kp.style.display = ''; return; }
-    st.style.display = ''; cols.style.display = 'none'; kp.style.display = 'none';
+    var pgS = document.getElementById('hj-prog');
+    if (!msg) { st.style.display = 'none'; cols.style.display = ''; kp.style.display = ''; if (pgS) { pgS.style.display = ''; } return; }
+    st.style.display = ''; cols.style.display = 'none'; kp.style.display = 'none'; if (pgS) { pgS.style.display = 'none'; }
     st.innerHTML = '';
     st.appendChild(txt('div', 'hj-state-t', msg));
     if (sub) { st.appendChild(txt('div', 'hj-state-s', sub)); }
   }
 
   /* ---------- pintura ---------- */
+  var CTX_MONTADO = false;
   function paint() {
     var m = MODELO, hoje = m.hoje;
+    /* F1-D(j): o seletor global precisa das siglas reais — monta no 1º paint */
+    if (!CTX_MONTADO && window.GrautCtx) { CTX_MONTADO = true; pintarScope(); }
     /* F1-B: o escopo do papel é o PISO — gestor vê tudo, líder só seus setores,
        usuário só as suas. O toggle Minhas/Todas atua DENTRO desse escopo. */
     var escopo = m.board.filter(function (o) { return KPI.visivelPara(o.act, CURRENT_USER, m.setores); });
     var board = (MODO === 'minhas')
       ? escopo.filter(function (o) { return o.act.responsavelUid === CURRENT_USER.uid; })
       : escopo;
+    /* F1-D(j): pré-filtro GLOBAL de setor (context switcher) — antes dos filtros locais */
+    if (window.GrautCtx) {
+      var cxSig = GrautCtx.sanear(GrautCtx.get(), m.setores, CURRENT_USER);
+      if (cxSig) { board = board.filter(function (o) { return GrautCtx.aplicaAtividade(o.act, cxSig); }); }
+    }
     /* P2: filtro por camada — atividade sem o campo conta como 'operacional' (default do import) */
     if (FCAMADA !== 'todas') {
       board = board.filter(function (o) { return (o.act.camada || 'operacional') === FCAMADA; });
@@ -454,15 +493,39 @@
 
     var mm = KPI.computar({ board: board, hoje: hoje, setores: m.setores, ativ: m.ativ, janela: m.janela, periodo: m.periodo });
 
+    /* F1-D(m): régua do dia — "quantas de quantas" com barra viva.
+       Marcou um check → refresh() → a barra ANDA (transição CSS). */
+    var pg = document.getElementById('hj-prog'); pg.innerHTML = '';
+    var pctDia = d.doHoje.length ? Math.round(d.feitasHoje / d.doHoje.length * 100) : 0;
+    if (d.doHoje.length) {
+      var pbox = el('<div class="hj-prog"></div>');
+      var ptop = el('<div class="hj-prog-top"></div>');
+      var msg = d.feitasHoje === 0 ? 'Comece marcando a primeira ✓'
+        : (d.feitasHoje === d.doHoje.length ? 'Dia fechado. 🎯' : pctDia + '% do dia');
+      ptop.appendChild(el('<div class="hj-prog-t"><b>' + d.feitasHoje + '</b> de <b>' + d.doHoje.length + '</b> concluídas hoje</div>'));
+      ptop.appendChild(el('<div class="hj-prog-s">' + msg + '</div>'));
+      pbox.appendChild(ptop);
+      var tr = el('<div class="hj-prog-track"></div>');
+      var fill = el('<div class="hj-prog-fill"></div>');
+      fill.style.width = '0%';
+      fill.style.background = pctDia >= 60 ? 'var(--green)' : 'var(--amber)';
+      tr.appendChild(fill); pbox.appendChild(tr); pg.appendChild(pbox);
+      /* dispara a transição no frame seguinte (0% → pct real) */
+      setTimeout(function () { fill.style.width = Math.max(2, pctDia) + '%'; }, 30);
+    }
+
     /* KPIs do topo */
     var kg = document.getElementById('hj-kpis'); kg.innerHTML = '';
-    var pctDia = d.doHoje.length ? Math.round(d.feitasHoje / d.doHoje.length * 100) : 0;
     var kpis = [
-      { label: 'Para hoje', value: String(d.doHoje.length), sub: d.feitasHoje + ' concluída(s)', tone: d.doHoje.length ? 'green' : 'amber' },
+      { label: 'Para hoje', value: String(d.doHoje.length), sub: d.feitasHoje === 0 && d.doHoje.length ? 'comece pela primeira ✓' : d.feitasHoje + ' concluída(s)', tone: d.doHoje.length ? 'green' : 'amber' },
       { label: 'Concluídas hoje', value: String(d.feitasHoje), sub: pctDia + '% do dia', tone: pctDia >= 60 ? 'green' : 'amber' },
       { label: 'Atrasadas', value: String(d.atras.length), sub: d.atras.length ? 'resolver primeiro' : 'nada vencido', tone: d.atras.length ? 'red' : 'green' },
       { label: 'Em andamento', value: String(mm.totais.andamento), sub: 'já iniciadas', tone: mm.totais.andamento ? 'amber' : 'green' },
-      { label: 'Aderência (janela)', value: mm.aderencia == null ? '—' : mm.aderencia + '%', sub: 'meta 90%', tone: mm.aderencia == null ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red') },
+      { label: 'Aderência (janela)',
+        /* F1-D(e): partida fria = mesmo tratamento do "sem previstas" (nunca 0% vermelho falso) */
+        value: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? '—' : mm.aderencia + '%',
+        sub: mm.totais.previstasVencidas === 0 ? 'coletando' : 'meta 90%',
+        tone: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red') },
       { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green' }
     ];
     kpis.forEach(function (k) { kg.appendChild(UI.kpiCard(k)); });
@@ -474,10 +537,44 @@
     if (d.comHora.length) { d.comHora.forEach(function (o) { tl.appendChild(tlRow(o, agoraHM)); }); }
     else { tl.appendChild(txt('div', 'hj-empty', 'Nenhuma atividade com horário hoje.')); }
 
-    /* atividades do dia (sem horário) */
+    /* atividades do dia (sem horário) — F1-D(i): agrupadas por setor-RAIZ.
+       O paredão alfabético vira blocos colapsáveis: sigla + nome + "N · M feitas".
+       Multi-homing aparece em cada setor marcado — o check é o MESMO objeto
+       (concluir num grupo conclui em todos). Ordem interna: camada
+       (sócio→gestor→operacional) e depois título. Motor puro: KPI.gruposDoDia
+       (testado no harness). Colapso vive em memória (reabre expandido). */
     var dt = document.getElementById('hj-daytasks'); dt.innerHTML = '';
     var rc = document.querySelector('.hj-rcount'); if (rc) { rc.textContent = d.feitasHoje + ' de ' + d.doHoje.length; }
-    if (d.semHora.length) { d.semHora.forEach(function (o) { dt.appendChild(dayRow(o)); }); }
+    if (d.semHora.length) {
+      var grupos = KPI.gruposDoDia(d.semHora, m.setores);
+      if (grupos.length === 1) {
+        /* um setor só (líder de subsetor, contexto filtrado): sem cabeçalho — lista direta */
+        grupos[0].items.forEach(function (o) { dt.appendChild(dayRow(o)); });
+      } else {
+        grupos.forEach(function (g) {
+          var fechado = HJ_ABERTO[g.sig] === false;
+          var box = el('<div class="hj-grp' + (fechado ? ' closed' : '') + '"></div>');
+          var hd = el('<button type="button" class="hj-grphd" aria-expanded="' + (!fechado) + '"></button>');
+          var car = el('<span class="hj-grpcaret"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></span>');
+          hd.appendChild(car);
+          var sigTag = txt('span', 'hj-tag', g.sig === '—' ? 'SEM SETOR' : g.sig);
+          sigTag.style.color = g.sig === '—' ? 'var(--muted2)' : 'var(--' + KPI.corSetor(g.sig, m.setores) + ')';
+          hd.appendChild(sigTag);
+          hd.appendChild(txt('span', 'hj-grpnome', g.sig === '—' ? 'Sem setor definido' : KPI.nomeSetor(g.sig, m.setores)));
+          hd.appendChild(el('<span class="hj-grpline"></span>'));
+          var cnt = el('<span class="hj-grpcount"><b>' + g.items.length + '</b> · ' + g.feitas + ' feita(s)</span>');
+          hd.appendChild(cnt);
+          (function (sig) {
+            hd.addEventListener('click', function () { HJ_ABERTO[sig] = (HJ_ABERTO[sig] === false); paint(); });
+          })(g.sig);
+          box.appendChild(hd);
+          var bd = el('<div class="hj-grpbody"></div>');
+          g.items.forEach(function (o) { bd.appendChild(dayRow(o)); });
+          box.appendChild(bd);
+          dt.appendChild(box);
+        });
+      }
+    }
     else { dt.appendChild(txt('div', 'hj-empty', 'Nada sem horário hoje.')); }
 
     /* atrasadas */
@@ -513,6 +610,18 @@
       cb.addEventListener('click', function () { if (FCAMADA !== c[0]) { FCAMADA = c[0]; pintarScope(); paint(); } });
       cs.appendChild(cb);
     });
+    /* F1-D(j): contexto global de setor ao lado dos seletores locais */
+    var gx = document.getElementById('hj-gctx');
+    if (!gx) {
+      gx = el('<div class="hj-scope" id="hj-gctx" style="margin-left:8px;border:0;background:transparent;padding:0"></div>');
+      cs.parentNode.insertBefore(gx, cs.nextSibling);
+    }
+    gx.innerHTML = '';
+    if (window.GrautCtx && MODELO) {
+      GrautCtx.mount(gx, { setores: MODELO.setores, user: CURRENT_USER,
+        rotuloTudo: (Guard.isGestor && Guard.isGestor()) ? 'Toda a escola' : 'Meu escopo',
+        onChange: function () { paint(); } });
+    }
   }
 
   /* ---------- carga ---------- */

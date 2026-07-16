@@ -201,6 +201,9 @@
 
     var ateHoje = board.filter(function (o) { return R.compareISO(o.effDate, hoje) <= 0; });
     var prevAteHoje = ateHoje.filter(function (o) { return o.status !== 'pulada'; });          /* previstas: exclui puladas */
+    /* F1-D: previstas VENCIDAS = já deviam ter acontecido (effDate < hoje). O que vence
+       HOJE ainda não é atraso às 9h — partida fria não pode punir com 0% falso. */
+    var prevVencidas = prevAteHoje.filter(function (o) { return R.compareISO(o.effDate, hoje) < 0; });
     var conclAteHoje = ateHoje.filter(function (o) { return o.status === 'concluida'; });
     var atrasadas = board.filter(function (o) { return o.atrasada; });
     var andamento = board.filter(function (o) { return o.status === 'em_andamento'; });
@@ -228,12 +231,12 @@
 
     /* por setor (multi-homing: conta em cada setor onde a atividade aparece) */
     var setorMap = {};
-    function bkt(sig) { return setorMap[sig] || (setorMap[sig] = { sig: sig, previstas: 0, concluidas: 0, atrasadas: 0, agingSoma: 0, carga: 0 }); }
+    function bkt(sig) { return setorMap[sig] || (setorMap[sig] = { sig: sig, previstas: 0, prevVencidas: 0, concluidas: 0, atrasadas: 0, agingSoma: 0, carga: 0 }); }
     ateHoje.forEach(function (o) {
       var sigs = setoresDe(o.act, setores); if (!sigs.length) { sigs = ['—']; }
       sigs.forEach(function (sig) {
         var b = bkt(sig);
-        if (o.status !== 'pulada') { b.previstas++; if (o.status === 'concluida') { b.concluidas++; } }
+        if (o.status !== 'pulada') { b.previstas++; if (R.compareISO(o.effDate, hoje) < 0) { b.prevVencidas++; } if (o.status === 'concluida') { b.concluidas++; } }
         if (o.atrasada) { b.atrasadas++; b.agingSoma += R.diasEntre(o.effDate, hoje); }
       });
     });
@@ -276,6 +279,8 @@
         reprogramadas: reprogramadas.length,
         abertas: abertas.length,
         semResp: semResp,
+        previstasVencidas: prevVencidas.length, /* F1-D: base honesta da partida fria */
+        ativSemResp: (ativ || []).filter(function (x) { return !x.responsavelUid; }).length, /* F1-D: backlog sem dono (séries) */
         atividadesAtivas: ativ.length
       },
       aderencia: aderencia,
@@ -508,7 +513,7 @@
       var k = uid || '(sem)';
       return map[k] || (map[k] = {
         uid: uid || null, nome: uid ? (nome || '(sem nome)') : '(sem responsável)',
-        total: 0, previstas: 0, concluidasAteHoje: 0, concluidasTotal: 0,
+        total: 0, previstas: 0, prevVencidas: 0, concluidasAteHoje: 0, concluidasTotal: 0,
         noPrazo: 0, atrasadas: 0, agingSoma: 0, carga: 0, reprogramadas: 0,
         cicloSomaMs: 0, pares: 0, thr4n: 0, sigs: {}
       });
@@ -520,6 +525,7 @@
       var ateHoje = R.compareISO(o.effDate, hoje) <= 0;
       if (ateHoje && o.status !== 'pulada') {
         p.previstas++;
+        if (R.compareISO(o.effDate, hoje) < 0) { p.prevVencidas++; }
         if (o.status === 'concluida') { p.concluidasAteHoje++; }
       }
       if (o.status === 'concluida') {
@@ -549,6 +555,7 @@
       p.thr4 = Math.round(p.thr4n / 4 * 10) / 10;
       p.pctAtrasadas = p.carga ? Math.round(p.atrasadas / p.carga * 100) : 0;
       if (p.ader == null) { p.score = null; p.tom = 'flat'; }         /* sem previstas → sem score (honesto) */
+      else if (p.prevVencidas === 0) { p.score = null; p.tom = 'flat'; p.coletando = true; } /* F1-D: partida fria — nada venceu ainda; medir amanhã, não punir hoje */
       else { var sc = K._score(p.ader, p.pctAtrasadas, p.agingMedio); p.score = sc.score; p.tom = sc.tom; p.comp = sc; }
       p.setores = Object.keys(p.sigs).sort();
       delete p.sigs;
@@ -598,5 +605,85 @@
       if (window.console && console.warn) { console.warn('[kpi] snapshots indisponíveis (tendência fica em coleta):', (e && e.message) || e); }
       return [];
     });
+  };
+  /* ============================================================
+     F1-D · HELPERS PUROS (append) — testados no harness.
+     ============================================================ */
+
+  /* Usuários visíveis no picker de responsável, por papel.
+     gestor  -> todos os ativos.
+     líder   -> quem tem `setor` (lotação) dentro do escopo expandido
+                (raiz liderada + subsetores filhos) + ele mesmo.
+                Usuário sem `setor` definido fica FORA do picker do líder
+                (não dá para provar o escopo) — exceto o próprio líder.
+     usuario -> ninguém (a tela nem abre o modal; fail-safe).       */
+  K.usuariosNoEscopo = function (usuarios, user, setores) {
+    var list = Array.isArray(usuarios) ? usuarios : [];
+    if (!user) { return []; }
+    if (user.perfil === 'gestor') { return list.slice(); }
+    if (user.perfil === 'lider') {
+      var esc = escopoLider(user.setoresLiderados, setores || []);
+      return list.filter(function (u) {
+        if (u && u.uid && user.uid && u.uid === user.uid) { return true; }
+        return !!(u && u.setor && esc[u.setor]);
+      });
+    }
+    return [];
+  };
+
+  /* Agrupa as ocorrências SEM horário do dia por setor-RAIZ (Hoje).
+     Multi-homing: a MESMA ocorrência aparece em cada raiz marcada
+     (o check é um só — o objeto é compartilhado, nunca duplicado).
+     Ordem dos grupos: ordem do cadastro de setores; órfãos/sem setor
+     por último. Ordem interna: camada (socio→gestor→operacional;
+     ausente = operacional) e depois título (pt-BR).                 */
+  var CAMADA_PESO = { socio: 0, gestor: 1, operacional: 2 };
+  K.gruposDoDia = function (semHora, setores) {
+    var sets = Array.isArray(setores) ? setores : [];
+    var raizes = sets.filter(function (s) { return s && !s.setorPaiSigla && s.ativo; });
+    var ordem = {}; raizes.forEach(function (s, i) { ordem[s.sigla] = i; });
+    function raizDe(sig) {
+      var s = sets.filter(function (x) { return x.sigla === sig; })[0];
+      if (!s) { return sig; }
+      return s.setorPaiSigla ? s.setorPaiSigla : s.sigla;
+    }
+    var map = {}, keys = [];
+    (semHora || []).forEach(function (o) {
+      var sigs = setoresDe(o.act, sets).map(raizDe);
+      if (!sigs.length) { sigs = ['—']; }
+      var vistos = {};
+      sigs.forEach(function (sig) {
+        if (vistos[sig]) { return; } vistos[sig] = true;
+        if (!map[sig]) { map[sig] = { sig: sig, items: [], feitas: 0 }; keys.push(sig); }
+        map[sig].items.push(o);
+        if (o.status === 'concluida') { map[sig].feitas++; }
+      });
+    });
+    keys.sort(function (a, b) {
+      var oa = (a in ordem) ? ordem[a] : 900 + (a === '—' ? 99 : 0);
+      var ob = (b in ordem) ? ordem[b] : 900 + (b === '—' ? 99 : 0);
+      if (oa !== ob) { return oa - ob; }
+      return a < b ? -1 : (a > b ? 1 : 0);
+    });
+    keys.forEach(function (k) {
+      map[k].items.sort(function (x, y) {
+        var cx = CAMADA_PESO[(x.act && x.act.camada) || 'operacional']; if (cx == null) { cx = 2; }
+        var cy = CAMADA_PESO[(y.act && y.act.camada) || 'operacional']; if (cy == null) { cy = 2; }
+        if (cx !== cy) { return cx - cy; }
+        return ((x.act && x.act.titulo) || '').localeCompare((y.act && y.act.titulo) || '', 'pt-BR');
+      });
+    });
+    return keys.map(function (k) { return map[k]; });
+  };
+
+  /* Menor dataInicio entre atividades recorrentes ativas — âncora do
+     banner "medição inicia em DD/MM". null se não derivável.        */
+  K.minDataInicio = function (ativ) {
+    var min = null;
+    (ativ || []).forEach(function (a) {
+      if (!a || a.recorrencia === 'unico' || !a.dataInicio) { return; }
+      if (min === null || a.dataInicio < min) { min = a.dataInicio; }
+    });
+    return min;
   };
 })();
