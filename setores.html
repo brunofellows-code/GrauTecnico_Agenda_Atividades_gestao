@@ -320,6 +320,51 @@
           }).catch(function (e) { throw (e && e.field) ? e : ferr(e); });
         },
         setAtivo: function (sigla, ativo) { return api.update(sigla, { ativo: !!ativo }); },
+
+        /* F1-E · 0.2 — Zona de manutenção: varre atividades ATIVAS e devolve o
+           uso de siglas (setorSigla + setorSiglas[] + subsetorSigla) para achar
+           órfãs (sigla ausente ou inativa no cadastro). Leitura única, com teto. */
+        listUsoDeSiglas: function () {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f;
+            var q = f.query(f.collection(db, 'atividades'), f.where('ativo', '==', true), f.limit(1000));
+            return f.getDocs(q).then(function (snap) {
+              var uso = {}; /* sigla -> [atividadeId,...] */
+              function marca(sig, id) {
+                if (!sig) { return; }
+                (uso[sig] = uso[sig] || []).push(id);
+              }
+              snap.forEach(function (d) {
+                var a = d.data() || {};
+                if (a.todosSetores) { return; } /* "todos" não referencia sigla específica */
+                if (Array.isArray(a.setorSiglas) && a.setorSiglas.length) {
+                  a.setorSiglas.forEach(function (sg) { marca(sg, d.id); });
+                } else { marca(a.setorSigla, d.id); }
+                marca(a.subsetorSigla, d.id);
+              });
+              return uso;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+        /* Soft-delete em lote das atividades de uma sigla órfã (nunca delete
+           físico). Cada atividade vira ativo:false + linha no atividade_log. */
+        inativarAtividadesDaSigla: function (sigla, ids, uid) {
+          return fb().then(function (ctx) {
+            var db = ctx.db, f = ctx.f, now = Date.now();
+            var seq = Promise.resolve();
+            ids.forEach(function (id) {
+              seq = seq.then(function () {
+                return f.updateDoc(f.doc(db, 'atividades', id), { ativo: false, atualizadoEm: now }).then(function () {
+                  return f.addDoc(f.collection(db, 'atividade_log'), {
+                    ts: Date.now(), uid: uid || null, acao: 'inativar_atividade', entidade: 'atividade',
+                    refId: id, antes: { ativo: true }, depois: { ativo: false, motivo: 'sigla órfã ' + sigla }
+                  }).catch(function () {});
+                });
+              });
+            });
+            return seq;
+          }).catch(function (e) { throw ferr(e); });
+        },
         /* F1-C · migração idempotente para a taxonomia oficial (CSA + subsetores).
            Aditiva e reversível: cria os setores que faltam, converte AGE em
            subsetor de CSA, desativa QLD (soft-delete) e remapeia as atividades
@@ -644,6 +689,47 @@
         visibleRoots.forEach(function (r) { tree.appendChild(rootNode(r)); });
       }
       stage.appendChild(tree);
+      if (CAN_WRITE) { stage.appendChild(zonaManutencao()); }
+    }
+
+    /* F1-E · 0.2 — siglas órfãs: sigla usada em atividade ativa que não existe
+       ATIVA no cadastro. Verificação sob demanda (1 leitura com teto de 1000);
+       limpeza = soft-delete auditado, nunca delete físico.                    */
+    function zonaManutencao() {
+      var card = el('<div class="st-tree" style="margin-top:16px"></div>');
+      var hd = el('<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>');
+      var t = txt('div', '', 'Zona de manutenção — siglas órfãs');
+      t.style.fontWeight = '700';
+      hd.appendChild(t);
+      var res = el('<div style="margin-top:8px"></div>');
+      var btn = UI.button({ label: 'Verificar siglas órfãs', variant: 'ghost', onClick: function () {
+        res.innerHTML = '';
+        res.appendChild(txt('div', 'st-kidempty', 'Verificando…'));
+        Store.listUsoDeSiglas().then(function (uso) {
+          res.innerHTML = '';
+          var ativasCad = {};
+          ALL.forEach(function (sx) { if (sx.ativo) { ativasCad[sx.sigla] = true; } });
+          var orfas = Object.keys(uso).filter(function (sg) { return !ativasCad[sg]; }).sort();
+          if (!orfas.length) { res.appendChild(txt('div', 'st-kidempty', 'Nenhuma sigla órfã — todas as atividades ativas apontam para setores ativos.')); return; }
+          orfas.forEach(function (sg) {
+            var ids = uso[sg];
+            var lin = el('<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px"></div>');
+            lin.appendChild(txt('span', '', sg + ' — ' + ids.length + ' atividade(s) ativa(s) apontando para sigla ' + (ALL.some(function (sx) { return sx.sigla === sg; }) ? 'INATIVA' : 'INEXISTENTE')));
+            lin.appendChild(UI.button({ label: 'Inativar essas atividades', variant: 'ghost', onClick: function () {
+              if (!window.confirm('Inativar ' + ids.length + ' atividade(s) da sigla órfã "' + sg + '"?\n\nÉ soft-delete auditado (ativo:false + atividade_log) — nada é apagado do banco.')) { return; }
+              Store.inativarAtividadesDaSigla(sg, ids, CURRENT_USER.uid || null)
+                .then(function () { toast(ids.length + ' atividade(s) de "' + sg + '" inativada(s).'); btn.click(); })
+                .catch(function (e) { toast(e.message, 'err'); });
+            } }));
+            res.appendChild(lin);
+          });
+        }).catch(function (e) { res.innerHTML = ''; res.appendChild(txt('div', 'st-kidempty', e.message)); });
+      } });
+      hd.appendChild(btn);
+      card.appendChild(hd);
+      card.appendChild(txt('div', 'st-kidempty', 'Sigla órfã = atividade ativa apontando para setor que não existe ativo no cadastro. Ela polui pauta e indicadores — a pauta ignora e lista aqui.'));
+      card.appendChild(res);
+      return card;
     }
 
     function toggleAtivo(s) {

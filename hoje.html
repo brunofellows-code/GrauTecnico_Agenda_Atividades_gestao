@@ -262,6 +262,11 @@
   var CAMADA_COR = { socio: 'brand', gestor: 'orange', operacional: 'muted2' };
   var FCAMADA = 'todas';          /* 'todas' | 'socio' | 'gestor' | 'operacional' */
   var HJ_ABERTO = {};             /* F1-D(i): colapso por setor (memória da sessão; false = fechado) */
+  var CONVOC = [];                /* F1-E · 3.1: reuniões abertas em que fui convocado */
+  var TIPO_LABEL_R = { lideres: 'Reunião de Líderes', integrada: 'Reunião Integrada', instrutor: 'Reunião com Instrutor', lideres_turma: 'Reunião c/ Líderes de Turmas', departamento: 'Reunião de Departamento' };
+  function origemReuniao(act) {
+    return act && (act.origemTipo === 'reuniao' || (act.origem && act.origem.tipo === 'reuniao'));
+  }
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
@@ -305,6 +310,21 @@
           Store.log({ acao: acao, entidade: 'ocorrencia', refId: idoc, antes: null, depois: patch });
         });
       }).catch(function (e) { throw ferr(e); });
+    },
+    /* F1-E · 3.1: convocações do usuário — reuniões abertas onde ele foi
+       convocado. where('convocadosUids','array-contains') + limit; filtro de
+       ativo/encerrada NO CLIENTE (evita índice composto). Falha degrada p/ []. */
+    listMinhasConvocacoes: function (uid) {
+      return fb().then(function (c) {
+        var q = c.f.query(c.f.collection(c.db, 'reunioes'),
+          c.f.where('convocadosUids', 'array-contains', uid), c.f.limit(20));
+        return c.f.getDocs(q).then(function (snap) {
+          var a = [];
+          snap.forEach(function (d) { var r = d.data() || {}; r.id = d.id; a.push(r); });
+          return a.filter(function (r) { return r.ativo !== false && !r.encerradaEm; })
+            .sort(function (x, y) { return (x.data || '').localeCompare(y.data || ''); });
+        });
+      }).catch(function () { return []; });
     }
   };
 
@@ -412,6 +432,12 @@
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-freq', 'Em andamento'); em.style.color = 'var(--doing)'; row.appendChild(em); }
     else if (!done && CAN_WRITE()) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
     var camDia = chipCamada(o.act); if (camDia) { row.appendChild(camDia); }
+    if (origemReuniao(o.act)) {
+      var chR = txt('span', 'hj-freq', 'Reunião'); chR.style.color = 'var(--doing)';
+      var ogD = o.act.origem || {};
+      chR.title = 'Nasceu na reunião' + (ogD.reuniaoTitulo ? ' "' + ogD.reuniaoTitulo + '"' : '') + (ogD.reuniaoData ? ' de ' + ogD.reuniaoData : '');
+      row.appendChild(chR);
+    }
     row.appendChild(txt('span', 'hj-freq', RECOR_LABEL[o.act.recorrencia] || ''));
     return row;
   }
@@ -430,6 +456,12 @@
     var camTx = (o.act.camada && CAMADA_LABEL[o.act.camada]) ? ' · ' + CAMADA_LABEL[o.act.camada] : '';
     main.appendChild(txt('div', 'hj-late-s', sigs + camTx + (o.responsavel ? ' · ' + o.responsavel : '')));
     row.appendChild(main);
+    if (origemReuniao(o.act)) {
+      var chL = txt('span', 'hj-freq', 'Reunião'); chL.style.color = 'var(--doing)';
+      var ogL = o.act.origem || {};
+      chL.title = 'Nasceu na reunião' + (ogL.reuniaoTitulo ? ' "' + ogL.reuniaoTitulo + '"' : '') + (ogL.reuniaoData ? ' de ' + ogL.reuniaoData : '');
+      row.appendChild(chL);
+    }
     if (CAN_WRITE()) { row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok')); }
     row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
     return row;
@@ -490,6 +522,7 @@
       return;
     }
     setState(null);
+    pintarReunioes(hoje); /* F1-E · 3.1/6.2 */
 
     var mm = KPI.computar({ board: board, hoje: hoje, setores: m.setores, ativ: m.ativ, janela: m.janela, periodo: m.periodo });
 
@@ -624,9 +657,90 @@
     }
   }
 
+  /* ---------- F1-E · reuniões no Hoje (3.1 convocações + 6.2 compromissos) ---------- */
+  /* Compromissos = atividades nascidas de decisão de reunião sob minha
+     responsabilidade, em aberto (do board — janela padrão). Atividade ÚNICA
+     fora da janela aparece SEM occurrence: mostrada como aberta (limitação
+     declarada — o board é a única fonte sem query nova).                    */
+  function compromissosDeReuniao(hoje) {
+    var uid = (CURRENT_USER && CURRENT_USER.uid) || null;
+    if (!uid || !MODELO) { return []; }
+    var out = [], vistos = {};
+    MODELO.board.forEach(function (o) {
+      if (!origemReuniao(o.act)) { return; }
+      if (o.act.responsavelUid !== uid) { return; }
+      if (o.status === 'concluida' || o.status === 'pulada') { return; }
+      vistos[o.act.id] = true;
+      out.push({ occ: o, act: o.act, prazo: o.effDate, vencida: R.compareISO(o.effDate, hoje) < 0 });
+    });
+    (MODELO.ativ || []).forEach(function (a) {
+      if (vistos[a.id] || !origemReuniao(a) || a.responsavelUid !== uid) { return; }
+      if (a.recorrencia !== 'unico' || !a.data) { return; }
+      out.push({ occ: null, act: a, prazo: a.data, vencida: R.compareISO(a.data, hoje) < 0 });
+    });
+    out.sort(function (x, y) { return (x.prazo || '').localeCompare(y.prazo || ''); });
+    return out;
+  }
+  function fmtBRhj(iso) { if (!iso) { return '—'; } var p = iso.split('-'); return p[2] + '/' + p[1]; }
+  function pintarReunioes(hoje) {
+    var velho = document.getElementById('hj-reun');
+    if (velho && velho.parentNode) { velho.parentNode.removeChild(velho); }
+    var comps = compromissosDeReuniao(hoje);
+    if (!CONVOC.length && !comps.length) { return; }
+    var box = el('<div id="hj-reun" style="margin-bottom:16px"></div>');
+
+    if (CONVOC.length) {
+      var c1 = el('<div class="hj-card" style="padding:14px 16px;margin-bottom:10px"></div>');
+      c1.appendChild(txt('div', 'hj-late-t', 'Convocações de reunião (' + CONVOC.length + ')'));
+      CONVOC.forEach(function (r) {
+        var lin = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
+        lin.appendChild(txt('span', '', 'Convocado: ' + (TIPO_LABEL_R[r.tipo] || 'Reunião') + ' · ' + fmtBRhj(r.data) + (r.horaPrevista ? ' ' + r.horaPrevista : '') + ' — ' + (r.titulo || '')));
+        var vencidos = comps.filter(function (c) { return c.vencida; }).length;
+        var vp = txt('button', 'hj-freq', 'Ver pauta'); vp.type = 'button'; vp.style.cursor = 'pointer'; vp.style.color = 'var(--doing)';
+        vp.addEventListener('click', function () { window.location.href = 'projetos.html#reunioes'; });
+        lin.appendChild(vp);
+        if (vencidos) {
+          var pv = txt('span', 'hj-freq', 'você tem ' + vencidos + ' pendência(s) de reunião anterior');
+          pv.style.color = 'var(--orange)';
+          lin.appendChild(pv);
+        }
+        c1.appendChild(lin);
+      });
+      box.appendChild(c1);
+    }
+
+    if (comps.length) {
+      var c2 = el('<div class="hj-card" style="padding:14px 16px"></div>');
+      c2.appendChild(txt('div', 'hj-late-t', 'Compromissos de reunião (' + comps.length + ')'));
+      comps.forEach(function (c) {
+        var lin = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
+        lin.appendChild(txt('span', '', c.act.titulo || '(sem título)'));
+        var pz = txt('span', 'hj-freq', 'prazo ' + fmtBRhj(c.prazo));
+        if (c.vencida) { pz.style.color = 'var(--red)'; }
+        lin.appendChild(pz);
+        var ch = txt('span', 'hj-freq', 'Reunião');
+        ch.style.color = 'var(--doing)';
+        var og = c.act.origem || {};
+        ch.title = 'Nasceu na reunião' + (og.reuniaoTitulo ? ' "' + og.reuniaoTitulo + '"' : '') + (og.reuniaoData ? ' de ' + fmtBRhj(og.reuniaoData) : '');
+        lin.appendChild(ch);
+        if (c.occ && CAN_WRITE() && c.occ.status !== 'concluida') {
+          lin.appendChild(miniBtn('Concluir', (function (occ) { return function () { concluir(occ); }; })(c.occ), 'ok'));
+        }
+        c2.appendChild(lin);
+      });
+      box.appendChild(c2);
+    }
+    var cols = document.querySelector('.hj-cols');
+    cols.parentNode.insertBefore(box, cols);
+  }
+
   /* ---------- carga ---------- */
   function refresh() {
-    KPI.carregar('band').then(function (m) { MODELO = m; paint(); })
+    var uid = (CURRENT_USER && CURRENT_USER.uid) || null;
+    Promise.all([
+      KPI.carregar('band'),
+      uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve([])
+    ]).then(function (r) { MODELO = r[0]; CONVOC = r[1] || []; paint(); })
       .catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
   }
 

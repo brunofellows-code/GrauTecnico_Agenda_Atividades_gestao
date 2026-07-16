@@ -126,6 +126,19 @@
       ['Agenda de Eventos', 'O calendário mensal de eventos de todos os setores, com custo previsto × realizado. O botão no Meu Dia pulsa quando há novidade.'],
       ['Matriz de Risco', 'A lista dos riscos do sistema/operação, ordenada por Pareto (impacto × chance), cada um com sua mitigação.'],
       ['Importar', 'A tela de importação por planilha, com o de-para de auditoria e o preview do delta antes de gravar.']
+    ]],
+    ['Reuniões (ciclo PEF)', [
+      ['Tipos de reunião', 'O GERA tem 5 tipos, e o tipo define quem entra na convocação automática: Reunião de Líderes (todos os líderes + gestores), Reunião Integrada (líderes + gestores + sócios), Reunião de Departamento (o líder do setor escolhido + quem é lotado nele), Reunião com Instrutor e Reunião c/ Líderes de Turmas (só quem criou — instrutores e alunos não têm login, entram como convidados externos). Em todos os tipos dá para ajustar a lista à mão.'],
+      ['Convocado, presente e ausente', 'Convocado é quem foi chamado para a reunião. Presente é quem recebeu o check de presença na tela da reunião. Ausente NÃO é gravado: é a conta convocados − presentes, feita na hora — assim nunca fica ausência velha esquecida no banco.'],
+      ['Convidado externo', 'Pessoa sem login no GERA (ex.: instrutor, líder de turma). Entra pelo nome na criação da reunião e ganha check de presença igual aos demais.'],
+      ['Pauta', 'O texto do que será tratado. Pode ser escrito à mão ou gerado pelo botão "Gerar pauta automática", que monta o retrato honesto do momento: atrasadas por setor, setores abaixo da banda, gargalos, decisões abertas e aprovações pendentes. Setor sem nada vencido aparece como "em coleta" — a pauta não pune quem ainda não teve prazo vencendo.'],
+      ['Itens sugeridos de pauta', 'Qualquer pessoa com permissão de escrita pode sugerir um item antes da reunião — o item entra com o nome de quem sugeriu.'],
+      ['Ata / resumo (obrigatório)', 'O texto do que foi discutido e combinado. SEM ATA A REUNIÃO NÃO ENCERRA: o botão "Encerrar reunião" bloqueia se o resumo estiver vazio. Reunião encerrada fica travada; só um gestor pode reabrir.'],
+      ['Atraso da reunião', 'Minutos entre a hora prevista e a hora em que alguém clicou "Iniciar reunião". Positivo = começou atrasada; negativo = adiantada. Sem hora prevista ou sem o clique de início, não há atraso a medir — o GERA não inventa.'],
+      ['Decisão → atividade', 'Toda decisão pode virar uma atividade única com dono e prazo (botão "→ Atividade"). A atividade nasce com a etiqueta "Reunião" nas telas Hoje e Atividades — dá para rastrear de onde ela veio.'],
+      ['Status da decisão', 'Calculado na hora, nunca gravado: EM ABERTO (sem atividade e não resolvida, ou atividade ainda no prazo) · RESOLVIDA NA REUNIÃO · FEITA / FEITA NO PRAZO / FEITA COM ATRASO (a atividade-filha foi concluída) · VENCIDA (a atividade-filha estourou o prazo e segue aberta). Na reunião seguinte, as decisões aparecem agrupadas por dono — é a prestação de contas pessoa a pessoa.'],
+      ['Ação obrigatória (banda de aderência)', 'Regra inspirada na ISO: setor com aderência abaixo de 80% em 2 fotos do dia consecutivas ganha a etiqueta AÇÃO OBRIGATÓRIA na pauta — precisa sair da reunião com um plano. Uma foto abaixo = "atenção". Sem fotos suficientes, o GERA não acusa ninguém.'],
+      ['Enviar por WhatsApp / e-mail', 'Os botões abrem o seu WhatsApp ou app de e-mail com a pauta ou a ata prontas — você escolhe o destinatário e envia. Não há disparo automático: o GERA não tem servidor próprio para mandar mensagens sozinho (e-mails muito longos são cortados com aviso, o texto completo fica no GERA).']
     ]]
   ];
 

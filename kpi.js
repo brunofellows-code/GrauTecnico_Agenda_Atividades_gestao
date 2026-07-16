@@ -687,3 +687,144 @@
     return min;
   };
 })();
+
+/* ============================================================
+   F1-E · HELPERS PUROS (append) — reuniões que fecham o ciclo.
+   Testados no harness_f1e.js. Zero query nova aqui: só matemática
+   e classificação sobre dados já carregados pelas telas.
+   ============================================================ */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  var R = window.GrautRecorrencia;
+
+  /* Classifica m.porSetor para a PAUTA honesta (F1-E · 0.1):
+       morta     -> sigla que não existe ATIVA em `setores` (dado órfão);
+       coletando -> setor ativo com previstas na janela mas NADA vencido
+                    ainda (prevVencidas === 0) — medir amanhã, não punir hoje;
+       abaixo    -> setor ativo, com previsto vencido, aderência < banda.
+     Retorna { abaixo:[], coletando:[], mortas:[sigla] }. Puro.        */
+  K.pautaSetores = function (porSetor, setores, banda) {
+    var b = (banda == null) ? 80 : banda;
+    var ativas = {};
+    (setores || []).forEach(function (s) { if (s && s.ativo !== false && s.sigla) { ativas[s.sigla] = true; } });
+    var out = { abaixo: [], coletando: [], mortas: [] };
+    (porSetor || []).forEach(function (s) {
+      if (!s || s.sig === '—') { return; }
+      if (!ativas[s.sig]) { out.mortas.push(s.sig); return; }
+      if (!s.previstas) { return; }
+      if ((s.prevVencidas || 0) === 0) { out.coletando.push(s); return; }
+      if (s.aderencia != null && s.aderencia < b) { out.abaixo.push(s); }
+    });
+    return out;
+  };
+
+  /* BANDA ISO (F1-E · 4.1): quantos snapshots CONSECUTIVOS, do mais
+     recente para trás, têm aderência do setor < banda. Snapshot sem o
+     setor ou com ader null QUEBRA a sequência (nunca inventa). Com
+     menos de 2 fotos, "obrigatória" é impossível por definição. Puro. */
+  K.bandaConsecutiva = function (snapshots, sig, banda) {
+    var b = (banda == null) ? 80 : banda;
+    var lista = (snapshots || []).slice().sort(function (a, c) {
+      return a.data < c.data ? -1 : (a.data > c.data ? 1 : 0);
+    });
+    var n = 0;
+    for (var i = lista.length - 1; i >= 0; i--) {
+      var ps = lista[i] && lista[i].porSetor;
+      var row = ps && ps[sig];
+      if (!row || row.ader == null || row.ader >= b) { break; }
+      n++;
+    }
+    return { n: n, obrigatoria: n >= 2, atencao: n === 1, fotos: lista.length };
+  };
+
+  /* CONVOCAÇÃO AUTOMÁTICA por tipo de reunião (F1-E · B1).
+     usuarios = lista de ativos {uid, nome, perfil, setor, setoresLiderados}.
+     PREMISSA (registrada no HANDOFF): não há marcador "sócio" no doc de
+     usuários — sócio = quem lidera ou é lotado na sigla 'SOC'.
+     O criador entra SEMPRE (é quem conduz). Dedup por uid. Puro.       */
+  function ehSocio(u) {
+    if (!u) { return false; }
+    var lid = Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [];
+    return lid.indexOf('SOC') >= 0 || u.setor === 'SOC';
+  }
+  K.convocadosPorTipo = function (tipo, usuarios, setores, criador, setorSigla) {
+    var list = Array.isArray(usuarios) ? usuarios : [];
+    var picked = {}, out = [];
+    function add(u) {
+      if (!u || !u.uid || picked[u.uid]) { return; }
+      picked[u.uid] = true; out.push({ uid: u.uid, nome: u.nome || '(sem nome)' });
+    }
+    if (criador && criador.uid) { add({ uid: criador.uid, nome: criador.nome || criador.name }); }
+    if (tipo === 'lideres' || tipo === 'integrada') {
+      list.forEach(function (u) { if (u.perfil === 'lider' || u.perfil === 'gestor') { add(u); } });
+      if (tipo === 'integrada') { list.forEach(function (u) { if (ehSocio(u)) { add(u); } }); }
+    } else if (tipo === 'departamento' && setorSigla) {
+      var esc = K.escopoLider([setorSigla], setores || []);
+      list.forEach(function (u) {
+        var lid = Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [];
+        var lideraSetor = false;
+        for (var i = 0; i < lid.length; i++) {
+          if (lid[i] === setorSigla) { lideraSetor = true; break; }
+          var escU = K.escopoLider([lid[i]], setores || []);
+          if (escU[setorSigla]) { lideraSetor = true; break; }
+        }
+        if (lideraSetor) { add(u); return; }
+        if (u.setor && esc[u.setor]) { add(u); }
+      });
+    }
+    /* 'instrutor' e 'lideres_turma': só o criador (externos entram à mão). */
+    return out;
+  };
+  K.ehSocio = ehSocio;
+
+  /* STATUS DERIVADO da decisão convertida (F1-E · 4.2) — lê a ocorrência
+     da atividade-filha (única = 1 ocorrência do board). NUNCA gravado.
+       sem atividadeId: aberta:false -> 'resolvida' · senão 'aberta'
+       com atividadeId e occ:
+         concluida + concluidaEm(dia) <= effDate -> 'no_prazo'
+         concluida + concluidaEm(dia) >  effDate -> 'atraso'
+         concluida sem concluidaEm               -> 'feita'
+         aberta   + effDate < hoje               -> 'vencida'
+         senão                                   -> 'aberta'
+       com atividadeId e SEM occ (fora da janela) -> 'aberta' (declarado). */
+  K.statusDecisao = function (dec, occ, hoje) {
+    if (!dec) { return { chave: 'aberta', rotulo: 'em aberto' }; }
+    if (!dec.atividadeId) {
+      return dec.aberta === false
+        ? { chave: 'resolvida', rotulo: 'resolvida na reunião' }
+        : { chave: 'aberta', rotulo: 'em aberto' };
+    }
+    if (!occ) { return { chave: 'aberta', rotulo: 'em aberto' }; }
+    if (occ.status === 'concluida') {
+      var ov = occ.ov || {};
+      if (!ov.concluidaEm) { return { chave: 'feita', rotulo: 'feita' }; }
+      var dia = R.toISO(new Date(Number(ov.concluidaEm)));
+      return R.compareISO(dia, occ.effDate) <= 0
+        ? { chave: 'no_prazo', rotulo: 'feita no prazo' }
+        : { chave: 'atraso', rotulo: 'feita com atraso' };
+    }
+    if (R.compareISO(occ.effDate, hoje) < 0) { return { chave: 'vencida', rotulo: 'vencida' }; }
+    return { chave: 'aberta', rotulo: 'em aberto' };
+  };
+
+  /* ATRASO DA REUNIÃO (F1-E · B2, sem dinheiro): minutos entre a hora
+     prevista e a hora de início real ('HH:MM'). Negativo = adiantada.
+     Entrada inválida -> null (nunca inventa). Puro.                    */
+  K.minutosEntreHoras = function (hPrev, hReal) {
+    var rx = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    var a = rx.exec(String(hPrev || '')), b = rx.exec(String(hReal || ''));
+    if (!a || !b) { return null; }
+    return (Number(b[1]) * 60 + Number(b[2])) - (Number(a[1]) * 60 + Number(a[2]));
+  };
+
+  /* TRUNCAR para mailto (F1-E · 3.3): corpo acima do teto seguro perde a
+     cauda e ganha o aviso — o resumo completo vive no GERA. Puro.      */
+  K.truncarCorpo = function (texto, max) {
+    var t = String(texto || '');
+    var m = max || 1800;
+    var aviso = '\n…resumo completo no GERA.';
+    if (t.length <= m) { return t; }
+    return t.slice(0, Math.max(0, m - aviso.length)) + aviso;
+  };
+})();

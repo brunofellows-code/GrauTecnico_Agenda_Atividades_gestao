@@ -944,6 +944,7 @@
       else if (view === 'serie') { renderColapsadoSerie(); }
       else { renderList(); }
       if (capped) { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
+      updateCount(); /* F1-E · 0.3: BOARD acabou de ser reconstruído — o contador do topo acompanha */
     }
 
     /* ----- meta comum dos cartões ----- */
@@ -957,6 +958,12 @@
       var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
       if (o.horario) { var hr = el('<span class="at-mi"></span>'); hr.appendChild(ico(PATH.clock, 12)); hr.appendChild(document.createTextNode(o.horario)); into.appendChild(hr); }
       if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
+      if (o.act.origemTipo === 'reuniao' || (o.act.origem && o.act.origem.tipo === 'reuniao')) {
+        var rg = txt('span', 'at-tag', 'Reunião'); rg.style.color = 'var(--doing)'; rg.style.background = 'var(--chipBg)';
+        var og = o.act.origem || {};
+        rg.title = 'Nasceu na reunião' + (og.reuniaoTitulo ? ' "' + og.reuniaoTitulo + '"' : '') + (og.reuniaoData ? ' de ' + og.reuniaoData : '');
+        into.appendChild(rg);
+      }
       if (o.status === 'em_andamento') { into.appendChild(txt('span', 'at-statetag doing', 'Em andamento')); }
       if (o.status === 'reprogramada' && o.ov && o.ov.dataOverride) { into.appendChild(txt('span', 'at-statetag rep', 'Reprogramada → ' + fmtBR(o.ov.dataOverride))); }
       if (o.status === 'pulada') { into.appendChild(txt('span', 'at-statetag skip', 'Pulada')); }
@@ -979,7 +986,7 @@
         var hd = el('<div class="at-grouphd"></div>');
         hd.appendChild(txt('span', 'at-gname' + (g.data === hoje ? ' today' : ''), dayLabel(g.data)));
         hd.appendChild(el('<span class="at-gline"></span>'));
-        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' item(s)'));
+        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' ocorrência(s)'));
         sec.appendChild(hd);
         g.items.forEach(function (o) { sec.appendChild(listCard(o)); });
         wrap.appendChild(sec);
@@ -1132,12 +1139,13 @@
         hd.appendChild(txt('span', 'at-gname', nomeSetor(g.sig)));
         hd.appendChild(el('<span class="at-gline"></span>'));
         if (late) { hd.appendChild(txt('span', 'at-latebadge', late + ' atrasada(s)')); }
-        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' item(s)'));
+        hd.appendChild(txt('span', 'at-gcount', g.items.length + ' ocorrência(s)'));
         sec.appendChild(hd);
         g.items.forEach(function (o) { sec.appendChild(listCard(o)); });
         wrap.appendChild(sec);
       });
       stage.appendChild(wrap);
+      stage.appendChild(txt('div', 'at-capnote', 'Atividade marcada em vários setores aparece em cada um deles — a soma dos grupos pode passar do total de ocorrências.'));
     }
 
     /* ===================== QUADRO POR SETOR ===================== */
