@@ -192,6 +192,11 @@
 .pf-backlog-s{font-size:12px;color:var(--muted);font-weight:600}
 .pf-backlog a{color:var(--greenText);font-weight:800;font-size:12.5px;text-decoration:none;margin-left:auto}
 .pf-backlog a:hover{text-decoration:underline}
+/* F1-G · criar plano */
+.pf-catlist{max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.pf-catrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);cursor:pointer}
+.pf-catt{font-size:.8rem;color:var(--text)}
+.pf-date{background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font:inherit}
 </style>
 </head>
 <body>
@@ -263,6 +268,7 @@
   var PERIODO = 'band';   /* band = atrasadas + 30 dias (padrão) | 'semana' | 'mes' */
   var MODELO = null;      /* último retorno de KPI.computar */
   var BOARD = [];         /* M2: board expandido retido p/ agrupar gargalos multi-setor */
+  var ATIV = [];          /* F1-G: atividades ativas retidas p/ vincular a planos */
   var DATA_OPER_MIN = null; /* F1-D: menor dataInicio recorrente — âncora do banner de partida */
   var SNAPSHOTS = [];     /* N2: fotos diárias (kpi_snapshots) p/ Δ7d + sparkline */
   var SNAP_TENTADO = false; /* N2: gravação idempotente — 1 tentativa por sessão */
@@ -761,20 +767,23 @@
         itens.push({ sev: 'red',
           txt: nAtiv + ' atividade(s) multi-setor atrasada(s) afeta(m) ' + gs.length + ' setores (' +
             gs.map(function (g) { return g.sigla; }).join(', ') + ')',
-          act: 'Resolver a atividade multi-setor destrava todos os setores de uma vez.' });
+          act: 'Resolver a atividade multi-setor destrava todos os setores de uma vez.',
+          pl: { tipo: 'gargalo', chave: 'multi-setor', setorSigla: gs[0].sigla, atividadeIds: k.split('|') } });
       } else {
         soltos.push(gs[0]);
       }
     });
     soltos.forEach(function (g) {
       itens.push({ sev: 'red', txt: 'Gargalo: ' + g.sigla + ' — ' + g.motivo,
-        act: 'Levar à reunião de líderes: causa raiz e replanejamento do setor.' });
+        act: 'Levar à reunião de líderes: causa raiz e replanejamento do setor.',
+        pl: { tipo: 'gargalo', chave: g.motivo, setorSigla: g.sigla } });
     });
     m.porSetor.forEach(function (s) {
       if (s.atrasadas > 0 && !siglasGargalo[s.sig]) { /* M1: gargalo não repete como atrasadas */
         itens.push({ sev: s.atrasadas >= 5 ? 'red' : 'amber',
           txt: KPI.nomeSetor(s.sig, m.setores) + ': ' + s.atrasadas + ' atrasada(s) · aderência ' + (s.aderencia == null ? '—' : s.aderencia + '%'),
-          act: 'Repriorizar e redistribuir as vencidas mais antigas primeiro.' });
+          act: 'Repriorizar e redistribuir as vencidas mais antigas primeiro.',
+          pl: { tipo: 'setor_atrasadas', chave: s.sig, setorSigla: s.sig } });
       }
     });
     /* F1-D(f): a mediana da régua sai só de PESSOAS REAIS — o backlog sem dono
@@ -783,11 +792,13 @@
     var mediana = vals[Math.floor(vals.length / 2)] || 0; var cap = Math.max(1, Math.round(mediana * 1.5));
     m.carga.forEach(function (c) {
       if (c.nome !== '(sem responsável)' && c.n > cap) {
-        itens.push({ sev: 'amber', txt: c.nome + ': ' + c.n + ' abertas (acima de 1,5× a mediana)', act: 'Aliviar a carga ou renegociar prazos.' });
+        itens.push({ sev: 'amber', txt: c.nome + ': ' + c.n + ' abertas (acima de 1,5× a mediana)', act: 'Aliviar a carga ou renegociar prazos.',
+          pl: { tipo: 'sobrecarga', chave: c.nome, setorSigla: null } });
       }
     });
     if (m.totais.semResp > 0) {
-      itens.push({ sev: 'red', txt: m.totais.semResp + ' ocorrência(s) aberta(s) sem responsável', act: 'Atribuir um dono para não cair no vazio.' });
+      itens.push({ sev: 'red', txt: m.totais.semResp + ' ocorrência(s) aberta(s) sem responsável', act: 'Atribuir um dono para não cair no vazio.',
+        pl: { tipo: 'sem_dono', chave: 'backlog', setorSigla: null } });
     }
     if (!itens.length) {
       list.appendChild(el('<div class="pf-plano-ok">Sem alertas: rotina em dia. 🎯</div>'));
@@ -799,6 +810,11 @@
         var t1 = el('<div class="pf-plano-txt"></div>'); t1.textContent = it.txt; cc.appendChild(t1);
         var t2 = el('<div class="pf-plano-act"></div>'); t2.textContent = it.act; cc.appendChild(t2);
         row.appendChild(cc);
+        /* F1-G: AÇÃO OBRIGATÓRIA vira PLANO VIVO com 1 clique (dono +
+           prazo + atividades). Padrão Jira/Easy Agile: o insight da
+           retro/indicador vira item rastreável do backlog — 2/3 dos
+           times implementam <25% do que decidem quando não há sistema. */
+        row.appendChild(UI.button({ label: 'Criar plano', variant: 'ghost', onClick: function () { abrirCriarPlano(it); } }));
         list.appendChild(row);
       });
     }
@@ -885,6 +901,208 @@
     return card;
   }
 
+  /* ============================================================
+     F1-G · PLANOS DE AÇÃO VIVOS. Plano APONTA para atividades
+     (atividadeIds[]) — a execução vive no motor de atividades;
+     status e % são SEMPRE derivados (KPI.pctPlano/statusPlano,
+     validados no harness_f1g.js). Soft-delete: ativo:false.
+     ============================================================ */
+  var _fbi = null;
+  function fbi() {
+    if (!_fbi) {
+      _fbi = Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+    }
+    return _fbi;
+  }
+  function logPlano(acao, refId, antes, depois) {
+    return fbi().then(function (c) {
+      return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), {
+        ts: Date.now(), uid: (USER && USER.uid) || null, acao: acao, entidade: 'plano_acao',
+        refId: refId || null, antes: antes || null, depois: depois || null
+      });
+    }).catch(function () {});
+  }
+  function abrirCriarPlano(it) {
+    var pl = it.pl || {};
+    var titInp = UI.input({ value: it.txt || '', maxlength: 140, placeholder: 'Ex: Zerar as vencidas do PED' });
+    var titField = UI.field({ label: 'Título do plano', required: true, control: titInp });
+    var prazoInp = el('<input type="date" class="pf-date">');
+    var prazoField = UI.field({ label: 'Prazo', required: true, control: prazoInp, hint: 'Data-limite para o plano fechar.' });
+    var donoHold = el('<div></div>'); donoHold.appendChild(el('<div class="pf-plano-act">Carregando pessoas…</div>'));
+    var donoField = UI.field({ label: 'Dono', required: true, control: donoHold, hint: 'Quem responde pelo plano na reunião.' });
+    var donoSel = null;
+    /* atividades vinculadas (>=1): a execução do plano SÃO as atividades */
+    var filtroInp = UI.input({ placeholder: 'Filtrar por título…' });
+    var listHold = el('<div class="pf-catlist"></div>');
+    var marcadas = {};
+    if (pl.atividadeIds) { pl.atividadeIds.forEach(function (id) { marcadas[id] = true; }); }
+    function pintaAtiv() {
+      listHold.innerHTML = '';
+      var termo = (filtroInp.value || '').toLowerCase();
+      var base = ATIV.filter(function (a) {
+        if (pl.setorSigla) {
+          var sigs = KPI.setoresDe(a, MODELO ? MODELO.setores : []);
+          if (sigs.indexOf(pl.setorSigla) < 0) { return false; }
+        }
+        return !termo || (a.titulo || '').toLowerCase().indexOf(termo) >= 0;
+      }).slice(0, 60);
+      if (!base.length) { listHold.appendChild(el('<div class="pf-plano-act">Nenhuma atividade neste filtro.</div>')); return; }
+      base.forEach(function (a) {
+        var row = el('<label class="pf-catrow"></label>');
+        var ck = el('<input type="checkbox">');
+        ck.checked = !!marcadas[a.id];
+        ck.addEventListener('change', function () { marcadas[a.id] = ck.checked; });
+        row.appendChild(ck);
+        var tx = el('<span class="pf-catt"></span>'); tx.textContent = a.titulo + (a.setorSigla ? ' · ' + a.setorSigla : '');
+        row.appendChild(tx);
+        listHold.appendChild(row);
+      });
+    }
+    filtroInp.addEventListener('input', pintaAtiv);
+    pintaAtiv();
+    var ativField = UI.field({ label: 'Atividades do plano (mínimo 1)', required: true, control: el('<div></div>'),
+      hint: pl.setorSigla ? 'Mostrando as atividades de ' + pl.setorSigla + '.' : 'A execução do plano vive nas atividades — o % vem delas.' });
+    ativField.appendChild(filtroInp); ativField.appendChild(listHold);
+    var banner = el('<div class="pf-banner" style="display:none"></div>');
+    var saveBtn = null;
+    var m2 = UI.modal({
+      title: 'Criar plano de ação', width: 560,
+      body: [titField, donoField, prazoField, ativField, banner],
+      footer: function (close) {
+        var c = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+        saveBtn = UI.button({ label: 'Criar plano', icon: 'check', onClick: salvar });
+        return [c, saveBtn];
+      }
+    });
+    /* pessoas: usuarios ativos (gestor/líder podem listar pelas regras) */
+    fbi().then(function (c) {
+      var q = c.f.query(c.f.collection(c.db, 'usuarios'), c.f.where('ativo', '==', true), c.f.limit(300));
+      return c.f.getDocs(q);
+    }).then(function (s) {
+      var opts = [];
+      s.forEach(function (d) { var u = d.data(); opts.push({ value: d.id, label: (u.nome || d.id) + (u.perfil ? ' · ' + u.perfil : '') }); });
+      opts.sort(function (a, b) { return a.label < b.label ? -1 : 1; });
+      donoHold.innerHTML = '';
+      donoSel = UI.select({ value: (USER && USER.uid) || '', placeholder: '— Escolha o dono —', options: opts });
+      donoHold.appendChild(donoSel);
+    }).catch(function (e) {
+      donoHold.innerHTML = '';
+      donoHold.appendChild(el('<div class="pf-plano-act">Não consegui listar as pessoas (' + ((e && e.message) || 'erro') + ').</div>'));
+    });
+    function erro(msg) { banner.textContent = msg; banner.style.display = ''; }
+    function salvar() {
+      banner.style.display = 'none';
+      var titulo = titInp.value.trim();
+      var prazo = prazoInp.value;
+      var ids = Object.keys(marcadas).filter(function (k) { return marcadas[k]; });
+      if (!titulo) { erro('Dê um título ao plano.'); return; }
+      if (!donoSel || !donoSel.value) { erro('Escolha o dono.'); return; }
+      if (!window.GrautRecorrencia.isISO(prazo)) { erro('Escolha o prazo.'); return; }
+      if (!ids.length) { erro('Vincule ao menos 1 atividade — a execução do plano vive nelas.'); return; }
+      var donoNome = '';
+      if (donoSel.selectedIndex >= 0) { donoNome = (donoSel.options[donoSel.selectedIndex].text || '').split(' · ')[0]; }
+      var doc = {
+        titulo: titulo,
+        origem: { tipo: pl.tipo || 'manual', chave: pl.chave || null, setorSigla: pl.setorSigla || null, textoAlerta: it.txt || null },
+        donoUid: donoSel.value, donoNome: donoNome, prazo: prazo,
+        atividadeIds: ids, ativo: true,
+        criadoEm: Date.now(), criadoPorUid: (USER && USER.uid) || null
+      };
+      if (saveBtn) { saveBtn.disabled = true; }
+      fbi().then(function (c) {
+        return c.f.addDoc(c.f.collection(c.db, 'planos_acao'), doc);
+      }).then(function (ref) {
+        logPlano('criar_plano', ref.id, null, doc);
+        m2.close(); carregar();
+      }).catch(function (e) {
+        if (saveBtn) { saveBtn.disabled = false; }
+        erro((e && e.message) || 'Não consegui gravar o plano.');
+      });
+    }
+  }
+
+  var PLANO_TOKEN = 0;
+  function planosVivos(m) {
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Planos de ação vivos</div>'));
+    h.appendChild(infoBtn({
+      title: 'Planos de ação vivos',
+      formula: '% do plano = média, entre as atividades vinculadas COM previstas, de (concluídas ÷ previstas até hoje) das ocorrências da janela. Status derivado (nunca gravado): Concluído (100%) · Vencido (prazo < hoje) · Em risco (faltam ≤ 5 dias e < 70%) · No prazo · Coletando (sem previstas ainda). Atividade sem ocorrência na janela fica fora do % e é sinalizada.',
+      dados: 'coleção planos_acao (ativo = true) + as MESMAS ocorrências do board desta tela',
+      numeros: 'janela ' + (m && m.janela ? m.janela.jIni + ' a ' + m.janela.jFim : '—')
+    }));
+    card.appendChild(h);
+    var list = el('<div class="pf-plano"></div>');
+    list.appendChild(el('<div class="pf-plano-act">Carregando…</div>'));
+    card.appendChild(list);
+    var meu = ++PLANO_TOKEN;
+    fbi().then(function (c) {
+      var q = c.f.query(c.f.collection(c.db, 'planos_acao'), c.f.where('ativo', '==', true), c.f.limit(100));
+      return c.f.getDocs(q);
+    }).then(function (snap) {
+      if (meu !== PLANO_TOKEN) { return; }
+      var planos = [];
+      snap.forEach(function (d) { planos.push(Object.assign({ id: d.id }, d.data())); });
+      planos.sort(function (a, b) { return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1; });
+      list.innerHTML = '';
+      if (!planos.length) {
+        list.appendChild(el('<div class="pf-plano-act">Nenhum plano vivo. Crie a partir de um alerta do Plano de ação acima — indicador → plano → execução.</div>'));
+        return;
+      }
+      planos.forEach(function (p) {
+        var prog = KPI.pctPlano(p.atividadeIds, BOARD, HOJE);
+        var st = KPI.statusPlano(p, prog.pct, HOJE);
+        var tok = st.tom === 'ok' ? 'green' : st.tom === 'warn' ? 'amber' : st.tom === 'bad' ? 'red' : 'muted2';
+        var row = el('<div class="pf-plano-item"></div>');
+        row.appendChild(el('<span class="pf-plano-dot" style="background:var(--' + tok + ')"></span>'));
+        var cc = el('<div class="pf-plano-c"></div>');
+        var t1 = el('<div class="pf-plano-txt"></div>');
+        t1.textContent = p.titulo + ' — ' + st.rotulo + (prog.pct == null ? '' : ' · ' + prog.pct + '%');
+        cc.appendChild(t1);
+        var t2 = el('<div class="pf-plano-act"></div>');
+        t2.textContent = 'Dono: ' + (p.donoNome || '—') + ' · prazo ' + (p.prazo ? brData(p.prazo) : '—') +
+          ' · ' + prog.comPrevistas + ' de ' + prog.total + ' atividade(s) medindo' +
+          (prog.foraJanela ? ' · ' + prog.foraJanela + ' fora da janela' : '') +
+          (p.origem && p.origem.setorSigla ? ' · origem: ' + p.origem.setorSigla : '');
+        cc.appendChild(t2);
+        row.appendChild(cc);
+        row.appendChild(infoBtn({
+          title: p.titulo,
+          formula: 'status ' + st.rotulo + ' — regra no “i” do card',
+          dados: 'atividades vinculadas: ' + (p.atividadeIds || []).length + ' · origem: ' + ((p.origem && p.origem.tipo) || 'manual') + ((p.origem && p.origem.textoAlerta) ? ' (' + p.origem.textoAlerta + ')' : ''),
+          numeros: '% = ' + (prog.pct == null ? 'coletando' : prog.pct + '%') + ' sobre ' + prog.comPrevistas + ' atividade(s) com previstas'
+        }));
+        row.appendChild(UI.button({ label: 'Arquivar', variant: 'ghost', onClick: function () {
+          UI.modal({
+            title: 'Arquivar plano?', width: 420,
+            body: [el('<div class="pf-plano-act">“' + p.titulo + '” sai da lista (soft-delete: ativo = false; nada é apagado, as atividades continuam).</div>')],
+            footer: function (close) {
+              return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+                UI.button({ label: 'Arquivar', icon: 'check', onClick: function () {
+                  fbi().then(function (c) {
+                    return c.f.updateDoc(c.f.doc(c.db, 'planos_acao', p.id), { ativo: false, atualizadoEm: Date.now() });
+                  }).then(function () {
+                    logPlano('arquivar_plano', p.id, { ativo: true }, { ativo: false });
+                    close(); carregar();
+                  }).catch(function (e) { alert((e && e.message) || 'Não consegui arquivar.'); });
+                } })];
+            }
+          });
+        } }));
+        list.appendChild(row);
+      });
+    }).catch(function (e) {
+      if (meu !== PLANO_TOKEN) { return; }
+      list.innerHTML = '';
+      list.appendChild(el('<div class="pf-plano-act">Não consegui ler os planos (' + ((e && e.message) || 'erro') + '). Publique as regras novas (planos_acao).</div>'));
+    });
+    return card;
+  }
+
   function paint(m) {
     MODELO = m;
     montarCtx(m);
@@ -902,6 +1120,7 @@
     focusKPIs(m).forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
     body.appendChild(focus);
     body.appendChild(planoAcao(m));
+    body.appendChild(planosVivos(m));           /* F1-G: fecha o ciclo indicador→plano→execução */
     var cand = candidatosIndicador();
     cand.style.marginTop = '13px';
     body.appendChild(cand); /* F1-F */
@@ -963,7 +1182,7 @@
                     setores: ctx.setores, janela: ctx.janela, hoje: ctx.hoje, periodo: ctx.periodo };
           }
         }
-        BOARD = ctx.board; DATA_OPER_MIN = KPI.minDataInicio(ctx.ativ); return KPI.computar(ctx);
+        BOARD = ctx.board; ATIV = ctx.ativ; DATA_OPER_MIN = KPI.minDataInicio(ctx.ativ); return KPI.computar(ctx);
       }),
       KPI.lerSnapshots(window.GrautRecorrencia.hojeISO()) /* degrada p/ [] se as regras ainda não foram publicadas */
     ]).then(function (r) {

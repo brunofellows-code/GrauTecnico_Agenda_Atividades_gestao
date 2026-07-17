@@ -101,24 +101,47 @@ service cloud.firestore {
     }
 
     // ---------- atividade_log (append-only) ----------
+    // F1-G: create aberto a QUALQUER usuario ativo. O perfil 'usuario' agora
+    // grava item de pauta (D2) e a mutacao dele tambem precisa ser logada —
+    // append-only + update/delete negados: abrir o create e MAIS auditoria.
     match /atividade_log/{id} {
       allow read: if isActive();
-      allow create: if canWrite();
+      allow create: if isActive();
       allow update, delete: if false;
     }
 
     // ---------- reunioes ----------
+    // F1-G (D2): participante (perfil 'usuario') pode mexer SO em pautaItens
+    // (padrao Fellow: qualquer participante adiciona talking point). O diff
+    // de chaves garante que nada alem da pauta e tocavel sem canWrite.
     match /reunioes/{id} {
       allow read: if isActive();
-      allow create, update: if canWrite();
+      allow create: if canWrite();
+      allow update: if canWrite()
+                    || (isActive()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pautaItens']));
       allow delete: if false;
     }
 
     // ---------- pauta_sugestoes (F1-F: cascata de pauta entre reunioes) ----------
     // Sugestao encaminhada de uma reuniao para a pauta de outra (tipo/setor).
     // Soft-delete via status 'descartada' (nunca delete fisico).
-    // Perfil 'usuario' NAO grava (canWrite) — limitacao DECLARADA no HANDOFF F1-F.
+    // F1-G (D2): CREATE aberto a qualquer usuario ativo (todo participante
+    // sugere pauta — padrao Fellow/Parabol). Moderacao (aceitar/descartar =
+    // update) continua lider+.
     match /pauta_sugestoes/{id} {
+      allow read: if isActive();
+      allow create: if isActive();
+      allow update: if canWrite();
+      allow delete: if false;
+    }
+
+    // ---------- planos_acao (F1-G: plano vivo da Inteligencia) ----------
+    // Plano nasce do gargalo/banda (ACAO OBRIGATORIA), tem dono, prazo e
+    // atividadeIds[] (a execucao vive nas atividades — 1 motor). Status e
+    // progresso sao SEMPRE derivados no cliente, nunca gravados aqui.
+    // Soft-delete via ativo:false (arquivar).
+    match /planos_acao/{id} {
       allow read: if isActive();
       allow create, update: if canWrite();
       allow delete: if false;

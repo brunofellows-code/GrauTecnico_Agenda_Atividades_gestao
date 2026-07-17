@@ -253,6 +253,12 @@
   .at-search{min-width:0;flex:1}
   .at-toolright{width:100%}
 }
+/* F1-G · catálogo de ações */
+.at-catlist{max-height:52vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.at-catrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.at-catc{flex:1;min-width:0}
+.at-catt{font-weight:600;font-size:.86rem;color:var(--text)}
+.at-cats{font-size:.74rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 </head>
 <body>
@@ -299,6 +305,7 @@
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="ctx.js"></script>
+  <script src="catalogo.js"></script>
   <script>
   (function () {
     'use strict';
@@ -715,6 +722,7 @@
 
       if (CAN_WRITE) {
         var actions = el('<div class="at-onb-actions"></div>');
+        actions.appendChild(UI.button({ label: 'Do catálogo', icon: 'list', variant: 'ghost', onClick: abrirCatalogo }));
         actions.appendChild(UI.button({ label: 'Nova atividade', icon: 'plus', onClick: function () { openEditor(null); } }));
         var inb = UI.button({ label: 'Ver inativas', variant: 'ghost', icon: 'repeat', onClick: openInativas });
         actions.appendChild(inb);
@@ -841,6 +849,7 @@
 
       /* nova atividade */
       if (CAN_WRITE) {
+        right.appendChild(UI.button({ label: 'Do catálogo', icon: 'list', variant: 'ghost', onClick: abrirCatalogo }));
         right.appendChild(UI.button({ label: 'Nova atividade', icon: 'plus', onClick: function () { openEditor(null); } }));
       }
 
@@ -1407,15 +1416,66 @@
     }
 
     /* ===================== editor de atividade ===================== */
-    function openEditor(act) {
+    /* ===================== F1-G · CATÁLOGO DE AÇÕES =====================
+       95 ações extraídas 1:1 da ATA (catalogo.js). Padrão Asana template
+       library: escolher -> vira atividade normal com 1 clique (o editor
+       abre pré-preenchido; nada é gravado sem passar pelo onSave). */
+    function abrirCatalogo() {
+      if (!CAN_WRITE) { return; }
+      var C = window.CATALOGO;
+      if (!C || !C.itens || !C.itens.length) { toast('Catálogo não carregado (catalogo.js).', 'err'); return; }
+      var FILTRO_CAT = 'TODOS';
+      var lista = el('<div class="at-catlist"></div>');
+      var opts = [{ value: 'TODOS', label: 'Todos os setores (' + C.itens.length + ')' }];
+      C.setores.forEach(function (s) {
+        var n = C.itens.filter(function (it) { return (it.setorSigla || 'A_CLASSIFICAR') === s; }).length;
+        opts.push({ value: s, label: (s === 'A_CLASSIFICAR' ? 'A classificar' : s + ' · ' + nomeSetor(s)) + ' (' + n + ')' });
+      });
+      var selSetor = UI.select({ value: 'TODOS', options: opts });
+      selSetor.addEventListener('change', function () { FILTRO_CAT = selSetor.value; pinta(); });
+      var hint = el('<div class="at-hint2">Fonte: ' + C.fonte + ' · ' + C.versao + '. Escolher abre o formulário pré-preenchido — nada é criado sem você confirmar.</div>');
+      var mCat = UI.modal({ title: 'Catálogo de ações (ATA)', width: 640, body: [UI.field({ label: 'Setor', control: selSetor }), hint, lista] });
+      function pinta() {
+        lista.innerHTML = '';
+        var itens = C.itens.filter(function (it) {
+          return FILTRO_CAT === 'TODOS' || (it.setorSigla || 'A_CLASSIFICAR') === FILTRO_CAT;
+        });
+        if (!itens.length) { lista.appendChild(txt('div', 'at-inempty', 'Nenhuma ação neste setor.')); return; }
+        itens.forEach(function (it) {
+          var row = el('<div class="at-catrow"></div>');
+          var cc = el('<div class="at-catc"></div>');
+          var l1 = el('<div class="at-catt"></div>');
+          l1.textContent = it.titulo;
+          cc.appendChild(l1);
+          var l2 = el('<div class="at-cats"></div>');
+          l2.textContent = (it.setorSigla ? it.setorSigla + (it.subsetorSigla ? '/' + it.subsetorSigla : '') : 'a classificar') +
+            ' · ATA: ' + it.categoriaATA + (it.como ? ' · COMO: ' + it.como : '');
+          l2.title = it.como || '';
+          cc.appendChild(l2);
+          row.appendChild(cc);
+          row.appendChild(UI.button({ label: 'Usar', variant: 'ghost', onClick: function () {
+            mCat.close();
+            openEditor(null, it);
+          } }));
+          lista.appendChild(row);
+        });
+      }
+      pinta();
+    }
+
+    function openEditor(act, pre) {
+      /* F1-G: pre = item do CATÁLOGO (id, titulo, como, setorSigla,
+         subsetorSigla) — pré-preenche a criação; nada muda na edição. */
       if (!CAN_WRITE) { return; }
       var editing = !!act;
+      pre = (!editing && pre) ? pre : null;
 
       /* título / descrição */
-      var titInp = UI.input({ value: editing ? act.titulo : '', placeholder: 'Ex: Conferir matrículas do dia', maxlength: 120 });
+      var titInp = UI.input({ value: editing ? act.titulo : (pre ? pre.titulo : ''), placeholder: 'Ex: Conferir matrículas do dia', maxlength: 120 });
       var titField = UI.field({ label: 'Título', required: true, control: titInp });
       var descTa = el('<textarea class="at-textarea" placeholder="Detalhes, instruções, checklist… (opcional)"></textarea>');
       if (editing && act.descricao) { descTa.value = act.descricao; }
+      else if (pre && pre.como) { descTa.value = pre.como; }
       var descField = UI.field({ label: 'Descrição (opcional)', control: descTa });
       /* F1-F: observações operacionais — anotações vivas da atividade
          (o que aconteceu, combinados, contexto). Diferente da descrição
@@ -1429,7 +1489,8 @@
       if (editing && act.setorSigla && !setorOpts.some(function (o) { return o.value === act.setorSigla; })) {
         setorOpts.unshift({ value: act.setorSigla, label: act.setorSigla + ' · ' + nomeSetor(act.setorSigla) + ' (inativo)' });
       }
-      var setorSelect = UI.select({ value: editing ? act.setorSigla : '', placeholder: '— Escolha o setor —', options: setorOpts });
+      var preSetor = (pre && pre.setorSigla && setorOpts.some(function (o) { return o.value === pre.setorSigla; })) ? pre.setorSigla : '';
+      var setorSelect = UI.select({ value: editing ? act.setorSigla : preSetor, placeholder: '— Escolha o setor —', options: setorOpts });
       var setorField = UI.field({ label: 'Setor', required: true, control: setorSelect, hint: 'Área da escola dona desta rotina.' });
 
       /* subsetor (depende do setor) */
@@ -1446,7 +1507,7 @@
         subSelect = UI.select({ value: val || '', placeholder: '— Nenhum (direto no setor) —', options: opts, disabled: !sig });
         subHolder.appendChild(subSelect);
       }
-      paintSub(editing ? act.setorSigla : '', editing ? (act.subsetorSigla || '') : '');
+      paintSub(editing ? act.setorSigla : preSetor, editing ? (act.subsetorSigla || '') : ((pre && preSetor && pre.subsetorSigla) || ''));
       var subField = UI.field({ label: 'Subsetor (opcional)', control: subHolder, hint: 'Refina dentro do setor, quando fizer sentido.' });
       setorSelect.addEventListener('change', function () { paintSub(setorSelect.value, ''); });
 
@@ -1628,7 +1689,8 @@
           deslizante: tipo === 'unico' ? !!deslizState : null,
           dataInicio: tipo !== 'unico' ? diInp.value : null,
           dataFim: (tipo !== 'unico' && dfInp.value) ? dfInp.value : null,
-          projetoId: (projSelect && projSelect.value) ? projSelect.value : null
+          projetoId: (projSelect && projSelect.value) ? projSelect.value : null,
+          catalogoId: editing ? (act.catalogoId || null) : (pre ? pre.id : null) /* F1-G: rastreio ATA->atividade */
         };
 
         var verr = R.validar(payload);

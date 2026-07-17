@@ -535,7 +535,7 @@
     ['instrutor', 'Reunião com Instrutor'],
     ['lideres_turma', 'Reunião c/ Líderes de Turmas'],
     ['departamento', 'Reunião de Departamento'],
-    ['resultado_mensal', 'Resultado Mensal'] /* F1-F · convocação default (c) provisória: só o criador */
+    ['resultado_mensal', 'Resultado Mensal'] /* F1-G · D1=(a): convoca líderes + gestores (kpi.js convocadosPorTipo) */
   ];
   var SUGS = [];           /* F1-F · sugestões de pauta PENDENTES (cascata) */
   var VIEW_TIPO = 'todas'; /* F1-F · chip ativo da lista de reuniões */
@@ -1203,7 +1203,10 @@
       return textoPautaReuniao(Object.assign({}, r, { pautaTexto: taP.value }));
     }, 'Pauta — ' + (r.titulo || fmtBR(r.data))));
 
-    /* itens sugeridos (F1-E · 6.4 — perfil "usuario" não grava: limitação declarada no HANDOFF) */
+    /* itens sugeridos — F1-G (D2): ABERTO a qualquer participante ativo
+       (padrão Fellow: todo convocado adiciona talking point). Regras novas
+       permitem update de reunioes restrito à chave pautaItens. Remover
+       item continua líder+ (moderação). */
     var itH = txt('div', 'pj-card-t', 'Itens sugeridos para a pauta');
     itH.style.marginTop = '10px';
     pauCard.appendChild(itH);
@@ -1224,7 +1227,7 @@
       }
       pauCard.appendChild(lin);
     });
-    if (podeEditar()) {
+    if (!r.encerradaEm) {   /* F1-G (D2): sugerir é de TODOS; encerrou, congelou */
       var itInp = UI.input({ placeholder: 'Sugerir item de pauta' });
       var itWrap = el('<div style="display:flex;gap:8px;margin-top:6px;align-items:center"></div>');
       itInp.style.flex = '1';

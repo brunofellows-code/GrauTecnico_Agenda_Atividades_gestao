@@ -177,6 +177,9 @@
   var PERIODO = 'band';
   var FILTRO = 'TODOS';   /* sigla de setor ou TODOS */
   var PP = null;          /* último retorno de computarPorPessoa */
+  var RANK = null;        /* F1-G: computarRanking (3 lentes) */
+  var USUARIOS = [];      /* F1-G: lista p/ a lente LÍDER (setoresLiderados) */
+  var LENTE = 'setores';  /* F1-G: setores | lideres | usuarios */
   var MODELO = null;      /* último retorno de computar (seção por setor) */
   var LOG = [];           /* atividade_log recente (query global única) */
   var BOARD = [];         /* C4: board expandido retido p/ o drill-down (zero query extra) */
@@ -538,8 +541,96 @@
     card.appendChild(wrap);
     body.appendChild(card);
 
+    body.appendChild(rankingCard());              /* F1-G */
+
     var so = MODELO ? scoreSetores(MODELO) : null;
     if (so) { body.appendChild(so); }
+  }
+
+  /* ============================================================
+     F1-G · RANKING 50/30/20 — 3 lentes (SETOR / LÍDER / USUÁRIO).
+     Score = 50% aderência + 30% no prazo + 20% (100 − atraso
+     residual), pesos renormalizados quando falta componente
+     (KPI.scoreDesempenho, validado no harness_f1g.js). MELHOR
+     primeiro (ranking clássico); a tabela acima já mostra o pior
+     primeiro para agir. Multi-setor conta em CADA setor (declarado).
+     ============================================================ */
+  function rankingCard() {
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Ranking de desempenho — score 50/30/20</div>'));
+    h.appendChild(infoBtn({
+      title: 'Score 50/30/20',
+      formula: 'score = 50% × aderência + 30% × conclusão no prazo + 20% × (100 − atraso residual). Atraso residual = atrasadas ÷ previstas VENCIDAS × 100 (do que já venceu, quanto segue aberto). Componente sem dado sai do cálculo e os pesos são renormalizados sobre os presentes — nunca inventa 0 nem 100. Sem previstas → sem score. Nada venceu ainda → “coletando” (partida fria, não pune). Pesos calibráveis: KPI.PESOS_SCORE.',
+      dados: 'mesmas ocorrências reais da janela (board), agregadas por setor (atividade multi-setor conta em CADA setor), por líder (ocorrência conta se o setor está no escopo raiz→filhos do líder) e por responsável (responsavelUid)',
+      numeros: rkNums()
+    }));
+    card.appendChild(h);
+    var seg = el('<div class="pf-seg" style="margin:8px 0 4px"></div>');
+    [['setores', 'Setor'], ['lideres', 'Líder'], ['usuarios', 'Usuário']].forEach(function (par) {
+      var b = el('<button type="button" class="pf-seg-b"></button>');
+      b.textContent = par[1];
+      if (LENTE === par[0]) { b.classList.add('on'); }
+      b.addEventListener('click', function () {
+        LENTE = par[0];
+        seg.querySelectorAll('.pf-seg-b').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        pintaRk();
+      });
+      seg.appendChild(b);
+    });
+    card.appendChild(seg);
+    var holder = el('<div></div>');
+    card.appendChild(holder);
+    function pintaRk() {
+      holder.innerHTML = '';
+      var lst = (RANK && RANK[LENTE]) || [];
+      if (LENTE === 'lideres' && !USUARIOS.length) {
+        holder.appendChild(el('<div class="pf-empty2">Não consegui ler a lista de usuários (lente Líder precisa dos setores liderados). Confirme seu perfil e as regras publicadas.</div>'));
+        return;
+      }
+      if (!lst.length) {
+        holder.appendChild(el('<div class="pf-empty2">Nenhum item com ocorrências nesta lente e recorte.</div>'));
+        return;
+      }
+      var wrap2 = el('<div class="pf-tblwrap"></div>');
+      var tbl2 = el('<table class="pf-tbl"></table>');
+      tbl2.appendChild(el('<thead><tr><th>#</th><th>Nome</th><th>Score</th><th>Aderência (50%)</th><th>No prazo (30%)</th><th>Atraso residual (20%)</th></tr></thead>'));
+      var tb2 = document.createElement('tbody');
+      lst.forEach(function (b, ix) {
+        var tr = document.createElement('tr');
+        var td0 = document.createElement('td'); td0.textContent = String(ix + 1); tr.appendChild(td0);
+        var td1 = document.createElement('td');
+        var nm = el('<div class="pf-nome"></div>'); nm.textContent = b.nome; td1.appendChild(nm);
+        tr.appendChild(td1);
+        var td2 = document.createElement('td');
+        var tok = tomToken(b.tom);
+        var sc = el('<span class="pf-scorecell"></span>');
+        sc.appendChild(el('<span class="pf-scoredot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok === 'muted2' ? 'green' : tok) + ')"></span>'));
+        sc.appendChild(el('<span style="color:var(--' + tok + ')">' + (b.score == null ? (b.previstas ? '—' : '—') : b.score) + (b.coletando ? ' · coletando' : '') + '</span>'));
+        var ib = infoBtn({
+          title: 'Score de ' + b.nome,
+          formula: 'componentes usados: ' + (b.usados.length ? b.usados.join(' + ') : 'nenhum (sem previstas)') + ' — pesos renormalizados sobre eles',
+          dados: 'previstas até hoje: ' + b.previstas + ' · vencidas: ' + b.prevVencidas + ' · concluídas até hoje: ' + b.concluidasAteHoje + ' · concluídas (total): ' + b.concluidasTotal + ' · no prazo: ' + b.noPrazo + ' · atrasadas: ' + b.atrasadas,
+          numeros: 'aderência ' + fmtPct(b.ader) + ' · no prazo ' + fmtPct(b.pctNoPrazo) + ' · residual ' + fmtPct(b.residual) + ' → score ' + (b.score == null ? '—' : b.score)
+        });
+        sc.appendChild(ib);
+        td2.appendChild(sc); tr.appendChild(td2);
+        [fmtPct(b.ader), fmtPct(b.pctNoPrazo), fmtPct(b.residual)].forEach(function (v) {
+          var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+        });
+        tb2.appendChild(tr);
+      });
+      tbl2.appendChild(tb2);
+      wrap2.appendChild(tbl2);
+      holder.appendChild(wrap2);
+    }
+    pintaRk();
+    return card;
+  }
+  function rkNums() {
+    if (!RANK) { return '—'; }
+    return RANK.setores.length + ' setor(es) · ' + RANK.lideres.length + ' líder(es) · ' + RANK.usuarios.length + ' usuário(s) na janela';
   }
 
   /* ---------- estados + boot ---------- */
@@ -561,12 +652,26 @@
     showState('Calculando desempenho…', 'Lendo as ocorrências e o log de ações.');
     Promise.all([
       KPI.carregar(PERIODO),
-      KPI.lerLogRecente()
+      KPI.lerLogRecente(),
+      /* F1-G: usuarios p/ a lente LÍDER do ranking (setoresLiderados).
+         Best-effort: falha (regras/HTTP) degrada p/ [] e a lente avisa. */
+      Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (mods) {
+        var db = mods[0].db, f = mods[1];
+        var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(300));
+        return f.getDocs(q).then(function (s) {
+          var a = []; s.forEach(function (d) { a.push(Object.assign({ uid: d.id }, d.data())); }); return a;
+        });
+      }).catch(function () { return []; })
     ]).then(function (r) {
       var ctx = KPI.recortarContexto(r[0], USER);   /* F1-B: gestor=tudo · líder=seus setores */
       LOG = r[1] || [];
+      USUARIOS = r[2] || [];
       MODELO = KPI.computar(ctx);
       PP = KPI.computarPorPessoa(ctx);
+      RANK = KPI.computarRanking(ctx, USUARIOS);    /* F1-G: mesmas ocorrências, 3 lentes */
       BOARD = ctx.board;                    /* C4: retido p/ drill-down */
       HOJE = MODELO.hoje;
       document.getElementById('pf-stamp').textContent =

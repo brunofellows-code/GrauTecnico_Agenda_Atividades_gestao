@@ -85,15 +85,18 @@ t('item da varredura vem marcado atrasada', v[0].atrasada, true);
 t('concluída (u2), futura (u3), recorrente (u5), na janela (u6) e inativa (u7) ficam FORA',
   v.length, 2);
 
-/* ---------- convocadosPorTipo · resultado_mensal (default provisório c) ---------- */
+/* ---------- convocadosPorTipo · resultado_mensal (F1-G · D1 = letra a) ----------
+   Regra nova: líderes + gestores (business review: líder apresenta ao gestor).
+   Criador sempre entra primeiro (dedup por uid). Perfil 'usuario' fica fora. */
 var USERS_X = [
   { uid: 'l1', nome: 'Lia', perfil: 'lider' },
   { uid: 'g1', nome: 'Gil', perfil: 'gestor' },
-  { uid: 's1', nome: 'Sol', perfil: 'gestor', socio: true }
+  { uid: 's1', nome: 'Sol', perfil: 'gestor', socio: true },
+  { uid: 'u1', nome: 'Ugo', perfil: 'usuario' }
 ];
 var cv = K.convocadosPorTipo('resultado_mensal', USERS_X, [], { uid: 'c1', nome: 'Bruno' }, null);
-t('resultado_mensal (default c): convoca SÓ o criador — ajuste manual no modal',
-  cv.map(function (u) { return u.uid; }), ['c1']);
+t('resultado_mensal (D1=a): criador + líderes + gestores (usuario fora)',
+  cv.map(function (u) { return u.uid; }), ['c1', 'l1', 'g1', 's1']);
 t('resultado_mensal: nome do criador preservado', cv[0].nome, 'Bruno');
 
 console.log('');

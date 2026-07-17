@@ -773,9 +773,14 @@
         if (u.setor && esc[u.setor]) { add(u); }
       });
     }
-    /* 'instrutor' e 'lideres_turma': só o criador (externos entram à mão).
-       F1-F: 'resultado_mensal' idem — default (c) PROVISÓRIO até o Bruno
-       cravar a letra (a/b/c/d); mudar aqui é 1 ramo (ver HANDOFF F1-F). */
+    else if (tipo === 'resultado_mensal') {
+      /* F1-G · D1 = letra (a): líderes + gestores. Benchmark: reunião mensal
+         de resultados no mercado (business review) é o LÍDER apresentando ao
+         GESTOR — mesma régua da reunião de líderes. Decidido em delegação
+         noturna (16/07); mudar de novo = trocar este ramo. */
+      list.forEach(function (u) { if (u.perfil === 'lider' || u.perfil === 'gestor') { add(u); } });
+    }
+    /* 'instrutor' e 'lideres_turma': só o criador (externos entram à mão). */
     return out;
   };
   K.ehSocio = ehSocio;
@@ -909,5 +914,166 @@
       });
     });
     return out;
+  };
+
+  /* ============================================================
+     F1-G · SCORE DE DESEMPENHO 50/30/20 + RANKING 3 LENTES +
+     PLANOS DE AÇÃO VIVOS. Matemática validada no harness_f1g.js.
+     ============================================================ */
+
+  /* Pesos do score (calibráveis em 1 linha — decisão F1-G: constante
+     no código; vira doc de config só se a calibração virar rotina). */
+  K.PESOS_SCORE = { ader: 0.5, prazo: 0.3, residual: 0.2 };
+
+  /* Atraso residual = do que JÁ VENCEU, quanto continua aberto.
+     atrasadas ÷ previstas vencidas × 100. prevVencidas 0 -> null
+     (partida fria F1-D: nada venceu ainda, não punir com 0 falso). */
+  K.residualPct = function (atrasadas, prevVencidas) {
+    if (!prevVencidas) { return null; }
+    return Math.round(atrasadas / prevVencidas * 100);
+  };
+
+  /* Score composto 50% aderência / 30% no prazo / 20% (100 − residual).
+     Componente sem dado (null) sai do cálculo e os pesos são
+     RENORMALIZADOS sobre os presentes (padrão de índice composto;
+     nunca inventa 0 nem 100). ader null -> score null (sem base).
+     Devolve { score, tom, comp:{ader,prazo,residual}, usados[] }. */
+  K.scoreDesempenho = function (ader, pctNoPrazo, residual) {
+    if (ader == null) { return null; }
+    var P = K.PESOS_SCORE;
+    var partes = [{ k: 'ader', v: ader, p: P.ader }];
+    if (pctNoPrazo != null) { partes.push({ k: 'prazo', v: pctNoPrazo, p: P.prazo }); }
+    if (residual != null) { partes.push({ k: 'residual', v: 100 - residual, p: P.residual }); }
+    var somaP = 0, i;
+    for (i = 0; i < partes.length; i++) { somaP += partes[i].p; }
+    var acc = 0, usados = [];
+    for (i = 0; i < partes.length; i++) {
+      acc += partes[i].v * (partes[i].p / somaP);
+      usados.push(partes[i].k);
+    }
+    var score = Math.round(acc);
+    if (score < 0) { score = 0; } if (score > 100) { score = 100; }
+    var tom = score >= 80 ? 'ok' : score >= 60 ? 'warn' : 'bad';
+    return { score: score, tom: tom, comp: { ader: ader, prazo: pctNoPrazo, residual: residual }, usados: usados };
+  };
+
+  /* Ranking nas 3 lentes (SETOR / LÍDER / USUÁRIO) numa única
+     passada do board. Multi-setor conta em CADA setor (declarado
+     no "i"). Líder: ocorrência conta se o setor dela está no
+     escopo do líder (raiz -> + filhos, mesmo escopoLider do RBAC).
+     usuarios: lista da coleção (p/ lente líder); pode ser []. */
+  K.computarRanking = function (ctx, usuarios) {
+    var board = ctx.board, hoje = ctx.hoje, setores = ctx.setores;
+    function novo(chave, nome) {
+      return { chave: chave, nome: nome, previstas: 0, prevVencidas: 0,
+               concluidasAteHoje: 0, concluidasTotal: 0, noPrazo: 0, atrasadas: 0 };
+    }
+    var porU = {}, porS = {}, porL = {};
+    var lids = [];
+    (Array.isArray(usuarios) ? usuarios : []).forEach(function (u) {
+      var ls = Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [];
+      if (u && u.uid && ls.length && u.ativo !== false) {
+        lids.push({ uid: u.uid, nome: u.nome || '(sem nome)', esc: K.escopoLider(ls, setores) });
+      }
+    });
+    function conta(b, o, ateHoje, venceu, conclAte) {
+      if (ateHoje && o.status !== 'pulada') {
+        b.previstas++;
+        if (venceu) { b.prevVencidas++; }
+        if (conclAte) { b.concluidasAteHoje++; }
+      }
+      if (o.status === 'concluida') {
+        b.concluidasTotal++;
+        var ov = o.ov || {};
+        if (ov.concluidaEm) {
+          var diaConcl = R.toISO(new Date(Number(ov.concluidaEm)));
+          if (R.compareISO(diaConcl, o.effDate) <= 0) { b.noPrazo++; }
+        }
+      }
+      if (o.atrasada) { b.atrasadas++; }
+    }
+    board.forEach(function (o) {
+      var ateHoje = R.compareISO(o.effDate, hoje) <= 0;
+      var venceu = R.compareISO(o.effDate, hoje) < 0;
+      var conclAte = ateHoje && o.status === 'concluida';
+      var ku = o.uid || '(sem)';
+      conta(porU[ku] || (porU[ku] = novo(o.uid, o.uid ? (o.responsavel || '(sem nome)') : '(sem responsável)')), o, ateHoje, venceu, conclAte);
+      var sigs = K.setoresDe(o.act, setores); if (!sigs.length) { sigs = ['—']; }
+      sigs.forEach(function (sig) {
+        conta(porS[sig] || (porS[sig] = novo(sig, K.nomeSetor(sig, setores))), o, ateHoje, venceu, conclAte);
+      });
+      lids.forEach(function (L) {
+        var meu = false;
+        for (var i = 0; i < sigs.length; i++) { if (L.esc[sigs[i]]) { meu = true; break; } }
+        if (!meu) { return; }
+        conta(porL[L.uid] || (porL[L.uid] = novo(L.uid, L.nome)), o, ateHoje, venceu, conclAte);
+      });
+    });
+    function fecha(map, keepSem) {
+      var out = [];
+      Object.keys(map).forEach(function (k) {
+        var b = map[k];
+        if (!keepSem && k === '(sem)') { return; }
+        b.ader = b.previstas ? Math.round(b.concluidasAteHoje / b.previstas * 100) : null;
+        b.pctNoPrazo = b.concluidasTotal ? Math.round(b.noPrazo / b.concluidasTotal * 100) : null;
+        b.residual = K.residualPct(b.atrasadas, b.prevVencidas);
+        var sc = K.scoreDesempenho(b.ader, b.pctNoPrazo, b.residual);
+        if (sc && b.prevVencidas === 0) { b.coletando = true; }
+        b.score = sc ? sc.score : null; b.tom = sc ? sc.tom : 'flat'; b.usados = sc ? sc.usados : [];
+        out.push(b);
+      });
+      out.sort(function (a, bb) {                 /* ranking clássico: MELHOR primeiro */
+        if (a.score == null && bb.score == null) { return bb.previstas - a.previstas; }
+        if (a.score == null) { return 1; }
+        if (bb.score == null) { return -1; }
+        return bb.score - a.score;
+      });
+      return out;
+    }
+    return { usuarios: fecha(porU, false), setores: fecha(porS, true), lideres: fecha(porL, false), hoje: hoje };
+  };
+
+  /* ---------- PLANOS DE AÇÃO VIVOS (F1-G · Bloco 2) ----------
+     Plano APONTA para atividades (atividadeIds[]) — reusa o motor;
+     nada de segundo motor de execução (decisão F1-G, padrão
+     Jira/Easy Agile: action item vira issue do backlog).
+     Progresso: por atividade vinculada, prog = concluídas ÷
+     previstas até hoje (ocorrências do board). pct do plano =
+     média dos progs das atividades COM previstas. Nenhuma com
+     previstas -> pct null ("coletando"). Atividade sem ocorrência
+     na janela -> excluída do cálculo e sinalizada foraJanela. */
+  K.pctPlano = function (atividadeIds, board, hoje) {
+    var ids = {}, i;
+    var lista = Array.isArray(atividadeIds) ? atividadeIds : [];
+    for (i = 0; i < lista.length; i++) { ids[lista[i]] = { prev: 0, concl: 0, visto: false }; }
+    board.forEach(function (o) {
+      var b = ids[o.act && o.act.id];
+      if (!b) { return; }
+      b.visto = true;
+      if (R.compareISO(o.effDate, hoje) <= 0 && o.status !== 'pulada') {
+        b.prev++;
+        if (o.status === 'concluida') { b.concl++; }
+      }
+    });
+    var soma = 0, n = 0, fora = 0;
+    for (i = 0; i < lista.length; i++) {
+      var b2 = ids[lista[i]];
+      if (!b2.visto) { fora++; continue; }
+      if (!b2.prev) { continue; }
+      soma += b2.concl / b2.prev; n++;
+    }
+    return { pct: n ? Math.round(soma / n * 100) : null, comPrevistas: n, foraJanela: fora, total: lista.length };
+  };
+
+  /* Status DERIVADO do plano (nunca gravado): concluído (pct 100) ·
+     vencido (prazo < hoje) · em risco (faltam <= 5 dias e pct < 70) ·
+     no prazo · coletando (pct null). Regra explícita no "i". */
+  K.statusPlano = function (plano, pct, hoje) {
+    if (pct != null && pct >= 100) { return { chave: 'concluido', rotulo: 'Concluído', tom: 'ok' }; }
+    var prazo = plano && plano.prazo;
+    if (prazo && R.compareISO(prazo, hoje) < 0) { return { chave: 'vencido', rotulo: 'Vencido', tom: 'bad' }; }
+    if (pct == null) { return { chave: 'coletando', rotulo: 'Coletando', tom: 'flat' }; }
+    if (prazo && R.diasEntre(hoje, prazo) <= 5 && pct < 70) { return { chave: 'em_risco', rotulo: 'Em risco', tom: 'warn' }; }
+    return { chave: 'no_prazo', rotulo: 'No prazo', tom: 'ok' };
   };
 })();
