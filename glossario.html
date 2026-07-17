@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
+  <script src="mnav.js"></script>
 
 <style>
 .gl-app{display:flex;min-height:100vh;background:var(--bg)}
@@ -117,6 +118,8 @@
       ['Backup (exportar JSON)', 'Botão na tela Importar (só gestor) que baixa uma cópia completa do banco num arquivo JSON. É a recuperação de desastre do sistema: guarde o arquivo em local seguro e repita todo mês.'],
       ['Responsável marca as próprias', 'Quem é o responsável de uma rotina pode concluir, iniciar e reabrir as PRÓPRIAS ocorrências no Meu Dia — mesmo no perfil usuário (padrão Asana: o assignado age na própria tarefa). Reprogramar e pular continuam com líder/gestor.'],
       ['Exportar CSV (ranking)', 'Botão na tela Performance que baixa a lente atual do ranking (setor, líder ou usuário) num arquivo que abre direto no Excel. Mesmos números da tela — nada é recalculado.'],
+      ['Placar da reunião', 'Cabeçalho numérico da reunião — Realizadas (no prazo/com atraso), Em andamento, Planejadas, Vencidas e Vence hoje — igual ao topo da planilha ATA, mas AUTOMÁTICO: cada número vem do status derivado da atividade-filha de cada decisão. Ninguém digita status.'],
+      ['Reunião = projeto', 'Toda reunião pode (e deve) morar num projeto: as demandas caem nele com kanban, subtarefas e % — como você fazia no GMIX, só que com status derivado. Reuniões do mesmo tipo sugerem o mesmo projeto (a série); reunião antiga sem projeto tem o botão Vincular, que migra as atividades já criadas.'],
       ['Custo do mês (Eventos)', 'Linha no topo da Agenda de Eventos somando o previsto × realizado de todos os eventos do mês no seu recorte, com a diferença em destaque. Valores em centavos por baixo — sem erro de arredondamento.']
     ]],
     ['Perfis e permissões', [

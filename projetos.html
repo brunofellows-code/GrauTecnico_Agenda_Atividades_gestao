@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
+  <script src="mnav.js"></script>
 
 <style>
 /* casca padrão (mesma da Inteligência/Performance) — namespace pj- */
@@ -988,6 +989,52 @@
   }
 
   /* ===================== F1-E · helpers de reunião ===================== */
+  /* F1-L: vincular (ou criar) o projeto de uma reunião JÁ ABERTA e migrar
+     as atividades que ela já gerou (retrofit — corrige reuniões antigas
+     criadas sem projeto). §8.2 da Instrução: reunião = projeto.           */
+  function modalVincularProjeto(r, aoConcluir) {
+    var opts = [{ value: '__novo__', label: '➕ Criar projeto desta reunião' }]
+      .concat(PROJ.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; }));
+    var sel = UI.select({ value: '__novo__', options: opts });
+    UI.modal({
+      title: 'Vincular reunião a projeto',
+      width: 460,
+      body: [UI.field({ label: 'Projeto', control: sel,
+        hint: 'As demandas desta reunião (novas E as já criadas) passam a morar no projeto: kanban, subtarefas e % valem para elas. Reuniões futuras do mesmo tipo já sugerem este projeto.' })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Vincular', icon: 'check', onClick: function () {
+            var pv = sel.value;
+            var pProj = (pv === '__novo__')
+              ? Store.criarProjeto({ nome: r.titulo || ('Reunião ' + fmtBR(r.data)), descricao: 'Projeto da série de reuniões: ' + (TIPO_LABEL[r.tipo] || 'Reunião') + '. Criado a partir da reunião de ' + fmtBR(r.data) + ' (§8.2: reunião = projeto).', siglaSetores: r.setorSigla ? [r.setorSigla] : [] })
+              : Promise.resolve(pv);
+            var pid = null;
+            pProj.then(function (id) {
+              pid = id;
+              return Store.atualizarReuniao(r.id, { projetoId: pid }, 'reuniao_vinculada_projeto');
+            }).then(function () {
+              /* retrofit: atividades órfãs que nasceram desta reunião */
+              var orfas = (CTX.ativ || []).filter(function (a) {
+                return a.origem && a.origem.reuniaoId === r.id && !a.projetoId;
+              });
+              var seq = Promise.resolve();
+              orfas.forEach(function (a) {
+                seq = seq.then(function () {
+                  return Store.atualizarAtividadeCampos(a.id, { projetoId: pid }, 'vincular_atividade_projeto', { projetoId: null });
+                }).then(function () { a.projetoId = pid; });
+              });
+              return seq.then(function () { return orfas.length; });
+            }).then(function (n) {
+              r.projetoId = pid;
+              close();
+              toast('Reunião vinculada' + (n ? ' — ' + n + ' atividade(s) migrada(s) para o projeto.' : '.'));
+              if (aoConcluir) { aoConcluir(); }
+            }).catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
   /* ocorrência da atividade-filha da decisão (única = 1 occ no board) */
   function occDaAtividade(atId) {
     if (!atId || !CTX || !CTX.board) { return null; }
@@ -1140,6 +1187,51 @@
       }
     }
     box.appendChild(cab);
+
+    /* ---------- F1-L · projeto da reunião (§8.2: reunião = projeto) ---------- */
+    (function () {
+      var linha = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 10px"></div>');
+      if (r.projetoId) {
+        var pj = PROJ.filter(function (x) { return x.id === r.projetoId; })[0];
+        var chip = txt('button', 'pj-badge', 'Projeto: ' + ((pj && pj.nome) || '(vinculado)') + ' →');
+        chip.type = 'button'; chip.style.cssText += ';color:var(--brand);cursor:pointer;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font:inherit;font-size:11px;font-weight:800';
+        chip.title = 'Abrir o projeto — as demandas desta reunião moram lá (kanban, subtarefas e %).';
+        chip.addEventListener('click', function () { window.location.hash = '#p=' + encodeURIComponent(r.projetoId); });
+        linha.appendChild(chip);
+      } else if (podeEditar()) {
+        var vb = UI.button({ label: 'Vincular a projeto', variant: 'ghost', onClick: function () { modalVincularProjeto(r, redesenhar); } });
+        vb.title = 'Sem projeto, as demandas desta reunião nascem avulsas. Vincule (ou crie) o projeto da série para elas caírem no kanban.';
+        linha.appendChild(vb);
+        var av = txt('span', 'pj-empty2', 'Sem projeto — demandas nascem avulsas.');
+        av.style.fontSize = '11.5px';
+        linha.appendChild(av);
+      }
+      /* ---------- F1-L · placar da ATA (derivado; abas 2–4 da planilha) ---------- */
+      var pl = KPI.placarReuniao(r.decisoes, occDaAtividade, hoje);
+      if (pl) {
+        var pills = [
+          ['Realizadas', pl.realizadas, 'var(--green)'],
+          ['· no prazo', pl.noPrazo, 'var(--green)'],
+          ['· com atraso', pl.comAtraso, 'var(--orange)'],
+          ['Em andamento', pl.andamento, 'var(--doing)'],
+          ['Planejadas', pl.planejadas, 'var(--muted2)'],
+          ['Vencidas', pl.vencidas, 'var(--red)'],
+          ['Vence hoje', pl.venceHoje, 'var(--amber)']
+        ];
+        pills.forEach(function (q) {
+          if (!q[1] && q[0].charAt(0) === '·') { return; } /* sub-linha zerada não polui */
+          var b = txt('span', 'pj-badge', q[0] + ' ' + q[1]);
+          b.style.color = q[2];
+          linha.appendChild(b);
+        });
+        linha.appendChild(iBtn('Placar da reunião (formato da sua ATA)', [
+          ['Fórmula', 'Cada decisão cai num balde pelo status DERIVADO da atividade-filha: Realizadas (feitas — no prazo ou com atraso — ou resolvidas na própria reunião) · Em andamento (atividade iniciada) · Planejadas (abertas dentro do prazo) · Vencidas (prazo estourado) · Vence hoje (prazo é hoje e segue aberta). Nada é digitado: é o mesmo cabeçalho Realizado/Planejado/Em andamento da planilha ATA, automático.'],
+          ['Dados', 'reunioes.decisoes[] desta reunião + ocorrência da atividade-filha no board (kpi.js).'],
+          ['Números', pl.total + ' decisão(ões): ' + pl.realizadas + ' realizadas (' + pl.noPrazo + ' no prazo · ' + pl.comAtraso + ' com atraso) · ' + pl.andamento + ' em andamento · ' + pl.planejadas + ' planejadas · ' + pl.vencidas + ' vencidas · ' + pl.venceHoje + ' vencem hoje']
+        ]));
+      }
+      if (linha.childNodes.length) { box.appendChild(linha); }
+    })();
 
     /* ---------- 2) presença (ausente = DERIVADO, nunca gravado) ---------- */
     var pcard = el('<div style="margin-bottom:10px"></div>');
@@ -1632,7 +1724,22 @@
     var depField = UI.field({ label: 'Setor do departamento', required: true, control: depSel });
     depField.style.display = tipoIni === 'departamento' ? '' : 'none';
     var projOpts = PROJ.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; });
-    var projSel = UI.select({ value: projetoIdFixo || '', placeholder: '— Sem projeto —', options: projOpts, disabled: !!projetoIdFixo });
+    /* F1-L (§8.2 da Instrução): reunião = projeto. Opção de CRIAR o projeto
+       da série na hora + sugestão automática: reuniões do MESMO TIPO apontam
+       para o mesmo projeto (recorrente). Sugestão = projeto da última reunião
+       deste tipo que tinha vínculo. Tocar no campo desliga a sugestão.      */
+    if (!projetoIdFixo) { projOpts.unshift({ value: '__novo__', label: '➕ Criar projeto desta reunião' }); }
+    function projetoDaSerie(tipo) {
+      var cand = REUN.filter(function (x) { return x.tipo === tipo && x.projetoId; })
+        .sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })[0];
+      return (cand && cand.projetoId) || '';
+    }
+    var projSel = UI.select({ value: projetoIdFixo || projetoDaSerie(tipoIni), placeholder: '— Sem projeto —', options: projOpts, disabled: !!projetoIdFixo });
+    var projTouched = false;
+    projSel.addEventListener('change', function () { projTouched = true; });
+    tipoSel.addEventListener('change', function () {
+      if (!projetoIdFixo && !projTouched) { projSel.value = projetoDaSerie(tipoSel.value); }
+    });
 
     var marcados = {};
     var convBox = el('<div style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:180px;overflow:auto"></div>');
@@ -1720,11 +1827,18 @@
               presentes: [],
               pautaTexto: null, pautaGeradaEm: null, pautaItens: [],
               resumoTexto: '',
-              projetoId: (projetoIdFixo || projSel.value) || null,
+              projetoId: null, /* F1-L: resolvido abaixo (pode nascer projeto novo) */
               participantesUids: [], decisoes: []
             };
-            Store.criarReuniao(doc)
-              .then(function () { close(); toast('Reunião criada — convocados veem a chamada no Hoje.'); return reload(); })
+            var pv = (projetoIdFixo || projSel.value) || null;
+            var pProj = (pv === '__novo__')
+              ? Store.criarProjeto({ nome: t, descricao: 'Projeto da série de reuniões: ' + (TIPO_LABEL[tipoSel.value] || 'Reunião') + '. Criado automaticamente pela reunião (§8.2: reunião = projeto; demandas caem aqui).', siglaSetores: tipoSel.value === 'departamento' && depSel.value ? [depSel.value] : [] })
+              : Promise.resolve(pv);
+            pProj.then(function (pid) {
+              doc.projetoId = pid || null;
+              return Store.criarReuniao(doc);
+            })
+              .then(function () { close(); toast(pv === '__novo__' ? 'Reunião criada com projeto próprio — as demandas caem nele.' : 'Reunião criada — convocados veem a chamada no Hoje.'); return reload(); })
               .catch(function (e) { toast(e.message, 'err'); });
           } })];
       }

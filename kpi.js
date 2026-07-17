@@ -1298,3 +1298,39 @@
     return null;
   };
 })();
+
+/* ============================================================
+   F1-L · PLACAR DA REUNIÃO (append) — o cabeçalho numérico das
+   abas REUNIÃO INTEGRADA / LÍDERES da planilha ATA, só que
+   DERIVADO (nunca digitado). Testado no harness_f1l.js.
+   Buckets (mapeados 1:1 do statusDecisao + occ):
+     realizadas = no_prazo + atraso + feita + resolvida
+       └ noPrazo (feitas até o prazo) · comAtraso (feitas depois)
+     andamento  = atividade-filha em 'em_andamento' (ainda aberta)
+     vencidas   = prazo estourado e aberta
+     planejadas = abertas dentro do prazo (o resto)
+     venceHoje  = abertas com prazo HOJE (o "vence hoje" da ATA)
+   Sem decisões -> null (placar não pinta).                    */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  K.placarReuniao = function (decisoes, getOcc, hoje) {
+    var lista = Array.isArray(decisoes) ? decisoes : [];
+    if (!lista.length) { return null; }
+    var p = { total: 0, realizadas: 0, noPrazo: 0, comAtraso: 0,
+      andamento: 0, planejadas: 0, vencidas: 0, venceHoje: 0 };
+    lista.forEach(function (d) {
+      p.total++;
+      var occ = getOcc ? getOcc(d && d.atividadeId) : null;
+      var st = K.statusDecisao(d, occ, hoje);
+      if (st.chave === 'no_prazo') { p.realizadas++; p.noPrazo++; }
+      else if (st.chave === 'atraso') { p.realizadas++; p.comAtraso++; }
+      else if (st.chave === 'feita' || st.chave === 'resolvida') { p.realizadas++; }
+      else if (st.chave === 'vencida') { p.vencidas++; }
+      else if (occ && occ.status === 'em_andamento') { p.andamento++; }
+      else { p.planejadas++; }
+      if (occ && occ.effDate === hoje && occ.status !== 'concluida') { p.venceHoje++; }
+    });
+    return p;
+  };
+})();
