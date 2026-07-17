@@ -835,7 +835,70 @@
       POP.style.left = Math.max(12, Math.min(r.left, window.innerWidth - 336)) + 'px';
     });
     document.getElementById('im-info').appendChild(ib);
+    montarBackup(); /* F1-I: exportação de segurança (só gestor) */
     boot2();
+  }
+
+  /* ============================================================
+     F1-I · BACKUP (exportação JSON) — fecha o risco CRÍTICO do
+     RAIO-X: "perda de dados sem backup". Só GESTOR. Lê cada
+     coleção com limit (leitura limitada, contrato §2) e baixa um
+     arquivo gera_backup_AAAA-MM-DD.json. Nada é gravado além de
+     1 linha de auditoria no atividade_log. Coleção que bater no
+     teto é sinalizada como possivelmente truncada — honestidade
+     antes de conveniência.
+     ============================================================ */
+  var BK_COLS = ['setores', 'usuarios', 'atividades', 'ocorrencias', 'projetos', 'subtarefas',
+    'eventos', 'reunioes', 'pauta_sugestoes', 'planos_acao', 'solicitacoes', 'kpi_snapshots', 'atividade_log'];
+  var BK_TETO = 9000;
+  function montarBackup() {
+    if (!(Guard.isGestor && Guard.isGestor())) { return; }
+    var top = document.querySelector('.im-top');
+    if (!top) { return; }
+    var bx = el('<div style="display:flex;align-items:center;gap:10px;margin-left:auto"></div>');
+    var st = txt('span', 'im-pop-v', '');
+    st.style.cssText = 'font-size:11.5px;font-weight:700;color:var(--muted2)';
+    var bt = UI.button({ label: 'Backup (exportar JSON)', icon: 'upload', variant: 'ghost' });
+    bt.title = 'Baixa uma cópia completa do banco (todas as coleções) em JSON. Guarde num lugar seguro — é a sua recuperação de desastre.';
+    bt.addEventListener('click', function () {
+      bt.disabled = true; st.textContent = 'Lendo o banco…';
+      var out = { geradoEm: new Date().toISOString(), sistema: 'GERA · Sistema A', colecoes: {} };
+      var truncadas = [];
+      fb().then(function (c) {
+        var seq = Promise.resolve();
+        BK_COLS.forEach(function (col) {
+          seq = seq.then(function () {
+            st.textContent = 'Lendo ' + col + '…';
+            var q = c.f.query(c.f.collection(c.db, col), c.f.limit(BK_TETO));
+            return c.f.getDocs(q).then(function (snap) {
+              var a = [];
+              snap.forEach(function (d) { a.push(Object.assign({ _id: d.id }, d.data())); });
+              out.colecoes[col] = a;
+              if (a.length >= BK_TETO) { truncadas.push(col); }
+            });
+          });
+        });
+        return seq.then(function () { return c; });
+      }).then(function (c) {
+        var nome = 'gera_backup_' + R.hojeISO() + '.json';
+        var blob = new Blob([JSON.stringify(out)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = nome;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+        var tot = 0; BK_COLS.forEach(function (k) { tot += (out.colecoes[k] || []).length; });
+        st.textContent = tot + ' documento(s) exportado(s)' + (truncadas.length ? ' · ATENÇÃO: ' + truncadas.join(', ') + ' pode(m) estar truncada(s) no teto de ' + BK_TETO : '') + '. Guarde o arquivo em local seguro.';
+        /* auditoria (uid = autor autenticado, regra anti-spoof) */
+        return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), {
+          ts: Date.now(), uid: (USER && USER.uid) || null, acao: 'backup_exportado', entidade: 'sistema',
+          refId: nome, antes: null, depois: { documentos: tot, truncadas: truncadas }
+        }).catch(function () { });
+      }).catch(function (e) {
+        st.textContent = 'Falhou: ' + ((e && e.message) || 'erro ao ler o banco.');
+      }).then(function () { bt.disabled = false; });
+    });
+    bx.appendChild(st); bx.appendChild(bt);
+    top.appendChild(bx);
   }
 
   Guard.onReady(function (u) { USER = u; boot(); });

@@ -287,14 +287,16 @@
   }
   function openPop(ev, d) {
     POP.innerHTML = '';
-    POP.appendChild(el('<div class="pf-pop-t">' + d.title + '</div>'));
+    /* RAIO-X: textContent em tudo que carrega dado dinâmico (títulos de
+       plano/atividade entram aqui) — HTML injetado em título não executa. */
+    var pt = el('<div class="pf-pop-t"></div>'); pt.textContent = d.title || ''; POP.appendChild(pt);
     [['FÓRMULA', d.formula], ['DADOS / COLUNAS', d.dados], ['NÚMEROS DESTE CÁLCULO', d.numeros]].forEach(function (r) {
       var row = el('<div class="pf-pop-row"></div>');
-      row.appendChild(el('<div class="pf-pop-k">' + r[0] + '</div>'));
-      row.appendChild(el('<div class="pf-pop-v">' + r[1] + '</div>'));
+      var rk = el('<div class="pf-pop-k"></div>'); rk.textContent = r[0]; row.appendChild(rk);
+      var rv = el('<div class="pf-pop-v"></div>'); rv.textContent = r[1] || ''; row.appendChild(rv);
       POP.appendChild(row);
     });
-    if (d.nota) { POP.appendChild(el('<div class="pf-pop-note">' + d.nota + '</div>')); }
+    if (d.nota) { var nt = el('<div class="pf-pop-note"></div>'); nt.textContent = d.nota; POP.appendChild(nt); }
     BACK.classList.add('on');
     POP.classList.add('on');
     if (window.innerWidth <= 900) {
@@ -314,7 +316,7 @@
   }
   function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
 
-  /* ---------- sparkline (mini-tendência ilustrativa) ---------- */
+  /* ---------- sparkline (tendência REAL: fotos diárias do kpi_snapshots) ---------- */
   /* ---------- card de KPI (sem tendência: ainda não há histórico real) ---------- */
   function kpiCard(k, big) {
     var c = el('<div class="' + (big ? 'pf-big' : 'pf-small') + '"></div>');
@@ -358,7 +360,11 @@
     var rows = el('<div class="pf-bh-rows"></div>');
     items.forEach(function (it) {
       var r = el('<div class="pf-bh-row ' + (opt.rowClass || '') + '"></div>');
-      r.appendChild(el('<div class="pf-bh-head"><span class="l">' + it.l + '</span><span class="v">' + it.v + (opt.suffix || '') + '</span></div>'));
+      /* RAIO-X: it.l carrega nome de pessoa/setor (dado dinâmico) → textContent */
+      var head = el('<div class="pf-bh-head"></div>');
+      var lb = el('<span class="l"></span>'); lb.textContent = it.l; head.appendChild(lb);
+      var vv = el('<span class="v"></span>'); vv.textContent = String(it.v) + (opt.suffix || ''); head.appendChild(vv);
+      r.appendChild(head);
       var tr = el('<div class="pf-bh-track"></div>');
       tr.appendChild(el('<div class="pf-bh-fill" style="width:' + (it.v / opt.max * 100) + '%;background:' + it.c + '"></div>'));
       r.appendChild(tr);
@@ -435,6 +441,14 @@
     r.appendChild(sig);
     var resp = el('<span class="dd-meta"></span>'); resp.textContent = o.responsavel || 'sem responsável';
     r.appendChild(resp);
+    /* F1-I: do insight à ação em 1 clique — abre a atividade na tela Atividades */
+    if (o.act && o.act.id) {
+      var lk = el('<a class="dd-meta" style="color:var(--brand);font-weight:800;text-decoration:none;flex:0 0 auto"></a>');
+      lk.textContent = 'abrir →';
+      lk.href = 'atividades.html#a=' + encodeURIComponent(o.act.id);
+      lk.addEventListener('click', function (ev) { ev.stopPropagation(); });
+      r.appendChild(lk);
+    }
     var dt = el('<span class="dd-meta' + (o.atrasada ? ' dd-late' : '') + '"></span>');
     dt.textContent = brData(o.effDate) + (o.atrasada ? ' · ' + ddDias(o.effDate, hoje) + 'd' : '');
     r.appendChild(dt);
@@ -822,6 +836,121 @@
     return card;
   }
 
+  /* ============================================================
+     F1-H · LENTE DE RISCO DINÂMICO (P1-Risco). Zero tela nova,
+     zero coleção nova, zero write: só leitura do MESMO board.
+     score = prioridade(PEF) × fatorAging × fatorReprog
+     (KPI.riscoAtividades, validado no harness_f1h.js).
+     Mitigação: SOMENTE a importada do PEF (act.mitigacao).
+     ============================================================ */
+  function lenteRisco(m) {
+    var riscos = KPI.riscoAtividades(BOARD, HOJE);
+    if (!riscos.length) { return null; }
+    var TETO_LINHAS = 10;
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Matriz de risco dinâmica — prioridade × comportamento</div>'));
+    /* F1-J: tendência REAL dos Críticos via fotos diárias (menor = melhor) */
+    var nCrit = riscos.filter(function (r) { return r.faixa === 'critico'; }).length;
+    if (PERIODO === 'band' && KPI._trend) {
+      var tR = KPI._trend(SNAPSHOTS, 'riscoCriticos', HOJE);
+      if (tR && tR.suficiente) {
+        var dfR = KPI._deltaFmt(tR.delta7, true);
+        var corR = dfR.tom === 'ok' ? 'green' : dfR.tom === 'bad' ? 'red' : 'muted2';
+        var chipR = el('<span class="pf-colet" style="color:var(--' + corR + ')"></span>');
+        chipR.textContent = 'Críticos ' + nCrit + ' · Δ7d ' + dfR.texto;
+        chipR.title = 'Variação do nº de atividades CRÍTICAS vs 7 dias atrás (fotos diárias). Menor é melhor.';
+        h.appendChild(chipR);
+      }
+    }
+    h.appendChild(infoBtn({
+      title: 'Risco dinâmico por atividade',
+      formula: 'score = pesoPrioridade × fatorAging × fatorReprog. Peso: P1=5 · P2=4 · P3=3 · P4=2 · P5=1 (sem prioridade = 3). fatorAging (maior atraso da atividade na janela): 0d=1,0 · 1–3d=1,2 · 4–7d=1,5 · 8–15d=2,0 · 15+d=3,0. fatorReprog = 1 + 0,5 × reprogramadas (teto 3,0). Faixas: ≥15 Crítico · ≥7,5 Em risco · <7,5 Observação.',
+      dados: 'prioridade e mitigação importadas do PEF (planilha-modelo) + ocorrências da janela (atrasadas e reprogramadas). Só entram atividades com sinal dinâmico: atraso > 0 OU reprogramação > 0.',
+      numeros: riscos.length + ' atividade(s) com sinal · exibindo até ' + TETO_LINHAS + ' · maior score: ' + riscos[0].score
+    }));
+    card.appendChild(h);
+    var list = el('<div class="pf-plano"></div>');
+    riscos.slice(0, TETO_LINHAS).forEach(function (r) {
+      var tok = r.faixa === 'critico' ? 'red' : r.faixa === 'em_risco' ? 'orange' : 'amber';
+      var rot = r.faixa === 'critico' ? 'Crítico' : r.faixa === 'em_risco' ? 'Em risco' : 'Observação';
+      var row = el('<div class="pf-plano-item dd-click"></div>');
+      row.title = 'Clique para ver as ocorrências desta atividade';
+      (function (id, tit) {
+        row.addEventListener('click', function () {
+          abrirDrill('Risco · ' + tit + ' — ocorrências da janela (atrasadas primeiro)',
+            BOARD.filter(function (o) { return o.act && o.act.id === id; })
+              .sort(function (a, b) { return ((b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0)) || ddOrdData(a, b); }));
+        });
+      })(r.act.id, r.act.titulo || '(sem título)');
+      row.appendChild(el('<span class="pf-plano-dot" style="background:var(--' + tok + ')"></span>'));
+      var cc = el('<div class="pf-plano-c"></div>');
+      var t1 = el('<div class="pf-plano-txt"></div>');
+      t1.textContent = (r.act.titulo || '(sem título)') + (r.act.setorSigla ? ' · ' + r.act.setorSigla : '');
+      cc.appendChild(t1);
+      var t2 = el('<div class="pf-plano-act"></div>');
+      t2.textContent = rot + ' · score ' + String(r.score).replace('.', ',') +
+        ' = ' + (r.prio || 'P?') + '(' + r.peso + ') × aging ' + String(r.fatorAging).replace('.', ',') +
+        (r.maxAtraso ? ' (' + r.maxAtraso + 'd)' : '') +
+        ' × reprog ' + String(r.fatorReprog).replace('.', ',') + (r.reprog ? ' (' + r.reprog + '×)' : '');
+      cc.appendChild(t2);
+      var t3 = el('<div class="pf-plano-act"></div>');
+      t3.textContent = r.mitigacao ? ('Mitigação (PEF): ' + r.mitigacao) : 'Sem mitigação cadastrada no PEF para esta rotina.';
+      cc.appendChild(t3);
+      row.appendChild(cc);
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+    return card;
+  }
+
+  /* ---------- F1-H · Pareto das atrasadas por setor (80/20 · Juran) ---------- */
+  function chartPareto(m) {
+    var p = KPI.paretoAtrasadas(m.porSetor);
+    if (!p) { return null; }
+    var vitais = p.itens.filter(function (x) { return x.vital; });
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">Pareto das atrasadas — 80/20 por setor</div>'));
+    h.appendChild(infoBtn({
+      title: 'Pareto das atrasadas por setor',
+      formula: 'setores em ordem decrescente de atrasadas + % acumulado. "Vitais" = setores até (e incluindo) a barra em que o acumulado cruza 80% — é onde agir rende mais.',
+      dados: 'as MESMAS atrasadas do painel, agrupadas por setor (multi-setor conta em cada área).',
+      numeros: p.total + ' atrasada(s) no total · ' + vitais.map(function (x) { return x.sig + ' ' + x.atrasadas; }).join(' · ') + ' → acumulado ' + vitais[vitais.length - 1].acumPct + '%'
+    }));
+    card.appendChild(h);
+    var list = el('<div></div>');
+    var max = p.itens[0].atrasadas;
+    p.itens.forEach(function (x) {
+      var tok = x.vital ? 'red' : 'muted2';
+      var row = el('<div class="pf-ss-row dd-click"></div>');
+      row.title = 'Clique para ver as ocorrências do setor';
+      (function (sig) {
+        row.addEventListener('click', function () {
+          abrirDrill('Setor ' + KPI.nomeSetor(sig, m.setores) + ' — ocorrências da janela (atrasadas primeiro)', DD.setor(sig));
+        });
+      })(x.sig);
+      row.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + tok + ')"></span>'));
+      var nome = el('<span class="pf-ss-nome"></span>');
+      nome.textContent = KPI.nomeSetor(x.sig, m.setores);
+      nome.title = x.sig;
+      row.appendChild(nome);
+      var tr = el('<div class="pf-ss-track"></div>');
+      tr.appendChild(el('<div class="pf-ss-fill" style="width:' + Math.round(x.atrasadas / max * 100) + '%;background:var(--' + tok + ')"></div>'));
+      row.appendChild(tr);
+      var num = el('<span class="pf-ss-num" style="color:var(--' + tok + ')"></span>');
+      num.textContent = x.atrasadas + ' · Σ' + x.acumPct + '%';
+      row.appendChild(num);
+      list.appendChild(row);
+    });
+    card.appendChild(list);
+    var rod = el('<div class="pf-plano-act" style="margin-top:8px"></div>');
+    rod.textContent = 'Vitais (concentram ' + vitais[vitais.length - 1].acumPct + '% das atrasadas): ' +
+      vitais.map(function (x) { return x.sig; }).join(', ') + '. Atacar estes primeiro rende mais que espalhar esforço.';
+    card.appendChild(rod);
+    return card;
+  }
+
   /* ---------- render + estados + boot ---------- */
   var CTX_MONTADO = false;
   function montarCtx(m) {
@@ -1056,12 +1185,14 @@
       planos.forEach(function (p) {
         var prog = KPI.pctPlano(p.atividadeIds, BOARD, HOJE);
         var st = KPI.statusPlano(p, prog.pct, HOJE);
-        var tok = st.tom === 'ok' ? 'green' : st.tom === 'warn' ? 'amber' : st.tom === 'bad' ? 'red' : 'muted2';
+        /* F1-I: escalonamento D-5/D-3/D-0 (spec travada) — só rótulo/cor, nunca bloqueia */
+        var esc = KPI.escalonamentoPlano ? KPI.escalonamentoPlano(p, prog.pct, HOJE) : null;
+        var tok = esc ? esc.tom : (st.tom === 'ok' ? 'green' : st.tom === 'warn' ? 'amber' : st.tom === 'bad' ? 'red' : 'muted2');
         var row = el('<div class="pf-plano-item"></div>');
         row.appendChild(el('<span class="pf-plano-dot" style="background:var(--' + tok + ')"></span>'));
         var cc = el('<div class="pf-plano-c"></div>');
         var t1 = el('<div class="pf-plano-txt"></div>');
-        t1.textContent = p.titulo + ' — ' + st.rotulo + (prog.pct == null ? '' : ' · ' + prog.pct + '%');
+        t1.textContent = p.titulo + ' — ' + st.rotulo + (prog.pct == null ? '' : ' · ' + prog.pct + '%') + (esc ? ' · ⚠ ' + esc.rotulo : '');
         cc.appendChild(t1);
         var t2 = el('<div class="pf-plano-act"></div>');
         t2.textContent = 'Dono: ' + (p.donoNome || '—') + ' · prazo ' + (p.prazo ? brData(p.prazo) : '—') +
@@ -1116,28 +1247,66 @@
        Só reordenação de blocos; zero lógica nova nos cálculos. */
     var bp = bannerPartida(m);
     if (bp) { body.appendChild(bp); }
+    /* F1-I (Parmenter): a tela em 2 andares. DECIDIR AGORA = os 4 heróis +
+       plano de ação + risco (o que exige ação hoje). ANALISAR = o resto,
+       colapsável (estado por aparelho em localStorage). Só reordenação/
+       agrupamento — zero mudança em qualquer cálculo. */
+    function secHead(t, subEl) {
+      var h2 = el('<div style="display:flex;align-items:center;gap:10px;margin:4px 0 10px"></div>');
+      var tt = el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)"></div>');
+      tt.textContent = t; h2.appendChild(tt);
+      h2.appendChild(el('<div style="flex:1;height:1px;background:var(--border)"></div>'));
+      if (subEl) { h2.appendChild(subEl); }
+      return h2;
+    }
+    body.appendChild(secHead('Decidir agora'));
     var focus = el('<div class="pf-focus"></div>');
     focusKPIs(m).forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
     body.appendChild(focus);
     body.appendChild(planoAcao(m));
-    body.appendChild(planosVivos(m));           /* F1-G: fecha o ciclo indicador→plano→execução */
+    var lr = lenteRisco(m);                     /* F1-H: risco dinâmico como LENTE (P1-Risco) */
+    if (lr) { lr.style.marginTop = '13px'; body.appendChild(lr); }
+
+    var ANA_KEY = 'gera_intel_analisar';
+    var anaAberto = true;
+    try { anaAberto = localStorage.getItem(ANA_KEY) !== '0'; } catch (e0) { }
+    var tg = el('<button type="button" style="font:inherit;font-size:11.5px;font-weight:800;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:6px 12px;cursor:pointer"></button>');
+    var secA = el('<div></div>');
+    function pintaTg() {
+      tg.textContent = anaAberto ? 'Recolher ▴' : 'Expandir ▾';
+      secA.style.display = anaAberto ? '' : 'none';
+    }
+    tg.addEventListener('click', function () {
+      anaAberto = !anaAberto;
+      try { if (anaAberto) { localStorage.removeItem(ANA_KEY); } else { localStorage.setItem(ANA_KEY, '0'); } } catch (e1) { }
+      pintaTg();
+    });
+    var hAna = secHead('Analisar', tg);
+    hAna.style.marginTop = '18px';
+    body.appendChild(hAna);
+    body.appendChild(secA);
+
+    secA.appendChild(planosVivos(m));           /* F1-G: fecha o ciclo indicador→plano→execução */
     var cand = candidatosIndicador();
     cand.style.marginTop = '13px';
-    body.appendChild(cand); /* F1-F */
+    secA.appendChild(cand); /* F1-F */
     var ss = scoreSetores(m);
-    if (ss) { ss.style.marginTop = '13px'; body.appendChild(ss); }
+    if (ss) { ss.style.marginTop = '13px'; secA.appendChild(ss); }
     var bk = backlogCard(m);
-    if (bk) { bk.style.marginTop = '13px'; body.appendChild(bk); }
+    if (bk) { bk.style.marginTop = '13px'; secA.appendChild(bk); }
     var score = el('<div class="pf-score"></div>');
     score.style.marginTop = '13px';
     scoreKPIs(m).forEach(function (k) { score.appendChild(kpiCard(k, false)); });
-    body.appendChild(score);
+    secA.appendChild(score);
     var row1 = el('<div class="pf-row1"></div>');
     row1.appendChild(chartAderencia(m)); row1.appendChild(chartAging(m));
-    body.appendChild(row1);
+    secA.appendChild(row1);
     var row2 = el('<div class="pf-row2"></div>');
     row2.appendChild(chartThroughput(m)); row2.appendChild(chartCarga(m));
-    body.appendChild(row2);
+    secA.appendChild(row2);
+    var pa = chartPareto(m);                    /* F1-H: 80/20 das atrasadas (Juran) */
+    if (pa) { pa.style.marginTop = '13px'; secA.appendChild(pa); }
+    pintaTg();
   }
 
   /* ---------- N2: foto do dia (idempotente; falha nunca quebra o painel) ---------- */
@@ -1147,6 +1316,12 @@
     SNAP_TENTADO = true;
     var ja = SNAPSHOTS.some(function (s) { return s.data === m.hoje; });
     if (ja) { return; }
+    /* F1-J: contagens de risco entram na foto (Δ7d da lente) — derivadas na hora */
+    try {
+      var rr = KPI.riscoAtividades(BOARD, m.hoje);
+      m.riscoCriticos = rr.filter(function (r) { return r.faixa === 'critico'; }).length;
+      m.riscoEmRisco = rr.filter(function (r) { return r.faixa === 'em_risco'; }).length;
+    } catch (eR) { m.riscoCriticos = null; m.riscoEmRisco = null; }
     KPI.gravarSnapshotHoje(m, USER.uid).then(function (res) {
       if (res && res.gravado) { SNAPSHOTS.push(KPI.snapshotDoc(m)); } /* cache local coerente p/ o resto da sessão */
     }).catch(function (e) {

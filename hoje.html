@@ -152,6 +152,20 @@
 .hj-state-s{font-size:13px;color:var(--muted);max-width:460px;line-height:1.5}
 .hj-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .hj-toast.err{border-color:var(--red);color:var(--red)}
+/* ---- F1-I: streak, i, supervisiona e cobranças ---- */
+.hj-fire{font-size:11.5px;font-weight:800;color:var(--orange);background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;margin-left:8px;white-space:nowrap}
+.hj-i{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--muted2);font-size:11px;font-weight:800;line-height:1;cursor:pointer;margin-left:8px;flex:0 0 auto}
+.hj-i:hover{color:var(--text);border-color:var(--brand)}
+.hj-xcard{background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:12px 16px;margin-bottom:14px;box-shadow:var(--shadowSoft)}
+.hj-xhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.hj-xtitle{font-size:12.5px;font-weight:800}
+.hj-xcount{margin-left:auto;font-size:11px;font-weight:800;padding:2px 9px;border-radius:20px;background:var(--s2);border:1px solid var(--border)}
+.hj-xrow{display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border);font-size:12.5px}
+.hj-xrow:first-of-type{border-top:0}
+.hj-xdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.hj-xtit{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hj-xmeta{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap}
+.hj-xlink{font-size:11.5px;font-weight:800;color:var(--brand);text-decoration:none;margin-top:6px;display:inline-block}
 /* ---- N4-B: botão "Agenda de Eventos" pulsante (D2) — tokens, sem hex ---- */
 .hj-evbtn{position:relative}
 .hj-evbtn.pulse{animation:hjEvPulse 1.6s ease-in-out infinite}
@@ -263,6 +277,10 @@
   var FCAMADA = 'todas';          /* 'todas' | 'socio' | 'gestor' | 'operacional' */
   var HJ_ABERTO = {};             /* F1-D(i): colapso por setor (memória da sessão; false = fechado) */
   var CONVOC = [];                /* F1-E · 3.1: reuniões abertas em que fui convocado */
+  var PLANOS = [];                /* F1-I: planos de ação vivos (só líder/gestor) p/ escalonamento D-5/D-3/D-0 */
+  var CELEBRADO = '';             /* F1-I: 1 celebração por dia por sessão (Kahneman: nudge único, nunca modal) */
+  var LAST_NUM = {};              /* F1-I: números da última pintura p/ os "i" estáticos */
+  var HJ_I_ATRAS = false;         /* F1-I: "i" das Atrasadas injetado 1x */
   var TIPO_LABEL_R = { lideres: 'Reunião de Líderes', integrada: 'Reunião Integrada', instrutor: 'Reunião com Instrutor', lideres_turma: 'Reunião c/ Líderes de Turmas', departamento: 'Reunião de Departamento' };
   function origemReuniao(act) {
     return act && (act.origemTipo === 'reuniao' || (act.origem && act.origem.tipo === 'reuniao'));
@@ -314,6 +332,17 @@
     /* F1-E · 3.1: convocações do usuário — reuniões abertas onde ele foi
        convocado. where('convocadosUids','array-contains') + limit; filtro de
        ativo/encerrada NO CLIENTE (evita índice composto). Falha degrada p/ []. */
+    /* F1-I: planos vivos p/ o escalonamento D-5/D-3/D-0 (mesma query da
+       Inteligência: where ativo + limit 100). Falha → [] (o Hoje nunca quebra). */
+    listPlanosVivos: function () {
+      return fb().then(function (c) {
+        var q = c.f.query(c.f.collection(c.db, 'planos_acao'), c.f.where('ativo', '==', true), c.f.limit(100));
+        return c.f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { a.push(Object.assign({ id: d.id }, d.data())); });
+          return a;
+        });
+      }).catch(function () { return []; });
+    },
     listMinhasConvocacoes: function (uid) {
       return fb().then(function (c) {
         var q = c.f.query(c.f.collection(c.db, 'reunioes'),
@@ -337,6 +366,14 @@
 
   /* ---------- mutações (1 toque) ---------- */
   function CAN_WRITE() { var p = (CURRENT_USER && CURRENT_USER.profile) || ''; return p === 'Admin' || p === 'Editor'; }
+  /* F1-J: o RESPONSÁVEL age nas próprias (padrão Asana: assignado conclui
+     a própria tarefa mesmo sendo somente-leitura no resto). Espelha a regra
+     do Firestore — só concluir/iniciar/reabrir; reprogramar/pular seguem
+     com líder/gestor. */
+  function PODE_AGIR(o) {
+    if (CAN_WRITE()) { return true; }
+    return !!(o && o.act && CURRENT_USER && o.act.responsavelUid === CURRENT_USER.uid);
+  }
   function mutar(o, patch, acao, msg) {
     if (!CAN_WRITE()) { toast('Seu perfil só visualiza.', 'err'); return; }
     Store.setOcorrencia(o.act, o.origData, patch, acao)
@@ -409,7 +446,7 @@
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-evsec', 'em andamento'); em.style.color = 'var(--doing)'; meta.appendChild(em); }
     card.appendChild(meta);
     card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), o.titulo));
-    if (CAN_WRITE()) {
+    if (PODE_AGIR(o)) {
       var acts = el('<div class="hj-rowacts"></div>');
       if (state === 'done') { acts.appendChild(miniBtn('Reabrir', function () { reabrir(o); })); }
       else {
@@ -427,10 +464,10 @@
     var done = o.status === 'concluida';
     row.appendChild(UI.checkbox({
       checked: done, label: o.titulo,
-      onToggle: function () { if (!CAN_WRITE()) { toast('Seu perfil só visualiza.', 'err'); refresh(); return; } if (done) { reabrir(o); } else { concluir(o); } }
+      onToggle: function () { if (!PODE_AGIR(o)) { toast('Só o responsável (ou líder/gestor) marca esta.', 'err'); refresh(); return; } if (done) { reabrir(o); } else { concluir(o); } }
     }));
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-freq', 'Em andamento'); em.style.color = 'var(--doing)'; row.appendChild(em); }
-    else if (!done && CAN_WRITE()) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
+    else if (!done && PODE_AGIR(o)) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
     var camDia = chipCamada(o.act); if (camDia) { row.appendChild(camDia); }
     if (origemReuniao(o.act)) {
       var chR = txt('span', 'hj-freq', 'Reunião'); chR.style.color = 'var(--doing)';
@@ -462,9 +499,120 @@
       chL.title = 'Nasceu na reunião' + (ogL.reuniaoTitulo ? ' "' + ogL.reuniaoTitulo + '"' : '') + (ogL.reuniaoData ? ' de ' + ogL.reuniaoData : '');
       row.appendChild(chL);
     }
-    if (CAN_WRITE()) { row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok')); }
+    if (PODE_AGIR(o)) { row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok')); }
     row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
     return row;
+  }
+
+  /* ---------- F1-I · "i" leve (Protocolo A: fórmula + dados + números) ---------- */
+  function infoHj(titulo, d) {
+    var b = el('<button type="button" class="hj-i" aria-label="Como este número é calculado">i</button>');
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var dd = (typeof d === 'function') ? d() : d;   /* função = números do momento */
+      var body = [];
+      [['FÓRMULA', dd.formula], ['DADOS', dd.dados], ['NÚMEROS DESTE CÁLCULO', dd.numeros]].forEach(function (r) {
+        if (!r[1]) { return; }
+        var k = txt('div', 'hj-prog-s', r[0]); k.style.marginTop = '8px';
+        var v = txt('div', '', r[1]); v.style.cssText = 'font-size:12.5px;line-height:1.5';
+        body.push(k); body.push(v);
+      });
+      UI.modal({ title: titulo, width: 460, body: body,
+        footer: function (close) { return [UI.button({ label: 'Entendi', onClick: close })]; } });
+    });
+    return b;
+  }
+
+  /* ---------- F1-I · Você supervisiona (campo supervisor → valor no dia) ----------
+     Ocorrências ABERTAS já vencidas ou de hoje cujas atividades têm
+     supervisorUid = você (e o responsável é OUTRA pessoa). Derivado do
+     MESMO board — zero query nova. Só rastreio e cobrança leve.       */
+  function cardSupervisiona(m, hoje) {
+    var uid = CURRENT_USER.uid;
+    if (!uid || (Guard.isUsuario && Guard.isUsuario())) { return null; }
+    var itens = m.board.filter(function (o) {
+      var a = o.act || {};
+      if (a.supervisorUid !== uid || a.responsavelUid === uid) { return false; }
+      var aberta = o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada';
+      return aberta && o.effDate && R.compareISO(o.effDate, hoje) <= 0;
+    }).sort(function (a, b) { return ((b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0)) || (a.effDate < b.effDate ? -1 : 1); });
+    if (!itens.length) { return null; }
+    var atras = itens.filter(function (o) { return o.atrasada; }).length;
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Você supervisiona'));
+    hd.appendChild(infoHj('Você supervisiona', {
+      formula: 'ocorrências ABERTAS (pendente, em andamento ou reprogramada) já vencidas ou de hoje, cujas atividades têm VOCÊ como supervisor e outra pessoa como responsável.',
+      dados: 'campo supervisor da atividade (sugerido pela hierarquia, editável) + as mesmas ocorrências do painel.',
+      numeros: itens.length + ' aberta(s) · ' + atras + ' atrasada(s)'
+    }));
+    var ct = el('<span class="hj-xcount"></span>');
+    ct.textContent = itens.length + ' aberta(s)' + (atras ? ' · ' + atras + ' atrasada(s)' : '');
+    ct.style.color = atras ? 'var(--red)' : 'var(--muted2)';
+    hd.appendChild(ct);
+    card.appendChild(hd);
+    itens.slice(0, 5).forEach(function (o) {
+      var row = el('<div class="hj-xrow"></div>');
+      row.appendChild(el('<span class="hj-xdot" style="background:var(--' + (o.atrasada ? 'red' : 'amber') + ')"></span>'));
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = (o.act.titulo || '(sem título)'); t.title = t.textContent;
+      row.appendChild(t);
+      var mt = el('<span class="hj-xmeta"></span>');
+      var dd = o.atrasada ? R.diasEntre(o.effDate, hoje) : 0;
+      mt.textContent = (o.act.responsavelNome || 'sem responsável') + (dd ? ' · ' + dd + 'd de atraso' : ' · hoje');
+      row.appendChild(mt);
+      card.appendChild(row);
+    });
+    if (itens.length > 5) { card.appendChild(txt('div', 'hj-prog-s', '+ ' + (itens.length - 5) + ' outra(s).')); }
+    return card;
+  }
+
+  /* ---------- F1-I · Cobranças do PEF (escalonamento D-5/D-3/D-0) ----------
+     Spec travada: D-5 alerta o DONO · D-3 escala à GESTÃO · D-0 vira
+     NÃO-CONFORMIDADE. NUNCA bloqueia. Derivado (KPI.escalonamentoPlano,
+     harness_f1i): gestor vê tudo; líder vê só os planos em que é o dono. */
+  function cardCobrancas(m, hoje) {
+    if (!PLANOS.length) { return null; }
+    var souGestor = Guard.isGestor && Guard.isGestor();
+    var uid = CURRENT_USER.uid;
+    var itens = [];
+    PLANOS.forEach(function (p) {
+      var prog = KPI.pctPlano(p.atividadeIds, m.board, hoje);
+      var esc = KPI.escalonamentoPlano(p, prog.pct, hoje);
+      if (!esc) { return; }
+      if (!souGestor && p.donoUid !== uid) { return; }
+      itens.push({ p: p, pct: prog.pct, esc: esc });
+    });
+    if (!itens.length) { return null; }
+    var peso = { D0: 0, D3: 1, D5: 2 };
+    itens.sort(function (a, b) { return peso[a.esc.nivel] - peso[b.esc.nivel] || ((a.p.prazo || '') < (b.p.prazo || '') ? -1 : 1); });
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(el('<span class="hj-reddot"></span>'));
+    hd.appendChild(txt('div', 'hj-xtitle', 'Cobranças do PEF — planos escalando'));
+    hd.appendChild(infoHj('Cobranças do PEF', {
+      formula: 'plano de ação abaixo de 70% escala sozinho: faltando ≤ 5 dias alerta o DONO (D-5) · faltando ≤ 3 dias sobe à GESTÃO (D-3) · vencido vira NÃO-CONFORMIDADE (D-0). Nunca bloqueia nada — só muda de dono e de cor.',
+      dados: 'planos de ação vivos + % derivado das atividades vinculadas (mesma conta da Inteligência).',
+      numeros: itens.length + ' plano(s) escalando agora'
+    }));
+    var ct = el('<span class="hj-xcount"></span>'); ct.textContent = itens.length; ct.style.color = 'var(--red)';
+    hd.appendChild(ct);
+    card.appendChild(hd);
+    itens.slice(0, 5).forEach(function (it) {
+      var row = el('<div class="hj-xrow"></div>');
+      row.appendChild(el('<span class="hj-xdot" style="background:var(--' + it.esc.tom + ')"></span>'));
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = it.p.titulo || '(sem título)'; t.title = t.textContent;
+      row.appendChild(t);
+      var mt = el('<span class="hj-xmeta"></span>');
+      mt.textContent = it.esc.rotulo + ' · ' + (it.pct == null ? 'coletando' : it.pct + '%') +
+        ' · dono ' + (it.p.donoNome || '—') + ' · prazo ' + (it.p.prazo ? it.p.prazo.split('-').reverse().join('/') : '—');
+      row.appendChild(mt);
+      card.appendChild(row);
+    });
+    var lk = el('<a class="hj-xlink" href="inteligencia.html">Tratar na Inteligência →</a>');
+    card.appendChild(lk);
+    return card;
   }
 
   /* ---------- estados ---------- */
@@ -530,12 +678,27 @@
        Marcou um check → refresh() → a barra ANDA (transição CSS). */
     var pg = document.getElementById('hj-prog'); pg.innerHTML = '';
     var pctDia = d.doHoje.length ? Math.round(d.feitasHoje / d.doHoje.length * 100) : 0;
+    /* F1-I: streak pessoal (regra 80%, derivada do MESMO board — KPI.streak80) */
+    var stk = KPI.streak80 ? KPI.streak80(m.board, CURRENT_USER.uid, hoje) : { dias: 0, hojeFechado: false };
     if (d.doHoje.length) {
       var pbox = el('<div class="hj-prog"></div>');
       var ptop = el('<div class="hj-prog-top"></div>');
       var msg = d.feitasHoje === 0 ? 'Comece marcando a primeira ✓'
         : (d.feitasHoje === d.doHoje.length ? 'Dia fechado. 🎯' : pctDia + '% do dia');
-      ptop.appendChild(el('<div class="hj-prog-t"><b>' + d.feitasHoje + '</b> de <b>' + d.doHoje.length + '</b> concluídas hoje</div>'));
+      var pt1 = el('<div class="hj-prog-t"></div>');
+      pt1.appendChild(el('<span><b>' + d.feitasHoje + '</b> de <b>' + d.doHoje.length + '</b> concluídas hoje</span>'));
+      if (stk.dias >= 2) {
+        var fire = el('<span class="hj-fire"></span>');
+        fire.textContent = '🔥 ' + stk.dias + ' dias seguidos';
+        fire.title = 'Sequência de dias com pelo menos 80% das suas atividades do dia concluídas. Dia sem nada previsto não quebra.';
+        pt1.appendChild(fire);
+      }
+      pt1.appendChild(infoHj('Progresso do dia', {
+        formula: 'concluídas hoje ÷ previstas para hoje × 100. Sequência (🔥): dias seguidos com ≥ 80% das SUAS atividades do dia concluídas; dia sem nada previsto (folga/feriado) não quebra; o dia de hoje, ainda aberto, também não.',
+        dados: 'as MESMAS ocorrências do seu painel (responsável = você), por dia civil de Salvador. Puladas ficam fora da conta.',
+        numeros: d.feitasHoje + ' ÷ ' + d.doHoje.length + ' = ' + pctDia + '%' + (stk.dias ? ' · sequência: ' + stk.dias + ' dia(s)' : ' · sequência: começa quando você fechar 80% de um dia')
+      }));
+      ptop.appendChild(pt1);
       ptop.appendChild(el('<div class="hj-prog-s">' + msg + '</div>'));
       pbox.appendChild(ptop);
       var tr = el('<div class="hj-prog-track"></div>');
@@ -545,7 +708,18 @@
       tr.appendChild(fill); pbox.appendChild(tr); pg.appendChild(pbox);
       /* dispara a transição no frame seguinte (0% → pct real) */
       setTimeout(function () { fill.style.width = Math.max(2, pctDia) + '%'; }, 30);
+      /* F1-I: celebração — toast único por dia/sessão ao fechar 100% (nunca modal) */
+      /* F1-J fix: celebra pelo conjunto PESSOAL (streak80, independente de
+         filtro/modo) — nunca por recorte de tela, que daria festa falsa. */
+      if (stk.hojeFechado && stk.hojePrev > 0 && CELEBRADO !== hoje) {
+        CELEBRADO = hoje;
+        toast('Dia fechado! 🎯' + (stk.dias >= 2 ? ' Sequência de ' + stk.dias + ' dias. 🔥' : ''));
+      }
     }
+    /* F1-I: Cobranças do PEF (escalonamento D-5/D-3/D-0 dos planos de ação) */
+    var cb = cardCobrancas(m, hoje); if (cb) { pg.appendChild(cb); }
+    /* F1-I: Você supervisiona (o campo supervisor vira valor imediato) */
+    var sup = cardSupervisiona(m, hoje); if (sup) { pg.appendChild(sup); }
 
     /* KPIs do topo */
     var kg = document.getElementById('hj-kpis'); kg.innerHTML = '';
@@ -562,6 +736,35 @@
       { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green' }
     ];
     kpis.forEach(function (k) { kg.appendChild(UI.kpiCard(k)); });
+    /* F1-I: "i" único cobrindo os 6 números do topo (Protocolo A) — números vivos */
+    LAST_NUM = { d: d, mm: mm, pctDia: pctDia };
+    if (!document.getElementById('hj-kpis-i')) {
+      var ki = el('<div id="hj-kpis-i" style="display:flex;align-items:center;gap:6px;margin:-6px 0 8px"></div>');
+      ki.appendChild(txt('span', 'hj-prog-s', 'Números do dia'));
+      ki.appendChild(infoHj('Números do dia — como cada um é calculado', function () {
+        var L = LAST_NUM;
+        return {
+          formula: 'Para hoje = ocorrências com data de hoje (menos puladas). Concluídas hoje = as de hoje com status concluída. Atrasadas = vencidas e ainda abertas. Em andamento = status "em andamento". Aderência (janela) = concluídas ÷ previstas até hoje × 100 (meta 90%). Reprogramação = reprogramadas ÷ total × 100 (limite 20%).',
+          dados: 'as MESMAS ocorrências deste painel, no seu escopo e filtros atuais; dia civil de Salvador.',
+          numeros: 'hoje ' + L.d.feitasHoje + '/' + L.d.doHoje.length + ' (' + L.pctDia + '%) · atrasadas ' + L.d.atras.length + ' · andamento ' + L.mm.totais.andamento + ' · aderência ' + (L.mm.aderencia == null ? '—' : L.mm.aderencia + '%') + ' · reprog ' + L.mm.reprogPct + '%'
+        };
+      }));
+      kg.parentNode.insertBefore(ki, kg);
+    }
+    if (!HJ_I_ATRAS) {
+      HJ_I_ATRAS = true;
+      var lhead = document.querySelector('.hj-late-badge');
+      if (lhead && lhead.parentNode) {
+        lhead.parentNode.insertBefore(infoHj('Atrasadas e críticas', function () {
+          var L = LAST_NUM;
+          return {
+            formula: 'ocorrências com data ANTERIOR a hoje e ainda abertas (pendente, em andamento ou reprogramada), das mais antigas para as mais novas. A cor sobe com a idade do atraso.',
+            dados: 'as mesmas ocorrências do painel, no seu escopo atual.',
+            numeros: (L.d ? L.d.atras.length : 0) + ' pendente(s) agora'
+          };
+        }), lhead);
+      }
+    }
 
     /* timeline (com horário) */
     var agora = new Date(); var agoraHM = pad2(agora.getHours()) + ':' + pad2(agora.getMinutes());
@@ -739,8 +942,9 @@
     var uid = (CURRENT_USER && CURRENT_USER.uid) || null;
     Promise.all([
       KPI.carregar('band'),
+      Store.listPlanosVivos ? ((Guard.isUsuario && Guard.isUsuario()) ? Promise.resolve([]) : Store.listPlanosVivos()) : Promise.resolve([]),
       uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve([])
-    ]).then(function (r) { MODELO = r[0]; CONVOC = r[1] || []; paint(); })
+    ]).then(function (r) { MODELO = r[0]; PLANOS = r[1] || []; CONVOC = r[2] || []; paint(); })
       .catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
   }
 

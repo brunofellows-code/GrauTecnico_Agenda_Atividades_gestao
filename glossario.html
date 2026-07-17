@@ -107,7 +107,17 @@
       ['Sparkline', 'O mini-gráfico de linha dentro do card: a forma dos últimos 7 dias do indicador, para ver a tendência de relance.'],
       ['Snapshot (foto do dia)', 'Uma vez por dia o sistema grava os números daquele dia. É dessa série de fotos que nascem o Δ7d e o sparkline. Sem medição retroativa: só existe tendência a partir do 1º dia de foto.'],
       ['Janela padrão', 'O recorte de tempo dos indicadores: dos últimos 45 dias até 30 dias à frente. As tendências (Δ7d) só valem nessa janela — comparar com "semana" ou "mês" misturaria réguas diferentes.'],
-      ['Pareto', 'Regra 80/20: poucos itens causam a maior parte do problema. O Plano de ação e a Matriz de Risco ordenam do mais impactante para o menos.']
+      ['Pareto', 'Regra 80/20: poucos itens causam a maior parte do problema. O Plano de ação e a Matriz de Risco ordenam do mais impactante para o menos.'],
+      ['Pareto das atrasadas', 'Card da Inteligência que ordena os setores pelo nº de atrasadas e mostra o % acumulado. Os setores "vitais" (até a barra em que o acumulado cruza 80%) concentram a maior parte do problema — atacar esses primeiro rende mais que espalhar esforço.'],
+      ['Supervisor', 'Quem acompanha a atividade POR CIMA do responsável (padrão de aprovador do Jira/Asana). O sistema sugere sozinho subindo a hierarquia: operacional → líder do subsetor/setor → gestor; camada gestor → outro gestor; sócio fica sem (é o topo). É só sugestão: dá para trocar ou deixar vazio.'],
+      ['Risco dinâmico (score)', 'Nota de risco que MUDA com o comportamento real: prioridade do PEF (P1=5 … P5=1) × fator de atraso (quanto mais velho, maior) × fator de reprogramação (quanto mais adiada, maior). ≥15 Crítico · ≥7,5 Em risco · abaixo, Observação. A mitigação mostrada é sempre a do PEF — o sistema nunca inventa uma.'],
+      ['Sequência (🔥 streak)', 'Dias seguidos em que você concluiu pelo menos 80% das SUAS atividades do dia. Dia de folga (sem nada previsto) não quebra; o dia de hoje, ainda aberto, também não. É motivação, não punição — não entra em nenhum ranking.'],
+      ['Escalonamento D-5/D-3/D-0', 'Plano de ação abaixo de 70% escala sozinho: faltando 5 dias alerta o DONO · faltando 3 dias sobe à GESTÃO · vencido vira NÃO-CONFORMIDADE. Nunca trava nada — só muda de dono e de cor, para a cobrança acontecer antes do estouro.'],
+      ['Você supervisiona', 'Card do Meu Dia com as rotinas abertas em que você é o SUPERVISOR (e outra pessoa é a responsável). Serve para acompanhar por cima sem virar o executor.'],
+      ['Backup (exportar JSON)', 'Botão na tela Importar (só gestor) que baixa uma cópia completa do banco num arquivo JSON. É a recuperação de desastre do sistema: guarde o arquivo em local seguro e repita todo mês.'],
+      ['Responsável marca as próprias', 'Quem é o responsável de uma rotina pode concluir, iniciar e reabrir as PRÓPRIAS ocorrências no Meu Dia — mesmo no perfil usuário (padrão Asana: o assignado age na própria tarefa). Reprogramar e pular continuam com líder/gestor.'],
+      ['Exportar CSV (ranking)', 'Botão na tela Performance que baixa a lente atual do ranking (setor, líder ou usuário) num arquivo que abre direto no Excel. Mesmos números da tela — nada é recalculado.'],
+      ['Custo do mês (Eventos)', 'Linha no topo da Agenda de Eventos somando o previsto × realizado de todos os eventos do mês no seu recorte, com a diferença em destaque. Valores em centavos por baixo — sem erro de arredondamento.']
     ]],
     ['Perfis e permissões', [
       ['Admin', 'Vê e faz tudo, inclusive gerenciar usuários e aprovar mudanças de data automaticamente.'],

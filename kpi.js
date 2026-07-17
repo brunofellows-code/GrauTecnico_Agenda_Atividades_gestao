@@ -477,6 +477,11 @@
       andamento: t.andamento,
       throughputSemana: thrSem,
       reprogPct: m.reprogPct,
+      /* F1-J: CONTAGENS de risco na foto (Crítico/Em risco) — tendência Δ7d
+         da lente sem jamais persistir score por atividade (derivado). Quem
+         chama anexa m.riscoCriticos/m.riscoEmRisco; ausente = null (honesto). */
+      riscoCriticos: m.riscoCriticos == null ? null : m.riscoCriticos,
+      riscoEmRisco: m.riscoEmRisco == null ? null : m.riscoEmRisco,
       porSetor: porSetor
     };
   };
@@ -1075,5 +1080,221 @@
     if (pct == null) { return { chave: 'coletando', rotulo: 'Coletando', tom: 'flat' }; }
     if (prazo && R.diasEntre(hoje, prazo) <= 5 && pct < 70) { return { chave: 'em_risco', rotulo: 'Em risco', tom: 'warn' }; }
     return { chave: 'no_prazo', rotulo: 'No prazo', tom: 'ok' };
+  };
+})();
+
+/* ============================================================
+   F1-H · HELPERS PUROS (append) — supervisor determinístico,
+   risco dinâmico e Pareto das atrasadas. Testados no
+   harness_f1h.js. Zero query nova: só matemática sobre dados
+   já carregados pelas telas.
+   ============================================================ */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  var R = window.GrautRecorrencia;
+
+  /* ---------- D1 · SUGESTÃO DETERMINÍSTICA DE SUPERVISOR ----------
+     Padrão Jira/Asana: aprovação/acompanhamento vai para o supervisor
+     acima do executor (campo de usuário, editável). Cadeia por camada:
+       operacional -> líder do SUBSETOR -> líder do SETOR-RAIZ -> gestor
+       gestor      -> outro gestor (par; "sócio" não existe como perfil)
+       socio       -> null (topo da árvore — ninguém acima)
+     Nunca sugere o próprio responsável (auto-supervisão); pool vazio
+     após remover o responsável -> sobe um nível. Determinístico:
+     ordena por nome pt-BR e desempata por uid. É SUGESTÃO — a tela
+     deixa trocar ou limpar (campo nullable).                        */
+  function ordUser(a, b) {
+    var n = ((a && a.nome) || '').localeCompare((b && b.nome) || '', 'pt-BR');
+    if (n !== 0) { return n; }
+    return ((a && a.uid) || '') < ((b && b.uid) || '') ? -1 : 1;
+  }
+  K.sugerirSupervisor = function (act, usuarios, setores) {
+    var camada = (act && act.camada) || 'operacional';
+    if (camada === 'socio') { return null; }
+    var ativos = (Array.isArray(usuarios) ? usuarios : [])
+      .filter(function (u) { return u && u.uid && u.ativo !== false; })
+      .sort(ordUser);
+    var respUid = (act && act.responsavelUid) || null;
+    function lideresDe(sig) {
+      if (!sig) { return []; }
+      return ativos.filter(function (u) {
+        return u.perfil === 'lider' && Array.isArray(u.setoresLiderados) && u.setoresLiderados.indexOf(sig) !== -1;
+      });
+    }
+    var gestores = ativos.filter(function (u) { return u.perfil === 'gestor'; });
+    var cadeia = (camada === 'gestor')
+      ? [gestores]
+      : [lideresDe(act && act.subsetorSigla), lideresDe(act && act.setorSigla), gestores];
+    for (var i = 0; i < cadeia.length; i++) {
+      var pool = cadeia[i].filter(function (u) { return u.uid !== respUid; });
+      if (pool.length) { return { uid: pool[0].uid, nome: pool[0].nome || '' }; }
+    }
+    return null;
+  };
+
+  /* ---------- D2 · RISCO DINÂMICO (lente da Inteligência) ----------
+     score = pesoPrioridade × fatorAging × fatorReprog.
+     - pesoPrioridade: P1=5 … P5=1 (rótulo do PEF importado); ausente /
+       não-parseável = 3 (default "médio", padrão Jira).
+     - fatorAging: MESMAS faixas do gráfico de aging (coerência):
+       0d=1,0 · 1–3d=1,2 · 4–7d=1,5 · 8–15d=2,0 · 15+d=3,0.
+     - fatorReprog: 1 + 0,5 × reprogramadas da atividade na janela
+       (teto 3,0).
+     Faixas do score (máx 45): ≥15 Crítico · ≥7,5 Em risco · <7,5
+     Observação. Só entra quem tem SINAL DINÂMICO (atraso>0 OU
+     reprog>0) — prioridade parada não é risco dinâmico.
+     Mitigação: SOMENTE act.mitigacao (importada do PEF); nunca
+     inventada aqui.                                                 */
+  K.parsePrioridade = function (str) {
+    var m = /P([1-5])/.exec(String(str || ''));
+    if (!m) { return { p: null, peso: 3 }; }
+    var n = parseInt(m[1], 10);
+    return { p: 'P' + n, peso: 6 - n };
+  };
+  K.fatorAging = function (dias) {
+    var d = Number(dias) || 0;
+    if (d <= 0) { return 1; }
+    if (d <= 3) { return 1.2; }
+    if (d <= 7) { return 1.5; }
+    if (d <= 15) { return 2; }
+    return 3;
+  };
+  K.fatorReprog = function (n) {
+    var f = 1 + 0.5 * (Number(n) || 0);
+    return f > 3 ? 3 : f;
+  };
+  K.riscoAtividades = function (board, hoje) {
+    var map = {}, out = [];
+    (Array.isArray(board) ? board : []).forEach(function (o) {
+      var a = o && o.act;
+      if (!a || !a.id) { return; }
+      var b = map[a.id] || (map[a.id] = { act: a, maxAtraso: 0, reprog: 0 });
+      if (o.atrasada) {
+        var d = R.diasEntre(o.effDate, hoje);
+        if (d > b.maxAtraso) { b.maxAtraso = d; }
+      }
+      if (o.status === 'reprogramada') { b.reprog++; }
+    });
+    Object.keys(map).forEach(function (id) {
+      var b = map[id];
+      if (b.maxAtraso <= 0 && b.reprog <= 0) { return; }
+      var pr = K.parsePrioridade(b.act.prioridade);
+      var fa = K.fatorAging(b.maxAtraso);
+      var fr = K.fatorReprog(b.reprog);
+      var score = Math.round(pr.peso * fa * fr * 10) / 10;
+      out.push({
+        act: b.act, prio: pr.p, peso: pr.peso,
+        maxAtraso: b.maxAtraso, reprog: b.reprog,
+        fatorAging: fa, fatorReprog: fr, score: score,
+        faixa: score >= 15 ? 'critico' : score >= 7.5 ? 'em_risco' : 'observacao',
+        mitigacao: b.act.mitigacao || null
+      });
+    });
+    out.sort(function (x, y) {
+      return (y.score - x.score) ||
+        ((x.act.titulo || '').localeCompare(y.act.titulo || '', 'pt-BR'));
+    });
+    return out;
+  };
+
+  /* ---------- D3 · PARETO DAS ATRASADAS POR SETOR ----------
+     Padrão Juran/Kaizen: categorias em ordem decrescente + %
+     acumulado; "vital few" = setores até (e incluindo) a barra que
+     CRUZA os 80 %. Recebe m.porSetor (multi-setor já conta em cada
+     raiz, mesma regra dos demais gráficos). null se não há
+     atrasadas.                                                      */
+  K.paretoAtrasadas = function (porSetor) {
+    var itens = (Array.isArray(porSetor) ? porSetor : [])
+      .filter(function (s) { return s && s.atrasadas > 0; })
+      .map(function (s) { return { sig: s.sig, atrasadas: s.atrasadas }; })
+      .sort(function (a, b) { return (b.atrasadas - a.atrasadas) || (a.sig < b.sig ? -1 : 1); });
+    var total = 0;
+    itens.forEach(function (x) { total += x.atrasadas; });
+    if (!total) { return null; }
+    var acum = 0, cruzou = false;
+    itens.forEach(function (x) {
+      acum += x.atrasadas;
+      x.pct = Math.round(x.atrasadas / total * 100);
+      x.acumPct = Math.round(acum / total * 100);
+      x.vital = !cruzou;
+      if (!cruzou && x.acumPct >= 80) { cruzou = true; }
+    });
+    return { total: total, itens: itens };
+  };
+})();
+
+/* ============================================================
+   F1-I · HELPERS PUROS (append) — streak pessoal 80% e
+   escalonamento D-5/D-3/D-0 dos planos. Testados no
+   harness_f1i.js. Zero query aqui.
+   ============================================================ */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  var R = window.GrautRecorrencia;
+
+  /* ---------- STREAK PESSOAL (C5, decisões travadas) ----------
+     Deriva do MESMO board (zero query): ocorrências do uid, por dia
+     civil, excluindo puladas. Dia CONTA se previstas>0 e
+     feitas/previstas >= 0,8 (regra 80%). Dia sem nada previsto é
+     PULADO (folga/feriado não quebra — auto-perdão). O dia de HOJE
+     ainda aberto não quebra: se hoje não fechou, a contagem começa
+     de ontem. Teto natural = início da janela do board.
+     Devolve { dias, hojePrev, hojeFeitas, hojeFechado }.          */
+  K.streak80 = function (board, uid, hoje) {
+    var porDia = {};
+    (Array.isArray(board) ? board : []).forEach(function (o) {
+      if (!o || !o.act || o.act.responsavelUid !== uid) { return; }
+      if (o.status === 'pulada') { return; }
+      if (!o.effDate || R.compareISO(o.effDate, hoje) > 0) { return; }
+      var b = porDia[o.effDate] || (porDia[o.effDate] = { prev: 0, feitas: 0 });
+      b.prev++;
+      if (o.status === 'concluida') { b.feitas++; }
+    });
+    var hj = porDia[hoje] || { prev: 0, feitas: 0 };
+    function fecha(d) { return d.prev > 0 && (d.feitas / d.prev) >= 0.8; }
+    var dias = 0;
+    var cursor = hoje;
+    if (hj.prev > 0 && fecha(hj)) { dias++; }
+    /* anda para trás a partir de ontem; para no 1º dia COM previstas que não fechou */
+    var guard = 0;
+    cursor = R.addDias(cursor, -1);
+    while (guard++ < 60) {
+      var d = porDia[cursor];
+      if (d && d.prev > 0) {
+        if (fecha(d)) { dias++; } else { break; }
+      }
+      /* dia sem nada previsto: pula sem quebrar */
+      var temMaisAntigo = false;
+      for (var k2 in porDia) { if (R.compareISO(k2, cursor) < 0) { temMaisAntigo = true; break; } }
+      if (!temMaisAntigo && (!d || !d.prev)) { break; }
+      cursor = R.addDias(cursor, -1);
+    }
+    return { dias: dias, hojePrev: hj.prev, hojeFeitas: hj.feitas,
+      hojeFechado: hj.prev > 0 && hj.feitas === hj.prev };
+  };
+
+  /* ---------- ESCALONAMENTO D-5 / D-3 / D-0 (spec travada) ----------
+     Plano de ação não entregue: D-5 alerta o DONO/líder · D-3 escala
+     à GESTÃO · D-0 (vencido) vira NÃO-CONFORMIDADE. NUNCA bloqueia —
+     só muda de dono e de cor. Determinístico e derivado (nada gravado):
+       pct >= 100            -> null (entregue)
+       prazo < hoje          -> D0  (não-conformidade, red)
+       faltam <= 3 e pct<70  -> D3  (gestão, red)
+       faltam <= 5 e pct<70  -> D5  (dono, amber)
+       senão                 -> null                                  */
+  K.escalonamentoPlano = function (plano, pct, hoje) {
+    if (pct != null && pct >= 100) { return null; }
+    var prazo = plano && plano.prazo;
+    if (!prazo || !R.isISO(prazo)) { return null; }
+    if (R.compareISO(prazo, hoje) < 0) {
+      return { nivel: 'D0', quem: 'nc', rotulo: 'Não-conformidade (venceu)', tom: 'red' };
+    }
+    var faltam = R.diasEntre(hoje, prazo);
+    var p = pct == null ? 0 : pct;
+    if (faltam <= 3 && p < 70) { return { nivel: 'D3', quem: 'gestao', rotulo: 'Escalado à gestão (D-3)', tom: 'red' }; }
+    if (faltam <= 5 && p < 70) { return { nivel: 'D5', quem: 'dono', rotulo: 'Alerta ao dono (D-5)', tom: 'amber' }; }
+    return null;
   };
 })();

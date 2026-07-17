@@ -86,7 +86,27 @@ service cloud.firestore {
     // ---------- ocorrencias ----------
     match /ocorrencias/{id} {
       allow read: if isActive();
-      allow create, update: if canWrite();
+      // F1-J: o RESPONSÁVEL age nas PRÓPRIAS ocorrências (padrão Asana:
+      // quem é assignado numa tarefa pode concluí-la mesmo sendo
+      // comment-only no resto). Só status de EXECUÇÃO — reprogramar e
+      // pular continuam exigindo líder/gestor. O vínculo é verificado na
+      // ATIVIDADE-mãe (1 get), não no que o cliente declara.
+      allow create: if canWrite()
+        || (isActive()
+            && get(/databases/$(database)/documents/atividades/$(request.resource.data.atividadeId)).data.responsavelUid == request.auth.uid
+            && request.resource.data.status in ['concluida', 'pendente', 'em_andamento']);
+      allow update: if canWrite()
+        || (isActive()
+            && get(/databases/$(database)/documents/atividades/$(request.resource.data.atividadeId)).data.responsavelUid == request.auth.uid
+            && request.resource.data.status in ['concluida', 'pendente', 'em_andamento']
+            // edge da reatribuição: a base denormalizada (responsavelUid/
+            // setorSigla) pode ressincronizar com a atividade-mãe — mas SÓ
+            // para os valores atuais dela (nunca valores livres). data/
+            // prazoOriginal/atividadeId ficam FORA: são amarrados ao id do
+            // doc e mudar 'data' moveria o effDate (fraude de prazo).
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidaEm', 'iniciadaEm', 'responsavelUid', 'setorSigla'])
+            && request.resource.data.responsavelUid == request.auth.uid
+            && request.resource.data.setorSigla == get(/databases/$(database)/documents/atividades/$(request.resource.data.atividadeId)).data.setorSigla);
       allow delete: if false;
     }
 
@@ -106,7 +126,9 @@ service cloud.firestore {
     // append-only + update/delete negados: abrir o create e MAIS auditoria.
     match /atividade_log/{id} {
       allow read: if isActive();
-      allow create: if isActive();
+      // RAIO-X: o uid gravado TEM de ser o do autor autenticado — impede
+      // forjar autoria (o ranking da Performance nasce deste log).
+      allow create: if isActive() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
 

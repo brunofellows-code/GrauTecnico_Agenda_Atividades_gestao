@@ -582,6 +582,35 @@
     card.appendChild(seg);
     var holder = el('<div></div>');
     card.appendChild(holder);
+    /* F1-J: exportar a lente atual em CSV (padrão de todo BI/dashboard de
+       mercado). Colunas ESTÁVEIS; separador ';' (Excel pt-BR); UTF-8 com BOM.
+       Exporta o que está na tela — mesmo recorte, mesma janela, zero conta nova. */
+    function csvEscape(v) {
+      var s = String(v == null ? '' : v);
+      return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    function exportarCSV() {
+      var lst = (RANK && RANK[LENTE]) || [];
+      if (!lst.length) { return; }
+      var linhas = ['posicao;nome;score;aderencia_pct;no_prazo_pct;atraso_residual_pct;previstas;prev_vencidas;concluidas_ate_hoje;concluidas_total;no_prazo;atrasadas'];
+      lst.forEach(function (b, ix) {
+        linhas.push([ix + 1, b.nome, b.score == null ? '' : b.score,
+          b.ader == null ? '' : b.ader, b.pctNoPrazo == null ? '' : b.pctNoPrazo,
+          b.residual == null ? '' : b.residual,
+          b.previstas, b.prevVencidas, b.concluidasAteHoje, b.concluidasTotal, b.noPrazo, b.atrasadas
+        ].map(csvEscape).join(';'));
+      });
+      var blob = new Blob(['\uFEFF' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'gera_ranking_' + LENTE + '_' + HOJE + '.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+    }
+    var exb = el('<button type="button" class="pf-seg-b" style="margin-left:auto">Exportar CSV</button>');
+    exb.title = 'Baixa a lente atual do ranking em CSV (abre no Excel). Mesmos números da tela.';
+    exb.addEventListener('click', exportarCSV);
+    seg.appendChild(exb);
     function pintaRk() {
       holder.innerHTML = '';
       var lst = (RANK && RANK[LENTE]) || [];

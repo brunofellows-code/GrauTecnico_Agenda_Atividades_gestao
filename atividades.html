@@ -377,7 +377,10 @@
             var db = c.db, f = c.f;
             var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(1000));
             return f.getDocs(q).then(function (snap) {
-              var a = []; snap.forEach(function (d) { a.push({ uid: d.id, nome: (d.data() || {}).nome || '(sem nome)', perfil: (d.data() || {}).perfil || '' }); });
+              /* F1-H: setor + setoresLiderados de volta no shape — o recorte do
+                 líder (KPI.usuariosNoEscopo, contrato F1-D) e a sugestão de
+                 supervisor (KPI.sugerirSupervisor) dependem deles. */
+              var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)', perfil: u.perfil || '', setor: u.setor || null, setoresLiderados: Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [] }); });
               a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
               return a;
             });
@@ -596,6 +599,7 @@
     var SETORES = [];      /* docs de setores */
     var ATIV = [];         /* TODAS as atividades ativas (filtro de setor é em memória) */
     var USERS = [];        /* usuários ativos p/ picker (pode vir vazio sem permissão) */
+    var USERS_ALL = [];    /* F1-H: lista completa p/ a cadeia de supervisor (o gestor pode estar fora do escopo do líder) */
     var PROJETOS = [];     /* N4: projetos ativos p/ vínculo opcional */
     var OCC_DOCS = [];     /* docs de ocorrencias na janela */
     var OCC_BY_ATIV = {};  /* atividadeId -> [override docs] */
@@ -665,7 +669,18 @@
         .then(function (res) {
           SETORES = res[0]; ATIV = res[1]; PROJETOS = res[3];
           /* F1-D(b): líder enxerga só os liderados do escopo; gestor vê todos. */
+          USERS_ALL = res[2]; /* F1-H */
           USERS = KPI.usuariosNoEscopo(res[2], CURRENT_USER, SETORES);
+          /* F1-I: deep-link vindo do drill da Inteligência (#a=<id>) —
+             pré-preenche a busca com o título da atividade e limpa o hash. */
+          try {
+            var mHash = /[#&]a=([^&]+)/.exec(window.location.hash || '');
+            if (mHash) {
+              var alvo = res[1].filter(function (a) { return a.id === decodeURIComponent(mHash[1]); })[0];
+              if (alvo && alvo.titulo) { search = alvo.titulo; toast('Mostrando: ' + alvo.titulo); }
+              if (window.history && history.replaceState) { history.replaceState(null, '', window.location.pathname); }
+            }
+          } catch (eH) { }
           return loadBoardData();
         })
         .then(function () { renderAll(); })
@@ -907,7 +922,7 @@
 
       if (term) {
         out = out.filter(function (o) {
-          var hay = (o.titulo || '') + ' ' + (o.act.responsavelNome || '') + ' ' + setoresDe(o.act).join(' ') + ' ' + (o.act.subsetorSigla || '') + (o.act.todosSetores ? ' todos' : '');
+          var hay = (o.titulo || '') + ' ' + (o.act.responsavelNome || '') + ' ' + (o.act.supervisorNome || '') + ' ' + setoresDe(o.act).join(' ') + ' ' + (o.act.subsetorSigla || '') + (o.act.todosSetores ? ' todos' : '');
           return hay.toLowerCase().indexOf(term) !== -1;
         });
       }
@@ -967,6 +982,8 @@
       var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
       if (o.horario) { var hr = el('<span class="at-mi"></span>'); hr.appendChild(ico(PATH.clock, 12)); hr.appendChild(document.createTextNode(o.horario)); into.appendChild(hr); }
       if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
+      /* F1-H: supervisor visível no card (rastreabilidade de quem acompanha) */
+      if (o.act.supervisorNome) { var sv = el('<span class="at-mi"></span>'); sv.appendChild(ico(PATH.user, 12)); sv.appendChild(document.createTextNode('Sup.: ' + o.act.supervisorNome)); into.appendChild(sv); }
       if (o.act.origemTipo === 'reuniao' || (o.act.origem && o.act.origem.tipo === 'reuniao')) {
         var rg = txt('span', 'at-tag', 'Reunião'); rg.style.color = 'var(--doing)'; rg.style.background = 'var(--chipBg)';
         var og = o.act.origem || {};
@@ -1560,6 +1577,38 @@
       });
       var camField = UI.field({ label: 'Camada', control: camSelect, hint: 'Organograma: define em qual lente (Sócio/Gestor/Operacional) a rotina aparece.' });
 
+      /* F1-H · SUPERVISOR (padrão Jira/Asana: quem acompanha por cima do
+         responsável). Campo NULLABLE + sugestão determinística subindo a
+         árvore de setores por camada (KPI.sugerirSupervisor, harness_f1h):
+         operacional → líder do subsetor → líder do setor → gestor;
+         gestor → outro gestor; sócio → sem supervisor (topo).
+         Tocar no campo desliga a sugestão automática (escolha manual vale). */
+      var supPool = (USERS_ALL && USERS_ALL.length) ? USERS_ALL : USERS;
+      var supOpts = supPool.map(function (u) { return { value: u.uid, label: u.nome }; });
+      if (editing && act.supervisorUid && !supOpts.some(function (o) { return o.value === act.supervisorUid; })) {
+        supOpts.unshift({ value: act.supervisorUid, label: (act.supervisorNome || '(supervisor atual)') });
+      }
+      var supTouched = !!(editing && act.supervisorUid); /* edição preserva o gravado */
+      var supSelect = UI.select({ value: (editing && act.supervisorUid) ? act.supervisorUid : '', placeholder: '— Sem supervisor —', options: supOpts });
+      supSelect.addEventListener('change', function () { supTouched = true; });
+      var supField = UI.field({ label: 'Supervisor (opcional)', control: supSelect,
+        hint: 'Sugerido pela hierarquia: operacional → líder do subsetor/setor → gestor; camada gestor → outro gestor; sócio fica sem (topo). Pode trocar ou limpar.' });
+      function sugerirSup() {
+        if (supTouched) { return; }
+        var s = KPI.sugerirSupervisor({
+          camada: camSelect.value || 'operacional',
+          setorSigla: setorSelect.value || null,
+          subsetorSigla: (subSelect && subSelect.value) ? subSelect.value : null,
+          responsavelUid: respSelect.value || CURRENT_USER.uid || null
+        }, supPool, SETORES);
+        supSelect.value = s ? s.uid : '';
+      }
+      setorSelect.addEventListener('change', sugerirSup);
+      subHolder.addEventListener('change', sugerirSup);   /* delegação: subSelect é recriado */
+      respSelect.addEventListener('change', sugerirSup);
+      camSelect.addEventListener('change', sugerirSup);
+      if (!editing) { sugerirSup(); }
+
       /* N4: vínculo OPCIONAL a projeto (o % da atividade cascateia p/ o projeto).
          `origem` (decisão de reunião) nunca é editada aqui — só preservada. */
       var projOpts = PROJETOS.map(function (p) { return { value: p.id, label: p.nome }; });
@@ -1645,7 +1694,7 @@
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, projField, recField, recBox, hrField, banner],
+        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, supField, projField, recField, recBox, hrField, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -1681,6 +1730,8 @@
           responsavelUid: respUid,
           responsavelNome: respNomeOf(respUid),
           camada: camSelect.value || 'operacional', /* F1-D(c) */
+          supervisorUid: supSelect.value || null,   /* F1-H: nullable */
+          supervisorNome: supSelect.value ? (((supSelect.options[supSelect.selectedIndex] || {}).text) || '') : null,
           recorrencia: tipo,
           horario: hrInp.value || null,
           diasSemana: tipo === 'semanal' ? selDias.slice().sort(function (a, b) { return a - b; }) : null,

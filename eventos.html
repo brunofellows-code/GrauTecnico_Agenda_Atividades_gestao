@@ -325,6 +325,39 @@
     }
     bodyEl.appendChild(pills);
 
+    /* F1-J: TOTAL do mês — previsto × realizado (padrão Monday/Asana:
+       rollup de orçamento no topo do quadro). Soma os MESMOS eventos
+       visíveis abaixo (recorte por papel já aplicado). */
+    (function () {
+      if (!EVTS.length) { return; }
+      var tp = 0, trz = 0, nReal = 0;
+      EVTS.forEach(function (e) {
+        tp += (Number(e.custoPrevisto) || 0);
+        if (e.custoRealizado != null) { trz += (Number(e.custoRealizado) || 0); nReal++; }
+      });
+      var bar = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:9px 14px;margin:0 0 12px;font-size:12.5px;font-weight:700"></div>');
+      var lft = el('<span></span>');
+      lft.textContent = 'Custo do mês: ' + fmtBRL(tp) + ' previsto × ' + fmtBRL(trz) + ' realizado';
+      bar.appendChild(lft);
+      var dif = trz - tp;
+      if (nReal) {
+        var dv = el('<span style="font-size:11.5px;font-weight:800"></span>');
+        dv.style.color = dif > 0 ? 'var(--red)' : 'var(--green)';
+        dv.textContent = dif > 0 ? ('+' + fmtBRL(dif) + ' acima do previsto') : (dif < 0 ? (fmtBRL(-dif) + ' abaixo do previsto') : 'na linha do previsto');
+        bar.appendChild(dv);
+      }
+      var ib2 = el('<button class="ev-i" type="button" aria-label="Como este número é calculado" style="margin-left:auto"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
+      ib2.addEventListener('click', function () {
+        openPop(ib2, 'Custo do mês — como é calculado', [
+          ['Fórmula', 'soma do custo PREVISTO de todos os eventos do mês × soma do custo REALIZADO dos já marcados como realizados. Diferença = realizado − previsto.'],
+          ['Dados', EVTS.length + ' evento(s) visíveis no seu recorte · ' + nReal + ' com realizado lançado. Valores guardados em centavos (sem erro de arredondamento).'],
+          ['Números', fmtBRL(tp) + ' previsto · ' + fmtBRL(trz) + ' realizado · diferença ' + (dif >= 0 ? '+' : '−') + fmtBRL(Math.abs(dif))]
+        ]);
+      });
+      bar.appendChild(ib2);
+      bodyEl.appendChild(bar);
+    })();
+
     /* cabeçalho do mês */
     var mh = el('<div class="ev-mh"></div>');
     mh.appendChild(txt('div', 'ev-mh-t', MESES[MES - 1] + ' de ' + ANO));
