@@ -72,6 +72,43 @@
 .at-vtoggle button:hover{color:var(--text)}
 .at-vtoggle button.on{color:var(--greenText);background:var(--activeBg)}
 
+/* ===== COLUNAS POR RECORRÊNCIA (visão padrão · REGRA GLOBAL) =====
+   Abre calma: colunas com contadores; vermelho = ponto + número; drill no clique. */
+.at-reccols{display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:14px;align-items:start}
+.at-rcol{background:var(--sideBg);border:1px solid var(--border);border-radius:14px;padding:11px;min-width:0}
+.at-rchd{display:flex;align-items:center;gap:8px;padding:4px 5px 11px}
+.at-rcname{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.at-rcsp{flex:1}
+.at-rccount{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px;flex:none}
+.at-latedot{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:var(--red);flex:none}
+.at-latedot::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block}
+.at-rcbody{display:flex;flex-direction:column;gap:8px}
+.at-scard{background:var(--s1);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+.at-schd{display:flex;flex-direction:column;gap:6px;width:100%;padding:11px 12px;background:transparent;border:0;cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.at-schd:hover{background:var(--s2)}
+.at-sct{font-size:13px;font-weight:700;line-height:1.35;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.at-scmeta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.at-scmeta .at-tag{font-size:9.5px;padding:1px 6px}
+.at-scfoot{display:flex;align-items:center;gap:8px}
+.at-scfoot .at-gcount{margin-left:auto}
+.at-noresp{font-size:10px;font-weight:800;letter-spacing:.03em;color:var(--amber);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+.at-sresp{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.at-sdrill{border-top:1px solid var(--border);padding:6px 8px 8px;display:flex;flex-direction:column;gap:2px;background:var(--s2)}
+.at-orow{display:flex;align-items:center;gap:9px;padding:5px 4px;border-radius:8px;min-width:0}
+.at-orow:hover{background:var(--s1)}
+.at-odate{font-size:12px;font-weight:700;color:var(--text);flex:none;width:44px}
+.at-orow.done .at-odate{color:var(--muted);text-decoration:line-through}
+.at-orow.skip .at-odate{color:var(--muted);text-decoration:line-through}
+.at-olate{font-size:9.5px;font-weight:800;letter-spacing:.03em;color:var(--red);background:var(--haloRed);border-radius:5px;padding:1px 6px;flex:none}
+.at-ostate{font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 6px;flex:none;border:1px solid var(--border);background:var(--chipBg)}
+.at-ostate.skip{color:var(--amber)}
+.at-ostate.rep{color:var(--orange)}
+.at-ostate.doing{color:var(--doing)}
+.at-osp{flex:1;min-width:0}
+.at-okebab{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex:none;border:0;border-radius:7px;background:transparent;color:var(--muted2);cursor:pointer}
+.at-okebab:hover{background:var(--s3);color:var(--text)}
+@media (max-width:640px){.at-reccols{grid-template-columns:1fr}}
+
 /* ===== LISTA ===== */
 .at-list{display:flex;flex-direction:column;gap:20px}
 .at-group{display:flex;flex-direction:column;gap:9px}
@@ -612,7 +649,9 @@
 
     var selSetor = '';     /* '' = todos os setores */
     var periodo = 'band';
-    var view = 'setor';    /* 'setor' | 'lista' | 'serie' | 'kanban' | 'quadro' */
+    var view = 'recor';    /* REGRA GLOBAL: única visão = colunas por recorrência com drill.
+                              Renders antigos ('setor'|'lista'|'serie'|'kanban'|'quadro')
+                              preservados no código mas sem botão — reativáveis se preciso. */
     var openSeries = {};   /* séries expandidas na visão colapsada */
     var search = '';
     var searchTimer = null;
@@ -812,14 +851,9 @@
       /* ---- direita: filtros e ações ---- */
       var right = el('<div class="at-toolright"></div>');
 
-      /* setor */
-      var simpleRoots = setoresRaiz();
-      var sel = el('<select class="at-fsel" aria-label="Filtrar por setor"></select>');
-      sel.appendChild(el('<option value="">Todos os setores</option>'));
-      simpleRoots.forEach(function (s) { var o = document.createElement('option'); o.value = s.sigla; o.textContent = s.sigla + ' · ' + s.nome; sel.appendChild(o); });
-      sel.value = selSetor;
-      sel.addEventListener('change', function () { selSetor = sel.value; renderBoard(); updateCount(); });
-      right.appendChild(sel);
+      /* REGRA GLOBAL 5 (topo enxuto): o filtro de setor é o contexto global
+         GrautCtx (à esquerda) — o select local redundante foi removido.
+         selSetor permanece '' (variável preservada; sem UI). */
 
       /* período (segmented) */
       var seg = el('<div class="at-seg" role="group" aria-label="Período"></div>');
@@ -852,20 +886,8 @@
         right.appendChild(bell);
       }
 
-      /* toggle de visão */
-      var vt = el('<div class="at-vtoggle" role="group" aria-label="Visão"></div>');
-      function vbtn(id, label, iconNode) {
-        var b = el('<button type="button"' + (view === id ? ' class="on"' : '') + '></button>');
-        b.appendChild(iconNode); b.appendChild(el('<span>' + label + '</span>'));
-        b.addEventListener('click', function () { if (view === id) { return; } view = id; renderToolbar(); renderBoard(); });
-        return b;
-      }
-      vt.appendChild(vbtn('setor', 'Setor', ico('<path d="M12 2 21 7l-9 5-9-5 9-5zM3 12l9 5 9-5"></path>', 15)));
-      vt.appendChild(vbtn('lista', 'Lista', UI.icon('bars', 15)));
-      vt.appendChild(vbtn('serie', 'Série', ico('<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>', 15)));
-      vt.appendChild(vbtn('kanban', 'Kanban', UI.icon('grid', 15)));
-      vt.appendChild(vbtn('quadro', 'Quadro', ico('<path d="M4 4h6v16H4zM14 4h6v16h-6z"></path>', 15)));
-      right.appendChild(vt);
+      /* REGRA GLOBAL 5: barra de 5 modos de visão removida — visão única
+         (colunas por recorrência). Renders antigos preservados no código. */
 
       /* nova atividade */
       if (CAN_WRITE) {
@@ -967,7 +989,8 @@
         stage.appendChild(box);
         return;
       }
-      if (view === 'kanban') { renderKanban(); }
+      if (view === 'recor') { renderColunasRecorrencia(); }
+      else if (view === 'kanban') { renderKanban(); }
       else if (view === 'setor') { renderPorSetor(); }
       else if (view === 'quadro') { renderQuadroSetor(); }
       else if (view === 'serie') { renderColapsadoSerie(); }
@@ -1262,6 +1285,112 @@
         });
       });
       stage.appendChild(wrap);
+    }
+
+    /* ===== COLUNAS POR RECORRÊNCIA (visão padrão · REGRA GLOBAL) =====
+       1) Abre calma: séries colapsadas, sem lista empilhada de vermelhos.
+       2) Colunas: Diária / Semanal / Quinzenal / Mensal / Outras — com contadores.
+       3) Vermelho = ponto + número no cabeçalho da coluna e no rodapé do card.
+       4) Drill no clique: a série abre as ocorrências (data + estado + check + ações).
+       Reusa BOARD, openSeries, listadores e ações existentes — zero lógica nova de dado. */
+    var RECCOL_DEF = [
+      { id: 'diario',    label: 'Diária',    tipos: ['diario'] },
+      { id: 'semanal',   label: 'Semanal',   tipos: ['semanal'] },
+      { id: 'quinzenal', label: 'Quinzenal', tipos: ['quinzenal'] },
+      { id: 'mensal',    label: 'Mensal',    tipos: ['mensal'] },
+      { id: 'outras',    label: 'Outras',    tipos: ['bimestral', 'trimestral', 'unico'] }
+    ];
+
+    function occRowCompact(o) {
+      var done = o.status === 'concluida';
+      var skip = o.status === 'pulada';
+      var row = el('<div class="at-orow' + (done ? ' done' : '') + (skip ? ' skip' : '') + '"></div>');
+      if (CAN_WRITE && !skip) {
+        row.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { concluir(o); } } }));
+      }
+      var p = (o.effDate || '').split('-');
+      row.appendChild(txt('span', 'at-odate', p.length === 3 ? (p[2] + '/' + p[1]) : o.effDate));
+      if (o.atrasada) { row.appendChild(txt('span', 'at-olate', 'Atrasada')); }
+      if (o.status === 'em_andamento') { row.appendChild(txt('span', 'at-ostate doing', 'Andamento')); }
+      if (o.status === 'reprogramada') { row.appendChild(txt('span', 'at-ostate rep', 'Reprog.')); }
+      if (skip) { row.appendChild(txt('span', 'at-ostate skip', 'Pulada')); }
+      if (o.horario) { var hr = txt('span', 'at-mi', o.horario); row.appendChild(hr); }
+      row.appendChild(el('<span class="at-osp"></span>'));
+      var kb = el('<button type="button" class="at-okebab" title="Ações da ocorrência"></button>');
+      kb.appendChild(ico('<circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle>', 15));
+      kb.addEventListener('click', function () { actionsMenu(o); });
+      row.appendChild(kb);
+      return row;
+    }
+
+    function serieCard(g) {
+      var late = 0; g.items.forEach(function (o) { if (o.atrasada) { late++; } });
+      var open = !!openSeries[g.id];
+      var card = el('<div class="at-scard"></div>');
+      var hd = el('<button type="button" class="at-schd" aria-expanded="' + (open ? 'true' : 'false') + '"></button>');
+      hd.appendChild(txt('div', 'at-sct', g.act.titulo));
+      var meta = el('<div class="at-scmeta"></div>');
+      if (g.act.todosSetores) {
+        var atag = txt('span', 'at-tag', 'Todos'); atag.style.color = 'var(--muted)'; atag.style.background = 'var(--chipBg)'; meta.appendChild(atag);
+      } else {
+        setoresDe(g.act).forEach(function (sg) { var t = txt('span', 'at-tag', sg); var c = corSetor(sg); t.style.color = 'var(--' + c + ')'; t.style.background = 'var(--' + c + 'Bg)'; meta.appendChild(t); });
+      }
+      if (g.act.subsetorSigla) { var st = txt('span', 'at-tag sub', g.act.subsetorSigla); meta.appendChild(st); }
+      hd.appendChild(meta);
+      var foot = el('<div class="at-scfoot"></div>');
+      /* ALERTA DE DADO: sem responsável = causa dos zeros nos indicadores — expor onde se corrige */
+      if (g.act.responsavelNome) {
+        var rp = el('<span class="at-sresp"></span>'); rp.appendChild(ico(PATH.user, 11)); rp.appendChild(document.createTextNode(g.act.responsavelNome)); foot.appendChild(rp);
+      } else {
+        var nr = txt('span', 'at-noresp', 'Sem responsável'); nr.title = 'Defina o responsável em “Editar a atividade” — sem ele, os indicadores não medem.'; foot.appendChild(nr);
+      }
+      if (late) { foot.appendChild(txt('span', 'at-latedot', String(late))); }
+      foot.appendChild(txt('span', 'at-gcount', g.items.length + ' ocor.'));
+      hd.appendChild(foot);
+      hd.addEventListener('click', function () { openSeries[g.id] = !openSeries[g.id]; renderBoard(); });
+      card.appendChild(hd);
+      if (open) {
+        var drill = el('<div class="at-sdrill"></div>');
+        g.items.forEach(function (o) { drill.appendChild(occRowCompact(o)); });
+        card.appendChild(drill);
+      }
+      return card;
+    }
+
+    function renderColunasRecorrencia() {
+      /* agrupa ocorrências por série (atividade) */
+      var smap = {}, slist = [];
+      BOARD.forEach(function (o) {
+        var k = o.act.id;
+        if (!(k in smap)) { smap[k] = { id: k, act: o.act, items: [] }; slist.push(smap[k]); }
+        smap[k].items.push(o);
+      });
+      var grid = el('<div class="at-reccols"></div>');
+      RECCOL_DEF.forEach(function (cdef) {
+        var series = slist.filter(function (s) { return cdef.tipos.indexOf(s.act.recorrencia || 'unico') !== -1; });
+        if (!series.length) { return; }
+        var tot = 0, late = 0;
+        series.forEach(function (s) { tot += s.items.length; s.items.forEach(function (o) { if (o.atrasada) { late++; } }); });
+        /* atrasadas primeiro dentro da coluna; depois alfabético */
+        series.sort(function (a, b) {
+          var la = a.items.some(function (o) { return o.atrasada; }) ? 1 : 0;
+          var lb = b.items.some(function (o) { return o.atrasada; }) ? 1 : 0;
+          if (la !== lb) { return lb - la; }
+          return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR');
+        });
+        var col = el('<div class="at-rcol"></div>');
+        var hd = el('<div class="at-rchd"></div>');
+        hd.appendChild(txt('span', 'at-rcname', cdef.label));
+        hd.appendChild(el('<span class="at-rcsp"></span>'));
+        if (late) { var ld = txt('span', 'at-latedot', String(late)); ld.title = late + ' ocorrência(s) atrasada(s) nesta coluna'; hd.appendChild(ld); }
+        hd.appendChild(txt('span', 'at-rccount', series.length + ' · ' + tot));
+        col.appendChild(hd);
+        var body = el('<div class="at-rcbody"></div>');
+        series.forEach(function (g) { body.appendChild(serieCard(g)); });
+        col.appendChild(body);
+        grid.appendChild(col);
+      });
+      stage.appendChild(grid);
     }
 
     /* ===================== mutações de ocorrência ===================== */

@@ -57,6 +57,42 @@
 .pf-chip.on{background:var(--activeBg);border-color:var(--brand);color:var(--greenText)}
 /* tabela ranking */
 .pf-tblwrap{overflow-x:auto}
+
+/* ===== REGRA GLOBAL: 3 heróis + grupos por severidade + barras ===== */
+.pf-heroes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:13px;margin-bottom:13px}
+.pf-hero{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:16px 18px}
+.pf-hlab{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);margin-bottom:8px}
+.pf-hnum{font-size:30px;font-weight:800;line-height:1;color:var(--text)}
+.pf-hnum .pf-hdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:9px;vertical-align:middle}
+.pf-hsub{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:7px;line-height:1.4}
+.pf-bars{display:flex;flex-direction:column;gap:9px}
+.pf-bar{display:flex;align-items:center;gap:10px}
+.pf-bname{width:52px;flex:none;font-size:11.5px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.pf-btrack{flex:1;height:14px;background:var(--chipBg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.pf-bfill{height:100%;border-radius:7px;min-width:2px}
+.pf-bval{width:84px;flex:none;font-size:11.5px;font-weight:700;color:var(--muted);text-align:right}
+.pf-bval .lt{color:var(--red);font-weight:800}
+.pf-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:13px;align-items:start;margin-bottom:13px}
+.pf-grp{background:var(--sideBg);border:1px solid var(--border);border-radius:14px;padding:11px}
+.pf-grphd{display:flex;align-items:center;gap:8px;padding:3px 4px 10px}
+.pf-grpdot{width:9px;height:9px;border-radius:50%;flex:none}
+.pf-grpname{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text)}
+.pf-grpsp{flex:1}
+.pf-grpcount{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px}
+.pf-pcard{display:flex;flex-direction:column;gap:5px;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 12px;cursor:pointer;margin-bottom:8px}
+.pf-pcard:hover{background:var(--s2)}
+.pf-pcard:last-child{margin-bottom:0}
+.pf-pcn{font-size:13px;font-weight:700;color:var(--text)}
+.pf-pcs{font-size:10.5px;font-weight:700;color:var(--muted2)}
+.pf-pcm{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;color:var(--muted)}
+.pf-pcm .sc{display:inline-flex;align-items:center;gap:5px}
+.pf-pcm .sc .d{width:8px;height:8px;border-radius:50%;display:inline-block}
+.pf-pcm .lt{color:var(--red);font-weight:800}
+.pf-hyg{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin-bottom:13px;cursor:pointer}
+.pf-hyg:hover{background:var(--s2)}
+.pf-hygdot{width:9px;height:9px;border-radius:50%;background:var(--amber);flex:none}
+.pf-hygt{font-size:12.5px;font-weight:700;color:var(--text)}
+.pf-hygs{font-size:11.5px;font-weight:600;color:var(--muted)}
 .pf-tbl{width:100%;border-collapse:collapse;min-width:760px}
 .pf-tbl th{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
 .pf-tbl th .thx{display:inline-flex;align-items:center;gap:5px}
@@ -187,6 +223,7 @@
   var HOJE = null;        /* C4: dia civil LOCAL da última carga */
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
   function haloOf(tone) { return 'halo' + tone.charAt(0).toUpperCase() + tone.slice(1); }
   function tomToken(t) { return t === 'ok' ? 'green' : t === 'warn' ? 'amber' : t === 'bad' ? 'red' : 'muted2'; }
   function fmtPct(v) { return v == null ? '—' : v + '%'; }
@@ -484,62 +521,135 @@
 
     body.appendChild(chipsSetores(PP));
 
+    var infos = colInfos(lista.concat(semResp ? [semResp] : []));
+
+    /* ===== 3 HERÓIS (REGRA GLOBAL: abre calma; vermelho = ponto + número) ===== */
+    var T = (MODELO && MODELO.totais) || {};
+    /* conclusão no prazo global do recorte: Σ noPrazo ÷ Σ concluídas (mesma base do colInfos) */
+    var gNP = 0, gCT = 0;
+    lista.concat(semResp ? [semResp] : []).forEach(function (p) { gNP += p.noPrazo; gCT += p.concluidasTotal; });
+    var pctNoPrazoG = gCT ? Math.round(gNP / gCT * 100) : null;
+
+    function heroTom(v, okMin, warnMin) {
+      if (v == null) { return 'muted2'; }
+      return v >= okMin ? 'green' : v >= warnMin ? 'amber' : 'red';
+    }
+    function hero(label, info, numHtml, sub) {
+      var h = el('<div class="pf-hero"></div>');
+      var lb = el('<div class="pf-hlab"></div>'); lb.appendChild(document.createTextNode(label));
+      if (info) { lb.appendChild(infoBtn(info)); }
+      h.appendChild(lb);
+      var n = el('<div class="pf-hnum"></div>'); n.innerHTML = numHtml; h.appendChild(n);
+      if (sub) { h.appendChild(txt('div', 'pf-hsub', sub)); }
+      return h;
+    }
+    var heroes = el('<div class="pf-heroes"></div>');
+    var aderG = (MODELO && MODELO.aderencia != null) ? MODELO.aderencia : null;
+    var tA = heroTom(aderG, 80, 60);
+    heroes.appendChild(hero('Aderência à rotina', infos.ader,
+      '<span class="pf-hdot" style="background:var(--' + tA + ')"></span><span style="color:var(--' + tA + ')">' + (aderG == null ? '—' : aderG + '%') + '</span>',
+      aderG == null ? 'Coletando — nada previsto venceu ainda nesta janela.' : 'Concluídas ÷ previstas até hoje, no recorte da janela.'));
+    var tP = heroTom(pctNoPrazoG, 80, 60);
+    heroes.appendChild(hero('Conclusão no prazo', infos.prazo,
+      '<span class="pf-hdot" style="background:var(--' + tP + ')"></span><span style="color:var(--' + tP + ')">' + (pctNoPrazoG == null ? '—' : pctNoPrazoG + '%') + '</span>',
+      pctNoPrazoG == null ? 'Sem concluídas no recorte ainda.' : gNP + ' de ' + gCT + ' concluída(s) dentro do prazo.'));
+    var nAtr = T.atrasadas || 0;
+    var tR = nAtr ? 'red' : 'green';
+    heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela', numeros: nAtr + ' atrasada(s) · aging médio ' + (MODELO ? (Math.round((MODELO.agingMedio || 0) * 10) / 10) : 0) + ' dia(s)' },
+      '<span class="pf-hdot" style="background:var(--' + tR + ')"></span><span style="color:var(--' + tR + ')">' + nAtr + '</span>',
+      nAtr ? ('Aging médio: ' + (Math.round((MODELO.agingMedio || 0) * 10) / 10) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
+    body.appendChild(heroes);
+
+    /* ===== higiene: sem responsável (âmbar, 1 linha — não polui) ===== */
+    if (semResp) {
+      var hyg = el('<div class="pf-hyg"></div>');
+      hyg.appendChild(el('<span class="pf-hygdot"></span>'));
+      hyg.appendChild(txt('span', 'pf-hygt', 'Sem responsável: ' + semResp.total + ' ocorrência(s)'));
+      hyg.appendChild(txt('span', 'pf-hygs', '— importe com a coluna "responsavel" ou edite as atividades. Clique para ver.'));
+      hyg.addEventListener('click', function () { abrirPessoa(semResp); });
+      body.appendChild(hyg);
+    }
+
+    /* ===== GRÁFICO: aderência por setor (barras, com atrasadas como ponto+número) ===== */
+    if (MODELO && MODELO.porSetor && MODELO.porSetor.length) {
+      var gc = el('<div class="pf-card"></div>');
+      var gh = el('<div class="pf-card-h"></div>');
+      gh.appendChild(el('<div class="pf-card-t">Aderência por setor</div>'));
+      gh.appendChild(infoBtn({ title: 'Aderência por setor', formula: 'concluídas ÷ previstas até hoje × 100, por setor (multi-homing conta em cada setor onde a atividade aparece)', dados: 'MODELO.porSetor — mesmo motor da Inteligência', numeros: MODELO.porSetor.length + ' setor(es) na janela' }));
+      gc.appendChild(gh);
+      var bars = el('<div class="pf-bars"></div>');
+      MODELO.porSetor.forEach(function (s) {
+        var ad = s.previstas ? Math.round(s.concluidas / s.previstas * 100) : null;
+        var tom = heroTom(ad, 80, 60);
+        var row = el('<div class="pf-bar"></div>');
+        var nm = txt('span', 'pf-bname', s.sig); nm.title = KPI.nomeSetor(s.sig, MODELO.setores); row.appendChild(nm);
+        var tr2 = el('<div class="pf-btrack"></div>');
+        var fill = el('<div class="pf-bfill"></div>');
+        fill.style.width = (ad == null ? 0 : Math.max(2, ad)) + '%';
+        fill.style.background = 'var(--' + (tom === 'muted2' ? 'chipBg' : tom) + ')';
+        tr2.appendChild(fill); row.appendChild(tr2);
+        var val = el('<span class="pf-bval"></span>');
+        val.innerHTML = (ad == null ? '—' : ad + '%') + (s.atrasadas ? ' · <span class="lt">●&hairsp;' + s.atrasadas + '</span>' : '');
+        val.title = s.concluidas + ' ÷ ' + s.previstas + ' previstas' + (s.atrasadas ? ' · ' + s.atrasadas + ' atrasada(s)' : '');
+        row.appendChild(val);
+        bars.appendChild(row);
+      });
+      gc.appendChild(bars);
+      body.appendChild(gc);
+    }
+
+    /* ===== PESSOAS agrupadas por severidade (agrupar, não empilhar) ===== */
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
-    h.appendChild(el('<div class="pf-card-t">Ranking por pessoa — pior score primeiro (onde agir)</div>'));
-    h.appendChild(infoBtn({ title: 'Ranking por pessoa', formula: 'todas as métricas saem das ocorrências REAIS da janela, agregadas por responsável (responsavelUid). Toque numa linha para os números individuais e as últimas ações.', dados: 'mesmo board expandido da Inteligência — nenhuma expansão duplicada', numeros: lista.length + ' pessoa(s)' + (semResp ? ' + linha de higiene (sem responsável)' : '') }));
+    h.appendChild(el('<div class="pf-card-t">Pessoas por severidade — clique para o detalhe individual</div>'));
+    h.appendChild(infoBtn({ title: 'Pessoas por severidade', formula: 'grupo = semáforo do score (≥80 verde · 60–79 âmbar · <60 vermelho · sem dado = coletando). ' + (infos.score.formula), dados: infos.score.dados, numeros: lista.length + ' pessoa(s) no recorte' }));
     card.appendChild(h);
 
     if (!lista.length && !semResp) {
       card.appendChild(el('<div class="pf-empty2">Nenhuma pessoa com ocorrências neste recorte.</div>'));
       body.appendChild(card);
-      var so = MODELO ? scoreSetores(MODELO) : null;
-      if (so) { body.appendChild(so); }
+      var so0 = MODELO ? scoreSetores(MODELO) : null;
+      if (so0) { body.appendChild(so0); }
       return;
     }
 
-    var infos = colInfos(lista.concat(semResp ? [semResp] : []));
-    var wrap = el('<div class="pf-tblwrap"></div>');
-    var tbl = el('<table class="pf-tbl"></table>');
-    var thead = el('<thead><tr></tr></thead>');
-    var trh = thead.firstChild;
-    function th(label, info) {
-      var t = document.createElement('th');
-      var x = el('<span class="thx"></span>');
-      x.appendChild(document.createTextNode(label));
-      if (info) { x.appendChild(infoBtn(info)); }
-      t.appendChild(x);
-      trh.appendChild(t);
-    }
-    th('Pessoa', null); th('Score', infos.score); th('Aderência', infos.ader); th('No prazo', infos.prazo);
-    th('Ciclo', infos.ciclo); th('Carga', infos.carga); th('Reprog.', infos.reprog);
-    tbl.appendChild(thead);
-    var tbody = document.createElement('tbody');
-
-    function linha(p, semRespRow) {
-      var tr = document.createElement('tr');
-      if (semRespRow) { tr.className = 'pf-semresp'; }
-      var tdN = document.createElement('td');
-      var nm = el('<div class="pf-nome"></div>'); nm.textContent = p.nome; tdN.appendChild(nm);
-      var sg = el('<div class="pf-sigs"></div>'); sg.textContent = p.setores.join(' · ') || '—'; tdN.appendChild(sg);
-      tr.appendChild(tdN);
-      var tdS = document.createElement('td');
+    var GRP_DEF = [
+      { id: 'bad',  label: 'Crítico',   tok: 'red' },
+      { id: 'warn', label: 'Atenção',   tok: 'amber' },
+      { id: 'ok',   label: 'Ok',        tok: 'green' },
+      { id: 'flat', label: 'Coletando', tok: 'muted2' }
+    ];
+    function pcard(p) {
+      var c = el('<div class="pf-pcard" role="button" tabindex="0"></div>');
+      c.appendChild(txt('div', 'pf-pcn', p.nome));
+      c.appendChild(txt('div', 'pf-pcs', p.setores.join(' · ') || '—'));
+      var m = el('<div class="pf-pcm"></div>');
       var tok = tomToken(p.tom);
-      var sc = el('<span class="pf-scorecell"></span>');
-      sc.appendChild(el('<span class="pf-scoredot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok === 'muted2' ? 'green' : tok) + ')"></span>'));
-      sc.appendChild(el('<span style="color:var(--' + tok + ')">' + (p.score == null ? (p.coletando ? '— coletando' : '—') : p.score) + '</span>'));
-      tdS.appendChild(sc); tr.appendChild(tdS);
-      [fmtPct(p.ader), fmtPct(p.pctNoPrazo), fmtDias(p.cicloDias), String(p.carga), p.reprogPct + '%'].forEach(function (v) {
-        var td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
-      });
-      tr.addEventListener('click', function () { abrirPessoa(p); });
-      return tr;
+      var sc = el('<span class="sc"></span>');
+      sc.appendChild(el('<span class="d" style="background:var(--' + tok + ')"></span>'));
+      sc.appendChild(document.createTextNode(p.score == null ? (p.coletando ? 'coletando' : '—') : 'score ' + p.score));
+      m.appendChild(sc);
+      m.appendChild(document.createTextNode('ader. ' + fmtPct(p.ader)));
+      if (p.atrasadas) { var lt = el('<span class="lt"></span>'); lt.textContent = '● ' + p.atrasadas; lt.title = p.atrasadas + ' atrasada(s)'; m.appendChild(lt); }
+      c.appendChild(m);
+      c.addEventListener('click', function () { abrirPessoa(p); });
+      return c;
     }
-    lista.forEach(function (p) { tbody.appendChild(linha(p, false)); });
-    if (semResp) { tbody.appendChild(linha(semResp, true)); }
-    tbl.appendChild(tbody);
-    wrap.appendChild(tbl);
-    card.appendChild(wrap);
+    var grid = el('<div class="pf-groups"></div>');
+    GRP_DEF.forEach(function (g) {
+      var arr = lista.filter(function (p) { return (p.tom || 'flat') === g.id; });
+      if (!arr.length) { return; }
+      var col = el('<div class="pf-grp"></div>');
+      var hd = el('<div class="pf-grphd"></div>');
+      hd.appendChild(el('<span class="pf-grpdot" style="background:var(--' + g.tok + ')"></span>'));
+      hd.appendChild(txt('span', 'pf-grpname', g.label));
+      hd.appendChild(el('<span class="pf-grpsp"></span>'));
+      hd.appendChild(txt('span', 'pf-grpcount', String(arr.length)));
+      col.appendChild(hd);
+      arr.forEach(function (p) { col.appendChild(pcard(p)); });
+      grid.appendChild(col);
+    });
+    card.appendChild(grid);
     body.appendChild(card);
 
     body.appendChild(rankingCard());              /* F1-G */

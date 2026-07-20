@@ -141,6 +141,18 @@
 .pf-state-s{font-size:13px;color:var(--muted);max-width:440px;line-height:1.5}
 .pf-plano{display:flex;flex-direction:column;gap:2px;margin-top:4px}
 .pf-plano-item{display:flex;align-items:flex-start;gap:11px;padding:11px 2px;border-top:1px solid var(--border)}
+/* REGRA GLOBAL: plano de ação agrupado (não empilhado) */
+.pf-pg{border:1px solid var(--border);border-radius:12px;margin-top:10px;overflow:hidden;background:var(--s1)}
+.pf-pg-hd{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;background:transparent;border:0;cursor:pointer;text-align:left;font:inherit;color:var(--text)}
+.pf-pg-hd:hover{background:var(--s2)}
+.pf-pg-dot{width:9px;height:9px;border-radius:50%;flex:none}
+.pf-pg-t{font-size:13px;font-weight:800;color:var(--text)}
+.pf-pg-sp{flex:1}
+.pf-pg-n{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px;flex:none}
+.pf-pg-car{display:inline-flex;color:var(--muted);transition:transform .15s;flex:none}
+.pf-pg.open .pf-pg-car{transform:rotate(180deg)}
+.pf-pg-body{display:none;padding:0 14px 6px}
+.pf-pg.open .pf-pg-body{display:block}
 .pf-plano-item:first-child{border-top:0}
 .pf-plano-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
 .pf-plano-c{flex:1;min-width:0}
@@ -818,7 +830,10 @@
     if (!itens.length) {
       list.appendChild(el('<div class="pf-plano-ok">Sem alertas: rotina em dia. 🎯</div>'));
     } else {
-      itens.forEach(function (it) {
+      /* REGRA GLOBAL: agrupar, não empilhar — os itens (lógica intacta acima)
+         são exibidos em blocos colapsáveis por tipo, com contador e ponto de
+         severidade. Abre calmo; o detalhe (e o botão "Criar plano") fica no drill. */
+      function planoRow(it) {
         var row = el('<div class="pf-plano-item"></div>');
         row.appendChild(el('<span class="pf-plano-dot" style="background:var(--' + it.sev + ')"></span>'));
         var cc = el('<div class="pf-plano-c"></div>');
@@ -826,12 +841,42 @@
         var t2 = el('<div class="pf-plano-act"></div>'); t2.textContent = it.act; cc.appendChild(t2);
         row.appendChild(cc);
         /* F1-G: AÇÃO OBRIGATÓRIA vira PLANO VIVO com 1 clique (dono +
-           prazo + atividades). Padrão Jira/Easy Agile: o insight da
-           retro/indicador vira item rastreável do backlog — 2/3 dos
-           times implementam <25% do que decidem quando não há sistema. */
+           prazo + atividades). Padrão Jira/Easy Agile: o insight vira
+           item rastreável — 2/3 dos times implementam <25% do que
+           decidem quando não há sistema. */
         row.appendChild(UI.button({ label: 'Criar plano', variant: 'ghost', onClick: function () { abrirCriarPlano(it); } }));
-        list.appendChild(row);
+        return row;
+      }
+      var PG_DEF = [
+        { tipo: 'gargalo',         label: 'Gargalos de setor' },
+        { tipo: 'setor_atrasadas', label: 'Atrasadas por setor' },
+        { tipo: 'sobrecarga',      label: 'Sobrecarga de pessoas' },
+        { tipo: 'sem_dono',        label: 'Sem responsável' }
+      ];
+      PG_DEF.forEach(function (gd) {
+        var arr = itens.filter(function (it) { return (it.pl && it.pl.tipo) === gd.tipo; });
+        if (!arr.length) { return; }
+        var pior = arr.some(function (it) { return it.sev === 'red'; }) ? 'red' : 'amber';
+        var grp = el('<div class="pf-pg"></div>');
+        var hd = el('<button type="button" class="pf-pg-hd" aria-expanded="false"></button>');
+        hd.appendChild(el('<span class="pf-pg-dot" style="background:var(--' + pior + ')"></span>'));
+        var tt = el('<span class="pf-pg-t"></span>'); tt.textContent = gd.label; hd.appendChild(tt);
+        hd.appendChild(el('<span class="pf-pg-sp"></span>'));
+        var nn = el('<span class="pf-pg-n"></span>'); nn.textContent = String(arr.length); hd.appendChild(nn);
+        var car = el('<span class="pf-pg-car"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></span>');
+        hd.appendChild(car);
+        var bd = el('<div class="pf-pg-body"></div>');
+        arr.forEach(function (it) { bd.appendChild(planoRow(it)); });
+        hd.addEventListener('click', function () {
+          var aberto = grp.classList.toggle('open');
+          hd.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+        });
+        grp.appendChild(hd); grp.appendChild(bd);
+        list.appendChild(grp);
       });
+      /* itens fora dos 4 tipos conhecidos (defensivo): mostram soltos, sem sumir */
+      itens.filter(function (it) { return !PG_DEF.some(function (g) { return (it.pl && it.pl.tipo) === g.tipo; }); })
+        .forEach(function (it) { list.appendChild(planoRow(it)); });
     }
     card.appendChild(list);
     return card;

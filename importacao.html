@@ -138,6 +138,16 @@
         });
       }).catch(function (e) { throw ferr(e); });
     },
+    /* P2-Resp: usuários ativos p/ resolver a coluna "responsavel" e o default líder-do-setor */
+    listUsuariosAtivos: function () {
+      return fb().then(function (c) {
+        var q = c.f.query(c.f.collection(c.db, 'usuarios'), c.f.where('ativo', '==', true), c.f.limit(500));
+        return c.f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '', perfil: u.perfil || '', setor: u.setor || null, setoresLiderados: Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [] }); });
+          return a;
+        });
+      }).catch(function () { return []; }); /* falha aqui não bloqueia o import — só desativa o default */
+    },
     criar: function (doc) {
       return fb().then(function (c) {
         return c.f.addDoc(c.f.collection(c.db, 'atividades'), doc).then(function (ref) { return ref.id; });
@@ -158,15 +168,15 @@
 
   /* ===================== modelo ===================== */
   var COLS_CRITICAS = ['codigo', 'titulo'];
-  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao', 'camada'];
+  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao', 'camada', 'responsavel'];
   var CAMADAS_VALIDAS = ['socio', 'gestor', 'operacional']; /* P1: organograma Sócios → Gestor → Operacional */
   var COLS_TODAS = COLS_CRITICAS.concat(COLS_OPCIONAIS);
   var MODELO_CSV = COLS_TODAS.join(';') + '\n' +
-    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;;;1;;08:00;;;operacional\n' +
-    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;;;;;17:30;;;operacional\n' +
-    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;;;;5;;;;gestor\n' +
-    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;;;;15;;Alta;Ligar e convocar o responsável;operacional\n' +
-    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;;socio';
+    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;;;1;;08:00;;;operacional;Maria Silva\n' +
+    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;;;;;17:30;;;operacional;\n' +
+    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;;;;5;;;;gestor;\n' +
+    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;;;;15;;Alta;Ligar e convocar o responsável;operacional;\n' +
+    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;;socio;';
 
   /* ===================== parser CSV (; ou ,) ===================== */
   function parseCSV(text) {
@@ -202,6 +212,7 @@
   }
 
   var SETORES = [], ATIV = [], PLANO = null;
+  var USUARIOS = []; /* P2-Resp: base p/ resolver responsável no import */
   var DATA_OPER = null; /* P1: carimbo da data de início da operação (definida no passo 1) */
   var bodyEl, POP, BACK;
 
@@ -242,6 +253,42 @@
     if (!achou) { return undefined; }
     if (!achou.setorPaiSigla) { return false; }
     return achou;
+  }
+
+  /* ===== P2-Resp: responsável no import =====
+     Ordem: (1) coluna "responsavel" (nome exato, case-insensitive) →
+     (2) default líder do subsetor → líder do setor → gestor → (3) null com aviso.
+     Motivo: 100% das rotinas importadas nasciam sem responsável e os
+     indicadores zeravam (aderência precisa de dono). Padrão de mercado:
+     Monday/Todoist exigem mapeamento; aqui alertamos e atribuímos default. */
+  function acharUsuarioPorNome(nome) {
+    if (!nome) { return null; }
+    /* R2: casamento TOLERANTE — sem acento, sem caixa; aceita nome exato,
+       primeiro nome ou prefixo, desde que aponte para UM único usuário ativo.
+       "Brenda" acha "Brenda Silva"; ambíguo (2+ candidatos) → null com aviso. */
+    function norm(s) {
+      s = (s || '').trim().toLowerCase();
+      try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+      return s;
+    }
+    var alvo = norm(nome);
+    if (!alvo) { return null; }
+    var exato = USUARIOS.filter(function (u) { return norm(u.nome) === alvo; });
+    if (exato.length === 1) { return exato[0]; }
+    if (exato.length > 1) { return null; }
+    var cand = USUARIOS.filter(function (u) {
+      var n = norm(u.nome);
+      return n.indexOf(alvo + ' ') === 0 || n === alvo || n.split(' ')[0] === alvo;
+    });
+    return cand.length === 1 ? cand[0] : null;
+  }
+  function liderDefault(setorSigla, subsetorSigla) {
+    function liderDe(sig) {
+      if (!sig) { return null; }
+      return USUARIOS.filter(function (u) { return u.perfil === 'lider' && u.setoresLiderados.indexOf(sig) !== -1; })[0] || null;
+    }
+    return liderDe(subsetorSigla) || liderDe(setorSigla)
+      || USUARIOS.filter(function (u) { return u.perfil === 'gestor'; })[0] || null;
   }
 
   function montarPlano(parsed, audit) {
@@ -328,8 +375,42 @@
         cand.camada = cam;
       }
 
+      /* P2-Resp: coluna "responsavel" (por nome) — não encontrado = aviso e cai no default */
+      var respNome = valOf(row, audit.mapa, 'responsavel');
+      if (respNome != null) {
+        var uResp = acharUsuarioPorNome(respNome);
+        if (uResp) { cand.responsavelUid = uResp.uid; cand.responsavelNome = uResp.nome; }
+        else { plano.avisos.push('linha ' + linha + ' (' + codigo + '): responsável "' + respNome + '" não encontrado OU ambíguo (2+ usuários com esse nome) — aplicando a regra da camada'); }
+      }
+      function aplicarRespDefault(destino, ctxSetor, ctxSub, ctxCamada) {
+        /* R2: decisão do Bruno — PEF define o dono das rotinas de GESTOR/SÓCIO;
+           OPERACIONAL sem coluna preenchida FICA EM BRANCO de propósito
+           (o líder direciona na tela). Default automático só p/ gestor/sócio. */
+        if ((ctxCamada || 'operacional') === 'operacional') {
+          plano.avisos.push('linha ' + linha + ' (' + codigo + '): operacional sem responsável — deixada em branco para o líder direcionar');
+          return false;
+        }
+        var lid = liderDefault(ctxSetor, ctxSub);
+        if (lid) {
+          destino.responsavelUid = lid.uid; destino.responsavelNome = lid.nome;
+          plano.avisos.push('linha ' + linha + ' (' + codigo + '): sem responsável — atribuído a ' + lid.nome + ' (default ' + (ctxCamada || '') + ')');
+          return true;
+        }
+        plano.avisos.push('linha ' + linha + ' (' + codigo + '): sem responsável e sem líder/gestor cadastrado para o setor — ficará sem dono');
+        return false;
+      }
+
       var existente = porCodigo[codigo];
       if (existente) {
+        /* P2-Resp: saneamento de órfãs — doc existente SEM responsável e linha sem
+           a coluna preenchida ganha o default do setor. Não é quebra da regra
+           "vazio preserva": não havia valor a preservar (null ≠ valor). */
+        if (cand.responsavelUid == null && existente.responsavelUid == null) {
+          aplicarRespDefault(cand,
+            cand.setorSigla || existente.setorSigla || null,
+            (cand.subsetorSigla !== undefined ? cand.subsetorSigla : existente.subsetorSigla) || null,
+            cand.camada || existente.camada || 'operacional');
+        }
         /* DELTA: só o que mudou */
         var patch = {}, diffs = [];
         Object.keys(cand).forEach(function (k) {
@@ -347,8 +428,12 @@
         if (setorNorm == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem setor' }); return; }
         if (rec == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem recorrencia' }); return; }
         if (cam == null) { plano.avisos.push('linha ' + linha + ' (' + codigo + '): camada ausente — assumida "operacional"'); }
-        /* P1: responsável NASCE null no import — atribuição individual é feita depois,
-           na tela; usar USER.uid inflaria a carga (WIP) de quem importou. */
+        /* P2-Resp: responsável não nasce mais null — coluna "responsavel" resolve
+           direto; ausente/ inválida → default líder do subsetor → setor → gestor.
+           (Substitui a regra P1 de nascer null, que zerava os indicadores.) */
+        if (cand.responsavelUid == null) {
+          aplicarRespDefault(cand, setorNorm || null, (subObj && subObj.sigla) || null, cand.camada || 'operacional');
+        }
         var doc = Object.assign({
           codigo: codigo, descricao: '', horario: null, diasSemana: null, diaMes: null,
           data: null, deslizante: false, dataInicio: null, dataFim: null, subsetorSigla: null,
@@ -806,8 +891,8 @@
 
   function boot2() {
     renderLoading();
-    Promise.all([Store.listSetores(), Store.listAtividadesAtivas()])
-      .then(function (r) { SETORES = r[0]; ATIV = r[1]; renderPasso1(); })
+    Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), Store.listUsuariosAtivos()])
+      .then(function (r) { SETORES = r[0]; ATIV = r[1]; USUARIOS = r[2]; renderPasso1(); })
       .catch(renderError);
   }
 
@@ -825,6 +910,7 @@
       POP.appendChild(txt('div', 'im-pop-t', 'Regras da importação'));
       [['Chave', 'Coluna "codigo" (estável): código existente ATUALIZA; novo CRIA. Duplicado no arquivo → linha rejeitada.'],
        ['Delta', 'Só grava o que MUDOU. Célula vazia PRESERVA o valor atual. Linha idêntica é pulada. Nunca sobrescreve tudo.'],
+       ['Responsável', 'Coluna "responsavel" aceita o NOME de um usuário ativo. Vazia: camada GESTOR/SÓCIO recebe o líder/gestor do setor como default (com aviso); camada OPERACIONAL fica EM BRANCO de propósito — o líder direciona depois, na tela.'],
        ['Auditoria', 'De-para do cabeçalho: sem "codigo"/"titulo" BLOQUEIA · coluna faltando/extra ALERTA e pede confirmação. Cada gravação vai ao atividade_log com rótulo de importação + 1 registro-resumo.'],
        ['Quota', 'Teto de 200 linhas por importação — protege o limite diário de escritas do banco.']].forEach(function (r) {
         var v = txt('div', 'im-pop-v', r[0] + ': ' + r[1]);
