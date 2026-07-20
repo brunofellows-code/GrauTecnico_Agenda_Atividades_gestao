@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
+  <script src="mnav.js"></script>
 
 <style>
 /* ===== layout da tela Hoje (cor 100% via var) ===== */
@@ -278,7 +279,8 @@
   var HJ_ABERTO = {};             /* F1-D(i): colapso por setor (memória da sessão; false = fechado) */
   var CONVOC = [];                /* F1-E · 3.1: reuniões abertas em que fui convocado */
   var PLANOS = [];                /* F1-I: planos de ação vivos (só líder/gestor) p/ escalonamento D-5/D-3/D-0 */
-  var CELEBRADO = '';             /* F1-I: 1 celebração por dia por sessão (Kahneman: nudge único, nunca modal) */
+  var CELEBRADO = '';
+  var CELEB80 = '';               /* F1-N: marco dos 80% — 1 toast por dia */             /* F1-I: 1 celebração por dia por sessão (Kahneman: nudge único, nunca modal) */
   var LAST_NUM = {};              /* F1-I: números da última pintura p/ os "i" estáticos */
   var HJ_I_ATRAS = false;         /* F1-I: "i" das Atrasadas injetado 1x */
   var TIPO_LABEL_R = { lideres: 'Reunião de Líderes', integrada: 'Reunião Integrada', instrutor: 'Reunião com Instrutor', lideres_turma: 'Reunião c/ Líderes de Turmas', departamento: 'Reunião de Departamento' };
@@ -342,6 +344,17 @@
           return a;
         });
       }).catch(function () { return []; });
+    },
+    /* F1-N: convocado confirma a própria presença (regra espelhada no
+       Firestore: só adiciona a si; nunca remove ninguém). */
+    confirmarPresenca: function (reuniaoId, atuais, uid) {
+      return fb().then(function (c) {
+        var novo = (Array.isArray(atuais) ? atuais.slice() : []);
+        if (novo.indexOf(uid) === -1) { novo.push(uid); }
+        return c.f.updateDoc(c.f.doc(c.db, 'reunioes', reuniaoId), { confirmadosUids: novo }).then(function () {
+          return Store.log({ acao: 'confirmar_presenca', entidade: 'reuniao', refId: reuniaoId, antes: null, depois: { uid: uid } });
+        });
+      });
     },
     listMinhasConvocacoes: function (uid) {
       return fb().then(function (c) {
@@ -553,6 +566,9 @@
     card.appendChild(hd);
     itens.slice(0, 5).forEach(function (o) {
       var row = el('<div class="hj-xrow"></div>');
+      row.style.cursor = 'pointer';
+      row.title = 'Abrir esta atividade';
+      row.addEventListener('click', function () { window.location.href = 'atividades.html#a=' + encodeURIComponent(o.act.id); });
       row.appendChild(el('<span class="hj-xdot" style="background:var(--' + (o.atrasada ? 'red' : 'amber') + ')"></span>'));
       var t = el('<span class="hj-xtit"></span>');
       t.textContent = (o.act.titulo || '(sem título)'); t.title = t.textContent;
@@ -612,6 +628,122 @@
     });
     var lk = el('<a class="hj-xlink" href="inteligencia.html">Tratar na Inteligência →</a>');
     card.appendChild(lk);
+    return card;
+  }
+
+  /* ---------- F1-N · G1: COCKPIT DO LÍDER ----------
+     4 números do MEU escopo (Parmenter: poucos heróis; Marr: cada um
+     dispara ação). Só perfil líder; derivado do MESMO board.          */
+  function escopoDoLider() {
+    if (!(Guard.isLider && Guard.isLider())) { return null; }
+    var lids = USER.setoresLiderados || [];
+    if (!lids.length) { return null; }
+    return KPI.escopoLider ? KPI.escopoLider(lids, m0Setores()) : null;
+  }
+  function m0Setores() { return (MODELO && MODELO.setores) || []; }
+  function cardCockpitLider(m, hoje) {
+    var esc = escopoDoLider();
+    if (!esc) { return null; }
+    var k = KPI.kpisDoEscopo(m.board, esc, hoje);
+    if (!k) { return null; }
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Seu setor hoje'));
+    hd.appendChild(infoHj('Seu setor hoje', {
+      formula: 'Aderência = concluídas ÷ previstas até hoje ×100 (meta 90%; puladas fora) · Atrasadas = vencidas em aberto (com o atraso mais velho) · Reprogramação = reprogramadas ÷ total da janela ×100 (limite 20%). Mesmas fórmulas do painel, recortadas para os setores que você lidera.',
+      dados: 'ocorrências da janela cujas atividades pertencem ao seu escopo (raiz + subsetores).',
+      numeros: 'aderência ' + (k.aderencia == null ? '—' : k.aderencia + '%') + ' (' + k.concluidas + '/' + k.previstas + ') · ' + k.atrasadas + ' atrasada(s), pior ' + k.agingMax + 'd · reprog ' + k.reprogPct + '%'
+    }));
+    card.appendChild(hd);
+    var linha = el('<div style="display:flex;gap:8px;flex-wrap:wrap"></div>');
+    [
+      ['Aderência ' + (k.aderencia == null ? '—' : k.aderencia + '%'), k.aderencia != null && k.aderencia < 90 ? 'red' : 'green'],
+      [k.atrasadas + ' atrasada(s)' + (k.agingMax ? ' · pior ' + k.agingMax + 'd' : ''), k.atrasadas ? 'red' : 'green'],
+      ['Reprog ' + k.reprogPct + '%', k.reprogPct > 20 ? 'orange' : 'muted2']
+    ].forEach(function (p) {
+      var b = txt('span', 'hj-xcount', p[0]);
+      b.style.color = 'var(--' + p[1] + ')';
+      linha.appendChild(b);
+    });
+    card.appendChild(linha);
+    return card;
+  }
+
+  /* ---------- F1-N · G3: RADAR DO GESTOR ----------
+     Pior × melhor equipe do dia (aderência) — o gestor sabe QUEM
+     chamar sem abrir a Inteligência. Só gestor; raízes ativas.       */
+  function cardRadarGestor(m, hoje) {
+    if (!(Guard.isGestor && Guard.isGestor())) { return null; }
+    var raizes = m0Setores().filter(function (s) { return s && s.ativo !== false && !s.setorPaiSigla; });
+    var linhas = [];
+    raizes.forEach(function (s) {
+      var k = KPI.kpisDoEscopo(m.board, KPI.escopoLider ? KPI.escopoLider([s.sigla], m0Setores()) : [s.sigla], hoje);
+      if (k && k.previstas > 0) { linhas.push({ sig: s.sigla, k: k }); }
+    });
+    if (linhas.length < 2) { return null; }
+    linhas.sort(function (a, b) { return (a.k.aderencia || 0) - (b.k.aderencia || 0) || (a.sig < b.sig ? -1 : 1); });
+    var pior = linhas[0], melhor = linhas[linhas.length - 1];
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Radar das equipes'));
+    hd.appendChild(infoHj('Radar das equipes', {
+      formula: 'aderência (concluídas ÷ previstas até hoje ×100) calculada por setor-raiz (raiz + subsetores); mostra a PIOR e a MELHOR equipe do momento. Multi-setor conta em cada área.',
+      dados: linhas.length + ' equipe(s) com previstas na janela.',
+      numeros: linhas.map(function (x) { return x.sig + ' ' + (x.k.aderencia == null ? '—' : x.k.aderencia + '%'); }).join(' · ')
+    }));
+    card.appendChild(hd);
+    var r1 = el('<div class="hj-xrow"></div>');
+    r1.appendChild(el('<span class="hj-xdot" style="background:var(--red)"></span>'));
+    var t1 = el('<span class="hj-xtit"></span>');
+    t1.textContent = 'Chamar agora: ' + pior.sig + ' — aderência ' + (pior.k.aderencia == null ? '—' : pior.k.aderencia + '%') + ' · ' + pior.k.atrasadas + ' atrasada(s)';
+    r1.appendChild(t1);
+    card.appendChild(r1);
+    var r2 = el('<div class="hj-xrow"></div>');
+    r2.appendChild(el('<span class="hj-xdot" style="background:var(--green)"></span>'));
+    var t2 = el('<span class="hj-xtit"></span>');
+    t2.textContent = 'Reconhecer: ' + melhor.sig + ' — aderência ' + (melhor.k.aderencia == null ? '—' : melhor.k.aderencia + '%');
+    r2.appendChild(t2);
+    card.appendChild(r2);
+    var lk = el('<a class="hj-xlink" href="inteligencia.html">Tratar na Inteligência →</a>');
+    card.appendChild(lk);
+    return card;
+  }
+
+  /* ---------- F1-N · G2: QUEM PRECISA DE AJUDA HOJE ----------
+     Top-3 do escopo com atrasadas — cobrança vira conversa 1:1, sem
+     ranking público (Kahneman). Líder = escopo; gestor = escola.     */
+  function cardAjuda(m, hoje) {
+    var esc = null;
+    if (Guard.isGestor && Guard.isGestor()) {
+      esc = {};
+      m0Setores().forEach(function (s) { if (s && s.ativo !== false) { esc[s.sigla] = true; } });
+    } else { esc = escopoDoLider(); }
+    if (!esc) { return null; }
+    var top = KPI.pessoasCriticas(m.board, esc, hoje, 3);
+    if (!top.length) { return null; }
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Quem precisa de ajuda hoje'));
+    hd.appendChild(infoHj('Quem precisa de ajuda hoje', {
+      formula: 'as até 3 pessoas do seu escopo com mais atrasadas (desempate: atraso mais velho, depois nome). Não é ranking — é onde uma conversa 1:1 hoje rende mais.',
+      dados: 'ocorrências vencidas em aberto no board, agrupadas por responsável.',
+      numeros: top.map(function (p) { return p.nome + ' ' + p.atrasadas + ' (' + p.agingMax + 'd)'; }).join(' · ')
+    }));
+    card.appendChild(hd);
+    top.forEach(function (p) {
+      var row = el('<div class="hj-xrow"></div>');
+      row.style.cursor = 'pointer';
+      row.title = 'Ver as atividades de ' + p.nome;
+      row.addEventListener('click', function () { window.location.href = 'atividades.html#q=' + encodeURIComponent(p.nome); });
+      row.appendChild(el('<span class="hj-xdot" style="background:var(--' + (p.agingMax >= 8 ? 'red' : 'amber') + ')"></span>'));
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = p.nome;
+      row.appendChild(t);
+      var mt = el('<span class="hj-xmeta"></span>');
+      mt.textContent = p.atrasadas + ' atrasada(s) · pior ' + p.agingMax + 'd · ver →';
+      row.appendChild(mt);
+      card.appendChild(row);
+    });
     return card;
   }
 
@@ -679,7 +811,37 @@
     var pg = document.getElementById('hj-prog'); pg.innerHTML = '';
     var pctDia = d.doHoje.length ? Math.round(d.feitasHoje / d.doHoje.length * 100) : 0;
     /* F1-I: streak pessoal (regra 80%, derivada do MESMO board — KPI.streak80) */
-    var stk = KPI.streak80 ? KPI.streak80(m.board, CURRENT_USER.uid, hoje) : { dias: 0, hojeFechado: false };
+    var stk = KPI.streak80 ? KPI.streak80(m.board, CURRENT_USER.uid, hoje) : { dias: 0, hojeFechado: false, recorde: 0, semana: [] };
+    /* F1-N · U1+U3: PRÓXIMA AÇÃO — saudação contextual + 1 sugestão
+       determinística (Krug). Some quando não há nada aberto. */
+    (function () {
+      var fn0 = String(USER.name || '').trim().split(/\s+/)[0] || 'você';
+      var px = KPI.proximaAcao ? KPI.proximaAcao(m.board, CURRENT_USER.uid, hoje) : null;
+      if (!px) { return; }
+      var card = el('<div class="hj-xcard" style="border-left:3px solid var(--brand)"></div>');
+      var hd = el('<div class="hj-xhead"></div>');
+      var restam = d.doHoje.length - d.feitasHoje;
+      hd.appendChild(txt('div', 'hj-xtitle', saudacao() + ', ' + fn0 + (restam > 0 ? ' — faltam ' + restam + ' para fechar o dia.' : '!') + ' Comece por esta:'));
+      hd.appendChild(infoHj('Próxima ação', {
+        formula: 'uma única sugestão, sempre pela mesma regra: (1º) sua atrasada MAIS VELHA · senão (2º) a de hoje com horário mais cedo · senão (3º) a primeira de hoje. Reduz o custo de decidir por onde começar.',
+        dados: 'suas ocorrências abertas no painel.',
+        numeros: px.motivo === 'atrasada' ? 'atrasada há ' + px.dias + ' dia(s)' : px.motivo === 'hora' ? 'horário ' + px.hora : 'de hoje, sem horário'
+      }));
+      card.appendChild(hd);
+      var row = el('<div class="hj-xrow"></div>');
+      row.appendChild(el('<span class="hj-xdot" style="background:var(--' + (px.motivo === 'atrasada' ? 'red' : 'brand') + ')"></span>'));
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = px.occ.act.titulo || '(sem título)'; t.title = t.textContent;
+      row.appendChild(t);
+      var mt = el('<span class="hj-xmeta"></span>');
+      mt.textContent = px.motivo === 'atrasada' ? (px.dias + 'd de atraso') : (px.motivo === 'hora' ? ('hoje · ' + px.hora) : 'hoje');
+      row.appendChild(mt);
+      if (PODE_AGIR(px.occ) && px.occ.status !== 'concluida') {
+        row.appendChild(miniBtn('Concluir', (function (occ) { return function () { concluir(occ); }; })(px.occ), 'ok'));
+      }
+      card.appendChild(row);
+      pg.appendChild(card);
+    })();
     if (d.doHoje.length) {
       var pbox = el('<div class="hj-prog"></div>');
       var ptop = el('<div class="hj-prog-top"></div>');
@@ -687,11 +849,16 @@
         : (d.feitasHoje === d.doHoje.length ? 'Dia fechado. 🎯' : pctDia + '% do dia');
       var pt1 = el('<div class="hj-prog-t"></div>');
       pt1.appendChild(el('<span><b>' + d.feitasHoje + '</b> de <b>' + d.doHoje.length + '</b> concluídas hoje</span>'));
-      if (stk.dias >= 2) {
+      if (stk.dias >= 1) {
         var fire = el('<span class="hj-fire"></span>');
-        fire.textContent = '🔥 ' + stk.dias + ' dias seguidos';
+        fire.textContent = '🔥 ' + stk.dias + (stk.dias === 1 ? ' dia' : ' dias') +
+          (stk.recorde > stk.dias ? ' · recorde ' + stk.recorde : (stk.dias >= 2 && stk.recorde === stk.dias ? ' · seu recorde!' : ''));
         fire.title = 'Sequência de dias com pelo menos 80% das suas atividades do dia concluídas. Dia sem nada previsto não quebra.';
         pt1.appendChild(fire);
+      } else if (stk.recorde >= 2) {
+        var fr2 = el('<span class="hj-fire" style="color:var(--muted2)"></span>');
+        fr2.textContent = 'recorde: ' + stk.recorde + ' dias — recomece hoje';
+        pt1.appendChild(fr2);
       }
       pt1.appendChild(infoHj('Progresso do dia', {
         formula: 'concluídas hoje ÷ previstas para hoje × 100. Sequência (🔥): dias seguidos com ≥ 80% das SUAS atividades do dia concluídas; dia sem nada previsto (folga/feriado) não quebra; o dia de hoje, ainda aberto, também não.',
@@ -705,9 +872,30 @@
       var fill = el('<div class="hj-prog-fill"></div>');
       fill.style.width = '0%';
       fill.style.background = pctDia >= 60 ? 'var(--green)' : 'var(--amber)';
-      tr.appendChild(fill); pbox.appendChild(tr); pg.appendChild(pbox);
+      tr.appendChild(fill); pbox.appendChild(tr);
+      /* F1-N · U6: sua semana em 7 pontos (verde = dia fechado ≥80%;
+         âmbar vazado = teve previsto e não fechou; cinza = folga). */
+      if (stk.semana && stk.semana.length) {
+        var wk = el('<div style="display:flex;align-items:center;gap:7px;margin-top:9px"></div>');
+        wk.appendChild(txt('span', 'hj-prog-s', 'Sua semana'));
+        stk.semana.forEach(function (dw) {
+          var dot = el('<span style="width:11px;height:11px;border-radius:50%;display:inline-block"></span>');
+          if (dw.fechado) { dot.style.background = 'var(--green)'; }
+          else if (dw.prev > 0) { dot.style.cssText += ';background:var(--s2);border:2px solid var(--amber)'; }
+          else { dot.style.cssText += ';background:var(--s2);border:1px solid var(--border)'; }
+          dot.title = dw.iso.split('-').reverse().join('/') + (dw.fechado ? ' — fechado' : dw.prev ? ' — não fechou (' + dw.prev + ' prevista(s))' : ' — sem previstas');
+          wk.appendChild(dot);
+        });
+        pbox.appendChild(wk);
+      }
+      pg.appendChild(pbox);
       /* dispara a transição no frame seguinte (0% → pct real) */
       setTimeout(function () { fill.style.width = Math.max(2, pctDia) + '%'; }, 30);
+      /* F1-N · U5: marco dos 80% — a sequência do dia está garantida */
+      if (stk.hojePrev > 0 && !stk.hojeFechado && (stk.hojeFeitas / stk.hojePrev) >= 0.8 && CELEB80 !== hoje) {
+        CELEB80 = hoje;
+        toast('80% do seu dia — sequência garantida. 🔥');
+      }
       /* F1-I: celebração — toast único por dia/sessão ao fechar 100% (nunca modal) */
       /* F1-J fix: celebra pelo conjunto PESSOAL (streak80, independente de
          filtro/modo) — nunca por recorte de tela, que daria festa falsa. */
@@ -720,6 +908,12 @@
     var cb = cardCobrancas(m, hoje); if (cb) { pg.appendChild(cb); }
     /* F1-I: Você supervisiona (o campo supervisor vira valor imediato) */
     var sup = cardSupervisiona(m, hoje); if (sup) { pg.appendChild(sup); }
+    /* F1-N · G1: Cockpit do líder (KPIs do MEU setor, sem trocar de tela) */
+    var g1 = cardCockpitLider(m, hoje); if (g1) { pg.appendChild(g1); }
+    /* F1-N · G3: Radar do gestor (pior × melhor equipe do dia → agir) */
+    var g3 = cardRadarGestor(m, hoje); if (g3) { pg.appendChild(g3); }
+    /* F1-N · G2: Quem precisa de ajuda hoje (cobrança vira conversa 1:1) */
+    var g2 = cardAjuda(m, hoje); if (g2) { pg.appendChild(g2); }
 
     /* KPIs do topo */
     var kg = document.getElementById('hj-kpis'); kg.innerHTML = '';
@@ -771,7 +965,7 @@
     var nb = document.querySelector('.hj-nowbadge'); if (nb) { nb.lastChild.nodeValue = ' agora ' + agoraHM; }
     var tl = document.getElementById('hj-timeline'); tl.innerHTML = '';
     if (d.comHora.length) { d.comHora.forEach(function (o) { tl.appendChild(tlRow(o, agoraHM)); }); }
-    else { tl.appendChild(txt('div', 'hj-empty', 'Nenhuma atividade com horário hoje.')); }
+    else { tl.appendChild(txt('div', 'hj-empty', 'Sem horários marcados hoje — os compromissos com hora aparecem aqui.')); }
 
     /* atividades do dia (sem horário) — F1-D(i): agrupadas por setor-RAIZ.
        O paredão alfabético vira blocos colapsáveis: sigla + nome + "N · M feitas".
@@ -811,13 +1005,13 @@
         });
       }
     }
-    else { dt.appendChild(txt('div', 'hj-empty', 'Nada sem horário hoje.')); }
+    else { dt.appendChild(txt('div', 'hj-empty', 'Nada previsto sem horário — dia livre nesta lista. Puxe uma atividade do catálogo se quiser adiantar.')); }
 
     /* atrasadas */
     var at = document.getElementById('hj-atrasadas'); at.innerHTML = '';
     var lb = document.querySelector('.hj-late-badge'); if (lb) { lb.textContent = d.atras.length + ' pendente(s)'; }
     if (d.atras.length) { d.atras.forEach(function (o) { at.appendChild(lateRow(o, hoje)); }); }
-    else { at.appendChild(txt('div', 'hj-empty', 'Nenhuma atrasada. 🎯')); }
+    else { at.appendChild(txt('div', 'hj-empty', 'Zero atrasadas — tudo em dia. 🎯 Continue assim que a sequência cresce.')); }
   }
 
   /* ---------- escopo (Minhas / Todas) ---------- */
@@ -902,6 +1096,22 @@
         var vp = txt('button', 'hj-freq', 'Ver pauta'); vp.type = 'button'; vp.style.cursor = 'pointer'; vp.style.color = 'var(--doing)';
         vp.addEventListener('click', function () { window.location.href = 'projetos.html#reunioes'; });
         lin.appendChild(vp);
+        /* F1-N · U7: confirmar presença em 1 toque (achado do REDTEAM:
+           antes as regras bloqueavam o convocado de confirmar) */
+        var confs = Array.isArray(r.confirmadosUids) ? r.confirmadosUids : [];
+        if (confs.indexOf(CURRENT_USER.uid) !== -1) {
+          var okc = txt('span', 'hj-freq', '✓ Presença confirmada');
+          okc.style.color = 'var(--green)';
+          lin.appendChild(okc);
+        } else {
+          lin.appendChild(miniBtn('Confirmar presença', (function (rr) {
+            return function () {
+              Store.confirmarPresenca(rr.id, rr.confirmadosUids, CURRENT_USER.uid)
+                .then(function () { rr.confirmadosUids = (rr.confirmadosUids || []).concat([CURRENT_USER.uid]); toast('Presença confirmada — quem convocou já vê.'); paint(); })
+                .catch(function (e) { toast(e.message || 'Não deu para confirmar.', 'err'); });
+            };
+          })(r), 'ok'));
+        }
         if (vencidos) {
           var pv = txt('span', 'hj-freq', 'você tem ' + vencidos + ' pendência(s) de reunião anterior');
           pv.style.color = 'var(--orange)';

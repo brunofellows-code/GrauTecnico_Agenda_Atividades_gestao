@@ -1271,8 +1271,25 @@
       if (!temMaisAntigo && (!d || !d.prev)) { break; }
       cursor = R.addDias(cursor, -1);
     }
+    /* F1-N: recorde na janela (mesma regra: dia vazio não quebra nem conta)
+       + faixa dos últimos 7 dias para o strip visual do Meu Dia. */
+    var chaves = [];
+    for (var kd in porDia) { if (porDia[kd].prev > 0) { chaves.push(kd); } }
+    chaves.sort();
+    var recorde = 0, seq = 0;
+    for (var ci = 0; ci < chaves.length; ci++) {
+      if (fecha(porDia[chaves[ci]])) { seq++; if (seq > recorde) { recorde = seq; } }
+      else { seq = 0; }
+    }
+    var semana = [];
+    for (var si = 6; si >= 0; si--) {
+      var isoS = R.addDias(hoje, -si);
+      var ds = porDia[isoS];
+      semana.push({ iso: isoS, prev: ds ? ds.prev : 0, fechado: !!(ds && fecha(ds)) });
+    }
     return { dias: dias, hojePrev: hj.prev, hojeFeitas: hj.feitas,
-      hojeFechado: hj.prev > 0 && hj.feitas === hj.prev };
+      hojeFechado: hj.prev > 0 && hj.feitas === hj.prev,
+      recorde: recorde, semana: semana };
   };
 
   /* ---------- ESCALONAMENTO D-5 / D-3 / D-0 (spec travada) ----------
@@ -1332,5 +1349,101 @@
       if (occ && occ.effDate === hoje && occ.status !== 'concluida') { p.venceHoje++; }
     });
     return p;
+  };
+})();
+
+/* ============================================================
+   F1-N · OPTIMIZE (append) — próxima ação, KPIs do escopo e
+   pessoas críticas. Puros, harness_f1n.js. Zero query.
+   ============================================================ */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  var R = window.GrautRecorrencia;
+  function aberta(o) { return o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada'; }
+
+  /* U1+U3 · PRÓXIMA AÇÃO (Krug: não me faça pensar) — 1 sugestão
+     determinística: (a) a atrasada MAIS VELHA; senão (b) a de hoje com
+     horário mais cedo; senão (c) a primeira de hoje sem horário
+     (título pt-BR). Só do próprio uid; null se nada aberto.        */
+  K.proximaAcao = function (board, uid, hoje) {
+    var minhas = (Array.isArray(board) ? board : []).filter(function (o) {
+      return o && o.act && o.act.responsavelUid === uid && aberta(o)
+        && o.effDate && R.compareISO(o.effDate, hoje) <= 0 && o.status !== 'pulada';
+    });
+    if (!minhas.length) { return null; }
+    var atr = minhas.filter(function (o) { return o.atrasada; })
+      .sort(function (a, b) { return R.compareISO(a.effDate, b.effDate); })[0];
+    if (atr) { return { occ: atr, motivo: 'atrasada', dias: R.diasEntre(atr.effDate, hoje) }; }
+    var doDia = minhas.filter(function (o) { return o.effDate === hoje; });
+    var comHora = doDia.filter(function (o) { return o.act.horaPrevista; })
+      .sort(function (a, b) { return String(a.act.horaPrevista).localeCompare(String(b.act.horaPrevista)); })[0];
+    if (comHora) { return { occ: comHora, motivo: 'hora', hora: comHora.act.horaPrevista }; }
+    var semHora = doDia.sort(function (a, b) {
+      return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR');
+    })[0];
+    return semHora ? { occ: semHora, motivo: 'hoje' } : null;
+  };
+
+  /* G1/G3 · KPIs DE UM ESCOPO de setores (mesmas fórmulas do painel:
+     aderência = concluídas ÷ previstas até hoje ×100, puladas fora;
+     reprog% = reprogramadas ÷ total da janela ×100). esc = mapa
+     {SIG:true} ou array de siglas. null se nada previsto no escopo. */
+  function escMapa(esc) {
+    if (!esc) { return {}; }
+    if (Array.isArray(esc)) { var m = {}; esc.forEach(function (s) { m[s] = true; }); return m; }
+    return esc;
+  }
+  function noEscopo(act, mapa) {
+    var sigs = K.setoresDe(act);
+    for (var i = 0; i < sigs.length; i++) { if (mapa[sigs[i]]) { return true; } }
+    return !!(act && act.subsetorSigla && mapa[act.subsetorSigla]);
+  }
+  K.kpisDoEscopo = function (board, esc, hoje) {
+    var mapa = escMapa(esc);
+    var prev = 0, conc = 0, atras = 0, agingMax = 0, reprog = 0, total = 0;
+    (Array.isArray(board) ? board : []).forEach(function (o) {
+      if (!o || !o.act || !noEscopo(o.act, mapa)) { return; }
+      if (o.status === 'pulada') { return; }
+      total++;
+      if (o.status === 'reprogramada') { reprog++; }
+      if (o.effDate && R.compareISO(o.effDate, hoje) <= 0) {
+        prev++;
+        if (o.status === 'concluida') { conc++; }
+      }
+      if (o.atrasada) {
+        atras++;
+        var d = R.diasEntre(o.effDate, hoje);
+        if (d > agingMax) { agingMax = d; }
+      }
+    });
+    if (!total && !prev) { return null; }
+    return { previstas: prev, concluidas: conc,
+      aderencia: prev ? Math.round(conc / prev * 100) : null,
+      atrasadas: atras, agingMax: agingMax,
+      reprog: reprog, reprogPct: total ? Math.round(reprog / total * 100) : 0,
+      total: total };
+  };
+
+  /* G2 · QUEM PRECISA DE AJUDA (sem ranking público — Kahneman):
+     top-n liderados do escopo com atrasadas, por atrasadas desc e
+     aging desc; desempate nome pt-BR. */
+  K.pessoasCriticas = function (board, esc, hoje, n) {
+    var mapa = escMapa(esc);
+    var por = {};
+    (Array.isArray(board) ? board : []).forEach(function (o) {
+      if (!o || !o.act || !o.atrasada || !noEscopo(o.act, mapa)) { return; }
+      var uid = o.act.responsavelUid || '(sem)';
+      var b = por[uid] || (por[uid] = { uid: uid, nome: o.act.responsavelNome || '(sem responsável)', atrasadas: 0, agingMax: 0 });
+      b.atrasadas++;
+      var d = R.diasEntre(o.effDate, hoje);
+      if (d > b.agingMax) { b.agingMax = d; }
+    });
+    var lista = Object.keys(por).map(function (k) { return por[k]; });
+    lista.sort(function (a, b) {
+      return (b.atrasadas - a.atrasadas) || (b.agingMax - a.agingMax) ||
+        a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+    return lista.slice(0, n || 3);
   };
 })();

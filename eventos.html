@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
+  <script src="mnav.js"></script>
 
 <style>
 /* casca padrão — namespace ev- */
@@ -42,6 +43,7 @@
 .ev-dn{font-size:11.5px;font-weight:800;color:var(--muted);width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 .ev-day.today .ev-dn{background:var(--cta);color:var(--ctaText)}
 .ev-chip{font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.ev-chip-r{font-style:italic}
 .ev-more{font-size:9.5px;font-weight:800;color:var(--muted2);padding-left:2px}
 /* bottom sheet */
 .ev-sheetback{position:fixed;inset:0;z-index:48;background:rgba(2,6,23,.62);display:none}
@@ -160,6 +162,19 @@
           return a.filter(function (e) { return e.ativo !== false; }); /* §2.6 */
         });
       }).catch(function (e) { throw ferr(e); });
+    },
+    /* F1-M: a agenda mostra TUDO que tem data (padrão "Everything Calendar"
+       do ClickUp). Reuniões entram na MESMA grade dos eventos, sem fundir
+       coleção. Falha vira [] — a agenda nunca quebra por causa da reunião. */
+    listReunioesMes: function (ini, fim) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'reunioes'),
+          f.where('data', '>=', ini), f.where('data', '<=', fim), f.limit(200));
+        return f.getDocs(q).then(mapDocs).then(function (a) {
+          return a.filter(function (r) { return r.ativo !== false; });
+        });
+      }).catch(function () { return []; });
     },
     listSetores: function () {
       return fb().then(function (c) {
@@ -329,9 +344,10 @@
        rollup de orçamento no topo do quadro). Soma os MESMOS eventos
        visíveis abaixo (recorte por papel já aplicado). */
     (function () {
-      if (!EVTS.length) { return; }
+      var soEv = EVTS.filter(function (e) { return e._kind !== 'reuniao'; });
+      if (!soEv.length) { return; }
       var tp = 0, trz = 0, nReal = 0;
-      EVTS.forEach(function (e) {
+      soEv.forEach(function (e) {
         tp += (Number(e.custoPrevisto) || 0);
         if (e.custoRealizado != null) { trz += (Number(e.custoRealizado) || 0); nReal++; }
       });
@@ -350,7 +366,7 @@
       ib2.addEventListener('click', function () {
         openPop(ib2, 'Custo do mês — como é calculado', [
           ['Fórmula', 'soma do custo PREVISTO de todos os eventos do mês × soma do custo REALIZADO dos já marcados como realizados. Diferença = realizado − previsto.'],
-          ['Dados', EVTS.length + ' evento(s) visíveis no seu recorte · ' + nReal + ' com realizado lançado. Valores guardados em centavos (sem erro de arredondamento).'],
+          ['Dados', soEv.length + ' evento(s) visíveis no seu recorte · ' + nReal + ' com realizado lançado. Valores guardados em centavos (sem erro de arredondamento).'],
           ['Números', fmtBRL(tp) + ' previsto · ' + fmtBRL(trz) + ' realizado · diferença ' + (dif >= 0 ? '+' : '−') + fmtBRL(Math.abs(dif))]
         ]);
       });
@@ -396,8 +412,10 @@
         var lista = porDia[iso] || [];
         /* chips (desktop) */
         lista.slice(0, 2).forEach(function (e) {
-          var c = txt('div', 'ev-chip', e.titulo || '(evento)');
+          var isR = e._kind === 'reuniao';
+          var c = txt('div', 'ev-chip' + (isR ? ' ev-chip-r' : ''), (isR ? '📋 ' : '') + (e.titulo || (isR ? '(reunião)' : '(evento)')));
           c.style.background = 'var(--' + corSetor(e.siglaSetor) + 'Bg)';
+          if (isR && e.souConvocado && !e.confirmei && !e.encerrada) { c.style.borderLeft = '3px solid var(--amber)'; c.title = 'Você foi convocado — confirme presença'; }
           cell.appendChild(c);
         });
         if (lista.length > 2) { cell.appendChild(txt('div', 'ev-more', '+' + (lista.length - 2))); }
@@ -420,7 +438,7 @@
     bodyEl.appendChild(grid);
 
     if (!EVTS.length) {
-      var em = txt('div', 'ev-state-s', 'Nenhum evento neste mês' + (CAN_WRITE() ? ' — toque em + Novo evento para criar.' : '.'));
+      var em = txt('div', 'ev-state-s', 'Nada agendado neste mês' + (CAN_WRITE() ? ' — toque em + Novo evento para criar, ou crie uma reunião em Projetos.' : '.'));
       em.style.padding = '18px 4px';
       bodyEl.appendChild(em);
     }
@@ -446,6 +464,28 @@
       }
     }
     lista.forEach(function (e) {
+      if (e._kind === 'reuniao') {
+        var itR = el('<div class="ev-item"></div>');
+        var ihR = el('<div class="ev-it-h"></div>');
+        ihR.appendChild(txt('div', 'ev-it-t', '📋 ' + (e.titulo || 'Reunião')));
+        if (e.siglaSetor) { var tgR = txt('span', 'ev-tag', e.siglaSetor); tgR.style.background = 'var(--' + corSetor(e.siglaSetor) + 'Bg)'; ihR.appendChild(tgR); }
+        var bdR = txt('span', 'ev-badge', e.encerrada ? 'Encerrada' : (e.souConvocado ? (e.confirmei ? 'Presença confirmada' : 'Confirme presença') : 'Reunião'));
+        bdR.style.color = e.encerrada ? 'var(--muted2)' : (e.souConvocado && !e.confirmei ? 'var(--amber)' : 'var(--green)');
+        ihR.appendChild(bdR);
+        itR.appendChild(ihR);
+        var mR = [];
+        if (e.hora) { mR.push(e.hora); }
+        if (e.local) { mR.push(e.local); }
+        mR.push(e.nConv + ' convocado(s)');
+        itR.appendChild(txt('div', 'ev-it-m', mR.join(' · ')));
+        var bR = el('<div class="ev-it-b"></div>');
+        var goR = UI.button({ label: 'Abrir reunião', variant: 'ghost' });
+        goR.addEventListener('click', function () { window.location.href = 'projetos.html#reunioes'; });
+        bR.appendChild(goR);
+        itR.appendChild(bR);
+        SHEET.appendChild(itR);
+        return;
+      }
       var it = el('<div class="ev-item"></div>');
       var ih = el('<div class="ev-it-h"></div>');
       ih.appendChild(txt('div', 'ev-it-t', e.titulo || '(sem título)'));
@@ -583,8 +623,29 @@
   function carregarMes() {
     renderLoading();
     var w = iniFimMes(ANO, MES);
-    Store.listEventosMes(w.ini, w.fim)
-      .then(function (evs) { EVTS = evs.filter(eventoVisivel); renderTudo(); }) /* F1-C: recorte por papel */
+    Promise.all([Store.listEventosMes(w.ini, w.fim), Store.listReunioesMes(w.ini, w.fim)])
+      .then(function (res) {
+        var evs = res[0].filter(eventoVisivel); /* F1-C: recorte por papel */
+        /* F1-M: reunião normalizada como item de agenda (mesma grade).
+           _kind='reuniao' distingue o chip; convocado vê badge próprio. */
+        var meu = (CURRENT_USER && CURRENT_USER.uid) || null;
+        var reun = (res[1] || []).map(function (r) {
+          var conv = Array.isArray(r.convocadosUids) ? r.convocadosUids : [];
+          var pres = Array.isArray(r.presencaUids) ? r.presencaUids : [];
+          return {
+            id: r.id, _kind: 'reuniao', titulo: r.titulo || 'Reunião',
+            data: r.data, hora: r.hora || null, local: r.local || null,
+            siglaSetor: r.setorSigla || null, tipo: r.tipo || null,
+            projetoId: r.projetoId || null, encerrada: !!r.encerrada,
+            souConvocado: meu && conv.indexOf(meu) !== -1,
+            /* F1-N: confirmado ANTES da reunião (confirmadosUids) ou presente no dia */
+            confirmei: meu && ((Array.isArray(r.confirmadosUids) && r.confirmadosUids.indexOf(meu) !== -1) || pres.indexOf(meu) !== -1),
+            nConv: conv.length
+          };
+        });
+        EVTS = evs.concat(reun);
+        renderTudo();
+      })
       .catch(renderError);
   }
 

@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
+  <script src="mnav.js"></script>
 
 <style>
 /* ===== layout da tela Atividades (cor 100% via var) ===== */
@@ -678,8 +679,12 @@
             if (mHash) {
               var alvo = res[1].filter(function (a) { return a.id === decodeURIComponent(mHash[1]); })[0];
               if (alvo && alvo.titulo) { search = alvo.titulo; toast('Mostrando: ' + alvo.titulo); }
-              if (window.history && history.replaceState) { history.replaceState(null, '', window.location.pathname); }
             }
+            /* L99: deep-link de BUSCA (#q=texto) — cards do Meu Dia caem aqui
+               já filtrados por pessoa ou por título. */
+            var qHash = /[#&]q=([^&]+)/.exec(window.location.hash || '');
+            if (qHash) { search = decodeURIComponent(qHash[1]); toast('Filtro: ' + search); }
+            if ((mHash || qHash) && window.history && history.replaceState) { history.replaceState(null, '', window.location.pathname); }
           } catch (eH) { }
           return loadBoardData();
         })
