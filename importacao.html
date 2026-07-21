@@ -168,15 +168,15 @@
 
   /* ===================== modelo ===================== */
   var COLS_CRITICAS = ['codigo', 'titulo'];
-  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao', 'camada', 'responsavel'];
+  var COLS_OPCIONAIS = ['descricao', 'setor', 'subsetor', 'recorrencia', 'data', 'data_inicio', 'data_fim', 'dias_semana', 'dia_mes', 'horario', 'prioridade', 'mitigacao', 'camada', 'responsavel', 'apelido'];
   var CAMADAS_VALIDAS = ['socio', 'gestor', 'operacional']; /* P1: organograma Sócios → Gestor → Operacional */
   var COLS_TODAS = COLS_CRITICAS.concat(COLS_OPCIONAIS);
   var MODELO_CSV = COLS_TODAS.join(';') + '\n' +
-    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;;;1;;08:00;;;operacional;Maria Silva\n' +
-    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;;;;;17:30;;;operacional;\n' +
-    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;;;;5;;;;gestor;\n' +
-    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;;;;15;;Alta;Ligar e convocar o responsável;operacional;\n' +
-    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;;socio;';
+    'PED-001;Planejar aula da semana;Plano semanal dos professores;PED;;semanal;;;;1;;08:00;;;operacional;Maria Silva;\n' +
+    'SEC-010;Fechar caixa do dia;;SEC;FIN;diario;;;;;;17:30;;;operacional;;Assis. SEC 1\n' +
+    'GES-005;Enviar relatório mensal;Relatório ao mantenedor;GES;;mensal;;;;;5;;;;gestor;;\n' +
+    'CSA-020;Acompanhar evasão do bimestre;Contato com faltosos;CSA;EVA;bimestral;;;;;15;;Alta;Ligar e convocar o responsável;operacional;;\n' +
+    'COM-002;Visita à escola parceira;;COM;;unico;2026-07-15;;;;;09:00;;;socio;;';
 
   /* ===================== parser CSV (; ou ,) ===================== */
   function parseCSV(text) {
@@ -382,6 +382,15 @@
         if (uResp) { cand.responsavelUid = uResp.uid; cand.responsavelNome = uResp.nome; }
         else { plano.avisos.push('linha ' + linha + ' (' + codigo + '): responsável "' + respNome + '" não encontrado OU ambíguo (2+ usuários com esse nome) — aplicando a regra da camada'); }
       }
+      /* R2: coluna "apelido" = RÓTULO VISUAL sem login (UID nulo). Só vale se
+         nenhum responsável REAL foi resolvido acima — pessoa de verdade sempre
+         ganha da etiqueta. Serve p/ o líder ver a distribuição planejada; a
+         atividade conta como "sem responsável" nos indicadores (UID nulo). */
+      var apel = valOf(row, audit.mapa, 'apelido');
+      if (apel != null && cand.responsavelUid == null) {
+        cand.responsavelNome = apel; cand.responsavelUid = null;
+        cand.apelidoPlaceholder = true; /* marca p/ futuros: é etiqueta, não pessoa */
+      }
       function aplicarRespDefault(destino, ctxSetor, ctxSub, ctxCamada) {
         /* R2: decisão do Bruno — PEF define o dono das rotinas de GESTOR/SÓCIO;
            OPERACIONAL sem coluna preenchida FICA EM BRANCO de propósito
@@ -405,7 +414,7 @@
         /* P2-Resp: saneamento de órfãs — doc existente SEM responsável e linha sem
            a coluna preenchida ganha o default do setor. Não é quebra da regra
            "vazio preserva": não havia valor a preservar (null ≠ valor). */
-        if (cand.responsavelUid == null && existente.responsavelUid == null) {
+        if (cand.responsavelUid == null && !cand.responsavelNome && existente.responsavelUid == null) {
           aplicarRespDefault(cand,
             cand.setorSigla || existente.setorSigla || null,
             (cand.subsetorSigla !== undefined ? cand.subsetorSigla : existente.subsetorSigla) || null,
@@ -428,13 +437,11 @@
         if (setorNorm == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem setor' }); return; }
         if (rec == null) { plano.rejeitar.push({ linha: linha, motivo: 'atividade NOVA (' + codigo + ') sem recorrencia' }); return; }
         if (cam == null) { plano.avisos.push('linha ' + linha + ' (' + codigo + '): camada ausente — assumida "operacional"'); }
-        /* P2-Resp: responsável não nasce mais null — coluna "responsavel" resolve
-           direto; ausente/ inválida → default líder do subsetor → setor → gestor.
-           (Substitui a regra P1 de nascer null, que zerava os indicadores.) */
-        if (cand.responsavelUid == null) {
+        /* P2-Resp: default só quando NÃO há responsável real NEM apelido.
+           (responsavelNome cobre os dois: pessoa resolvida ou etiqueta.) */
+        if (cand.responsavelUid == null && !cand.responsavelNome) {
           aplicarRespDefault(cand, setorNorm || null, (subObj && subObj.sigla) || null, cand.camada || 'operacional');
-        }
-        var doc = Object.assign({
+        }        var doc = Object.assign({
           codigo: codigo, descricao: '', horario: null, diasSemana: null, diaMes: null,
           data: null, deslizante: false, dataInicio: null, dataFim: null, subsetorSigla: null,
           camada: 'operacional',
@@ -910,7 +917,8 @@
       POP.appendChild(txt('div', 'im-pop-t', 'Regras da importação'));
       [['Chave', 'Coluna "codigo" (estável): código existente ATUALIZA; novo CRIA. Duplicado no arquivo → linha rejeitada.'],
        ['Delta', 'Só grava o que MUDOU. Célula vazia PRESERVA o valor atual. Linha idêntica é pulada. Nunca sobrescreve tudo.'],
-       ['Responsável', 'Coluna "responsavel" aceita o NOME de um usuário ativo. Vazia: camada GESTOR/SÓCIO recebe o líder/gestor do setor como default (com aviso); camada OPERACIONAL fica EM BRANCO de propósito — o líder direciona depois, na tela.'],
+       ['Responsável', 'Coluna "responsavel" = NOME de usuário ativo (com login). Vazia: camada GESTOR/SÓCIO recebe o líder/gestor do setor; OPERACIONAL fica em branco pro líder direcionar.'],
+       ['Apelido', 'Coluna "apelido" = etiqueta VISUAL sem login (ex.: "Assis. PED 1"). Aparece no card pro líder ver a divisão planejada, mas NÃO loga e conta como "sem responsável" nos indicadores até virar pessoa real. Responsável real sempre ganha do apelido.'],
        ['Auditoria', 'De-para do cabeçalho: sem "codigo"/"titulo" BLOQUEIA · coluna faltando/extra ALERTA e pede confirmação. Cada gravação vai ao atividade_log com rótulo de importação + 1 registro-resumo.'],
        ['Quota', 'Teto de 200 linhas por importação — protege o limite diário de escritas do banco.']].forEach(function (r) {
         var v = txt('div', 'im-pop-v', r[0] + ': ' + r[1]);
