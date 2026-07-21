@@ -392,20 +392,24 @@
         cand.apelidoPlaceholder = true; /* marca p/ futuros: é etiqueta, não pessoa */
       }
       function aplicarRespDefault(destino, ctxSetor, ctxSub, ctxCamada) {
-        /* R2: decisão do Bruno — PEF define o dono das rotinas de GESTOR/SÓCIO;
-           OPERACIONAL sem coluna preenchida FICA EM BRANCO de propósito
-           (o líder direciona na tela). Default automático só p/ gestor/sócio. */
+        /* R2: decisão do Bruno (21/07) — OPERACIONAL e SÓCIO sem coluna preenchida
+           FICAM EM BRANCO. Operacional: o líder direciona na tela. Sócio: o Bruno
+           decide caso a caso depois (sócio-gestor). Default automático SÓ p/ GESTOR. */
         if ((ctxCamada || 'operacional') === 'operacional') {
           plano.avisos.push('linha ' + linha + ' (' + codigo + '): operacional sem responsável — deixada em branco para o líder direcionar');
+          return false;
+        }
+        if (ctxCamada === 'socio') {
+          plano.avisos.push('linha ' + linha + ' (' + codigo + '): sócio sem responsável — deixada em branco (Bruno decide caso a caso)');
           return false;
         }
         var lid = liderDefault(ctxSetor, ctxSub);
         if (lid) {
           destino.responsavelUid = lid.uid; destino.responsavelNome = lid.nome;
-          plano.avisos.push('linha ' + linha + ' (' + codigo + '): sem responsável — atribuído a ' + lid.nome + ' (default ' + (ctxCamada || '') + ')');
+          plano.avisos.push('linha ' + linha + ' (' + codigo + '): sem responsável — atribuído a ' + lid.nome + ' (default gestor)');
           return true;
         }
-        plano.avisos.push('linha ' + linha + ' (' + codigo + '): sem responsável e sem líder/gestor cadastrado para o setor — ficará sem dono');
+        plano.avisos.push('linha ' + linha + ' (' + codigo + '): sem responsável e sem gestor cadastrado — ficará sem dono');
         return false;
       }
 
