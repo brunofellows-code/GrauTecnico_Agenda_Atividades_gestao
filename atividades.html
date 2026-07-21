@@ -344,6 +344,7 @@
   <script src="kpi.js"></script>
   <script src="ctx.js"></script>
   <script src="catalogo.js"></script>
+  <script src="lentes.js"></script>
   <script>
   (function () {
     'use strict';
@@ -680,6 +681,16 @@
       var mav = document.getElementById('at-mav'); mav.innerHTML = '';
       mav.appendChild(UI.avatar({ initials: CURRENT_USER.initials, size: 42 }));
 
+      /* R3 · Bloco 1: barra das 3 lentes (motor em lentes.js). Nesta tela a
+         lente é um PREDICADO no buildOccurrences (EU FAÇO = minhas · EU COBRO
+         = da equipe) e OS NÚMEROS troca o palco pelos indicadores da janela.
+         vazio:false — a tela já tem estados vazios próprios e didáticos. */
+      if (window.GrautLentes) {
+        GrautLentes.mount({ tela: 'atividades', user: CURRENT_USER, padrao: 'eufaco',
+          before: toolbarEl, vazio: false,
+          onChange: function () { if (ATIV.length) { renderBoard(); } } });
+      }
+
       load();
     }
 
@@ -926,6 +937,14 @@
         if (!visivelPara(act, CURRENT_USER)) { return; }   /* F1-B: escopo por papel */
         if (window.GrautCtx && !GrautCtx.aplicaAtividade(act, GrautCtx.sanear(GrautCtx.get(), SETORES, CURRENT_USER))) { return; } /* F1-D(j): pré-filtro global */
         if (selSetor && !act.todosSetores && setoresDe(act).indexOf(selSetor) === -1) { return; }
+        /* R3 · lente ativa como predicado: EU FAÇO = responsável sou eu ·
+           EU COBRO = da equipe (inclui sem responsável, que é cobrança de
+           higiene) · OS NÚMEROS = escopo completo (sem corte). */
+        if (window.GrautLentes) {
+          var _lt = GrautLentes.ativa();
+          if (_lt === 'eufaco' && act.responsavelUid !== CURRENT_USER.uid) { return; }
+          if (_lt === 'eucobro' && act.responsavelUid === CURRENT_USER.uid) { return; }
+        }
         var ovs = OCC_BY_ATIV[act.id] || [];
         var occs = R.ocorrenciasNaJanela(act, w.jIni, w.jFim, ovs, hoje);
         occs.forEach(function (oc) {
@@ -969,9 +988,62 @@
       return out;
     }
 
+    /* R3 · "i" desta tela (mesmo padrão do Hoje — Protocolo A) */
+    function infoAt(titulo, d) {
+      var b = el('<button type="button" aria-label="Como este número é calculado" title="Como este número é calculado" style="width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:11px;font-weight:800;cursor:pointer;line-height:1;flex:none">i</button>');
+      b.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var dd = typeof d === 'function' ? d() : d;
+        UI.modal({ title: titulo, width: 520, body: function () {
+          var w = el('<div style="display:flex;flex-direction:column;gap:10px"></div>');
+          [['FÓRMULA', dd.formula], ['DADOS', dd.dados], ['NÚMEROS DESTE CÁLCULO', dd.numeros]].forEach(function (r) {
+            var s = el('<div></div>');
+            s.appendChild(el('<div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--muted2);margin-bottom:3px">' + r[0] + '</div>'));
+            var p = el('<div style="font-size:13px;color:var(--text);line-height:1.5"></div>'); p.textContent = r[1] || '—';
+            s.appendChild(p); w.appendChild(s);
+          });
+          return w;
+        }, footer: function (close) { return [UI.button({ label: 'Entendi', onClick: close })]; } });
+      });
+      return b;
+    }
+
+    /* R3 · lente OS NÚMEROS: os mesmos números do motor (KPI.computar) sobre
+       o escopo da janela atual. Com esta lente ativa o predicado não corta
+       por responsável, então o BOARD já é a base completa. Zero query nova. */
+    function renderNumeros() {
+      var hoje = R.hojeISO();
+      var mm = KPI.computar({ board: BOARD, hoje: hoje, setores: SETORES, ativ: ATIV });
+      var wrap = el('<div data-lente="numeros"></div>');
+      var head = el('<div style="display:flex;align-items:center;gap:7px;margin:2px 0 10px"></div>');
+      head.appendChild(el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)">Números da janela (' + PERIODO_LABEL[periodo] + ')</div>'));
+      head.appendChild(infoAt('Números da janela — como cada um é calculado', function () {
+        return {
+          formula: 'Aderência = concluídas ÷ previstas até hoje × 100 (meta 90%). Atrasadas = abertas com data efetiva vencida; aging = média de dias de atraso. Em andamento = status "em andamento". Reprogramação = reprogramadas ÷ total × 100 (limite 20%). Sem responsável = abertas sem dono (não medem).',
+          dados: 'as MESMAS ocorrências desta tela (seu escopo + contexto de setor + busca + período acima); dia civil de Salvador.',
+          numeros: 'ocorrências ' + mm.totais.ocorrencias + ' · aderência ' + (mm.aderencia == null ? '—' : mm.aderencia + '%') + ' · atrasadas ' + mm.totais.atrasadas + ' (aging ' + (Math.round(mm.agingMedio * 10) / 10) + 'd) · andamento ' + mm.totais.andamento + ' · reprog ' + mm.reprogPct + '% · sem resp. ' + mm.totais.semResp
+        };
+      }));
+      wrap.appendChild(head);
+      var grid = el('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px"></div>');
+      [
+        { label: 'Aderência à rotina', value: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? '—' : mm.aderencia + '%', sub: mm.totais.previstasVencidas === 0 ? 'coletando' : 'meta 90%', tone: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red') },
+        { label: 'Atrasadas agora', value: String(mm.totais.atrasadas), sub: mm.totais.atrasadas ? 'aging médio ' + (Math.round(mm.agingMedio * 10) / 10) + 'd' : 'nada vencido', tone: mm.totais.atrasadas ? 'red' : 'green' },
+        { label: 'Em andamento', value: String(mm.totais.andamento), sub: 'já iniciadas', tone: mm.totais.andamento ? 'amber' : 'green' },
+        { label: 'Concluídas na janela', value: String(mm.totais.concluidas), sub: 'de ' + mm.totais.ocorrencias + ' ocorrência(s)', tone: 'green' },
+        { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green' },
+        { label: 'Sem responsável', value: String(mm.totais.semResp), sub: mm.totais.semResp ? 'defina o dono — não medem' : 'todas com dono', tone: mm.totais.semResp ? 'amber' : 'green' }
+      ].forEach(function (k) { grid.appendChild(UI.kpiCard(k)); });
+      wrap.appendChild(grid);
+      wrap.appendChild(el('<div style="margin-top:12px;font-size:12px;color:var(--muted2)">Detalhe por pessoa em <a href="performance.html" style="color:var(--brand);font-weight:700">Performance</a> · plano de ação em <a href="inteligencia.html" style="color:var(--brand);font-weight:700">Inteligência</a>.</div>'));
+      stage.appendChild(wrap);
+    }
+
     function renderBoard() {
       BOARD = buildOccurrences();
       stage.innerHTML = '';
+      /* R3 · lente OS NÚMEROS troca o palco pelos indicadores da janela */
+      if (window.GrautLentes && GrautLentes.ativa() === 'numeros') { renderNumeros(); updateCount(); return; }
       if (!BOARD.length) {
         var box = el('<div class="at-msg"></div>');
         var icw = el('<div class="at-msg-ic"></div>'); icw.appendChild(ico(PATH.calendar, 22)); box.appendChild(icw);
@@ -997,6 +1069,7 @@
       else { renderList(); }
       if (capped) { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
       updateCount(); /* F1-E · 0.3: BOARD acabou de ser reconstruído — o contador do topo acompanha */
+      if (window.GrautLentes) { GrautLentes.aplicar(); } /* R3 · lentes */
     }
 
     /* ----- meta comum dos cartões ----- */

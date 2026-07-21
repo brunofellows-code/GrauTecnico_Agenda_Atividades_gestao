@@ -221,9 +221,9 @@
         <div class="hj-scope" id="hj-scope"></div>
       <div class="hj-state" id="hj-state"></div>
       <div id="hj-prog"></div>
-      <div class="hj-kpis" id="hj-kpis"></div>
+      <div class="hj-kpis" id="hj-kpis" data-lente="numeros"></div>
 
-        <div class="hj-cols">
+        <div class="hj-cols" data-lente="eufaco">
           <div class="hj-card">
             <div class="hj-cardhead">
               <div class="hj-ctitle">Linha do tempo de hoje</div>
@@ -261,6 +261,7 @@
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="ctx.js"></script>
+  <script src="lentes.js"></script>
   <script>
   /* ================= MEU DIA — dados REAIS (zero mock) =================
      Carrega via KPI.carregar (mesmo motor validado da Inteligência) e
@@ -840,10 +841,12 @@
         row.appendChild(miniBtn('Concluir', (function (occ) { return function () { concluir(occ); }; })(px.occ), 'ok'));
       }
       card.appendChild(row);
+      card.setAttribute('data-lente', 'eufaco'); /* R3 · lente */
       pg.appendChild(card);
     })();
     if (d.doHoje.length) {
       var pbox = el('<div class="hj-prog"></div>');
+      pbox.setAttribute('data-lente', 'eufaco'); /* R3 · lente */
       var ptop = el('<div class="hj-prog-top"></div>');
       var msg = d.feitasHoje === 0 ? 'Comece marcando a primeira ✓'
         : (d.feitasHoje === d.doHoje.length ? 'Dia fechado. 🎯' : pctDia + '% do dia');
@@ -905,15 +908,16 @@
       }
     }
     /* F1-I: Cobranças do PEF (escalonamento D-5/D-3/D-0 dos planos de ação) */
-    var cb = cardCobrancas(m, hoje); if (cb) { pg.appendChild(cb); }
+    /* R3 · lentes: cada card já existente ganha a etiqueta da sua pergunta */
+    var cb = cardCobrancas(m, hoje); if (cb) { cb.setAttribute('data-lente', 'eucobro'); pg.appendChild(cb); }
     /* F1-I: Você supervisiona (o campo supervisor vira valor imediato) */
-    var sup = cardSupervisiona(m, hoje); if (sup) { pg.appendChild(sup); }
+    var sup = cardSupervisiona(m, hoje); if (sup) { sup.setAttribute('data-lente', 'eucobro'); pg.appendChild(sup); }
     /* F1-N · G1: Cockpit do líder (KPIs do MEU setor, sem trocar de tela) */
-    var g1 = cardCockpitLider(m, hoje); if (g1) { pg.appendChild(g1); }
+    var g1 = cardCockpitLider(m, hoje); if (g1) { g1.setAttribute('data-lente', 'numeros'); pg.appendChild(g1); }
     /* F1-N · G3: Radar do gestor (pior × melhor equipe do dia → agir) */
-    var g3 = cardRadarGestor(m, hoje); if (g3) { pg.appendChild(g3); }
+    var g3 = cardRadarGestor(m, hoje); if (g3) { g3.setAttribute('data-lente', 'numeros'); pg.appendChild(g3); }
     /* F1-N · G2: Quem precisa de ajuda hoje (cobrança vira conversa 1:1) */
-    var g2 = cardAjuda(m, hoje); if (g2) { pg.appendChild(g2); }
+    var g2 = cardAjuda(m, hoje); if (g2) { g2.setAttribute('data-lente', 'eucobro'); pg.appendChild(g2); }
 
     /* KPIs do topo */
     var kg = document.getElementById('hj-kpis'); kg.innerHTML = '';
@@ -934,6 +938,7 @@
     LAST_NUM = { d: d, mm: mm, pctDia: pctDia };
     if (!document.getElementById('hj-kpis-i')) {
       var ki = el('<div id="hj-kpis-i" style="display:flex;align-items:center;gap:6px;margin:-6px 0 8px"></div>');
+      ki.setAttribute('data-lente', 'numeros'); /* R3 · lente */
       ki.appendChild(txt('span', 'hj-prog-s', 'Números do dia'));
       ki.appendChild(infoHj('Números do dia — como cada um é calculado', function () {
         var L = LAST_NUM;
@@ -1012,6 +1017,9 @@
     var lb = document.querySelector('.hj-late-badge'); if (lb) { lb.textContent = d.atras.length + ' pendente(s)'; }
     if (d.atras.length) { d.atras.forEach(function (o) { at.appendChild(lateRow(o, hoje)); }); }
     else { at.appendChild(txt('div', 'hj-empty', 'Zero atrasadas — tudo em dia. 🎯 Continue assim que a sequência cresce.')); }
+
+    /* R3 · lentes: os blocos renasceram — a lente ativa reaplica a visibilidade */
+    if (window.GrautLentes) { GrautLentes.aplicar(); }
   }
 
   /* ---------- escopo (Minhas / Todas) ---------- */
@@ -1085,6 +1093,7 @@
     var comps = compromissosDeReuniao(hoje);
     if (!CONVOC.length && !comps.length) { return; }
     var box = el('<div id="hj-reun" style="margin-bottom:16px"></div>');
+    box.setAttribute('data-lente', 'eufaco'); /* R3 · lente */
 
     if (CONVOC.length) {
       var c1 = el('<div class="hj-card" style="padding:14px 16px;margin-bottom:10px"></div>');
@@ -1195,6 +1204,13 @@
     var hojeISO = R.hojeISO();
     var d1 = document.querySelector('.hj-dd'); if (d1) { d1.textContent = dataLonga(hojeISO); }
     var d2 = document.querySelector('.hj-md'); if (d2) { d2.textContent = dataLonga(hojeISO); }
+    /* R3 · Bloco 1: barra das 3 lentes (motor em lentes.js) — reorganiza os
+       blocos JÁ existentes por pergunta; troca de lente repinta o dia. */
+    if (window.GrautLentes) {
+      GrautLentes.mount({ tela: 'hoje', user: USER, padrao: 'eufaco',
+        before: document.getElementById('hj-scope'),
+        onChange: function () { if (MODELO) { paint(); } } });
+    }
     pintarScope();
     setState('Carregando o seu dia…', 'Lendo atividades e ocorrências.');
     refresh();

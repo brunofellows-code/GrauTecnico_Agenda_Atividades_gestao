@@ -275,6 +275,7 @@
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="ctx.js"></script>
+  <script src="lentes.js"></script>
   <script>
   /* ===== Inteligência: KPIs REAIS via kpi.js (motor validado à mão). Zero mock. ===== */
   var USER = { name: '—', profile: 'Visualizador', initials: '—' };
@@ -1305,13 +1306,18 @@
       if (subEl) { h2.appendChild(subEl); }
       return h2;
     }
-    body.appendChild(secHead('Decidir agora'));
+    var hDec = secHead('Decidir agora');
+    hDec.setAttribute('data-lente', 'eucobro numeros'); /* R3 · lente */
+    body.appendChild(hDec);
     var focus = el('<div class="pf-focus"></div>');
     focusKPIs(m).forEach(function (k) { focus.appendChild(kpiCard(k, true)); });
+    focus.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     body.appendChild(focus);
-    body.appendChild(planoAcao(m));
+    var _pl = planoAcao(m);
+    _pl.setAttribute('data-lente', 'eucobro'); /* R3 · lente */
+    body.appendChild(_pl);
     var lr = lenteRisco(m);                     /* F1-H: risco dinâmico como LENTE (P1-Risco) */
-    if (lr) { lr.style.marginTop = '13px'; body.appendChild(lr); }
+    if (lr) { lr.style.marginTop = '13px'; lr.setAttribute('data-lente', 'eucobro'); body.appendChild(lr); }
 
     var ANA_KEY = 'gera_intel_analisar';
     var anaAberto = true;
@@ -1329,30 +1335,64 @@
     });
     var hAna = secHead('Analisar', tg);
     hAna.style.marginTop = '18px';
+    hAna.setAttribute('data-lente', 'eucobro numeros'); /* R3 · lente */
     body.appendChild(hAna);
     body.appendChild(secA);
 
-    secA.appendChild(planosVivos(m));           /* F1-G: fecha o ciclo indicador→plano→execução */
+    var _pv = planosVivos(m);                   /* F1-G: fecha o ciclo indicador→plano→execução */
+    _pv.setAttribute('data-lente', 'eucobro');  /* R3 · lente */
+    secA.appendChild(_pv);
     var cand = candidatosIndicador();
     cand.style.marginTop = '13px';
+    cand.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     secA.appendChild(cand); /* F1-F */
     var ss = scoreSetores(m);
-    if (ss) { ss.style.marginTop = '13px'; secA.appendChild(ss); }
+    if (ss) { ss.style.marginTop = '13px'; ss.setAttribute('data-lente', 'numeros'); secA.appendChild(ss); }
     var bk = backlogCard(m);
-    if (bk) { bk.style.marginTop = '13px'; secA.appendChild(bk); }
+    if (bk) { bk.style.marginTop = '13px'; bk.setAttribute('data-lente', 'eucobro'); secA.appendChild(bk); }
     var score = el('<div class="pf-score"></div>');
     score.style.marginTop = '13px';
     scoreKPIs(m).forEach(function (k) { score.appendChild(kpiCard(k, false)); });
+    score.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     secA.appendChild(score);
     var row1 = el('<div class="pf-row1"></div>');
     row1.appendChild(chartAderencia(m)); row1.appendChild(chartAging(m));
+    row1.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     secA.appendChild(row1);
     var row2 = el('<div class="pf-row2"></div>');
     row2.appendChild(chartThroughput(m)); row2.appendChild(chartCarga(m));
+    row2.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     secA.appendChild(row2);
     var pa = chartPareto(m);                    /* F1-H: 80/20 das atrasadas (Juran) */
-    if (pa) { pa.style.marginTop = '13px'; secA.appendChild(pa); }
+    if (pa) { pa.style.marginTop = '13px'; pa.setAttribute('data-lente', 'numeros'); secA.appendChild(pa); }
+
+    /* R3 · lente EU FAÇO — minha parte nestes números (mesmo board; zero query nova) */
+    (function () {
+      var minhas = (m.board || []).filter(function (o) { return o.act && o.act.responsavelUid === USER.uid; });
+      var abertas = minhas.filter(function (o) { return o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada'; });
+      var atr = minhas.filter(function (o) { return o.atrasada; });
+      var mb = el('<div class="pf-card"></div>');
+      mb.setAttribute('data-lente', 'eufaco');
+      var mhh = el('<div class="pf-card-h"></div>');
+      mhh.appendChild(el('<div class="pf-card-t">Minha parte nestes números</div>'));
+      mb.appendChild(mhh);
+      var linha = el('<div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px"></div>');
+      linha.textContent = 'Na janela: ' + abertas.length + ' aberta(s) minha(s), ' + atr.length + ' atrasada(s). O indicador do setor melhora quando cada um fecha a própria fila.';
+      mb.appendChild(linha);
+      atr.slice(0, 3).forEach(function (o) {
+        var r = el('<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:3px 0"></div>');
+        r.appendChild(el('<span style="width:7px;height:7px;border-radius:50%;background:var(--red);flex:none"></span>'));
+        var tt2 = el('<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>');
+        tt2.textContent = (o.act && o.act.titulo) || '(sem título)';
+        r.appendChild(tt2);
+        mb.appendChild(r);
+      });
+      mb.appendChild(el('<a href="hoje.html" style="display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:var(--brand)">Resolver no Hoje →</a>'));
+      body.appendChild(mb);
+    })();
+
     pintaTg();
+    if (window.GrautLentes) { GrautLentes.aplicar(); } /* R3 · lentes */
   }
 
   /* ---------- N2: foto do dia (idempotente; falha nunca quebra o painel) ---------- */
@@ -1444,6 +1484,13 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
     var app = document.getElementById('app');
     app.insertBefore(UI.sidebar({ active: 'Inteligência', user: USER }), app.firstChild);
+    /* R3 · Bloco 1: barra das 3 lentes (motor em lentes.js). Padrão desta
+       tela = OS NÚMEROS ("Como vai?" é a pergunta-mãe da Inteligência). */
+    if (window.GrautLentes) {
+      GrautLentes.mount({ tela: 'inteligencia', user: USER, padrao: 'numeros',
+        before: document.getElementById('pf-stamp'),
+        onChange: function () { if (MODELO) { paint(MODELO); } } });
+    }
     var exp = document.getElementById('pf-export');
     if (exp) { var rb = UI.button({ label: 'Atualizar', icon: 'upload', variant: 'ghost' }); rb.addEventListener('click', carregar); exp.appendChild(rb); }
     document.querySelectorAll('.pf-seg').forEach(wireSeg);

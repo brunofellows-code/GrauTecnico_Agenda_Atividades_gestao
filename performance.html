@@ -205,6 +205,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="lentes.js"></script>
   <script>
   /* ===== Performance: ranking REAL por pessoa via KPI.computarPorPessoa (board expandido reaproveitado). Zero mock. ===== */
   (function () {
@@ -558,6 +559,7 @@
     heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela', numeros: nAtr + ' atrasada(s) · aging médio ' + (MODELO ? (Math.round((MODELO.agingMedio || 0) * 10) / 10) : 0) + ' dia(s)' },
       '<span class="pf-hdot" style="background:var(--' + tR + ')"></span><span style="color:var(--' + tR + ')">' + nAtr + '</span>',
       nAtr ? ('Aging médio: ' + (Math.round((MODELO.agingMedio || 0) * 10) / 10) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
+    heroes.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     body.appendChild(heroes);
 
     /* ===== higiene: sem responsável (âmbar, 1 linha — não polui) ===== */
@@ -567,6 +569,7 @@
       hyg.appendChild(txt('span', 'pf-hygt', 'Sem responsável: ' + semResp.total + ' ocorrência(s)'));
       hyg.appendChild(txt('span', 'pf-hygs', '— importe com a coluna "responsavel" ou edite as atividades. Clique para ver.'));
       hyg.addEventListener('click', function () { abrirPessoa(semResp); });
+      hyg.setAttribute('data-lente', 'eucobro'); /* R3 · lente */
       body.appendChild(hyg);
     }
 
@@ -595,6 +598,7 @@
         bars.appendChild(row);
       });
       gc.appendChild(bars);
+      gc.setAttribute('data-lente', 'numeros'); /* R3 · lente */
       body.appendChild(gc);
     }
 
@@ -604,12 +608,14 @@
     h.appendChild(el('<div class="pf-card-t">Pessoas por severidade — clique para o detalhe individual</div>'));
     h.appendChild(infoBtn({ title: 'Pessoas por severidade', formula: 'grupo = semáforo do score (≥80 verde · 60–79 âmbar · <60 vermelho · sem dado = coletando). ' + (infos.score.formula), dados: infos.score.dados, numeros: lista.length + ' pessoa(s) no recorte' }));
     card.appendChild(h);
+    card.setAttribute('data-lente', 'eucobro'); /* R3 · lente */
 
     if (!lista.length && !semResp) {
       card.appendChild(el('<div class="pf-empty2">Nenhuma pessoa com ocorrências neste recorte.</div>'));
       body.appendChild(card);
       var so0 = MODELO ? scoreSetores(MODELO) : null;
-      if (so0) { body.appendChild(so0); }
+      if (so0) { so0.setAttribute('data-lente', 'numeros'); body.appendChild(so0); } /* R3 · lente */
+      if (window.GrautLentes) { GrautLentes.aplicar(); }
       return;
     }
 
@@ -652,10 +658,32 @@
     card.appendChild(grid);
     body.appendChild(card);
 
-    body.appendChild(rankingCard());              /* F1-G */
+    var _rk = rankingCard();                      /* F1-G */
+    _rk.setAttribute('data-lente', 'eucobro');    /* R3 · lente */
+    body.appendChild(_rk);
 
     var so = MODELO ? scoreSetores(MODELO) : null;
-    if (so) { body.appendChild(so); }
+    if (so) { so.setAttribute('data-lente', 'numeros'); body.appendChild(so); } /* R3 · lente */
+
+    /* R3 · lente EU FAÇO: o MEU cartão — o mesmo pcard do grid, sem os
+       chips de filtro no caminho (eu sou sempre eu). Zero cálculo novo. */
+    var minha = null;
+    ((PP && PP.pessoas) || []).forEach(function (p) { if (p.uid && USER && p.uid === USER.uid) { minha = p; } });
+    var meu = el('<div class="pf-card"></div>');
+    meu.setAttribute('data-lente', 'eufaco');
+    var mh = el('<div class="pf-card-h"></div>');
+    mh.appendChild(el('<div class="pf-card-t">Meu desempenho — o mesmo cartão que o líder vê</div>'));
+    meu.appendChild(mh);
+    if (minha) {
+      var mgrid = el('<div style="max-width:360px"></div>');
+      mgrid.appendChild(pcard(minha));
+      meu.appendChild(mgrid);
+    } else {
+      meu.appendChild(el('<div class="pf-empty2">Sem ocorrências suas neste recorte — seus números nascem do uso em Hoje e Atividades.</div>'));
+    }
+    body.appendChild(meu);
+
+    if (window.GrautLentes) { GrautLentes.aplicar(); } /* R3 · lentes */
   }
 
   /* ============================================================
@@ -848,6 +876,13 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
     var app = document.getElementById('app');
     app.insertBefore(UI.sidebar({ active: 'Performance', user: USER }), app.firstChild);
+    /* R3 · Bloco 1: barra das 3 lentes (motor em lentes.js). Padrão desta
+       tela = EU COBRO (pessoa a pessoa é a razão de ser da Performance). */
+    if (window.GrautLentes) {
+      GrautLentes.mount({ tela: 'performance', user: USER, padrao: 'eucobro',
+        before: document.getElementById('pf-stamp'),
+        onChange: function () { if (MODELO && PP) { render(); } } });
+    }
     var exp = document.getElementById('pf-export');
     if (exp) { var rb = UI.button({ label: 'Atualizar', icon: 'upload', variant: 'ghost' }); rb.addEventListener('click', carregar); exp.appendChild(rb); }
     document.querySelectorAll('.pf-seg').forEach(wireSeg);
