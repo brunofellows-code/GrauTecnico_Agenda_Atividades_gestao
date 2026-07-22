@@ -313,6 +313,9 @@
     var perfil = normalizePerfil(perfilRaw);            /* papel: gestor|lider|usuario */
     var setoresLid = (data && Array.isArray(data.setoresLiderados)) ? data.setoresLiderados.slice() : [];
     var setorU = (data && data.setor) ? String(data.setor) : '';   /* F1-C: setor de lotação (âncora p/ calendário/eventos do usuário) */
+    /* R4-EXT: sócio = gestor com o marcador socio:true no doc (RESUMO: sócio-gestor
+       não é perfil novo — é gestor + lente). Assina a 2ª alçada (>R$200). */
+    var isSocioFlag = (perfil === 'gestor') && !!(data && data.socio === true);
     user = {
       uid: authUser.uid,
       email: (data && data.email) || authUser.email || '',
@@ -321,6 +324,7 @@
       perfilRaw: perfilRaw,           /* valor cru do doc (pode ser legado) */
       setoresLiderados: setoresLid,   /* siglas que o Líder lidera */
       setor: setorU,                  /* F1-C: sigla do setor do usuário ('' se não definido/legado) */
+      socio: isSocioFlag,             /* R4-EXT: assina alçada como sócio */
       /* aliases para UI.sidebar + telas existentes (espera name/profile/initials).
          profile = tier de CAPACIDADE legado (Admin|Editor|Visualizador): as telas
          que checam 'Admin'/'Editor' seguem funcionando sem tocar nelas. */
@@ -383,6 +387,7 @@
     },
     isGestor: function () { return !!user && user.perfil === 'gestor'; },
     isLider: function () { return !!user && user.perfil === 'lider'; },
+    isSocio: function () { return !!user && user.socio === true; },
     isUsuario: function () { return !!user && user.perfil === 'usuario'; },
     signOut: function () {
       settled = true;

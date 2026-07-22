@@ -109,7 +109,14 @@
          tudo; líder no próprio escopo (KPI.escopoLider — raiz cobre
          subsetores).
        - Alçada R$200 (KPI.planejamentoItemTravado): item >R$200 trava
-         até aprovLider E aprovGestor (paralelo); o PLANO nunca trava.
+         até aprovGestor E aprovSocio (paralelo — quem cria não assina;
+         RESUMO §4/O4 + four-eyes de mercado); o PLANO nunca trava.
+       - Item aberto travado = CLOCK-PAUSE na nota (não conta no
+         denominador enquanto espera — padrão SLA "Awaiting approval").
+       - "Não realizei" com motivo obrigatório (lista O3 do RESUMO +
+         Outro com detalhe); reabrir limpa. naoFeito derruba aderência.
+       - Fase D-3/D-0 sem entrega: gestor tem botão de cobrança manual
+         (WhatsApp/E-mail com texto pronto — padrão 3 canais F1-E).
        - Nota mensal 50/30/20 (KPI.planejamentoNota) + ranking "quem
          precisa de atenção". Tudo com "i" (fórmula+dados+números).
        - Fora das 3 lentes (eixo próprio VEM×FOI — decisão travada).
@@ -156,7 +163,7 @@
         var db = c.db, f = c.f;
         var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(300));
         return f.getDocs(q).then(function (snap) {
-          var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)' }); });
+          var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)', email: u.email || '', perfil: u.perfil || '', setoresLiderados: Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [] }); });
           a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
           return a;
         });
@@ -285,18 +292,18 @@
   }
   function iRowsNota(n) {
     return [
-      ['Fórmula', 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − médiaDiasAtraso ÷ 7); teto 7 dias). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes.'],
-      ['Dados', 'itens do plano desta competência (quandoPrevisto × quandoRealizado) · KPI.planejamentoNota (kpi.js, harness_r4 20/20).'],
-      ['Números', n ? ('aderência ' + n.aderencia + '% (' + n.realizados + '/' + n.previstos + ') · no prazo ' + n.noPrazoPct + '% (' + n.realizadosNoPrazo + '/' + n.realizados + ') · atraso médio ' + n.mediaDiasAtraso + 'd → componente ' + n.atrasoPct + '% · nota ' + n.nota) : 'sem itens — não ranqueia']
+      ['Fórmula', 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − médiaDiasAtraso ÷ 7); teto 7 dias). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes. Item ABERTO aguardando aprovação da alçada fica FORA do denominador (clock-pause — a espera não é do setor); item marcado "não realizado" CONTA e derruba a aderência.'],
+      ['Dados', 'itens do plano desta competência (quandoPrevisto × quandoRealizado × naoFeito × alçada) · KPI.planejamentoNota (kpi.js, harness_r4 27/27).'],
+      ['Números', n ? ('aderência ' + n.aderencia + '% (' + n.realizados + '/' + n.previstos + ') · no prazo ' + n.noPrazoPct + '% (' + n.realizadosNoPrazo + '/' + n.realizados + ') · atraso médio ' + n.mediaDiasAtraso + 'd → componente ' + n.atrasoPct + '% · nota ' + n.nota + (n.pausadosAprovacao ? (' · ' + n.pausadosAprovacao + ' item(ns) em pause de aprovação (fora do cálculo)') : '')) : 'sem itens ranqueáveis — não ranqueia']
     ];
   }
   var I_ALCADA = [
-    ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — líder E gestor (aprovação paralela: qualquer ordem). A trava é do ITEM; o plano nunca trava.'],
-    ['Dados', 'item.valorCentavos (inteiro, em centavos) + item.aprovLider / item.aprovGestor · KPI.planejamentoItemTravado (kpi.js, harness_r4).']
+    ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — GESTOR e SÓCIO (aprovação paralela: qualquer ordem; quem cria o item não assina — four-eyes). Sócio = gestor marcado como sócio no cadastro de usuários. A mesma pessoa que acumula os dois papéis pode dar as duas assinaturas (o objetivo é forçar a leitura). A trava é do ITEM; o plano nunca trava — e o item em espera entra em clock-pause na nota.'],
+    ['Dados', 'item.valorCentavos (inteiro, em centavos) + item.aprovGestor / item.aprovSocio (uid, nome, data) · usuário.socio · KPI.planejamentoItemTravado (kpi.js, harness_r4).']
   ];
   var I_EIXO = [
-    ['O QUE VEM', 'Itens ainda NÃO realizados da competência selecionada, em ordem de data prevista. Vermelho = data prevista já passou; âmbar = é hoje; cadeado = aguardando aprovação (alçada R$200).'],
-    ['O QUE FOI', 'Itens realizados, do mais recente para o mais antigo, com o desvio de prazo (no prazo · +N dias).'],
+    ['O QUE VEM', 'Itens ABERTOS (nem realizados, nem declarados não-feitos) da competência, em ordem de data prevista. Vermelho = data prevista já passou; âmbar = é hoje; cadeado = aguardando gestor+sócio (alçada R$200; item em pause na nota).'],
+    ['O QUE FOI', 'Desfechos, do mais recente para o mais antigo: realizados (com o desvio de prazo — no prazo · +N dias) e NÃO realizados (vermelho, com o motivo declarado no hover).'],
     ['Dados', 'planejamentos da competência · derivado na tela, nada gravado.']
   ];
 
@@ -326,7 +333,7 @@
     var all = todosItens();
 
     /* --- O QUE VEM --- */
-    var vem = all.filter(function (x) { return !x.item.quandoRealizado; })
+    var vem = all.filter(function (x) { return !x.item.quandoRealizado && !x.item.naoFeito; })
       .sort(function (a, b) { return (a.item.quandoPrevisto || '9999').localeCompare(b.item.quandoPrevisto || '9999'); });
     var c1 = el('<div class="pl-card"></div>');
     var h1 = el('<div class="pl-card-h"></div>');
@@ -346,7 +353,7 @@
       if (KPI.planejamentoItemTravado(x.item)) {
         var bd = txt('span', 'pl-badge', '🔒 aguarda aprovação');
         bd.style.color = 'var(--amber)';
-        bd.title = 'Acima de R$ 200 — precisa de líder E gestor para executar.';
+        bd.title = 'Acima de R$ 200 — precisa de GESTOR e SÓCIO para executar (item em pause na nota enquanto espera).';
         lin.appendChild(bd);
       }
       lin.appendChild(txt('div', 'pl-l-m', fmtBR(x.item.quandoPrevisto)));
@@ -358,27 +365,37 @@
     wrap.appendChild(c1);
 
     /* --- O QUE FOI --- */
-    var foi = all.filter(function (x) { return !!x.item.quandoRealizado; })
-      .sort(function (a, b) { return (b.item.quandoRealizado || '').localeCompare(a.item.quandoRealizado || ''); });
+    function dtDesfecho(x) { return x.item.quandoRealizado || (x.item.naoFeitoEm ? new Date(x.item.naoFeitoEm).toISOString().slice(0, 10) : ''); }
+    var foi = all.filter(function (x) { return !!x.item.quandoRealizado || !!x.item.naoFeito; })
+      .sort(function (a, b) { return dtDesfecho(b).localeCompare(dtDesfecho(a)); });
     var c2 = el('<div class="pl-card"></div>');
     var h2 = el('<div class="pl-card-h"></div>');
     h2.appendChild(txt('div', 'pl-card-t', 'O QUE FOI'));
-    h2.appendChild(txt('span', 'pl-count', foi.length + ' realizado(s)'));
+    h2.appendChild(txt('span', 'pl-count', foi.length + ' desfecho(s)'));
     h2.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
     c2.appendChild(h2);
     if (!foi.length) { c2.appendChild(txt('div', 'pl-empty', 'Nada realizado ainda nesta competência.')); }
     foi.slice(0, 12).forEach(function (x) {
       var lin = el('<div class="pl-linha"></div>');
-      var noPrazo = x.item.quandoPrevisto && x.item.quandoRealizado <= x.item.quandoPrevisto;
       var dot = el('<div class="pl-l-dot"></div>');
-      dot.style.background = noPrazo ? 'var(--green)' : 'var(--orange)';
       lin.appendChild(dot);
       lin.appendChild(txt('div', 'pl-l-t', '[' + x.plano.setorSigla + '] ' + (x.item.oque || '(sem título)')));
-      var desvio = noPrazo ? 'no prazo' : ('+' + diffDias(x.item.quandoPrevisto, x.item.quandoRealizado) + 'd');
-      var bd = txt('span', 'pl-badge', desvio);
-      bd.style.color = noPrazo ? 'var(--green)' : 'var(--orange)';
-      lin.appendChild(bd);
-      lin.appendChild(txt('div', 'pl-l-m', fmtBR(x.item.quandoRealizado)));
+      if (x.item.naoFeito) {
+        dot.style.background = 'var(--red)';
+        var bn = txt('span', 'pl-badge', '✗ não realizado');
+        bn.style.color = 'var(--red)';
+        bn.title = 'Motivo: ' + (x.item.motivo || '—') + (x.item.motivoDetalhe ? (' — ' + x.item.motivoDetalhe) : '');
+        lin.appendChild(bn);
+        lin.appendChild(txt('div', 'pl-l-m', x.item.naoFeitoEm ? fmtBR(new Date(x.item.naoFeitoEm).toISOString().slice(0, 10)) : '—'));
+      } else {
+        var noPrazo = x.item.quandoPrevisto && x.item.quandoRealizado <= x.item.quandoPrevisto;
+        dot.style.background = noPrazo ? 'var(--green)' : 'var(--orange)';
+        var desvio = noPrazo ? 'no prazo' : ('+' + diffDias(x.item.quandoPrevisto, x.item.quandoRealizado) + 'd');
+        var bd = txt('span', 'pl-badge', desvio);
+        bd.style.color = noPrazo ? 'var(--green)' : 'var(--orange)';
+        lin.appendChild(bd);
+        lin.appendChild(txt('div', 'pl-l-m', fmtBR(x.item.quandoRealizado)));
+      }
       wrapLinha(lin, x.plano.setorSigla);
       c2.appendChild(lin);
     });
@@ -448,9 +465,31 @@
       head.appendChild(fase);
       head.appendChild(iBtn('Fase da entrega — ' + s.sigla, function () { return iRowsPrazo(pz); }));
 
+      /* R4-EXT (arbitragem 2): cobrança MANUAL nos canais travados da F1-E
+         (WhatsApp/E-mail com texto pronto) quando D-3/D-0 sem entrega — o
+         push automático segue O2 aberto (exige backend). Só o gestor cobra. */
+      if ((pz.fase === 'd3' || pz.fase === 'd0') && !(pl && pl.entregueEm) && Guard.isGestor && Guard.isGestor()) {
+        var msgCob = 'Planejamento ' + s.sigla + ' (' + COMP + '): prazo dia ' + fmtBR(pz.deadline) + ' — favor entregar o plano no GERA.';
+        var lidsCob = USERS.filter(function (u) {
+          return u.perfil === 'lider' && (u.setoresLiderados.indexOf(s.sigla) >= 0 || (s.setorPaiSigla && u.setoresLiderados.indexOf(s.setorPaiSigla) >= 0));
+        });
+        var bW = txt('button', 'pl-acao', 'cobrar 📱'); bW.type = 'button';
+        bW.title = 'Abre o WhatsApp com a cobrança pronta (você escolhe o contato).';
+        bW.addEventListener('click', function (ev) { ev.stopPropagation(); window.open('https://wa.me/?text=' + encodeURIComponent(msgCob), '_blank'); });
+        head.appendChild(bW);
+        var bM = txt('button', 'pl-acao', 'cobrar ✉'); bM.type = 'button';
+        bM.title = lidsCob.length ? ('E-mail para: ' + lidsCob.map(function (u) { return u.nome; }).join(', ')) : 'E-mail com a cobrança pronta (sem destinatário — o cadastro não aponta líder deste setor).';
+        bM.addEventListener('click', function (ev) {
+          ev.stopPropagation();
+          var to = lidsCob.map(function (u) { return u.email; }).filter(Boolean).join(',');
+          window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent('Planejamento ' + s.sigla + ' — ' + COMP) + '&body=' + encodeURIComponent(msgCob);
+        });
+        head.appendChild(bM);
+      }
+
       if (pl) {
         var vivos = itensVivos(pl);
-        head.appendChild(txt('span', 'pl-smeta', vivos.length + ' item(ns) · ' + vivos.filter(function (i) { return i.quandoRealizado; }).length + ' realizado(s)'));
+        head.appendChild(txt('span', 'pl-smeta', vivos.length + ' item(ns) · ' + vivos.filter(function (i) { return i.quandoRealizado; }).length + ' realizado(s)' + (vivos.filter(function (i) { return i.naoFeito; }).length ? (' · ' + vivos.filter(function (i) { return i.naoFeito; }).length + ' não realizado(s)') : '')));
         var n = KPI.planejamentoNota(vivos);
         var nb = el('<span class="pl-nota"></span>');
         nb.appendChild(txt('span', '', n ? ('Nota ' + n.nota) : 'sem nota'));
@@ -504,25 +543,43 @@
       td(txt('span', 'pl-l-m', it.quemNome || '—'));
       var tdPrev = td(txt('span', '', fmtBR(it.quandoPrevisto)));
       if (!it.quandoRealizado && it.quandoPrevisto && it.quandoPrevisto < HOJE) { tdPrev.style.color = 'var(--red)'; }
-      var real = it.quandoRealizado ? fmtBR(it.quandoRealizado) : '—';
-      var tdReal = td(txt('span', '', real));
-      if (it.quandoRealizado) { tdReal.style.color = (it.quandoPrevisto && it.quandoRealizado <= it.quandoPrevisto) ? 'var(--green)' : 'var(--orange)'; }
+      var tdReal;
+      if (it.naoFeito) {
+        var nf = txt('span', 'pl-badge', '✗ não realizado');
+        nf.style.color = 'var(--red)';
+        nf.title = 'Motivo: ' + (it.motivo || '—') + (it.motivoDetalhe ? (' — ' + it.motivoDetalhe) : '');
+        tdReal = td(nf);
+      } else {
+        var real = it.quandoRealizado ? fmtBR(it.quandoRealizado) : '—';
+        tdReal = td(txt('span', '', real));
+        if (it.quandoRealizado) { tdReal.style.color = (it.quandoPrevisto && it.quandoRealizado <= it.quandoPrevisto) ? 'var(--green)' : 'var(--orange)'; }
+      }
       var tdV = td(txt('span', 'pl-l-m', it.valorCentavos ? fmtBRL(it.valorCentavos) : '—'));
       if (Number(it.valorCentavos) > 20000) {
         var travado = KPI.planejamentoItemTravado(it);
         var bd = txt('span', 'pl-badge', travado ? '🔒 ' + assinaturasTexto(it) : '✓ aprovado');
         bd.style.color = travado ? 'var(--amber)' : 'var(--green)';
         bd.style.marginLeft = '6px';
-        bd.title = 'Alçada R$200 — item acima de R$ 200 precisa de líder E gestor.';
+        bd.title = 'Alçada R$200 — item acima de R$ 200 precisa de GESTOR e SÓCIO.';
         tdV.appendChild(bd);
       }
       var tdA = td(null);
       if (podeEd || cabeAprovar(it)) {
-        if (!it.quandoRealizado && podeEd) {
+        if (!it.quandoRealizado && !it.naoFeito && podeEd) {
           var br = txt('button', 'pl-acao green', '✓ realizar'); br.type = 'button';
-          if (KPI.planejamentoItemTravado(it)) { br.disabled = true; br.style.opacity = '.45'; br.title = 'Aguardando aprovação (alçada R$200).'; }
+          if (KPI.planejamentoItemTravado(it)) { br.disabled = true; br.style.opacity = '.45'; br.title = 'Aguardando gestor + sócio (alçada R$200). Enquanto espera, o item não conta na nota.'; }
           br.addEventListener('click', function () { modalRealizar(pl, it); });
           tdA.appendChild(br);
+          var bn = txt('button', 'pl-acao red', '✗ não realizei'); bn.type = 'button';
+          bn.title = 'Declara o item como não realizado, com motivo obrigatório (alimenta o Pareto de motivos).';
+          bn.addEventListener('click', function () { modalNaoRealizar(pl, it); });
+          tdA.appendChild(bn);
+        }
+        if (it.naoFeito && podeEd) {
+          var bo = txt('button', 'pl-acao', 'reabrir'); bo.type = 'button';
+          bo.title = 'Volta o item para aberto e limpa o motivo (registrado no log).';
+          bo.addEventListener('click', function () { reabrirItem(pl, it); });
+          tdA.appendChild(bo);
         }
         if (cabeAprovar(it)) {
           var ba = txt('button', 'pl-acao', 'aprovar'); ba.type = 'button';
@@ -566,15 +623,16 @@
   }
   function assinaturasTexto(it) {
     var falta = [];
-    if (!it.aprovLider) { falta.push('líder'); }
     if (!it.aprovGestor) { falta.push('gestor'); }
+    if (!it.aprovSocio) { falta.push('sócio'); }
     return 'falta ' + falta.join(' + ');
   }
   function cabeAprovar(it) {
     if (!KPI.planejamentoItemTravado(it)) { return false; }
+    var socio = Guard.isSocio && Guard.isSocio();
+    if (socio) { return !it.aprovSocio || !it.aprovGestor; } /* sócio assina o que faltar */
     if (Guard.isGestor && Guard.isGestor()) { return !it.aprovGestor; }
-    if (Guard.isLider && Guard.isLider()) { return !it.aprovLider; }
-    return false;
+    return false; /* líder cria/executa — não assina a própria alçada (four-eyes) */
   }
 
   /* ===================== mutações ===================== */
@@ -594,7 +652,8 @@
       .catch(function (e) { toast(e.message, 'err'); });
   }
   function aprovarItem(pl, it) {
-    var papel = (Guard.isGestor && Guard.isGestor()) ? 'aprovGestor' : 'aprovLider';
+    var socio = Guard.isSocio && Guard.isSocio();
+    var papel = socio ? (!it.aprovSocio ? 'aprovSocio' : 'aprovGestor') : 'aprovGestor';
     var lista = (pl.itens || []).map(function (x) {
       if (x.id !== it.id) { return x; }
       var novo = Object.assign({}, x);
@@ -602,7 +661,7 @@
       return novo;
     });
     salvarItens(pl, lista, 'planejamento_item_aprovar', { itemId: it.id, papel: papel })
-      .then(function () { toast('Assinatura registrada (' + (papel === 'aprovGestor' ? 'gestor' : 'líder') + ').'); render(); })
+      .then(function () { toast('Assinatura registrada (' + (papel === 'aprovSocio' ? 'sócio' : 'gestor') + ').'); render(); })
       .catch(function (e) { toast(e.message, 'err'); });
   }
   function removerItem(pl, it) {
@@ -639,6 +698,47 @@
           } })];
       }
     });
+  }
+  /* R4-EXT (arbitragem 3 — O3 aprovado): lista fechada + Outro com detalhe.
+     Formato de mercado (Jira Resolution): motivo OBRIGATÓRIO ao fechar como
+     não-feito; reabrir limpa o campo. Alimenta o futuro Pareto de motivos. */
+  var MOTIVOS_NAO_REALIZAR = ['Falta de tempo/sobrecarga', 'Dependência de outro setor', 'Falta de recurso', 'Prioridade mudou', 'Aguardando aprovação', 'Outro'];
+  function modalNaoRealizar(pl, it) {
+    var motSel = UI.select({ value: '', placeholder: '— Motivo (obrigatório) —',
+      options: MOTIVOS_NAO_REALIZAR.map(function (m) { return { value: m, label: m }; }) });
+    var detTa = document.createElement('textarea');
+    detTa.className = 'ui-input'; detTa.rows = 2; detTa.style.resize = 'vertical';
+    detTa.placeholder = 'Detalhe (obrigatório se "Outro")';
+    UI.modal({
+      title: 'Não realizado — por quê?', width: 460,
+      body: [
+        txt('div', 'pl-empty', it.oque || ''),
+        UI.field({ label: 'Motivo', required: true, control: motSel, hint: 'O item passa a contar CONTRA a aderência do setor; o motivo vira insumo do Pareto de causas.' }),
+        UI.field({ label: 'Detalhe', control: detTa })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Confirmar', icon: 'check', onClick: function () {
+            var mot = motSel.value || '';
+            if (!mot) { toast('Escolha o motivo.', 'err'); return; }
+            if (mot === 'Outro' && !detTa.value.trim()) { toast('"Outro" exige o detalhe.', 'err'); return; }
+            var lista = (pl.itens || []).map(function (x) {
+              return x.id === it.id ? Object.assign({}, x, { naoFeito: true, motivo: mot, motivoDetalhe: detTa.value.trim() || null, naoFeitoEm: Date.now() }) : x;
+            });
+            salvarItens(pl, lista, 'planejamento_item_nao_realizado', { itemId: it.id, motivo: mot })
+              .then(function () { close(); toast('Registrado como não realizado.'); render(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+  function reabrirItem(pl, it) {
+    var lista = (pl.itens || []).map(function (x) {
+      return x.id === it.id ? Object.assign({}, x, { naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null }) : x;
+    });
+    salvarItens(pl, lista, 'planejamento_item_reabrir', { itemId: it.id, motivoAnterior: it.motivo || null })
+      .then(function () { toast('Item reaberto.'); render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
   }
   function modalItem(pl, it) {
     var editing = !!it;
@@ -679,12 +779,12 @@
                 if (x.id !== it.id) { return x; }
                 var novo = Object.assign({}, x, base);
                 if ((Number(x.valorCentavos) || 0) !== (Number(cents) || 0) && (Number(cents) || 0) > 20000) {
-                  novo.aprovLider = null; novo.aprovGestor = null;
+                  novo.aprovGestor = null; novo.aprovSocio = null; /* o aprovado foi OUTRO valor */
                 }
                 return novo;
               });
             } else {
-              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, aprovLider: null, aprovGestor: null, removido: false, criadoEm: Date.now() }, base)]);
+              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now() }, base)]);
             }
             salvarItens(pl, lista, editing ? 'planejamento_item_editar' : 'planejamento_item_add', editing ? { itemId: it.id } : null)
               .then(function () { close(); toast(editing ? 'Item salvo.' : 'Item adicionado ao 5W2H.'); render(); })

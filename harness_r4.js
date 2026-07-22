@@ -34,8 +34,38 @@ t('prazo: janeiro ancora em dezembro', K.planejamentoPrazo('2027-01', '2026-12-0
 t('alçada: R$200,00 exatos = autonomia (não trava)', K.planejamentoItemTravado({ valorCentavos: 20000 }), false);
 t('alçada: sem valor = não trava', K.planejamentoItemTravado({ valorCentavos: null }), false);
 t('alçada: R$200,01 sem assinatura = trava', K.planejamentoItemTravado({ valorCentavos: 20001 }), true);
-t('alçada: só líder assinou = segue travado', K.planejamentoItemTravado({ valorCentavos: 50000, aprovLider: { uid: 'a' } }), true);
-t('alçada: líder + gestor = libera', K.planejamentoItemTravado({ valorCentavos: 50000, aprovLider: { uid: 'a' }, aprovGestor: { uid: 'b' } }), false);
+t('alçada: só gestor assinou = segue travado', K.planejamentoItemTravado({ valorCentavos: 50000, aprovGestor: { uid: 'a' } }), true);
+t('alçada: gestor + sócio = libera', K.planejamentoItemTravado({ valorCentavos: 50000, aprovGestor: { uid: 'a' }, aprovSocio: { uid: 'b' } }), false);
+t('alçada: aprovLider legado NÃO libera (modelo novo = gestor+sócio)', K.planejamentoItemTravado({ valorCentavos: 50000, aprovLider: { uid: 'a' }, aprovGestor: { uid: 'b' } }), true);
+
+/* ---------- R4-EXT: clock-pause de aprovação + naoFeito na nota ---------- */
+(function () {
+  /* A realizado no prazo; B aberto travado (v>alçada, sem assinaturas) -> B pausa:
+     universo = [A] -> ader 100, prazo 100, atraso 100 -> nota 100, pausados 1. */
+  var n1 = K.planejamentoNota([
+    { quandoPrevisto: '2026-08-10', quandoRealizado: '2026-08-10' },
+    { quandoPrevisto: '2026-08-12', quandoRealizado: null, valorCentavos: 30000 }
+  ]);
+  t('pause: item aberto travado sai do denominador (nota)', n1.nota, 100);
+  t('pause: contador de pausados', n1.pausadosAprovacao, 1);
+  t('pause: previstos = universo sem os pausados', n1.previstos, 1);
+  /* B declarado NÃO-FEITO (mesmo travado) conta contra a aderência:
+     universo = [A,B] -> ader 50 (peso 50 = 25) + prazo 100 (30) + atraso 100 (20) = 75. */
+  var n2 = K.planejamentoNota([
+    { quandoPrevisto: '2026-08-10', quandoRealizado: '2026-08-10' },
+    { quandoPrevisto: '2026-08-12', quandoRealizado: null, valorCentavos: 30000, naoFeito: true }
+  ]);
+  t('pause: naoFeito travado CONTA (derruba aderência)', n2.nota, 75);
+  /* item travado que foi APROVADO e realizado conta normal (não está mais travado). */
+  var n3 = K.planejamentoNota([
+    { quandoPrevisto: '2026-08-10', quandoRealizado: '2026-08-10', valorCentavos: 30000,
+      aprovGestor: { uid: 'g' }, aprovSocio: { uid: 's' } }
+  ]);
+  t('pause: aprovado+realizado conta normal', n3.nota, 100);
+  /* tudo pausado -> null (sem nota, não ranqueia). */
+  t('pause: tudo aguardando aprovação = sem nota',
+    K.planejamentoNota([{ quandoPrevisto: '2026-08-12', quandoRealizado: null, valorCentavos: 30000 }]), null);
+})();
 
 /* ---------- planejamentoNota (50/30/20) ---------- */
 /* Caso conferido à mão:

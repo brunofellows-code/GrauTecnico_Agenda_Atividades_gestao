@@ -244,6 +244,7 @@
           var perfil = d.perfil || '';
           var setor = (d.setor || '').trim();   /* F1-C: setor de lotação (obrigatório) */
           var setoresLiderados = (perfil === 'lider' && Array.isArray(d.setoresLiderados)) ? d.setoresLiderados.slice() : [];
+          var socio = (perfil === 'gestor' && d.socio === true); /* R4-EXT: sócio = gestor marcado (assina alçada >R$200) */
           return fb().then(function (ctx) {
             return readAll(ctx).then(function (arr) {
               if (!RX_UID.test(uid)) { throw vErr('UID inválido. Cole o UID exatamente como aparece no Authentication.', 'uid'); }
@@ -253,11 +254,11 @@
               if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
               if (!setor) { throw vErr('Escolha o setor do usuário.', 'setor'); }
               var now = Date.now();
-              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, ativo: true, criadoEm: now, atualizadoEm: now };
+              var novo = { uid: uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, socio: socio, ativo: true, criadoEm: now, atualizadoEm: now };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, uid), novo).then(function () {
                 api.log({ acao: 'criar_usuario', entidade: 'usuario', refId: uid, antes: null,
-                  depois: { nome: novo.nome, email: novo.email, perfil: novo.perfil, setor: novo.setor, setoresLiderados: novo.setoresLiderados, ativo: novo.ativo } });
+                  depois: { nome: novo.nome, email: novo.email, perfil: novo.perfil, setor: novo.setor, setoresLiderados: novo.setoresLiderados, socio: novo.socio, ativo: novo.ativo } });
                 return novo;
               });
             });
@@ -277,11 +278,13 @@
               if (patch.setoresLiderados !== undefined) { setoresLiderados = Array.isArray(patch.setoresLiderados) ? patch.setoresLiderados.slice() : []; }
               else { setoresLiderados = Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados.slice() : []; }
               if (perfil !== 'lider') { setoresLiderados = []; } /* só Líder guarda setores */
+              var socio = (patch.socio !== undefined) ? (patch.socio === true) : (cur.socio === true);
+              if (perfil !== 'gestor') { socio = false; } /* R4-EXT: só gestor pode ser sócio */
               if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
               if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
               if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
               if (!setor) { throw vErr('Escolha o setor do usuário.', 'setor'); }
-              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, ativo: ativo,
+              var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, socio: socio, ativo: ativo,
                 criadoEm: cur.criadoEm || Date.now(), atualizadoEm: Date.now() };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, uid), updated).then(function () {
@@ -289,8 +292,8 @@
                 var acao = (wasAtivo && updated.ativo === false) ? 'inativar_usuario'
                          : ((!wasAtivo && updated.ativo === true) ? 'reativar_usuario' : 'editar_usuario');
                 api.log({ acao: acao, entidade: 'usuario', refId: cur.uid,
-                  antes: { perfil: cur.perfil, setor: (cur.setor || ''), ativo: wasAtivo, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [] },
-                  depois: { perfil: updated.perfil, setor: updated.setor, ativo: updated.ativo, setoresLiderados: updated.setoresLiderados } });
+                  antes: { perfil: cur.perfil, setor: (cur.setor || ''), ativo: wasAtivo, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [], socio: cur.socio === true },
+                  depois: { perfil: updated.perfil, setor: updated.setor, ativo: updated.ativo, setoresLiderados: updated.setoresLiderados, socio: updated.socio } });
                 return updated;
               });
             });
@@ -469,6 +472,7 @@
       var lin = [];
       if (u.setor) { lin.push('Setor: ' + u.setor); }
       if (u.perfil === 'lider' && Array.isArray(u.setoresLiderados) && u.setoresLiderados.length) { lin.push('Lidera: ' + u.setoresLiderados.join(', ')); }
+      if (u.perfil === 'gestor' && u.socio === true) { lin.push('Sócio (assina alçada >R$200)'); }
       if (lin.length) { meta.appendChild(txt('div', 'us-em', lin.join('  ·  '))); }
       r.appendChild(meta);
 
@@ -550,10 +554,20 @@
       var perfilOpts = PERFIS.map(function (p) { return { value: p.value, label: p.label }; });
       var perfilInicial = editing ? sugerePerfil(cur.perfil) : '';
       var perfilSelect = UI.select({ value: perfilInicial, placeholder: '— Selecione o perfil —', options: perfilOpts, disabled: isSelf,
-        onChange: function (v) { updateLiderVisibility(v); } });
+        onChange: function (v) { updateLiderVisibility(v); updateSocioVisibility(v); } });
       var perfilHintTxt = isSelf ? 'Você não pode alterar o seu próprio perfil.'
         : ((editing && perfilLegado(cur.perfil)) ? ('Perfil atual: "' + cur.perfil + '" (antigo). Escolha um dos 3 para migrar. ' + PERFIL_HINT) : PERFIL_HINT);
       var perfilField = UI.field({ label: 'Perfil', required: true, control: perfilSelect, hint: perfilHintTxt });
+
+      /* ----- R4-EXT: sócio (só quando o perfil é Gestor) ----- */
+      var socioState = editing ? (cur.socio === true) : false;
+      var socioChk = UI.checkbox({ checked: socioState, label: 'É sócio', onToggle: function (v) { socioState = v; } });
+      var socioField = UI.field({ label: 'Alçada', control: socioChk,
+        hint: 'Sócio assina a 2ª aprovação de itens de planejamento acima de R$ 200 (gestor + sócio). Sócio-gestor não é um perfil novo: é o Gestor com esta marca.' });
+      socioField.style.display = 'none';
+      function updateSocioVisibility(perfilVal) {
+        socioField.style.display = (perfilVal === 'gestor') ? '' : 'none';
+      }
 
       /* ----- F1-C: cache compartilhado de setores (raiz + subsetores, hierárquico) ----- */
       var setoresCache = null;
@@ -631,7 +645,7 @@
         ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos não conseguem entrar; o registro é preservado.' });
       }
 
-      var bodyFields = [uidField, nomeField, emailField, perfilField, setorField, liderField]; if (ativoField) { bodyFields.push(ativoField); }
+      var bodyFields = [uidField, nomeField, emailField, perfilField, socioField, setorField, liderField]; if (ativoField) { bodyFields.push(ativoField); }
 
       var saveBtn = null;
       var m = UI.modal({
@@ -650,6 +664,7 @@
       emailInput.addEventListener('keydown', submitOnEnter);
       nomeInput.addEventListener('keydown', submitOnEnter);
       updateLiderVisibility(perfilInicial); /* mostra setores se já for Líder ao abrir */
+      updateSocioVisibility(perfilInicial);  /* R4-EXT: mostra a marca de sócio se já for Gestor */
 
       function onSave() {
         clearErrs(m.card);
@@ -659,6 +674,7 @@
         var perfil = isSelf ? cur.perfil : (perfilSelect.value || '');
         var setorVal = setorSel ? (setorSel.value || '') : '';
         var setoresLid = (perfil === 'lider') ? liderState.slice() : [];
+        var socioVal = (perfil === 'gestor') ? socioState : false;
         var ok = true;
         if (!editing && !RX_UID.test(uidVal)) { setErr(uidField, 'Cole um UID válido (sem espaços).'); ok = false; }
         if (!RX_EMAIL.test(email)) { setErr(emailField, 'Informe um e-mail válido.'); ok = false; }
@@ -669,8 +685,8 @@
 
         if (saveBtn) { saveBtn.disabled = true; }
         var op = editing
-          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, setor: setorVal, ativo: isSelf ? true : ativoState, setoresLiderados: setoresLid })
-          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil, setor: setorVal, setoresLiderados: setoresLid });
+          ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, setor: setorVal, ativo: isSelf ? true : ativoState, setoresLiderados: setoresLid, socio: socioVal })
+          : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil, setor: setorVal, setoresLiderados: setoresLid, socio: socioVal });
 
         op.then(function () {
           m.close();

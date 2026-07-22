@@ -1494,15 +1494,21 @@
   /* ALÇADA R$200 (aprovação PARALELA, desenho travado da R3/R4):
        valorCentavos <= 20000 -> autonomia do líder (gestão só lê).
        valorCentavos  > 20000 -> o ITEM trava até ter as DUAS
-       assinaturas (aprovLider E aprovGestor) — o plano nunca trava.
-     (Divergência de fonte registrada no HANDOFF: RESUMO §4 fala
-      "gestor E sócio"; o prompt R4 trava "líder + gestor". Segue o
-      R4 — documento de execução mais recente e modelável no RBAC.) */
+       assinaturas (aprovGestor E aprovSocio) — o plano nunca trava.
+     (Arbitragem 1 RESOLVIDA na extensão da R4: vale o RESUMO §4/O4 —
+      gestor E sócio — alinhado ao padrão de mercado de alçada por
+      valor, em que o requisitante nunca aprova o próprio pedido.) */
+  /* R4-EXT (arbitragem 1): acima da alçada assinam os DOIS níveis ACIMA de quem
+     cria — gestor E sócio (RESUMO §4/O4; padrão de mercado: requisitante nunca
+     se auto-aprova — four-eyes). aprovLider saiu do modelo; sócio = gestor com
+     socio:true no cadastro. Mesma pessoa acumulando papéis pode dar as duas
+     assinaturas (o objetivo travado é FORÇAR LEITURA, não anti-fraude interna);
+     four-eyes estrito (uids distintos) é calibragem futura de 1 linha. */
   K.planejamentoItemTravado = function (item) {
     if (!item) { return false; }
     var v = Number(item.valorCentavos) || 0;
     if (v <= 20000) { return false; }
-    return !(item.aprovLider && item.aprovGestor);
+    return !(item.aprovGestor && item.aprovSocio);
   };
 
   /* NOTA MENSAL 50/30/20 (calibrável — pesos e teto declarados no "i"):
@@ -1511,14 +1517,28 @@
        atraso res. = 100 × max(0, 1 − médiaDiasAtraso ÷ 7)       (peso 20)
          (média só dos realizados COM atraso; teto 7 dias = nota 0
           no componente; sem nenhum atraso = 100.)
+       Item ABERTO travado pela alçada fica FORA do denominador (pause);
+       item naoFeito:true conta como não-aderente. Tudo pausado -> null.
        Sem itens -> nota null (não ranqueia). Sem realizados: noPrazo
        e atraso contam 0 (não há entrega para pontuar) — declarado.
      @param itens [{quandoPrevisto:'YYYY-MM-DD', quandoRealizado:'YYYY-MM-DD'|null, removido?:bool}]
      @returns null | { nota, aderencia, noPrazoPct, atrasoPct, previstos,
                        realizados, realizadosNoPrazo, mediaDiasAtraso } */
+  /* R4-EXT (arbitragem 4): CLOCK-PAUSE de aprovação — item ABERTO (nem realizado,
+     nem declarado não-feito) que está travado pela alçada NÃO conta no denominador
+     enquanto aguarda gestor+sócio: o relógio não corre contra o setor por espera
+     que não é dele (padrão SLA pause "Awaiting approval" — Jira/ServiceNow; sem
+     isso a nota gera "falsa violação" e pune o líder pela demora de cima).
+     Item declarado NÃO-FEITO conta normal (derruba aderência) mesmo se travado —
+     o motivo registrado ("Aguardando aprovação") expõe a causa no Pareto. */
   K.planejamentoNota = function (itens) {
     var at = (Array.isArray(itens) ? itens : []).filter(function (i) { return i && !i.removido; });
     if (!at.length) { return null; }
+    var pausados = at.filter(function (i) {
+      return !i.quandoRealizado && !i.naoFeito && K.planejamentoItemTravado(i);
+    });
+    at = at.filter(function (i) { return pausados.indexOf(i) < 0; });
+    if (!at.length) { return null; } /* tudo aguardando aprovação -> sem nota (não ranqueia) */
     var realizados = at.filter(function (i) { return !!i.quandoRealizado; });
     var noPrazo = realizados.filter(function (i) {
       return i.quandoPrevisto && i.quandoRealizado <= i.quandoPrevisto;
@@ -1537,6 +1557,7 @@
     var nota = Math.round(ader * 0.5 + npz * 0.3 + atr * 0.2);
     return { nota: nota, aderencia: ader, noPrazoPct: npz, atrasoPct: atr,
              previstos: at.length, realizados: realizados.length,
-             realizadosNoPrazo: noPrazo.length, mediaDiasAtraso: Math.round(media * 10) / 10 };
+             realizadosNoPrazo: noPrazo.length, mediaDiasAtraso: Math.round(media * 10) / 10,
+             pausadosAprovacao: pausados.length };
   };
 })();

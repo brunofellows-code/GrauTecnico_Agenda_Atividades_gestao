@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reuniões — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+  <script src="mnav.js"></script>
+
+<style>
+/* casca padrão (mesma da Inteligência/Performance) — namespace pj- */
+.pj-app{display:flex;min-height:100vh;background:var(--bg)}
+.pj-app>.ui-side{position:sticky;top:0;height:100vh}
+.pj-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.pj-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.pj-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pj-top-r{display:flex;align-items:center;gap:12px}
+.pj-body{padding:18px 32px 32px}
+.pj-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
+.pj-card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.pj-card-t{font-size:14px;font-weight:800}
+.pj-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.pj-i:hover{color:var(--greenText)}
+.pj-i svg{display:block}
+.pj-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:340px;padding:40px 20px}
+.pj-state-t{font-size:16px;font-weight:800;color:var(--text)}
+.pj-state-s{font-size:13px;color:var(--muted);max-width:440px;line-height:1.5}
+.pj-empty2{font-size:12.5px;color:var(--muted);padding:14px 4px}
+/* popover do "i" */
+.pj-backdrop{position:fixed;inset:0;z-index:40;display:none}
+.pj-backdrop.on{display:block}
+.pj-pop{position:fixed;z-index:41;display:none;width:300px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.pj-pop.on{display:block}
+.pj-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.pj-pop-row{margin-bottom:8px}
+.pj-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.pj-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
+/* lista de projetos */
+.pj-status{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:4px 10px;border-radius:12px;border:1px solid var(--border)}
+/* detalhe */
+.pj-back{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:0}
+.pj-back:hover{color:var(--text)}
+.pj-dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:13px}
+.pj-dm{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
+.pj-dm-k{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:6px}
+.pj-dm-v{font-size:20px;font-weight:800;margin-top:6px}
+/* atividade dentro do detalhe */
+/* reuniões */
+.pj-rrow{border-top:1px solid var(--border);padding:13px 4px}
+.pj-rrow:first-child{border-top:0}
+.pj-rrow-h{display:flex;align-items:center;gap:12px;cursor:pointer}
+.pj-rrow-t{flex:1;min-width:0;font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj-rrow-meta{font-size:11px;font-weight:600;color:var(--muted2)}
+.pj-dec{display:flex;align-items:flex-start;gap:10px;padding:8px 0 8px 14px;border-left:2px solid var(--border);margin-left:2px}
+.pj-dec-main{flex:1;min-width:0}
+.pj-dec-t{font-size:12.5px;font-weight:600;line-height:1.4}
+.pj-dec-m{font-size:11px;font-weight:600;color:var(--muted2);margin-top:2px}
+.pj-dec-b{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.pj-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border)}
+.pj-roll{margin-bottom:10px;padding:10px 12px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border);font-size:11.5px;font-weight:700;color:var(--muted)}
+/* eventos do projeto */
+/* pauta */
+.pj-pauta{width:100%;min-height:280px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px}
+@media (max-width:760px){
+  .pj-top{padding:14px 16px}
+  .pj-body{padding:14px 16px 28px}
+}
+</style>
+</head>
+<body>
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <div class="pj-app" id="app">
+    <main class="pj-main">
+      <div class="pj-top">
+        <div>
+          <div class="pj-h1" id="pj-title">Projetos</div>
+        </div>
+        <div class="pj-top-r" id="pj-actions"></div>
+      </div>
+      <div class="pj-body" id="pj-body"></div>
+    </main>
+  </div>
+
+  <div class="pj-backdrop" id="pj-backdrop"></div>
+  <div class="pj-pop" id="pj-pop" role="dialog" aria-label="Como calculamos"></div>
+
+  <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script src="kpi.js"></script>
+  <script type="module">
+  (function () {
+  'use strict';
+
+  /* ============================================================
+     REUNIÕES · Sistema A · Grau Técnico FSA
+     R4·B2 — antes "Projetos + Reuniões". "Projeto" não existe: a
+     reunião é a entidade RAIZ do ciclo; o detalhe de projeto (com o
+     cascade de %) morreu e as subtarefas migraram para Atividades.
+     ------------------------------------------------------------
+     Fonte de dados: KPI.carregar('band') (board expandido — decisão
+     C1 §2.8) — zero índice composto.
+     Decisão de reunião → atividade única em 1 clique (aberta:false,
+     origem preservada — decisão §2.11); rollforward = exibição
+     (§2.12; escopo = tipo + setor — R4·B2 tirou projetoId da série).
+     Toda mutação registra em atividade_log. Soft-delete sempre.
+     ============================================================ */
+
+  var R = window.GrautRecorrencia;
+
+  var USER = null;
+  function CAN_WRITE() { var p = (USER && USER.profile) || ''; return p === 'Admin' || p === 'Editor'; }
+
+  /* ---------- Firestore (mesmo padrão do atividades.html) ---------- */
+  var _fb = null;
+  function fb() {
+    if (!_fb) {
+      _fb = Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+    }
+    return _fb;
+  }
+  function ferr(e) {
+    var code = (e && e.code) || '';
+    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão. Confirme seu perfil e que as Regras do Firestore foram publicadas.'), { code: code }); }
+    if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
+    return Object.assign(new Error((e && e.message) || 'Erro ao acessar os dados.'), { code: code });
+  }
+  function mapDocs(snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); }); return a; }
+
+  var Store = {
+    listReunioes: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'reunioes'), f.where('ativo', '==', true), f.limit(500));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function (e) { throw ferr(e); });
+    },
+    criarReuniao: function (data) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var doc = Object.assign({}, data, { ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now });
+        return f.addDoc(f.collection(db, 'reunioes'), doc).then(function (ref) {
+          Store.log({ acao: 'reuniao_criada', entidade: 'reuniao', refId: ref.id, antes: null, depois: { titulo: doc.titulo, data: doc.data, tipo: doc.tipo || null } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    atualizarReuniao: function (id, patch, acao, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        return f.updateDoc(f.doc(db, 'reunioes', id), up).then(function () {
+          Store.log({ acao: acao || 'editar_reuniao', entidade: 'reuniao', refId: id, antes: antes || null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    listUsuariosAtivos: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(1000));
+        return f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)', perfil: u.perfil || 'usuario', setor: u.setor || null, setoresLiderados: u.setoresLiderados || [] }); });
+          a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+          return a;
+        });
+      }).catch(function () { return []; }); /* Editor pode não listar usuários — degrada */
+    },
+    listSolicPendentes: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'solicitacoes'), f.where('status', '==', 'pendente'), f.limit(200));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function () { return []; });
+    },
+    /* ===== F1-F · execução na reunião (B2) =====
+       setOcorrencia/createSolicitacao: corpos IDÊNTICOS ao Store do
+       atividades.html (mesmo docId determinístico, mesmo payload, mesmo
+       log) — duplicação mínima DECLARADA: são 2 páginas sem módulo
+       compartilhado de escrita; contrato único = este comentário + grep. */
+    setOcorrencia: function (act, origData, patch, acao) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var idoc = R.docIdOcorrencia(act.id, origData);
+        var base = {
+          atividadeId: act.id,
+          setorSigla: act.setorSigla,
+          responsavelUid: act.responsavelUid || null,
+          data: origData,
+          prazoOriginal: origData
+        };
+        var body = Object.assign(base, patch);
+        return f.setDoc(f.doc(db, 'ocorrencias', idoc), body, { merge: true }).then(function () {
+          Store.log({ acao: acao || 'editar_ocorrencia', entidade: 'ocorrencia', refId: idoc, antes: null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    createSolicitacao: function (d) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var doc = Object.assign({ status: 'pendente', criadoEm: Date.now() }, d);
+        return f.addDoc(f.collection(db, 'solicitacoes'), doc).then(function (ref) {
+          Store.log({ acao: 'solicitar_data', entidade: 'solicitacao', refId: ref.id, antes: { data: d.dataAtual }, depois: { data: d.dataProposta } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    /* patch cirúrgico de campos da atividade (troca de responsável etc.) */
+    atualizarAtividadeCampos: function (id, patch, acao, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        return f.updateDoc(f.doc(db, 'atividades', id), up).then(function () {
+          Store.log({ acao: acao || 'editar_atividade', entidade: 'atividade', refId: id, antes: antes || null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    /* atividade ÚNICA avulsa criada AO VIVO na reunião (painel de execução) */
+    criarAtividadeRapida: function (dados, reuniao) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var doc = {
+          titulo: dados.titulo,
+          descricao: 'Criada ao vivo na reunião "' + (reuniao.titulo || reuniao.data) + '" (' + reuniao.data + ').',
+          setorSigla: dados.setorSigla,
+          setorSiglas: [dados.setorSigla],
+          todosSetores: false,
+          responsavelUid: dados.responsavelUid || USER.uid,
+          responsavelNome: dados.responsavelNome || '',
+          recorrencia: 'unico',
+          horario: null, diasSemana: null, diaMes: null,
+          data: dados.data,
+          deslizante: false, dataInicio: null, dataFim: null,
+          origem: { tipo: 'reuniao', reuniaoId: reuniao.id, reuniaoTitulo: reuniao.titulo || null, reuniaoData: reuniao.data || null },
+          origemTipo: 'reuniao',
+          projetoSigla: null, ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now
+        };
+        return f.addDoc(f.collection(db, 'atividades'), doc).then(function (ref) {
+          Store.log({ acao: 'criar_atividade', entidade: 'atividade', refId: ref.id, antes: null, depois: { titulo: doc.titulo, reuniaoId: reuniao.id, origem: 'reuniao_execucao' } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    /* ocorrências ANTERIORES à janela das atividades únicas antigas (B2 ·
+       emenda 1). Lotes de 30 no where-in (limite do Firestore); teto de 4
+       lotes = 120 atividades — acima disso a tela declara varredura parcial. */
+    listOccAntigas: function (idsUnicasAntigas) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var lotes = [];
+        for (var i = 0; i < idsUnicasAntigas.length && i < 120; i += 30) {
+          lotes.push(idsUnicasAntigas.slice(i, i + 30));
+        }
+        return Promise.all(lotes.map(function (ids) {
+          var q = f.query(f.collection(db, 'ocorrencias'), f.where('atividadeId', 'in', ids), f.limit(600));
+          return f.getDocs(q).then(function (s) { var a = []; s.forEach(function (d) { a.push(d.data()); }); return a; });
+        })).then(function (rs) {
+          var flat = [];
+          rs.forEach(function (r) { r.forEach(function (o) { flat.push(o); }); });
+          return flat;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    /* ===== F1-F · cascata de pauta (B4) ===== */
+    /* padrão §2.6: 1 where de igualdade + filtro fino no cliente (evita índice composto) */
+    listSugestoesPauta: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'pauta_sugestoes'), f.where('ativo', '==', true), f.limit(300));
+        return f.getDocs(q).then(mapDocs);
+      }).catch(function () { return []; });
+    },
+    criarSugestoesPauta: function (docs) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        return Promise.all(docs.map(function (d) {
+          var doc = Object.assign({}, d, { status: d.status || 'pendente', ativo: true, criadoPorUid: USER.uid, criadoEm: now });
+          return f.addDoc(f.collection(db, 'pauta_sugestoes'), doc).then(function (ref) { return ref.id; });
+        })).then(function (ids) {
+          Store.log({ acao: 'encaminhar_pauta', entidade: 'pauta_sugestao', refId: ids.join(','), antes: null, depois: { n: ids.length, texto: docs[0] ? docs[0].texto : null } });
+          return ids;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    atualizarSugestaoPauta: function (id, patch, acao) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        return f.updateDoc(f.doc(db, 'pauta_sugestoes', id), Object.assign({}, patch, { atualizadoEm: Date.now() })).then(function () {
+          Store.log({ acao: acao || 'editar_pauta_sugestao', entidade: 'pauta_sugestao', refId: id, antes: null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    /* decisão → atividade ÚNICA (decisão §2.11) · F1-F: COMO/POR QUÊ (5W2H)
+       entram na descrição automática quando preenchidos. */
+    criarAtividadeDeDecisao: function (dec, reuniao, setorSigla) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var descPartes = ['Decisão da reunião "' + (reuniao.titulo || reuniao.data) + '" (' + reuniao.data + ').'];
+        if (dec.comoTexto) { descPartes.push('COMO: ' + dec.comoTexto); }
+        if (dec.porqueTexto) { descPartes.push('POR QUÊ: ' + dec.porqueTexto); }
+        var doc = {
+          titulo: dec.texto,
+          descricao: descPartes.join('\n'),
+          setorSigla: setorSigla,
+          setorSiglas: [setorSigla],
+          todosSetores: false,
+          responsavelUid: dec.donoUid || USER.uid,
+          responsavelNome: dec.donoNome || '',
+          recorrencia: 'unico',
+          horario: null, diasSemana: null, diaMes: null,
+          data: dec.prazo,
+          deslizante: false, dataInicio: null, dataFim: null,
+          origem: { tipo: 'reuniao', reuniaoId: reuniao.id, reuniaoTitulo: reuniao.titulo || null, reuniaoData: reuniao.data || null },
+          origemTipo: 'reuniao',
+          projetoSigla: null, ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now
+        };
+        return f.addDoc(f.collection(db, 'atividades'), doc).then(function (ref) {
+          Store.log({ acao: 'decisao_para_atividade', entidade: 'atividade', refId: ref.id, antes: null, depois: { titulo: doc.titulo, reuniaoId: reuniao.id } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+
+    log: function (entry) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var row = Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry);
+        return f.addDoc(f.collection(db, 'atividade_log'), row);
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[projetos] log falhou', e); } });
+    }
+  };
+
+  /* ===================== DOM util ===================== */
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+  function toast(msg, kind) {
+    var t = txt('div', 'ui-toast' + (kind === 'err' ? ' err' : ''), msg);
+    t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:11px;box-shadow:var(--cardShadow)';
+    document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
+  }
+  var ISVG = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>';
+
+  /* popover "i" */
+  var POP, BACK;
+  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+  function openPop(anchor, title, rows) {
+    POP.innerHTML = '';
+    POP.appendChild(txt('div', 'pj-pop-t', title));
+    rows.forEach(function (r) {
+      var d = txt('div', 'pj-pop-row', '');
+      d.appendChild(txt('div', 'pj-pop-k', r[0]));
+      d.appendChild(txt('div', 'pj-pop-v', r[1]));
+      POP.appendChild(d);
+    });
+    POP.classList.add('on'); BACK.classList.add('on');
+    var r = anchor.getBoundingClientRect();
+    var top = r.bottom + 8, left = Math.min(r.left, window.innerWidth - 316);
+    if (top + POP.offsetHeight > window.innerHeight - 12) { top = Math.max(12, r.top - POP.offsetHeight - 8); }
+    POP.style.top = top + 'px'; POP.style.left = Math.max(12, left) + 'px';
+  }
+  function iBtn(title, rows) {
+    var b = el('<button class="pj-i" type="button" aria-label="Como calculamos">' + ISVG + '</button>');
+    b.addEventListener('click', function (e) { e.stopPropagation(); openPop(b, title, rows); });
+    return b;
+  }
+
+  function fmtBR(iso) { if (!iso) { return '—'; } var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function fmtBRL(cents) {
+    if (cents == null) { return '—'; }
+    var v = (Number(cents) || 0) / 100;
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function parseBRL(str) {
+    var d = String(str || '').replace(/\D/g, '');
+    return d ? parseInt(d, 10) : 0;
+  }
+
+  /* ===================== ESTADO ===================== */
+  var CTX = null;         /* resultado de KPI.carregar('band') */
+  var REUN = [];          /* reuniões ativas (todas) */
+  var USERS = [];         /* usuários ativos (pode vir vazio) */
+  var PENDS = [];         /* solicitações pendentes (p/ pauta) */
+  var SNAPS = [];         /* fotos do dia (kpi_snapshots) p/ banda consecutiva — F1-E */
+  var TIPOS_REUNIAO = [
+    ['lideres', 'Reunião de Líderes'],
+    ['integrada', 'Reunião Integrada'],
+    ['instrutor', 'Reunião com Instrutor'],
+    ['lideres_turma', 'Reunião c/ Líderes de Turmas'],
+    ['departamento', 'Reunião de Departamento'],
+    ['resultado_mensal', 'Resultado Mensal'] /* F1-G · D1=(a): convoca líderes + gestores (kpi.js convocadosPorTipo) */
+  ];
+  var SUGS = [];           /* F1-F · sugestões de pauta PENDENTES (cascata) */
+  var VIEW_TIPO = 'todas'; /* F1-F · chip ativo da lista de reuniões */
+  var MODO_REUN = 'lista'; /* F1-F · 'lista' | 'kanban' */
+  var DEC_VIEW = 'lista';  /* F1-F · decisões: 'lista' | 'tabela' (5W2H) */
+  var OLD_OCC = null;      /* F1-F · cache da varredura de únicas antigas (1×/sessão) */
+  var TIPO_LABEL = {};
+  TIPOS_REUNIAO.forEach(function (t) { TIPO_LABEL[t[0]] = t[1]; });
+  var bodyEl, titleEl, actionsEl;
+
+  /* ===================== RENDER: RAIZ =====================
+     R4·B2: "Projeto" não existe — a tela É a casa da Reunião (entidade
+     raiz do ciclo). O toggle Projetos|Reuniões, a lista e o detalhe de
+     projeto (com subtarefas) morreram; subtarefas moram em Atividades. */
+  function renderRoot() {
+    titleEl.textContent = 'Reuniões';
+    actionsEl.innerHTML = '';
+    if (CAN_WRITE()) {
+      var nb = UI.button({ label: 'Nova reunião', icon: 'plus', onClick: function () { modalReuniao(VIEW_TIPO === 'todas' ? null : VIEW_TIPO); } });
+      actionsEl.appendChild(nb);
+    }
+    bodyEl.innerHTML = '';
+    renderListaReunioes();
+  }
+
+  /* ===================== RENDER: REUNIÕES ===================== */
+  function nomeUser(uid) {
+    var u = USERS.filter(function (x) { return x.uid === uid; })[0];
+    return u ? u.nome : '';
+  }
+
+  /* F1-F · B5 — ROLLFORWARD 2.0: matemática no K.rollforward2 (kpi.js,
+     harness 19/19). Substitui a v1: agora INCLUI a decisão convertida em
+     atividade ainda não feita e o escopo é tipo + setor + projeto.        */
+  function itensRolados(reuniao) {
+    var hoje = R.hojeISO();
+    return KPI.rollforward2(REUN, reuniao, function (d) {
+      return KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hoje);
+    });
+  }
+  /* a decisão rolada tem entry DESTA reunião? (registrada OU "não tratado") */
+  function entryDaReuniao(dec, reuniaoId) {
+    var ups = dec.atualizacoes || [];
+    for (var i = 0; i < ups.length; i++) {
+      if (ups[i] && ups[i].reuniaoId === reuniaoId) { return ups[i]; }
+    }
+    return null;
+  }
+  /* grava a atualização DENTRO da decisão, no doc da reunião de ORIGEM
+     (o array atualizacoes[] cresce lá — cálculo de 1 MiB no HANDOFF).
+     Risco declarado (mesmo do F1-E p/ decisoes[]): edições simultâneas do
+     MESMO doc de origem são last-write-wins.                              */
+  function registrarAndamento(item, entry, acao) {
+    var origem = item.reuniao;
+    var lista = (origem.decisoes || []).map(function (d, i) {
+      if (i !== item.idx) { return d; }
+      var ups = (d.atualizacoes || []).concat([entry]);
+      return Object.assign({}, d, { atualizacoes: ups });
+    });
+    return Store.atualizarReuniao(origem.id, { decisoes: lista }, acao || 'registrar_andamento')
+      .then(function () { origem.decisoes = lista; item.dec = lista[item.idx]; });
+  }
+
+  /* ===================== F1-F · B2 — EXECUÇÃO AO VIVO ===================== */
+  /* setores "presentes" = lotação de cada presente interno + escopo dos
+     líderes presentes (raiz expande p/ subsetores). Externo não tem lotação. */
+  function siglasPresentes(r) {
+    var mapa = {};
+    (r.presentes || []).forEach(function (chave) {
+      var u = USERS.filter(function (x) { return x.uid === chave; })[0];
+      if (!u) { return; }
+      if (u.setor) { mapa[u.setor] = true; }
+      if (Array.isArray(u.setoresLiderados) && u.setoresLiderados.length) {
+        var esc = KPI.escopoLider(u.setoresLiderados, CTX.setores);
+        Object.keys(esc).forEach(function (s) { mapa[s] = true; });
+      }
+    });
+    return mapa;
+  }
+  /* varredura das ÚNICAS com prazo ANTERIOR à janela (emenda 1) — 1×/sessão.
+     Ordena da mais antiga p/ frente; teto 120 (4 lotes de where-in). Acima
+     do teto: as excedentes NÃO são inventadas — o banner declara o corte. */
+  function garanteVarredura() {
+    if (OLD_OCC) { return Promise.resolve(OLD_OCC); }
+    var jIni = CTX.janela.jIni, hoje = R.hojeISO();
+    var antigas = (CTX.ativ || []).filter(function (a) {
+      return a && a.recorrencia === 'unico' && a.data && a.ativo !== false && R.compareISO(a.data, jIni) < 0;
+    }).sort(function (a, b) { return R.compareISO(a.data, b.data); });
+    var extra = Math.max(0, antigas.length - 120);
+    var lote = antigas.slice(0, 120);
+    if (!lote.length) { OLD_OCC = { itens: [], extra: 0 }; return Promise.resolve(OLD_OCC); }
+    return Store.listOccAntigas(lote.map(function (a) { return a.id; })).then(function (occs) {
+      OLD_OCC = { itens: KPI.vencidasUnicasAntigas(lote, occs, jIni, hoje), extra: extra };
+      return OLD_OCC;
+    });
+  }
+  function canDirect(act) { return (Guard.isGestor && Guard.isGestor()) || (act && act.criadoPor === USER.uid); }
+
+  function painelExecucao(r) {
+    function podeAgir() { return CAN_WRITE() && !r.encerradaEm; }
+    var escolaToda = false;
+    var card = el('<div style="margin-bottom:10px"></div>');
+    var head = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+    var tEl = txt('div', 'pj-card-t', 'Execução ao vivo — atrasadas dos setores presentes');
+    head.appendChild(tEl);
+    head.appendChild(iBtn('Execução ao vivo', [
+      ['Fórmula', 'Vencida em aberto = ocorrência pendente, reprogramada ou em andamento com data efetiva (override conta) ANTERIOR a hoje.'],
+      ['Fonte', 'Board da janela (hoje−45 → hoje+30) + varredura das atividades ÚNICAS com prazo anterior à janela (teto de 120, da mais antiga p/ frente — atrasos de 400 dias reaparecem aqui). Rotina recorrente além da janela NÃO é listada item a item de propósito: o débito histórico de rotina é medido pela ADERÊNCIA.'],
+      ['Recorte', 'Setor de lotação de cada presente interno + escopo dos líderes presentes (raiz inclui subsetores). "Todos os setores" conta em qualquer recorte. O check "escola toda" ignora o recorte.'],
+      ['Ações', 'Concluir e trocar responsável: quem tem escrita. Reprogramar: dono/gestor aplica na hora; os demais geram PEDIDO de aprovação — a mesma governança do Atividades.']
+    ]));
+    var lblT = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;color:var(--muted)"></label>');
+    var cbT = document.createElement('input'); cbT.type = 'checkbox';
+    cbT.addEventListener('change', function () { escolaToda = cbT.checked; desenha(); });
+    lblT.appendChild(cbT); lblT.appendChild(txt('span', '', 'escola toda'));
+    head.appendChild(lblT);
+    card.appendChild(head);
+    var corpo = el('<div></div>');
+    corpo.appendChild(txt('div', 'pj-empty2', 'Carregando execução…'));
+    card.appendChild(corpo);
+
+    function linhaExec(o) {
+      var hoje = R.hojeISO();
+      var lin = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--border)"></div>');
+      var main = el('<div style="flex:1;min-width:220px"></div>');
+      main.appendChild(txt('div', 'pj-dec-t', o.act.titulo || '(sem título)'));
+      var sigs = KPI.setoresDe(o.act, CTX.setores).join(', ') || '—';
+      var meta = sigs + ' · ' + (o.responsavel || '(sem responsável)') + ' · venceu ' + fmtBR(o.effDate) + ' · ' + R.diasEntre(o.effDate, hoje) + 'd';
+      main.appendChild(txt('div', 'pj-dec-m', meta));
+      lin.appendChild(main);
+      if (o.foraJanela) {
+        var bfj = txt('span', 'pj-badge', 'fora da janela'); bfj.style.color = 'var(--orange)';
+        lin.appendChild(bfj);
+      }
+      if (podeAgir()) {
+        var bts = el('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');
+        bts.appendChild(UI.button({ label: 'Concluir', variant: 'ghost', onClick: function () {
+          Store.setOcorrencia(o.act, o.origData, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia')
+            .then(function () { o.status = 'concluida'; o.atrasada = false; toast('Concluída.'); desenha(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        } }));
+        bts.appendChild(UI.button({ label: 'Reprogramar', variant: 'ghost', onClick: function () { modalReprogExec(o, desenha); } }));
+        bts.appendChild(UI.button({ label: 'Responsável', variant: 'ghost', onClick: function () { modalRespExec(o, desenha); } }));
+        lin.appendChild(bts);
+      }
+      return lin;
+    }
+
+    function desenha() {
+      corpo.innerHTML = '';
+      var base = (CTX.board || []).filter(function (o) { return o.atrasada; })
+        .concat(((OLD_OCC && OLD_OCC.itens) || []).filter(function (o) { return o.atrasada; }));
+      var mapa = siglasPresentes(r);
+      var temPresente = Object.keys(mapa).length > 0;
+      var lista = base;
+      if (!escolaToda) {
+        if (!temPresente) {
+          corpo.appendChild(txt('div', 'pj-empty2', 'Marque as presenças para carregar as atrasadas dos setores presentes — ou marque "escola toda".'));
+          return;
+        }
+        lista = base.filter(function (o) {
+          if (o.act && o.act.todosSetores) { return true; }
+          var sigs = KPI.setoresDe(o.act, CTX.setores);
+          for (var i = 0; i < sigs.length; i++) { if (mapa[sigs[i]]) { return true; } }
+          return false;
+        });
+      }
+      lista = lista.slice().sort(function (a, b) { return R.compareISO(a.effDate, b.effDate); });
+      tEl.textContent = 'Execução ao vivo — atrasadas ' + (escolaToda ? 'da escola toda' : 'dos setores presentes') + ' (' + lista.length + ')';
+      if (OLD_OCC && OLD_OCC.extra > 0) {
+        var av = txt('div', 'pj-empty2', 'Varredura parcial: ' + OLD_OCC.extra + ' atividade(s) única(s) antiga(s) além do teto de 120 ficaram fora — trate as mais antigas primeiro para liberá-las.');
+        av.style.color = 'var(--orange)';
+        corpo.appendChild(av);
+      }
+      if (!lista.length) {
+        corpo.appendChild(txt('div', 'pj-empty2', 'Nenhuma vencida em aberto neste recorte. '));
+      } else {
+        lista.slice(0, 40).forEach(function (o) { corpo.appendChild(linhaExec(o)); });
+        if (lista.length > 40) { corpo.appendChild(txt('div', 'pj-empty2', '… e mais ' + (lista.length - 40) + ' — as 40 mais antigas aparecem primeiro.')); }
+      }
+      if (podeAgir()) {
+        var rodape = el('<div style="margin-top:8px"></div>');
+        rodape.appendChild(UI.button({ label: 'Criar atividade ao vivo', icon: 'plus', variant: 'ghost', onClick: function () { modalAtividadeRapida(r); } }));
+        corpo.appendChild(rodape);
+      }
+    }
+    garanteVarredura()
+      .then(function () { desenha(); })
+      .catch(function () { OLD_OCC = { itens: [], extra: 0 }; desenha(); toast('Falha na varredura de atrasadas antigas — mostrando só a janela.', 'err'); });
+    return card;
+  }
+
+  /* reprogramar NA REUNIÃO — mesma trava do Atividades: dono/gestor aplica
+     direto; os demais criam PEDIDO para o dono aprovar. */
+  function modalReprogExec(o, done) {
+    var direct = canDirect(o.act);
+    var hoje = R.hojeISO();
+    var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = o.effDate;
+    var motTa = document.createElement('textarea');
+    motTa.className = 'pj-pauta'; motTa.rows = 2;
+    motTa.placeholder = direct ? 'Motivo (opcional)' : 'Por que precisa mudar a data? (o dono decide com isso)';
+    var aviso = txt('div', 'pj-empty2', direct
+      ? 'Você é dono ou gestor: a reprogramação aplica na hora.'
+      : 'Você não é o dono desta atividade — será criado um pedido para o dono (ou gestor) aprovar.');
+    UI.modal({
+      title: 'Reprogramar — ' + (o.act.titulo || ''), width: 460,
+      body: [aviso, UI.field({ label: 'Nova data', required: true, control: dtInp, hint: 'Data atual: ' + fmtBR(o.effDate) + '.' }), UI.field({ label: 'Motivo' + (direct ? ' (opcional)' : ''), required: !direct, control: motTa })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: direct ? 'Reprogramar' : 'Enviar pedido', icon: 'check', onClick: function () {
+            var nova = dtInp.value;
+            if (!R.isISO(nova)) { toast('Escolha uma data válida.', 'err'); return; }
+            if (nova === o.effDate) { toast('A nova data é igual à atual.', 'err'); return; }
+            var motivo = motTa.value.trim();
+            if (!direct && motivo.length < 3) { toast('Descreva o motivo do pedido (mínimo 3 caracteres).', 'err'); return; }
+            if (direct) {
+              Store.setOcorrencia(o.act, o.origData, { status: 'reprogramada', dataOverride: nova }, 'reprogramar_ocorrencia')
+                .then(function () {
+                  o.status = 'reprogramada'; o.effDate = nova;
+                  o.atrasada = R.compareISO(nova, hoje) < 0;
+                  close(); toast('Reprogramada para ' + fmtBR(nova) + '.'); if (done) { done(); }
+                })
+                .catch(function (e) { toast(e.message, 'err'); });
+              return;
+            }
+            Store.createSolicitacao({
+              atividadeId: o.act.id, ocorrenciaData: o.origData, escopo: 'esta',
+              dataAtual: o.effDate, dataProposta: nova, motivo: motivo,
+              solicitanteUid: USER.uid, solicitanteNome: USER.name || USER.nome || '',
+              tituloAtividade: o.act.titulo, donoUid: o.act.criadoPor || null
+            }).then(function () { close(); toast('Pedido de mudança de data enviado ao dono.'); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function modalRespExec(o, done) {
+    var opts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
+    var sel = UI.select({ value: o.act.responsavelUid || '', placeholder: 'Escolha o responsável', options: opts });
+    UI.modal({
+      title: 'Trocar responsável — ' + (o.act.titulo || ''), width: 420,
+      body: [UI.field({ label: 'Novo responsável', required: true, control: sel, hint: 'Vale para a atividade inteira (todas as ocorrências).' })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Trocar', icon: 'check', onClick: function () {
+            if (!sel.value) { toast('Escolha o responsável.', 'err'); return; }
+            var u = USERS.filter(function (x) { return x.uid === sel.value; })[0];
+            var antes = { responsavelNome: o.act.responsavelNome || null };
+            Store.atualizarAtividadeCampos(o.act.id, { responsavelUid: u.uid, responsavelNome: u.nome }, 'trocar_responsavel', antes)
+              .then(function () {
+                o.act.responsavelUid = u.uid; o.act.responsavelNome = u.nome;
+                o.responsavel = u.nome; o.semResp = false;
+                close(); toast('Responsável: ' + u.nome + '.'); if (done) { done(); }
+              })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function modalAtividadeRapida(r) {
+    var titInp = UI.input({ placeholder: 'O que precisa ser feito?' });
+    var setOpts = CTX.setores.filter(function (s) { return s.ativo !== false && !s.setorPaiSigla; })
+      .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
+    var setSel = UI.select({ placeholder: 'Setor', options: setOpts });
+    var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = R.hojeISO();
+    var rOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
+    var rSel = UI.select({ value: USER.uid, placeholder: 'Responsável', options: rOpts });
+    UI.modal({
+      title: 'Atividade ao vivo (única)', width: 460,
+      body: [
+        UI.field({ label: 'Título', required: true, control: titInp }),
+        UI.field({ label: 'Setor', required: true, control: setSel }),
+        UI.field({ label: 'Prazo', required: true, control: dtInp }),
+        UI.field({ label: 'Responsável', required: true, control: rSel })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Criar', icon: 'check', onClick: function () {
+            var t = titInp.value.trim();
+            if (!t) { toast('Informe o título.', 'err'); return; }
+            if (!setSel.value) { toast('Escolha o setor.', 'err'); return; }
+            if (!R.isISO(dtInp.value)) { toast('Escolha o prazo.', 'err'); return; }
+            var u = USERS.filter(function (x) { return x.uid === rSel.value; })[0] || { uid: USER.uid, nome: USER.name || USER.nome || '' };
+            Store.criarAtividadeRapida({ titulo: t, setorSigla: setSel.value, data: dtInp.value, responsavelUid: u.uid, responsavelNome: u.nome }, r)
+              .then(function () { close(); toast('Atividade criada — entra no board no próximo recarregamento.'); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function renderReuniaoRow(r, container) {
+    var row = el('<div class="pj-rrow"></div>');
+    var head = el('<div class="pj-rrow-h"></div>');
+    head.appendChild(txt('div', 'pj-rrow-t', (r.titulo || 'Reunião') + ' — ' + fmtBR(r.data)));
+    var metaEl = txt('div', 'pj-rrow-meta', '');
+    function atualizaMeta() {
+      var conv = (r.convocados || []).length + (r.convidadosExternos || []).length;
+      var pres = (r.presentes || []).length;
+      var aus = Math.max(0, conv - pres);
+      var m = (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + conv + ' convocado(s) · ' + pres + ' presente(s) · ' + aus + ' ausente(s) · ' + (r.decisoes || []).length + ' decisão(ões)';
+      if (r.encerradaEm) { m += ' · ENCERRADA'; }
+      metaEl.textContent = m;
+    }
+    atualizaMeta();
+    head.appendChild(metaEl);
+    row.appendChild(head);
+
+    var open = false;
+    var box = el('<div style="display:none;margin-top:8px"></div>');
+    head.addEventListener('click', function () {
+      open = !open; box.style.display = open ? 'block' : 'none';
+      if (open && !box.childNodes.length) { fillReuniao(r, box, atualizaMeta); }
+    });
+    row.appendChild(box);
+    container.appendChild(row);
+  }
+
+  /* ===================== F1-E · helpers de reunião ===================== */
+  /* ocorrência da atividade-filha da decisão (única = 1 occ no board) */
+  function occDaAtividade(atId) {
+    if (!atId || !CTX || !CTX.board) { return null; }
+    var b = CTX.board;
+    for (var i = 0; i < b.length; i++) { if (b[i].act.id === atId) { return b[i]; } }
+    return null;
+  }
+  function badgeStatusDec(st) {
+    var cor = st.chave === 'vencida' ? 'var(--red)'
+      : st.chave === 'atraso' ? 'var(--orange)'
+      : st.chave === 'aberta' ? 'var(--doing)'
+      : 'var(--green)';
+    var rot = st.rotulo.charAt(0).toUpperCase() + st.rotulo.slice(1);
+    var b = txt('span', 'pj-badge', rot);
+    b.style.color = cor;
+    return b;
+  }
+  function copiarTexto(texto, okMsg) {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(texto); }
+      else {
+        var ta = document.createElement('textarea');
+        ta.value = texto; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
+      toast(okMsg || 'Copiado.');
+    } catch (e) { toast('Não consegui copiar — selecione o texto manualmente.', 'err'); }
+  }
+  /* Envio manual (F1-E · 3.3): copiar / WhatsApp / e-mail. SEM backend não
+     há disparo automático — o GERA abre o app com o texto pronto (declarado). */
+  function botoesEnvio(getTexto, assunto) {
+    var wrap = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>');
+    wrap.appendChild(UI.button({ label: 'Copiar', variant: 'ghost', onClick: function () { copiarTexto(getTexto()); } }));
+    wrap.appendChild(UI.button({ label: 'WhatsApp', variant: 'ghost', onClick: function () {
+      window.open('https://wa.me/?text=' + encodeURIComponent(getTexto()), '_blank');
+    } }));
+    wrap.appendChild(UI.button({ label: 'E-mail', variant: 'ghost', onClick: function () {
+      var corpo = KPI.truncarCorpo(getTexto(), 1800);
+      window.location.href = 'mailto:?subject=' + encodeURIComponent(assunto) + '&body=' + encodeURIComponent(corpo);
+    } }));
+    return wrap;
+  }
+  function textoPautaReuniao(r) {
+    var L = [];
+    L.push('PAUTA — ' + (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + (r.titulo || '') + ' · ' + fmtBR(r.data) + (r.horaPrevista ? ' às ' + r.horaPrevista : ''));
+    L.push('');
+    if (r.pautaTexto) { L.push(r.pautaTexto); L.push(''); }
+    var itens = r.pautaItens || [];
+    if (itens.length) {
+      L.push('ITENS SUGERIDOS PELA EQUIPE:');
+      itens.forEach(function (it) { L.push('   · ' + it.texto + (it.nome ? ' (' + it.nome + ')' : '')); });
+    }
+    return L.join('\n');
+  }
+  function textoResumoReuniao(r) {
+    var L = [];
+    L.push('ATA/RESUMO — ' + (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + (r.titulo || '') + ' · ' + fmtBR(r.data));
+    var conv = (r.convocados || []).length + (r.convidadosExternos || []).length;
+    L.push('Presença: ' + (r.presentes || []).length + ' de ' + conv + ' convocado(s).');
+    var atrMin = KPI.minutosEntreHoras(r.horaPrevista, r.horaInicioReal);
+    if (atrMin != null && atrMin > 0) { L.push('Início com ' + atrMin + ' min de atraso (' + r.horaPrevista + ' → ' + r.horaInicioReal + ').'); }
+    L.push('');
+    L.push(r.resumoTexto || '(sem resumo)');
+    var decs = r.decisoes || [];
+    if (decs.length) {
+      L.push('');
+      L.push('DECISÕES (' + decs.length + ') — formato 5W2H da ata:');
+      decs.forEach(function (d, i) {
+        var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), R.hojeISO());
+        L.push((i + 1) + ') O QUE: ' + d.texto);
+        if (d.comoTexto) { L.push('   COMO: ' + d.comoTexto); }
+        if (d.porqueTexto) { L.push('   POR QUÊ: ' + d.porqueTexto); }
+        L.push('   QUEM: ' + (d.donoNome || '—') + ' · QUANDO: ' + fmtBR(d.prazo) + ' · STATUS: ' + st.rotulo);
+        (d.atualizacoes || []).forEach(function (u) {
+          L.push('   AVALIAÇÃO ' + (u.dataISO ? fmtBR(u.dataISO) : '') + ': ' + (u.texto || '') + (u.nome ? ' (' + u.nome + ')' : ''));
+        });
+      });
+    }
+    return L.join('\n');
+  }
+
+  /* Detalhe da reunião (F1-E): horas+atraso · presença · pauta · rollforward ·
+     decisões por dono · resumo/ata obrigatório para encerrar.               */
+  function fillReuniao(r, box, atualizaMeta) {
+    function redesenhar() { box.innerHTML = ''; fillReuniao(r, box, atualizaMeta); if (atualizaMeta) { atualizaMeta(); } }
+    function podeEditar() { return CAN_WRITE() && !r.encerradaEm; }
+    var hoje = R.hojeISO();
+    var taResumo = null; /* criado no bloco 6; lido pelo Encerrar (closure) */
+
+    /* ---------- 1) cabeçalho: horas, atraso, ciclo ---------- */
+    var cab = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"></div>');
+    if (r.horaPrevista) {
+      var bp = txt('span', 'pj-badge', 'Prevista ' + r.horaPrevista); bp.style.color = 'var(--muted)';
+      cab.appendChild(bp);
+    }
+    if (r.horaInicioReal) {
+      var bi = txt('span', 'pj-badge', 'Início real ' + r.horaInicioReal); bi.style.color = 'var(--doing)';
+      cab.appendChild(bi);
+      var atrMin = KPI.minutosEntreHoras(r.horaPrevista, r.horaInicioReal);
+      if (atrMin != null && atrMin !== 0) {
+        var ba = txt('span', 'pj-badge', atrMin > 0 ? 'Atraso ' + atrMin + ' min' : 'Adiantada ' + (-atrMin) + ' min');
+        ba.style.color = atrMin > 0 ? 'var(--red)' : 'var(--green)';
+        cab.appendChild(ba);
+        cab.appendChild(iBtn('Atraso da reunião', [
+          ['Fórmula', 'Atraso (min) = hora de início real − hora prevista. Negativo = começou adiantada. Sem hora prevista ou sem "Iniciar reunião", não há atraso a medir.'],
+          ['Dados', 'reunioes.horaPrevista + reunioes.horaInicioReal (gravada pelo botão "Iniciar reunião").']
+        ]));
+      }
+    }
+    if (r.encerradaEm) {
+      var be = txt('span', 'pj-badge', 'ENCERRADA'); be.style.color = 'var(--green)';
+      cab.appendChild(be);
+    }
+    if (CAN_WRITE()) {
+      if (!r.encerradaEm && !r.horaInicioReal) {
+        cab.appendChild(UI.button({ label: 'Iniciar reunião', variant: 'ghost', onClick: function () {
+          var ag = new Date();
+          var hh = ('0' + ag.getHours()).slice(-2) + ':' + ('0' + ag.getMinutes()).slice(-2);
+          Store.atualizarReuniao(r.id, { horaInicioReal: hh }, 'reuniao_iniciada')
+            .then(function () { r.horaInicioReal = hh; toast('Reunião iniciada às ' + hh + '.'); redesenhar(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        } }));
+      }
+      if (!r.encerradaEm) {
+        cab.appendChild(UI.button({ label: 'Encerrar reunião', icon: 'check', onClick: function () {
+          var resumo = (taResumo ? taResumo.value : (r.resumoTexto || '')).trim();
+          if (!resumo) { toast('Preencha o resumo para encerrar. Sem ata, a reunião não fecha.', 'err'); return; }
+          /* F1-F · B5: pendência rolada só passa com atualização registrada
+             NESTA reunião — ou com o escape honesto "não tratado" (emenda 2). */
+          var semTrato = itensRolados(r).filter(function (it) { return !entryDaReuniao(it.dec, r.id); });
+          if (semTrato.length) {
+            toast(semTrato.length + ' pendência(s) rolada(s) sem atualização — registre o andamento ou marque "Não tratado nesta reunião".', 'err');
+            return;
+          }
+          var ag2 = new Date();
+          var hh2 = ('0' + ag2.getHours()).slice(-2) + ':' + ('0' + ag2.getMinutes()).slice(-2);
+          var patch = { resumoTexto: resumo, encerradaEm: Date.now() };
+          if (!r.horaInicioReal) { patch.horaInicioReal = r.horaPrevista || hh2; }
+          Store.atualizarReuniao(r.id, patch, 'reuniao_encerrada')
+            .then(function () { Object.assign(r, patch); toast('Reunião encerrada — ata registrada.'); redesenhar(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        } }));
+      }
+      if (r.encerradaEm && Guard.isGestor && Guard.isGestor()) {
+        cab.appendChild(UI.button({ label: 'Reabrir', variant: 'ghost', onClick: function () {
+          Store.atualizarReuniao(r.id, { encerradaEm: null }, 'reuniao_reaberta')
+            .then(function () { r.encerradaEm = null; toast('Reunião reaberta.'); redesenhar(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        } }));
+      }
+    }
+    box.appendChild(cab);
+
+    /* ---------- placar da ATA (derivado; abas 2–4 da planilha) ----------
+       R4·B2: o chip "Projeto/Vincular" que abria esta linha foi removido —
+       a reunião é a entidade raiz; não existe projeto para vincular.     */
+    (function () {
+      var linha = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 10px"></div>');
+      var pl = KPI.placarReuniao(r.decisoes, occDaAtividade, hoje);
+      if (pl) {
+        var pills = [
+          ['Realizadas', pl.realizadas, 'var(--green)'],
+          ['· no prazo', pl.noPrazo, 'var(--green)'],
+          ['· com atraso', pl.comAtraso, 'var(--orange)'],
+          ['Em andamento', pl.andamento, 'var(--doing)'],
+          ['Planejadas', pl.planejadas, 'var(--muted2)'],
+          ['Vencidas', pl.vencidas, 'var(--red)'],
+          ['Vence hoje', pl.venceHoje, 'var(--amber)']
+        ];
+        pills.forEach(function (q) {
+          if (!q[1] && q[0].charAt(0) === '·') { return; } /* sub-linha zerada não polui */
+          var b = txt('span', 'pj-badge', q[0] + ' ' + q[1]);
+          b.style.color = q[2];
+          linha.appendChild(b);
+        });
+        linha.appendChild(iBtn('Placar da reunião (formato da sua ATA)', [
+          ['Fórmula', 'Cada decisão cai num balde pelo status DERIVADO da atividade-filha: Realizadas (feitas — no prazo ou com atraso — ou resolvidas na própria reunião) · Em andamento (atividade iniciada) · Planejadas (abertas dentro do prazo) · Vencidas (prazo estourado) · Vence hoje (prazo é hoje e segue aberta). Nada é digitado: é o mesmo cabeçalho Realizado/Planejado/Em andamento da planilha ATA, automático.'],
+          ['Dados', 'reunioes.decisoes[] desta reunião + ocorrência da atividade-filha no board (kpi.js).'],
+          ['Números', pl.total + ' decisão(ões): ' + pl.realizadas + ' realizadas (' + pl.noPrazo + ' no prazo · ' + pl.comAtraso + ' com atraso) · ' + pl.andamento + ' em andamento · ' + pl.planejadas + ' planejadas · ' + pl.vencidas + ' vencidas · ' + pl.venceHoje + ' vencem hoje']
+        ]));
+      }
+      if (linha.childNodes.length) { box.appendChild(linha); }
+    })();
+
+    /* ---------- 2) presença (ausente = DERIVADO, nunca gravado) ---------- */
+    var pcard = el('<div style="margin-bottom:10px"></div>');
+    pcard.appendChild(txt('div', 'pj-card-t', 'Presença'));
+    var presMap = {}; (r.presentes || []).forEach(function (p) { presMap[p] = true; });
+    var linhasP = [];
+    (r.convocados || []).forEach(function (c) { linhasP.push({ chave: c.uid, nome: c.nome }); });
+    (r.convidadosExternos || []).forEach(function (c) { linhasP.push({ chave: c.nome, nome: c.nome + ' (externo)' }); });
+    if (!linhasP.length) { pcard.appendChild(txt('div', 'pj-empty2', 'Sem convocados registrados nesta reunião.')); }
+    var pgridEl = el('<div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px"></div>');
+    var resumoP = txt('div', 'pj-rrow-meta', '');
+    function attP() {
+      var pt2 = (r.presentes || []).length;
+      resumoP.textContent = pt2 + ' presente(s) · ' + Math.max(0, linhasP.length - pt2) + ' ausente(s) (derivado: convocado sem check de presença)';
+    }
+    linhasP.forEach(function (ln) {
+      var lab = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer"></label>');
+      var cb = document.createElement('input'); cb.type = 'checkbox';
+      cb.checked = !!presMap[ln.chave];
+      cb.disabled = !podeEditar();
+      cb.addEventListener('change', function () {
+        var novo = (r.presentes || []).slice();
+        var ix = novo.indexOf(ln.chave);
+        if (cb.checked && ix < 0) { novo.push(ln.chave); }
+        if (!cb.checked && ix >= 0) { novo.splice(ix, 1); }
+        Store.atualizarReuniao(r.id, { presentes: novo }, 'presenca_registrada')
+          .then(function () { r.presentes = novo; attP(); if (atualizaMeta) { atualizaMeta(); } })
+          .catch(function (e) { cb.checked = !cb.checked; toast(e.message, 'err'); });
+      });
+      lab.appendChild(cb);
+      lab.appendChild(txt('span', '', ln.nome));
+      pgridEl.appendChild(lab);
+    });
+    pcard.appendChild(pgridEl);
+    attP();
+    pcard.appendChild(resumoP);
+    box.appendChild(pcard);
+
+    /* ---------- 3) pauta ---------- */
+    var pauCard = el('<div style="margin-bottom:10px"></div>');
+    pauCard.appendChild(txt('div', 'pj-card-t', 'Pauta'));
+    var taP = document.createElement('textarea');
+    taP.className = 'pj-pauta'; taP.rows = 6;
+    taP.value = r.pautaTexto || '';
+    taP.disabled = !podeEditar();
+    pauCard.appendChild(taP);
+    if (podeEditar()) {
+      var pbWrap = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
+      pbWrap.appendChild(UI.button({ label: 'Salvar pauta', variant: 'ghost', onClick: function () {
+        var v = taP.value;
+        Store.atualizarReuniao(r.id, { pautaTexto: v, pautaGeradaEm: Date.now() }, 'pauta_salva')
+          .then(function () { r.pautaTexto = v; r.pautaGeradaEm = Date.now(); toast('Pauta salva.'); })
+          .catch(function (e) { toast(e.message, 'err'); });
+      } }));
+      pbWrap.appendChild(UI.button({ label: 'Gerar pauta automática', variant: 'ghost', onClick: function () {
+        modalPauta(r, function (novoTexto) { taP.value = novoTexto; });
+      } }));
+      pauCard.appendChild(pbWrap);
+    }
+    pauCard.appendChild(botoesEnvio(function () {
+      return textoPautaReuniao(Object.assign({}, r, { pautaTexto: taP.value }));
+    }, 'Pauta — ' + (r.titulo || fmtBR(r.data))));
+
+    /* itens sugeridos — F1-G (D2): ABERTO a qualquer participante ativo
+       (padrão Fellow: todo convocado adiciona talking point). Regras novas
+       permitem update de reunioes restrito à chave pautaItens. Remover
+       item continua líder+ (moderação). */
+    var itH = txt('div', 'pj-card-t', 'Itens sugeridos para a pauta');
+    itH.style.marginTop = '10px';
+    pauCard.appendChild(itH);
+    var itens = r.pautaItens || [];
+    if (!itens.length) { pauCard.appendChild(txt('div', 'pj-empty2', 'Nenhum item sugerido.')); }
+    itens.forEach(function (it, ix2) {
+      var lin = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+      lin.appendChild(txt('div', '', '· ' + it.texto + (it.nome ? ' — ' + it.nome : '')));
+      if (podeEditar()) {
+        var bx = txt('button', 'pj-back', '×'); bx.type = 'button'; bx.title = 'Remover item';
+        bx.addEventListener('click', function () {
+          var novoI = (r.pautaItens || []).slice(); novoI.splice(ix2, 1);
+          Store.atualizarReuniao(r.id, { pautaItens: novoI }, 'pauta_item_removido')
+            .then(function () { r.pautaItens = novoI; redesenhar(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        });
+        lin.appendChild(bx);
+      }
+      pauCard.appendChild(lin);
+    });
+    if (!r.encerradaEm) {   /* F1-G (D2): sugerir é de TODOS; encerrou, congelou */
+      var itInp = UI.input({ placeholder: 'Sugerir item de pauta' });
+      var itWrap = el('<div style="display:flex;gap:8px;margin-top:6px;align-items:center"></div>');
+      itInp.style.flex = '1';
+      itWrap.appendChild(itInp);
+      itWrap.appendChild(UI.button({ label: 'Adicionar item', variant: 'ghost', onClick: function () {
+        var t = itInp.value.trim();
+        if (!t) { toast('Escreva o item.', 'err'); return; }
+        var novoI = (r.pautaItens || []).concat([{ texto: t, uid: USER.uid, nome: USER.name || USER.nome || '' }]);
+        Store.atualizarReuniao(r.id, { pautaItens: novoI }, 'pauta_item_adicionado')
+          .then(function () { r.pautaItens = novoI; redesenhar(); })
+          .catch(function (e) { toast(e.message, 'err'); });
+      } }));
+      pauCard.appendChild(itWrap);
+    }
+    box.appendChild(pauCard);
+
+    /* ---------- 4) ROLLFORWARD 2.0 (F1-F · B5) ---------- */
+    var ant = itensRolados(r);
+    if (ant.length) {
+      var roll = el('<div class="pj-roll"></div>');
+      var rollH = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+      rollH.appendChild(txt('div', '', 'Pendências de reuniões anteriores (' + ant.length + ') — atualização obrigatória'));
+      rollH.appendChild(iBtn('Rollforward 2.0', [
+        ['Regra', 'Toda decisão NÃO FECHADA (em aberto ou vencida — inclusive a que virou atividade e ainda não foi feita) de reunião ANTERIOR do MESMO ESCOPO (mesmo tipo; mesmo setor, se departamento; mesmo projeto) reaparece aqui. Para ENCERRAR esta reunião, cada uma precisa de um "Registrar andamento" — ou do "Não tratado nesta reunião", que registra a verdade e mantém a pendência rolando.'],
+        ['Dados', 'reunioes.decisoes[] das reuniões anteriores + status derivado da atividade-filha (kpi.js). A atualização é gravada DENTRO da decisão, no doc da reunião de ORIGEM (atualizacoes[]).']
+      ]));
+      roll.appendChild(rollH);
+      ant.forEach(function (it) {
+        var d = it.dec;
+        var linha = el('<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)"></div>');
+        var top = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+        top.appendChild(txt('div', 'pj-dec-t', d.texto || '(sem texto)'));
+        top.appendChild(badgeStatusDec(it.st));
+        linha.appendChild(top);
+        linha.appendChild(txt('div', 'pj-dec-m', 'Dono: ' + (d.donoNome || nomeUser(d.donoUid) || '—') +
+          ' · Prazo: ' + fmtBR(d.prazo) + ' · Reunião de origem: ' + fmtBR(it.reuniao.data)));
+        (d.atualizacoes || []).forEach(function (u) {
+          var uEl = txt('div', 'pj-dec-m', (u.naoTratado ? '○ ' : '↻ ') + (u.dataISO ? fmtBR(u.dataISO) + ' — ' : '') + (u.texto || '') + (u.nome ? ' (' + u.nome + ')' : ''));
+          uEl.style.paddingLeft = '10px';
+          linha.appendChild(uEl);
+        });
+        var jaEntry = entryDaReuniao(d, r.id);
+        if (jaEntry) {
+          var okEl = txt('div', 'pj-dec-m', jaEntry.naoTratado ? '○ Marcada como não tratada nesta reunião.' : '✔ Atualizada nesta reunião.');
+          okEl.style.color = jaEntry.naoTratado ? 'var(--muted)' : 'var(--green)';
+          linha.appendChild(okEl);
+        } else if (podeEditar()) {
+          var taU = document.createElement('textarea');
+          taU.className = 'pj-pauta'; taU.rows = 2;
+          taU.placeholder = 'O que foi feito desde a última reunião?';
+          linha.appendChild(taU);
+          var bW = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
+          bW.appendChild(UI.button({ label: 'Registrar andamento', variant: 'ghost', onClick: function () {
+            var v = taU.value.trim();
+            if (!v) { toast('Escreva o andamento — ou use "Não tratado nesta reunião".', 'err'); return; }
+            registrarAndamento(it, { texto: v, reuniaoId: r.id, dataISO: hoje, uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() }, 'registrar_andamento')
+              .then(function () { toast('Andamento registrado na decisão de origem.'); redesenhar(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } }));
+          bW.appendChild(UI.button({ label: 'Não tratado nesta reunião', variant: 'ghost', onClick: function () {
+            registrarAndamento(it, { texto: '(não tratado nesta reunião)', naoTratado: true, reuniaoId: r.id, dataISO: hoje, uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() }, 'rollforward_nao_tratado')
+              .then(function () { toast('Registrado: não tratado — a pendência continua rolando.'); redesenhar(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } }));
+          linha.appendChild(bW);
+        }
+        roll.appendChild(linha);
+      });
+      box.appendChild(roll);
+    }
+
+    /* ---------- 4.5) EXECUÇÃO AO VIVO (F1-F · B2) ---------- */
+    box.appendChild(painelExecucao(r));
+
+    /* ---------- 5) decisões AGRUPADAS POR DONO (F1-E · 4.2) + F1-F: tabela 5W2H e CSV ---------- */
+    var dHead = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+    dHead.appendChild(txt('div', 'pj-card-t', 'Decisões (' + (r.decisoes || []).length + ')'));
+    dHead.appendChild(iBtn('Decisões 5W2H', [
+      ['Formato', 'Cada decisão carrega O QUE (obrigatório), COMO e POR QUÊ (opcionais), QUEM (dono), QUANDO (prazo) e o STATUS derivado na hora. As AVALIAÇÕES (atualizações de rollforward) ficam dentro da decisão — o mesmo desenho da planilha de ata.'],
+      ['Visualização', 'Lista agrupa por dono (prestação de contas). Tabela mostra as colunas 5W2H lado a lado, com rolagem horizontal. "Baixar CSV" gera o arquivo no formato da planilha-mãe (abre no Excel).']
+    ]));
+    var btnVLista = UI.button({ label: 'Lista', variant: DEC_VIEW === 'lista' ? undefined : 'ghost', onClick: function () { DEC_VIEW = 'lista'; redesenhar(); } });
+    var btnVTab = UI.button({ label: 'Tabela', variant: DEC_VIEW === 'tabela' ? undefined : 'ghost', onClick: function () { DEC_VIEW = 'tabela'; redesenhar(); } });
+    dHead.appendChild(btnVLista); dHead.appendChild(btnVTab);
+    if ((r.decisoes || []).length) {
+      dHead.appendChild(UI.button({ label: 'Baixar CSV', variant: 'ghost', onClick: function () {
+        baixarCSV('decisoes_' + (r.data || 'reuniao') + '.csv', csvDecisoes(r));
+      } }));
+    }
+    box.appendChild(dHead);
+    var decs = r.decisoes || [];
+    if (!decs.length) { box.appendChild(txt('div', 'pj-empty2', 'Sem decisões registradas nesta reunião.')); }
+    else if (DEC_VIEW === 'tabela') { box.appendChild(renderTabelaDecisoes(r)); }
+    else {
+      var porDono = {};
+      decs.forEach(function (d, idx) {
+        var chaveD = d.donoNome || nomeUser(d.donoUid) || '—';
+        (porDono[chaveD] = porDono[chaveD] || []).push({ d: d, idx: idx });
+      });
+      Object.keys(porDono).sort(function (a2, b2) { return a2.localeCompare(b2, 'pt-BR'); }).forEach(function (dono) {
+        var grupo = porDono[dono];
+        var cont = {};
+        grupo.forEach(function (g) {
+          var st = KPI.statusDecisao(g.d, occDaAtividade(g.d.atividadeId), hoje);
+          cont[st.chave] = (cont[st.chave] || 0) + 1;
+        });
+        var partes = [];
+        [['no_prazo', 'no prazo'], ['feita', 'feita(s)'], ['atraso', 'com atraso'], ['vencida', 'vencida(s)'], ['aberta', 'em aberto'], ['resolvida', 'resolvida(s)']].forEach(function (pp) {
+          if (cont[pp[0]]) { partes.push(cont[pp[0]] + ' ' + pp[1]); }
+        });
+        var gh = txt('div', 'pj-rrow-meta', dono + ' — ' + grupo.length + ' decisão(ões): ' + partes.join(' · '));
+        gh.style.marginTop = '8px'; gh.style.fontWeight = '600';
+        box.appendChild(gh);
+        grupo.forEach(function (g) { box.appendChild(renderDecisao(r, g.d, g.idx)); });
+      });
+    }
+    if (podeEditar()) {
+      var add = UI.button({ label: 'Adicionar decisão', icon: 'plus', variant: 'ghost' });
+      add.addEventListener('click', function () { modalDecisao(r); });
+      var wrapD = el('<div style="margin-top:8px"></div>'); wrapD.appendChild(add); box.appendChild(wrapD);
+    }
+
+    /* ---------- 6) resumo / ata (obrigatório para encerrar) ---------- */
+    var rCard = el('<div style="margin-top:10px"></div>');
+    rCard.appendChild(txt('div', 'pj-card-t', 'Resumo / ata (obrigatório para encerrar)'));
+    taResumo = document.createElement('textarea');
+    taResumo.className = 'pj-pauta'; taResumo.rows = 5;
+    taResumo.value = r.resumoTexto || '';
+    taResumo.disabled = !podeEditar();
+    rCard.appendChild(taResumo);
+    if (podeEditar()) {
+      var rw = el('<div style="margin-top:6px"></div>');
+      rw.appendChild(UI.button({ label: 'Salvar resumo', variant: 'ghost', onClick: function () {
+        var v = taResumo.value;
+        Store.atualizarReuniao(r.id, { resumoTexto: v }, 'resumo_salvo')
+          .then(function () { r.resumoTexto = v; toast('Resumo salvo.'); })
+          .catch(function (e) { toast(e.message, 'err'); });
+      } }));
+      rCard.appendChild(rw);
+    }
+    rCard.appendChild(botoesEnvio(function () {
+      return textoResumoReuniao(Object.assign({}, r, { resumoTexto: taResumo.value }));
+    }, 'Ata — ' + (r.titulo || fmtBR(r.data))));
+    box.appendChild(rCard);
+  }
+
+  function renderDecisao(r, d, idx) {
+    var line = el('<div class="pj-dec"></div>');
+    var main = el('<div class="pj-dec-main"></div>');
+    main.appendChild(txt('div', 'pj-dec-t', d.texto || '(sem texto)'));
+    var dono = d.donoNome || nomeUser(d.donoUid) || '—';
+    main.appendChild(txt('div', 'pj-dec-m', 'Dono: ' + dono + ' · Prazo: ' + fmtBR(d.prazo)));
+    /* F1-F · 5W2H: COMO / POR QUÊ (opcionais) + nº de avaliações do rollforward */
+    if (d.comoTexto) { main.appendChild(txt('div', 'pj-dec-m', 'Como: ' + d.comoTexto)); }
+    if (d.porqueTexto) { main.appendChild(txt('div', 'pj-dec-m', 'Por quê: ' + d.porqueTexto)); }
+    if ((d.atualizacoes || []).length) {
+      main.appendChild(txt('div', 'pj-dec-m', (d.atualizacoes.length) + ' avaliação(ões) registrada(s) — histórico completo na ata e no CSV.'));
+    }
+    line.appendChild(main);
+    var btns = el('<div class="pj-dec-b"></div>');
+    if (CAN_WRITE()) {
+      var enc = UI.button({ label: 'Encaminhar p/ pauta…', variant: 'ghost' });
+      enc.addEventListener('click', function () { modalEncaminhar(r, d); });
+      btns.appendChild(enc);
+    }
+
+    if (d.atividadeId) {
+      var bv = txt('span', 'pj-badge', 'Virou atividade'); bv.style.color = 'var(--doing)';
+      btns.appendChild(bv);
+    }
+    var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), R.hojeISO());
+    btns.appendChild(badgeStatusDec(st));
+    if (st.chave === 'aberta' && !d.atividadeId && CAN_WRITE() && !r.encerradaEm) {
+      var toAct = UI.button({ label: '→ Atividade', variant: 'ghost' });
+      toAct.addEventListener('click', function () { converterDecisao(r, d, idx); });
+      btns.appendChild(toAct);
+      var res = UI.button({ label: 'Marcar resolvida', variant: 'ghost' });
+      res.addEventListener('click', function () { marcarResolvida(r, idx); });
+      btns.appendChild(res);
+    }
+    line.appendChild(btns);
+    return line;
+  }
+
+  /* ===== F1-F · D1c — TABELA 5W2H + CSV ===== */
+  function renderTabelaDecisoes(r) {
+    var hoje = R.hojeISO();
+    var wrap = el('<div style="overflow:auto;border:1px solid var(--border);border-radius:10px;margin-top:6px"></div>');
+    var tb = el('<table style="border-collapse:collapse;width:100%;min-width:860px;font-size:12.5px"></table>');
+    var thr = el('<tr></tr>');
+    ['O QUE', 'COMO', 'POR QUÊ', 'QUEM', 'QUANDO', 'STATUS', 'AVALIAÇÕES'].forEach(function (h) {
+      var th = txt('th', '', h);
+      th.style.cssText = 'text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;letter-spacing:.4px;white-space:nowrap';
+      thr.appendChild(th);
+    });
+    tb.appendChild(thr);
+    (r.decisoes || []).forEach(function (d) {
+      var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hoje);
+      var ups = d.atualizacoes || [];
+      var ultima = ups.length ? ((ups[ups.length - 1].dataISO ? fmtBR(ups[ups.length - 1].dataISO) + ' — ' : '') + (ups[ups.length - 1].texto || '')) : '—';
+      var tr = el('<tr></tr>');
+      [d.texto || '—', d.comoTexto || '—', d.porqueTexto || '—',
+        d.donoNome || nomeUser(d.donoUid) || '—', fmtBR(d.prazo), st.rotulo,
+        ups.length ? ultima + (ups.length > 1 ? ' (+' + (ups.length - 1) + ')' : '') : '—'
+      ].forEach(function (v) {
+        var td = txt('td', '', v);
+        td.style.cssText = 'padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;max-width:260px';
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    wrap.appendChild(tb);
+    return wrap;
+  }
+  /* CSV no formato da planilha-mãe (Excel PT-BR: ; como separador + BOM).
+     AVALIACAO_N = colunas dinâmicas com o histórico completo.            */
+  function csvDecisoes(r) {
+    var hoje = R.hojeISO();
+    function esc(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+    var maxUps = 0;
+    (r.decisoes || []).forEach(function (d) { maxUps = Math.max(maxUps, (d.atualizacoes || []).length); });
+    var head = ['TIPO', 'REUNIAO', 'DATA', 'O_QUE', 'COMO', 'POR_QUE', 'QUEM', 'QUANDO', 'STATUS'];
+    for (var i = 1; i <= maxUps; i++) { head.push('AVALIACAO_' + i); }
+    var linhas = [head.join(';')];
+    (r.decisoes || []).forEach(function (d) {
+      var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hoje);
+      var row = [
+        esc(TIPO_LABEL[r.tipo] || r.tipo || ''), esc(r.titulo || ''), esc(fmtBR(r.data)),
+        esc(d.texto), esc(d.comoTexto || ''), esc(d.porqueTexto || ''),
+        esc(d.donoNome || nomeUser(d.donoUid) || ''), esc(fmtBR(d.prazo)), esc(st.rotulo)
+      ];
+      (d.atualizacoes || []).forEach(function (u) {
+        row.push(esc((u.dataISO ? fmtBR(u.dataISO) + ' — ' : '') + (u.texto || '') + (u.nome ? ' (' + u.nome + ')' : '')));
+      });
+      linhas.push(row.join(';'));
+    });
+    return linhas.join('\r\n');
+  }
+  function baixarCSV(nome, conteudo) {
+    var blob = new Blob(['\uFEFF' + conteudo], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
+  }
+
+  /* ===== F1-F · B4 — CASCATA: encaminhar decisão p/ pauta de outra reunião ===== */
+  function modalEncaminhar(r, d) {
+    var ta = document.createElement('textarea');
+    ta.className = 'pj-pauta'; ta.rows = 2;
+    ta.value = d.texto || '';
+    var tipoOpts = TIPOS_REUNIAO.map(function (t) { return { value: t[0], label: t[1] }; });
+    var tipoSel = UI.select({ value: 'departamento', options: tipoOpts });
+    var depOpts = [{ value: '__todos__', label: 'Todos os setores (1 sugestão por departamento)' }]
+      .concat(CTX.setores.filter(function (s) { return s.ativo !== false && !s.setorPaiSigla; })
+        .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; }));
+    var depSel = UI.select({ placeholder: 'Escolha o destino', options: depOpts });
+    var depField = UI.field({ label: 'Setor de destino', required: true, control: depSel });
+    function attDep() { depField.style.display = tipoSel.value === 'departamento' ? '' : 'none'; }
+    tipoSel.addEventListener('change', attDep);
+    attDep();
+    UI.modal({
+      title: 'Encaminhar para pauta', width: 480,
+      body: [
+        txt('div', 'pj-empty2', 'A sugestão fica PENDENTE e aparece pré-listada quando alguém gerar a pauta de uma reunião do destino — quem gera escolhe se entra.'),
+        UI.field({ label: 'Texto do item', required: true, control: ta }),
+        UI.field({ label: 'Tipo de reunião de destino', required: true, control: tipoSel }),
+        depField
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Encaminhar', icon: 'check', onClick: function () {
+            var texto = ta.value.trim();
+            if (!texto) { toast('Escreva o item.', 'err'); return; }
+            var tipoD = tipoSel.value;
+            if (tipoD === 'departamento' && !depSel.value) { toast('Escolha o setor de destino.', 'err'); return; }
+            var base = {
+              texto: texto, candidatoIndicador: false,
+              origem: { reuniaoId: r.id, tipo: r.tipo || null, data: r.data || null, titulo: r.titulo || null },
+              destinoTipo: tipoD, destinoSetorSigla: null, consumidaPorReuniaoId: null
+            };
+            var docs = [];
+            if (tipoD === 'departamento' && depSel.value === '__todos__') {
+              CTX.setores.filter(function (s) { return s.ativo !== false && !s.setorPaiSigla; })
+                .forEach(function (s) { docs.push(Object.assign({}, base, { destinoSetorSigla: s.sigla })); });
+            } else if (tipoD === 'departamento') {
+              docs.push(Object.assign({}, base, { destinoSetorSigla: depSel.value }));
+            } else {
+              docs.push(base);
+            }
+            Store.criarSugestoesPauta(docs)
+              .then(function () { close(); toast(docs.length + ' sugestão(ões) encaminhada(s) — entram na geração de pauta do destino.'); return Store.listSugestoesPauta().then(function (x) { SUGS = x.filter(function (g) { return g.status === 'pendente'; }); }); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function salvarDecisoes(r, novaLista, acao) {
+    return Store.atualizarReuniao(r.id, { decisoes: novaLista }, acao)
+      .then(function () { r.decisoes = novaLista; });
+  }
+
+  function marcarResolvida(r, idx) {
+    var lista = (r.decisoes || []).map(function (d, i) {
+      return i === idx ? Object.assign({}, d, { aberta: false }) : d;
+    });
+    salvarDecisoes(r, lista, 'resolver_decisao')
+      .then(function () { toast('Decisão marcada como resolvida.'); rerender(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+
+  function converterDecisao(r, d, idx) {
+    /* R4·B2: sem projeto — o setor da atividade é sempre perguntado. */
+    function criar(sig) {
+      Store.criarAtividadeDeDecisao(d, r, sig)
+        .then(function (atId) {
+          var lista = (r.decisoes || []).map(function (x, i) {
+            return i === idx ? Object.assign({}, x, { atividadeId: atId, aberta: false }) : x;
+          });
+          return salvarDecisoes(r, lista, 'decisao_para_atividade');
+        })
+        .then(function () { toast('Atividade criada a partir da decisão.'); return reload(); })
+        .catch(function (e) { toast(e.message, 'err'); });
+    }
+    /* modal pede o setor responsável */
+    var opts = CTX.setores.filter(function (s) { return s.ativo !== false; })
+      .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
+    var sel = UI.select({ placeholder: 'Escolha o setor', options: opts });
+    var m = UI.modal({
+      title: 'Setor da nova atividade', width: 420,
+      body: [txt('div', 'pj-empty2', 'Escolha o setor responsável pela atividade que nasce desta decisão.'), UI.field({ label: 'Setor', required: true, control: sel })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Criar atividade', icon: 'check', onClick: function () {
+            if (!sel.value) { toast('Escolha o setor.', 'err'); return; }
+            close(); criar(sel.value);
+          } })];
+      }
+    });
+  }
+
+  function modalDecisao(r) {
+    if (r.encerradaEm) { toast('Reunião encerrada — só um gestor pode reabrir para editar.', 'err'); return; }
+    var txtInp = UI.input({ placeholder: 'O que foi decidido' });
+    /* F1-F · 5W2H: COMO e POR QUÊ opcionais — sem eles não vira texto-lixo */
+    var comoTa = document.createElement('textarea');
+    comoTa.className = 'pj-pauta'; comoTa.rows = 2; comoTa.placeholder = 'Como será feito? (opcional)';
+    var pqTa = document.createElement('textarea');
+    pqTa.className = 'pj-pauta'; pqTa.rows = 2; pqTa.placeholder = 'Por que essa decisão? (opcional)';
+    var donoOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
+    var donoSel = UI.select({ placeholder: USERS.length ? 'Escolha o dono' : '(eu mesmo)', options: donoOpts });
+    var przInp = UI.input({ placeholder: 'AAAA-MM-DD' });
+    przInp.type = 'date';
+    UI.modal({
+      title: 'Nova decisão', width: 480,
+      body: [
+        UI.field({ label: 'O que foi decidido', required: true, control: txtInp }),
+        UI.field({ label: 'Como', control: comoTa }),
+        UI.field({ label: 'Por quê', control: pqTa }),
+        UI.field({ label: 'Dono (quem)', control: donoSel, hint: USERS.length ? '' : 'Sem lista de usuários — você será o dono.' }),
+        UI.field({ label: 'Prazo (quando)', required: true, control: przInp })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Adicionar', icon: 'check', onClick: function () {
+            var t = txtInp.value.trim();
+            if (!t) { toast('Escreva a decisão.', 'err'); return; }
+            if (!R.isISO(przInp.value)) { toast('Informe o prazo.', 'err'); return; }
+            var dono = donoSel.value || USER.uid;
+            var nova = { texto: t, comoTexto: comoTa.value.trim() || null, porqueTexto: pqTa.value.trim() || null,
+              donoUid: dono, donoNome: nomeUser(dono) || USER.name, prazo: przInp.value,
+              atividadeId: null, aberta: true, atualizacoes: [] };
+            var lista = (r.decisoes || []).concat([nova]);
+            salvarDecisoes(r, lista, 'criar_decisao')
+              .then(function () { close(); toast('Decisão adicionada.'); rerender(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  /* Nova reunião (F1-E): tipo → convocação automática pré-marcada + externos.
+     F1-F · B6: tipoDefault pré-seleciona o tipo da visão ativa (chips).    */
+  function modalReuniao(tipoDefault) {
+    var titInp = UI.input({ placeholder: 'Ex.: Reunião de líderes — semana 12' });
+    var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = R.hojeISO();
+    var hrInp = UI.input({}); hrInp.type = 'time';
+    var tipoIni = tipoDefault && TIPOS_REUNIAO.some(function (t) { return t[0] === tipoDefault; }) ? tipoDefault : 'lideres';
+    var tipoSel = UI.select({ value: tipoIni, options: TIPOS_REUNIAO.map(function (t) { return { value: t[0], label: t[1] }; }) });
+    var depOpts = CTX.setores.filter(function (s) { return s.ativo !== false; })
+      .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
+    var depSel = UI.select({ placeholder: 'Escolha o setor', options: depOpts });
+    var depField = UI.field({ label: 'Setor do departamento', required: true, control: depSel });
+    depField.style.display = tipoIni === 'departamento' ? '' : 'none';
+    var marcados = {};
+    var convBox = el('<div style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:180px;overflow:auto"></div>');
+    function desenhaConv() {
+      convBox.innerHTML = '';
+      if (!USERS.length) { convBox.appendChild(txt('div', 'pj-empty2', 'Sem lista de usuários — você entra como único convocado.')); return; }
+      USERS.forEach(function (u) {
+        var lab = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer"></label>');
+        var cb = document.createElement('input'); cb.type = 'checkbox';
+        cb.checked = !!marcados[u.uid];
+        cb.addEventListener('change', function () { marcados[u.uid] = cb.checked; });
+        lab.appendChild(cb); lab.appendChild(txt('span', '', u.nome));
+        convBox.appendChild(lab);
+      });
+    }
+    function preMarcar() {
+      marcados = {};
+      var auto = KPI.convocadosPorTipo(tipoSel.value, USERS, CTX.setores, { uid: USER.uid, nome: USER.name || USER.nome }, depSel.value || null);
+      auto.forEach(function (c) { marcados[c.uid] = true; });
+      marcados[USER.uid] = true;
+      desenhaConv();
+    }
+    tipoSel.addEventListener('change', function () {
+      depField.style.display = tipoSel.value === 'departamento' ? '' : 'none';
+      preMarcar();
+    });
+    depSel.addEventListener('change', preMarcar);
+    preMarcar();
+
+    var externos = [];
+    var extChips = el('<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px"></div>');
+    function desenhaExt() {
+      extChips.innerHTML = '';
+      externos.forEach(function (nomeE, iE) {
+        var chip = txt('span', 'pj-status', nomeE + ' ×');
+        chip.style.cursor = 'pointer'; chip.title = 'Remover';
+        chip.addEventListener('click', function () { externos.splice(iE, 1); desenhaExt(); });
+        extChips.appendChild(chip);
+      });
+    }
+    var extInp = UI.input({ placeholder: 'Nome do convidado externo (ex.: instrutor)' });
+    var extWrap = el('<div></div>');
+    var extLine = el('<div style="display:flex;gap:8px;align-items:center"></div>');
+    extInp.style.flex = '1';
+    extLine.appendChild(extInp);
+    extLine.appendChild(UI.button({ label: 'Adicionar', variant: 'ghost', onClick: function () {
+      var n = extInp.value.trim();
+      if (!n) { return; }
+      if (externos.indexOf(n) < 0) { externos.push(n); }
+      extInp.value = ''; desenhaExt();
+    } }));
+    extWrap.appendChild(extLine); extWrap.appendChild(extChips);
+
+    UI.modal({
+      title: 'Nova reunião', width: 560,
+      body: [
+        UI.field({ label: 'Tipo', required: true, control: tipoSel, hint: 'Define a convocação automática — ajuste os checks à vontade. Decisões abertas de reuniões anteriores do mesmo tipo reaparecem (rollforward).' }),
+        depField,
+        UI.field({ label: 'Título', required: true, control: titInp }),
+        UI.field({ label: 'Data', required: true, control: dtInp }),
+        UI.field({ label: 'Hora prevista', control: hrInp, hint: 'Com "Iniciar reunião" no dia, o GERA mede o atraso em minutos.' }),
+        UI.field({ label: 'Convocados', control: convBox }),
+        UI.field({ label: 'Convidados externos (sem login)', control: extWrap, hint: 'Ex.: instrutores e líderes de turma — entram na presença pelo nome.' })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Criar reunião', icon: 'check', onClick: function () {
+            var t = titInp.value.trim();
+            if (!t) { toast('Informe o título.', 'err'); return; }
+            if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
+            if (tipoSel.value === 'departamento' && !depSel.value) { toast('Escolha o setor do departamento.', 'err'); return; }
+            var convocados = [];
+            USERS.forEach(function (u) { if (marcados[u.uid]) { convocados.push({ uid: u.uid, nome: u.nome }); } });
+            if (!convocados.length) { convocados.push({ uid: USER.uid, nome: USER.name || USER.nome || USER.email || '(eu)' }); }
+            var doc = {
+              titulo: t, data: dtInp.value,
+              tipo: tipoSel.value,
+              setorSigla: tipoSel.value === 'departamento' ? depSel.value : null,
+              horaPrevista: hrInp.value || null,
+              horaInicioReal: null, encerradaEm: null,
+              convocados: convocados,
+              convocadosUids: convocados.map(function (c) { return c.uid; }),
+              convidadosExternos: externos.map(function (n) { return { nome: n }; }),
+              presentes: [],
+              pautaTexto: null, pautaGeradaEm: null, pautaItens: [],
+              resumoTexto: '',
+              participantesUids: [], decisoes: []
+            };
+            Store.criarReuniao(doc)
+              .then(function () { close(); toast('Reunião criada — convocados veem a chamada no Hoje.'); return reload(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  function renderListaReunioes() {
+    var hoje = R.hojeISO();
+    /* F1-F · B6 — visões por tipo: chips DERIVADOS do dado (nada hardcoded).
+       Tipo sem reunião não vira chip; o contador é a contagem real.        */
+    var chipsBar = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;overflow-x:auto"></div>');
+    var contTipo = {};
+    REUN.forEach(function (r) { var t = r.tipo || 'sem_tipo'; contTipo[t] = (contTipo[t] || 0) + 1; });
+    function rotuloTipo(t) { return TIPO_LABEL[t] || (t === 'sem_tipo' ? '(sem tipo)' : t); }
+    function chip(valor, rotulo, n) {
+      var on = VIEW_TIPO === valor;
+      var b = txt('button', 'pj-status', rotulo + ' (' + n + ')');
+      b.type = 'button'; b.style.cursor = 'pointer'; b.style.whiteSpace = 'nowrap';
+      b.style.color = on ? 'var(--greenText)' : 'var(--muted)';
+      b.style.background = on ? 'var(--activeBg)' : 'transparent';
+      b.addEventListener('click', function () { VIEW_TIPO = valor; rerender(); });
+      return b;
+    }
+    chipsBar.appendChild(chip('todas', 'Todas', REUN.length));
+    Object.keys(contTipo).sort(function (a, b) { return rotuloTipo(a).localeCompare(rotuloTipo(b), 'pt-BR'); })
+      .forEach(function (t) { chipsBar.appendChild(chip(t, rotuloTipo(t), contTipo[t])); });
+    bodyEl.appendChild(chipsBar);
+    var REUNV = VIEW_TIPO === 'todas' ? REUN : REUN.filter(function (r) { return (r.tipo || 'sem_tipo') === VIEW_TIPO; });
+
+    /* painel do ciclo de decisões (F1-E · 4.3) — status DERIVADO, nunca gravado.
+       F1-F: respeita a visão ativa (mesmos números da lista embaixo).       */
+    var cAb = 0, cVc = 0, cCc = 0;
+    REUNV.forEach(function (r) {
+      (r.decisoes || []).forEach(function (d) {
+        var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hoje);
+        if (st.chave === 'vencida') { cVc++; }
+        else if (st.chave === 'aberta') { cAb++; }
+        else { cCc++; }
+      });
+    });
+    var painel = el('<div class="pj-card"></div>');
+    var ph0 = el('<div class="pj-card-h"></div>');
+    var pt0 = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+    pt0.appendChild(txt('div', 'pj-card-t', 'Ciclo de decisões'));
+    pt0.appendChild(iBtn('Como o status é calculado', [
+      ['Fórmula', 'Cada decisão de cada reunião ativa: EM ABERTO = sem atividade e não resolvida, ou atividade ainda no prazo · VENCIDA = atividade com prazo estourado em aberto · CONCLUÍDA = resolvida na reunião, ou atividade feita (no prazo ou com atraso).'],
+      ['Dados', 'reunioes.decisoes[] + ocorrência da atividade-filha no board (kpi.js, janela padrão). Status derivado na hora — nunca gravado.']
+    ]));
+    ph0.appendChild(pt0);
+    painel.appendChild(ph0);
+    var pgrid = el('<div class="pj-dgrid"></div>');
+    [['Decisões em aberto', cAb, 'var(--orange)'], ['Decisões vencidas', cVc, 'var(--red)'], ['Decisões concluídas', cCc, 'var(--green)']].forEach(function (kk) {
+      var dm = el('<div class="pj-dm"></div>');
+      dm.appendChild(txt('div', 'pj-dm-k', kk[0]));
+      var vEl = txt('div', 'pj-dm-v', String(kk[1]));
+      vEl.style.color = kk[2];
+      dm.appendChild(vEl);
+      pgrid.appendChild(dm);
+    });
+    painel.appendChild(pgrid);
+    bodyEl.appendChild(painel);
+
+    /* botão de pauta */
+    var pcard = el('<div class="pj-card"></div>');
+    var ph = el('<div class="pj-card-h"></div>');
+    var pt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+    pt.appendChild(txt('div', 'pj-card-t', 'Pauta da reunião de líderes'));
+    pt.appendChild(iBtn('O que entra na pauta', [
+      ['Conteúdo', 'Atrasadas por setor + setores abaixo da banda (só com previsto VENCIDO; 2 períodos consecutivos = ação obrigatória) + gargalos nomeados (score 50/30/20) + decisões ABERTAS + solicitações de data PENDENTES. Siglas fora do cadastro ativo são ignoradas e listadas no rodapé.'],
+      ['Uso', 'Gere, copie e cole onde a reunião acontece — ou grave direto numa reunião aberta (modelo L10/EOS: métricas → pendências → ações).']
+    ]));
+    ph.appendChild(pt);
+    var gen = UI.button({ label: 'Gerar pauta', icon: 'check' });
+    gen.addEventListener('click', function () { modalPauta(null); });
+    ph.appendChild(gen);
+    pcard.appendChild(ph);
+    pcard.appendChild(txt('div', 'pj-empty2', 'Texto pronto com atrasadas por setor, banda de aderência, gargalos, decisões abertas e aprovações pendentes.'));
+    bodyEl.appendChild(pcard);
+
+    /* F1-F · B4 — sugestões de pauta PENDENTES (cascata) com idade + descarte em lote */
+    if (SUGS.length) {
+      var scard = el('<div class="pj-card"></div>');
+      var sh = el('<div class="pj-card-h"></div>');
+      var st0 = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+      st0.appendChild(txt('div', 'pj-card-t', 'Sugestões de pauta pendentes (' + SUGS.length + ')'));
+      st0.appendChild(iBtn('Cascata de pauta', [
+        ['O que é', 'Itens encaminhados de uma reunião para a pauta de outra (ex.: da Integrada para os departamentos). Ficam PENDENTES até alguém gerar a pauta de uma reunião do destino e aceitar — ou até serem descartados aqui.'],
+        ['Idade', 'Pendente há N dias = hoje − data do encaminhamento. Sugestão velha é sinal de pauta que não roda — trate ou descarte.'],
+        ['Dados', 'Coleção pauta_sugestoes (status pendente). Descartar é soft-delete: vira status descartada, nada é apagado.']
+      ]));
+      sh.appendChild(st0);
+      scard.appendChild(sh);
+      var marcS = {};
+      SUGS.forEach(function (g) {
+        var lin = el('<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--border)"></div>');
+        if (CAN_WRITE()) {
+          var cbS = document.createElement('input'); cbS.type = 'checkbox';
+          cbS.addEventListener('change', function () { marcS[g.id] = cbS.checked; });
+          lin.appendChild(cbS);
+        }
+        var mainS = el('<div style="flex:1"></div>');
+        mainS.appendChild(txt('div', 'pj-dec-t', g.texto || '(sem texto)'));
+        var idade = g.criadoEm ? R.diasEntre(R.toISO(new Date(Number(g.criadoEm))), hoje) : null;
+        var destino = rotuloTipo(g.destinoTipo || 'sem_tipo') + (g.destinoSetorSigla ? ' · ' + g.destinoSetorSigla : '');
+        mainS.appendChild(txt('div', 'pj-dec-m', 'Destino: ' + destino +
+          ' · Origem: ' + (g.origem && g.origem.data ? fmtBR(g.origem.data) : '—') +
+          (idade == null ? '' : ' · pendente há ' + idade + 'd') +
+          (g.candidatoIndicador ? ' · candidato a indicador' : '')));
+        lin.appendChild(mainS);
+        scard.appendChild(lin);
+      });
+      if (CAN_WRITE()) {
+        var swrap = el('<div style="margin-top:8px"></div>');
+        swrap.appendChild(UI.button({ label: 'Descartar selecionadas', variant: 'ghost', onClick: function () {
+          var ids = Object.keys(marcS).filter(function (k) { return marcS[k]; });
+          if (!ids.length) { toast('Marque ao menos uma sugestão.', 'err'); return; }
+          if (!window.confirm('Descartar ' + ids.length + ' sugestão(ões)? Elas somem da fila (soft-delete).')) { return; }
+          Promise.all(ids.map(function (id) {
+            return Store.atualizarSugestaoPauta(id, { status: 'descartada' }, 'descartar_pauta_sugestao');
+          })).then(function () {
+            SUGS = SUGS.filter(function (g) { return ids.indexOf(g.id) < 0; });
+            toast(ids.length + ' sugestão(ões) descartada(s).'); rerender();
+          }).catch(function (e) { toast(e.message, 'err'); });
+        } }));
+        scard.appendChild(swrap);
+      }
+      bodyEl.appendChild(scard);
+    }
+
+    var card = el('<div class="pj-card"></div>');
+    var h = el('<div class="pj-card-h"></div>');
+    var tituloLista = VIEW_TIPO === 'todas' ? 'Todas as reuniões' : rotuloTipo(VIEW_TIPO);
+    h.appendChild(txt('div', 'pj-card-t', tituloLista + ' (' + REUNV.length + ')'));
+    /* F1-F · B7 — toggle Lista | Kanban (leitura; sem arrastar: as travas de
+       Iniciar/Encerrar/Reabrir do F1-E continuam mandando no status).      */
+    var tg = el('<div style="display:flex;gap:6px"></div>');
+    tg.appendChild(UI.button({ label: 'Lista', variant: MODO_REUN === 'lista' ? undefined : 'ghost', onClick: function () { MODO_REUN = 'lista'; rerender(); } }));
+    tg.appendChild(UI.button({ label: 'Kanban', variant: MODO_REUN === 'kanban' ? undefined : 'ghost', onClick: function () { MODO_REUN = 'kanban'; rerender(); } }));
+    h.appendChild(tg);
+    card.appendChild(h);
+    if (!REUNV.length) {
+      card.appendChild(txt('div', 'pj-empty2', CAN_WRITE() ? 'Nenhuma reunião nesta visão — clique em "Nova reunião".' : 'Nenhuma reunião nesta visão.'));
+    } else if (MODO_REUN === 'kanban') {
+      card.appendChild(kanbanReunioes(REUNV));
+    } else {
+      REUNV.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })
+        .forEach(function (r) { renderReuniaoRow(r, card); });
+    }
+    bodyEl.appendChild(card);
+  }
+
+  /* F1-F · B7 — kanban de LEITURA: 3 colunas com status derivado
+     (K.statusReuniao — harness). Card abre a reunião completa em modal
+     (o MESMO fillReuniao da lista: zero lógica duplicada).             */
+  function kanbanReunioes(lista) {
+    var wrap = el('<div style="display:flex;gap:10px;align-items:flex-start;overflow-x:auto;margin-top:6px"></div>');
+    [['agendada', 'Agendadas'], ['andamento', 'Em andamento'], ['encerrada', 'Encerradas']].forEach(function (c) {
+      var itens = lista.filter(function (r) { return KPI.statusReuniao(r).chave === c[0]; })
+        .sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); });
+      var col = el('<div style="flex:1;min-width:220px;border:1px solid var(--border);border-radius:10px;padding:8px"></div>');
+      var ch = txt('div', 'pj-rrow-meta', c[1] + ' (' + itens.length + ')');
+      ch.style.fontWeight = '700';
+      col.appendChild(ch);
+      if (!itens.length) { col.appendChild(txt('div', 'pj-empty2', '—')); }
+      itens.forEach(function (r) {
+        var cd = el('<div style="border:1px solid var(--border);background:var(--s2);border-radius:8px;padding:8px;margin-top:6px;cursor:pointer"></div>');
+        cd.appendChild(txt('div', 'pj-dec-t', r.titulo || 'Reunião'));
+        cd.appendChild(txt('div', 'pj-dec-m', fmtBR(r.data) + ' · ' + (TIPO_LABEL[r.tipo] || r.tipo || '—') + ' · ' + ((r.decisoes || []).length) + ' decisão(ões)'));
+        cd.addEventListener('click', function () {
+          var boxM = el('<div></div>');
+          UI.modal({ title: (r.titulo || 'Reunião') + ' — ' + fmtBR(r.data), width: 760, body: [boxM] });
+          fillReuniao(r, boxM, null);
+        });
+        col.appendChild(cd);
+      });
+      wrap.appendChild(col);
+    });
+    return wrap;
+  }
+
+  /* ===================== PAUTA ===================== */
+  /* Pauta HONESTA (F1-E · 0.1 + 4.1): não mente no dia zero — só cobra setor
+     com previsto VENCIDO; setor em coleta é declarado; sigla morta é ignorada
+     e listada no rodapé; banda ISO 2 períodos consecutivos = ação obrigatória. */
+  function textoPauta() {
+    var m = KPI.computar(CTX);
+    var cls = KPI.pautaSetores(m.porSetor, m.setores, 80);
+    var mortaSet = {};
+    cls.mortas.forEach(function (sg) { mortaSet[sg] = true; });
+    var L = [];
+    L.push('PAUTA — REUNIÃO DE LÍDERES · ' + fmtBR(R.hojeISO()));
+    L.push('Janela dos indicadores: ' + fmtBR(m.janela.jIni) + ' a ' + fmtBR(m.janela.jFim));
+    L.push('');
+    L.push('1) ATRASADAS POR SETOR (' + m.totais.atrasadas + ' no total)');
+    var comAtraso = m.porSetor.filter(function (s) { return s.atrasadas > 0 && !mortaSet[s.sig]; });
+    if (!comAtraso.length) { L.push('   — nenhuma atrasada. '); }
+    comAtraso.forEach(function (s) {
+      L.push('   · ' + KPI.nomeSetor(s.sig, m.setores) + ' (' + s.sig + '): ' + s.atrasadas +
+        ' atrasada(s) · aderência ' + (s.aderencia == null ? '—' : s.aderencia + '%') +
+        ' · aging médio ' + String(s.agingMedio).replace('.', ',') + 'd');
+    });
+    L.push('');
+    L.push('2) SETORES ABAIXO DA BANDA (aderência < 80% com previsto VENCIDO)');
+    if (!cls.abaixo.length) { L.push('   — nenhum setor abaixo da banda.'); }
+    cls.abaixo.forEach(function (s) {
+      var bc = KPI.bandaConsecutiva(SNAPS, s.sig, 80);
+      var etiqueta = bc.obrigatoria ? ' — AÇÃO OBRIGATÓRIA (2 períodos consecutivos abaixo da banda)'
+        : (bc.atencao ? ' — atenção (1º período abaixo)' : '');
+      L.push('   · ' + KPI.nomeSetor(s.sig, m.setores) + ' (' + s.sig + '): aderência ' + s.aderencia + '% · ' + s.prevVencidas + ' previsto(s) vencido(s)' + etiqueta);
+    });
+    if (cls.coletando.length) {
+      L.push('   Em coleta (nada venceu ainda — medir no próximo período): ' + cls.coletando.map(function (s) { return s.sig; }).join(', '));
+    }
+    L.push('');
+    L.push('3) GARGALOS (score 50/30/20)');
+    var base = m.porSetor.filter(function (s) { return s.sig !== '—' && (s.prevVencidas || 0) > 0 && !mortaSet[s.sig]; }).map(function (s) {
+      return { sigla: s.sig, ader: s.aderencia == null ? 0 : s.aderencia, atrasadas: s.atrasadas, agingMedio: s.agingMedio || 0, carga: s.carga || 0 };
+    });
+    var gg = KPI._gargalos(base);
+    if (!gg.length) { L.push('   — nenhum gargalo detectado (só conta setor com previsto vencido).'); }
+    gg.forEach(function (g) { L.push('   · ' + g.sigla + ' — ' + g.motivo); });
+    L.push('');
+    L.push('4) DECISÕES ABERTAS (rollforward)');
+    var nAb = 0;
+    REUN.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (r) {
+      (r.decisoes || []).forEach(function (d) {
+        if (d.aberta === true) {
+          nAb++;
+          L.push('   · ' + d.texto + ' — dono: ' + (d.donoNome || nomeUser(d.donoUid) || '—') +
+            ' · prazo ' + fmtBR(d.prazo) + ' · reunião ' + fmtBR(r.data));
+        }
+      });
+    });
+    if (!nAb) { L.push('   — nenhuma decisão aberta.'); }
+    L.push('');
+    L.push('5) APROVAÇÕES DE DATA PENDENTES (' + PENDS.length + ')');
+    if (!PENDS.length) { L.push('   — nenhuma pendente.'); }
+    PENDS.forEach(function (s) {
+      L.push('   · ' + (s.tituloAtividade || s.atividadeId) + ': ' + fmtBR(s.dataAtual) + ' → ' + fmtBR(s.dataProposta) +
+        ' (' + (s.solicitanteNome || '—') + ')');
+    });
+    if (cls.mortas.length) {
+      L.push('');
+      L.push('Obs.: siglas fora do cadastro ativo foram ignoradas (' + cls.mortas.join(', ') + ') — limpe na Zona de manutenção em Setores.');
+    }
+    return L.join('\n');
+  }
+
+  /* modalPauta(reuniaoAlvo, done) — F1-F · B3 (formulário de pauta):
+     COM alvo → 4 seções:
+       1) indicadores VERMELHOS do recorte, pré-marcados: setor abaixo da
+          banda, setor com atrasada e decisão VENCIDA rolando p/ esta
+          reunião. Recorte: departamento = escopoLider(setorSigla);
+          líderes / integrada / resultado_mensal / sem tipo = escola toda.
+       2) sugestões de CASCATA pendentes deste destino, pré-marcadas:
+          aceitar grava status "aceita" + consumidaPorReuniaoId e tira da
+          fila; desmarcada continua pendente.
+       3) ROLLFORWARD informativo (sem checkbox): esses itens entram no
+          bloco 4 da reunião com ou sem pauta; vencida marcada na seção 1
+          não repete aqui no texto gerado (zero duplicação, zero omissão).
+       4) itens LIVRES + check "candidato a indicador" (grava também em
+          pauta_sugestoes com candidatoIndicador:true, já consumida, p/ a
+          fila da Inteligência).
+     Gerar substitui os itens GERADOS anteriores (origem preenchida) e
+     preserva os manuais (sem origem). Premissa F1-E declarada: pautaItens
+     é gated por canWrite — perfil "usuario" não gera pauta nesta fase.
+     SEM alvo (botão da raiz) → comportamento antigo: textarea global da
+     reunião de líderes + Copiar (seções 2-4 exigem reunião de destino). */
+  function modalPauta(reuniaoAlvo, done) {
+    if (!reuniaoAlvo) {
+      var taG = document.createElement('textarea');
+      taG.className = 'pj-pauta';
+      taG.value = textoPauta();
+      UI.modal({
+        title: 'Pauta da reunião de líderes', width: 640,
+        body: [taG],
+        footer: function (close) {
+          return [UI.button({ label: 'Fechar', variant: 'ghost', onClick: close }),
+            UI.button({ label: 'Copiar', icon: 'check', onClick: function () { copiarTexto(taG.value, 'Pauta copiada.'); } })];
+        }
+      });
+      return;
+    }
+    var r = reuniaoAlvo;
+    var hoje = R.hojeISO();
+    var m = KPI.computar(CTX);
+    var cls = KPI.pautaSetores(m.porSetor, m.setores, 80);
+    var mortaSet = {};
+    cls.mortas.forEach(function (sg) { mortaSet[sg] = true; });
+
+    var recorte = null;
+    if (r.tipo === 'departamento' && r.setorSigla) {
+      recorte = {};
+      KPI.escopoLider([r.setorSigla], (CTX && CTX.setores) || []).forEach(function (sg) { recorte[sg] = true; });
+    }
+    function noRecorte(sig) { return !recorte || recorte[sig] === true; }
+    var nomeRecorte = recorte ? ('setor ' + r.setorSigla + ' + subsetores') : 'escola toda';
+
+    /* seção 1 — indicadores vermelhos (roladoIdx marca decisão vencida p/ não duplicar no bloco 3) */
+    var inds = [];
+    cls.abaixo.forEach(function (s) {
+      if (!noRecorte(s.sig)) { return; }
+      var bc = KPI.bandaConsecutiva(SNAPS, s.sig, 80);
+      var extra = bc.obrigatoria ? ' — AÇÃO OBRIGATÓRIA (2 períodos abaixo da banda)' : (bc.atencao ? ' — atenção (1º período)' : '');
+      inds.push({ texto: 'Aderência abaixo da banda: ' + KPI.nomeSetor(s.sig, m.setores) + ' (' + s.sig + ') ' + s.aderencia + '% · ' + s.prevVencidas + ' previsto(s) vencido(s)' + extra });
+    });
+    m.porSetor.forEach(function (s) {
+      if (mortaSet[s.sig] || !noRecorte(s.sig)) { return; }
+      if ((s.atrasadas || 0) > 0) {
+        inds.push({ texto: 'Atrasadas em ' + KPI.nomeSetor(s.sig, m.setores) + ' (' + s.sig + '): ' + s.atrasadas + ' · aging médio ' + String(s.agingMedio).replace('.', ',') + 'd' });
+      }
+    });
+    var rolados = itensRolados(r);
+    rolados.forEach(function (g, gi) {
+      if (g.st.chave !== 'vencida') { return; }
+      inds.push({ roladoIdx: gi, texto: 'Decisão VENCIDA: ' + g.dec.texto + ' — ' + (g.dec.donoNome || nomeUser(g.dec.donoUid) || '—') + ' · prazo ' + fmtBR(g.dec.prazo) + ' · reunião ' + fmtBR(g.reuniao.data) });
+    });
+
+    /* seção 2 — cascata pendente deste destino */
+    var sugsDest = SUGS.filter(function (g) {
+      if ((g.destinoTipo || null) !== (r.tipo || null)) { return false; }
+      if (r.tipo === 'departamento' && (g.destinoSetorSigla || null) !== (r.setorSigla || null)) { return false; }
+      return true;
+    });
+
+    var bodyF = el('<div style="max-height:60vh;overflow:auto"></div>');
+    var h0 = el('<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"></div>');
+    h0.appendChild(txt('div', 'pj-card-t', 'Gerar pauta — ' + (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + fmtBR(r.data)));
+    h0.appendChild(iBtn('Como esta pauta é montada', [
+      ['Recorte', nomeRecorte + ' (departamento usa o setor + subsetores; os demais tipos e reunião sem tipo olham a escola toda).'],
+      ['Seção 1', 'Vermelhos da janela ' + fmtBR(m.janela.jIni) + ' a ' + fmtBR(m.janela.jFim) + ': aderência < 80% com previsto vencido (banda), atrasadas > 0 por setor e decisões vencidas que rolam p/ esta reunião. Pré-marcados — desmarque o que não entra.'],
+      ['Seção 2', 'Sugestões encaminhadas de outras reuniões p/ este destino. Aceitar grava "aceita" e tira da fila; desmarcada continua pendente.'],
+      ['Seção 3', 'Rollforward informativo: os itens já entram no bloco 4 da reunião. Vencida marcada na seção 1 não repete no texto.'],
+      ['Seção 4', 'Itens livres. "Candidato a indicador" também grava na fila da Inteligência (pauta_sugestoes).'],
+      ['Gravação', 'Gerar substitui os itens gerados anteriores (com origem) e preserva os adicionados à mão. pautaItens exige perfil com escrita (canWrite).']
+    ]));
+    bodyF.appendChild(h0);
+
+    function secao(titulo) {
+      var c = el('<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)"></div>');
+      c.appendChild(txt('div', 'pj-dec-t', titulo));
+      return c;
+    }
+
+    var marc1 = [];
+    var s1 = secao('1) Indicadores vermelhos (' + inds.length + ') — pré-marcados');
+    if (!inds.length) { s1.appendChild(txt('div', 'pj-empty2', 'Nenhum indicador vermelho no recorte (' + nomeRecorte + ').')); }
+    inds.forEach(function (it, ix) {
+      marc1[ix] = true;
+      var lin = el('<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0"></div>');
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+      cb.addEventListener('change', function () { marc1[ix] = cb.checked; });
+      lin.appendChild(cb);
+      lin.appendChild(txt('div', '', it.texto));
+      s1.appendChild(lin);
+    });
+    bodyF.appendChild(s1);
+
+    var marc2 = {};
+    var s2 = secao('2) Sugestões de cascata p/ este destino (' + sugsDest.length + ') — pré-marcadas');
+    if (!sugsDest.length) { s2.appendChild(txt('div', 'pj-empty2', 'Nenhuma sugestão pendente p/ este destino.')); }
+    sugsDest.forEach(function (g) {
+      marc2[g.id] = true;
+      var lin = el('<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0"></div>');
+      var cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = true;
+      cb.addEventListener('change', function () { marc2[g.id] = cb.checked; });
+      lin.appendChild(cb);
+      var mn = el('<div style="flex:1"></div>');
+      mn.appendChild(txt('div', '', g.texto || '(sem texto)'));
+      var idade = g.criadoEm ? R.diasEntre(R.toISO(new Date(Number(g.criadoEm))), hoje) : null;
+      mn.appendChild(txt('div', 'pj-dec-m', 'Origem: ' + (g.origem && g.origem.data ? fmtBR(g.origem.data) : '—') + (idade == null ? '' : ' · pendente há ' + idade + 'd') + (g.candidatoIndicador ? ' · candidato a indicador' : '')));
+      lin.appendChild(mn);
+      s2.appendChild(lin);
+    });
+    bodyF.appendChild(s2);
+
+    var s3 = secao('3) Rollforward — itens que rolam p/ esta reunião (' + rolados.length + ') · informativo');
+    if (!rolados.length) { s3.appendChild(txt('div', 'pj-empty2', 'Nada rolando de reuniões anteriores.')); }
+    rolados.forEach(function (g) {
+      s3.appendChild(txt('div', 'pj-dec-m', '· [' + g.st.rotulo + '] ' + g.dec.texto + ' — ' + (g.dec.donoNome || nomeUser(g.dec.donoUid) || '—') + ' · reunião ' + fmtBR(g.reuniao.data)));
+    });
+    if (rolados.length) { s3.appendChild(txt('div', 'pj-dec-m', 'Esses itens entram no bloco Rollforward da reunião com ou sem pauta.')); }
+    bodyF.appendChild(s3);
+
+    var livres = [];
+    var s4 = secao('4) Itens livres');
+    var lvLista = el('<div></div>');
+    s4.appendChild(lvLista);
+    function pintaLivres() {
+      lvLista.innerHTML = '';
+      livres.forEach(function (lv, ix) {
+        var lin = el('<div style="display:flex;align-items:center;gap:8px;padding:2px 0"></div>');
+        lin.appendChild(txt('div', '', '· ' + lv.texto + (lv.candidato ? ' — candidato a indicador' : '')));
+        var bx = txt('button', 'pj-back', '×'); bx.type = 'button'; bx.title = 'Remover';
+        bx.addEventListener('click', function () { livres.splice(ix, 1); pintaLivres(); });
+        lin.appendChild(bx);
+        lvLista.appendChild(lin);
+      });
+    }
+    var lvInp = UI.input({ placeholder: 'Novo item de pauta' });
+    lvInp.style.flex = '1';
+    var lvCand = document.createElement('input'); lvCand.type = 'checkbox';
+    var lvLab = el('<label style="display:flex;align-items:center;gap:4px;white-space:nowrap;color:var(--muted);cursor:pointer"></label>');
+    lvLab.appendChild(lvCand);
+    lvLab.appendChild(document.createTextNode('candidato a indicador'));
+    var lvWrap = el('<div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap"></div>');
+    lvWrap.appendChild(lvInp); lvWrap.appendChild(lvLab);
+    lvWrap.appendChild(UI.button({ label: 'Adicionar', variant: 'ghost', onClick: function () {
+      var t = lvInp.value.trim();
+      if (!t) { toast('Escreva o item.', 'err'); return; }
+      livres.push({ texto: t, candidato: lvCand.checked });
+      lvInp.value = ''; lvCand.checked = false; pintaLivres();
+    } }));
+    s4.appendChild(lvWrap);
+    bodyF.appendChild(s4);
+
+    UI.modal({
+      title: 'Pauta — formulário', width: 720,
+      body: [bodyF],
+      footer: function (close) {
+        var btns = [UI.button({ label: 'Fechar', variant: 'ghost', onClick: close })];
+        if (CAN_WRITE() && !r.encerradaEm) {
+          btns.push(UI.button({ label: 'Gerar pauta', onClick: function () {
+            var gerados = [];
+            var vencidaMarcada = {};
+            inds.forEach(function (it, ix) {
+              if (!marc1[ix]) { return; }
+              if (it.roladoIdx != null) { vencidaMarcada[it.roladoIdx] = true; }
+              gerados.push({ texto: it.texto, origem: 'indicador', uid: USER.uid, nome: USER.name || USER.nome || '' });
+            });
+            var aceitas = sugsDest.filter(function (g) { return marc2[g.id]; });
+            aceitas.forEach(function (g) { gerados.push({ texto: g.texto, origem: 'sugestao', uid: USER.uid, nome: USER.name || USER.nome || '' }); });
+            rolados.forEach(function (g, gi) {
+              if (vencidaMarcada[gi]) { return; }
+              gerados.push({ texto: '[rollforward · ' + g.st.rotulo + '] ' + g.dec.texto, origem: 'rollforward', uid: USER.uid, nome: USER.name || USER.nome || '' });
+            });
+            livres.forEach(function (lv) { gerados.push({ texto: lv.texto + (lv.candidato ? ' (candidato a indicador)' : ''), origem: 'livre', uid: USER.uid, nome: USER.name || USER.nome || '' }); });
+            var manuais = (r.pautaItens || []).filter(function (it) { return !it.origem; });
+            var novoI = manuais.concat(gerados);
+            var L = [];
+            L.push('PAUTA — ' + (TIPO_LABEL[r.tipo] || 'Reunião') + (r.titulo ? ' · ' + r.titulo : '') + ' · ' + fmtBR(r.data) + (r.horaPrevista ? ' às ' + r.horaPrevista : ''));
+            L.push('Recorte: ' + nomeRecorte + ' · janela ' + fmtBR(m.janela.jIni) + ' a ' + fmtBR(m.janela.jFim));
+            L.push('');
+            function bloco(titulo, arr) {
+              L.push(titulo);
+              if (!arr.length) { L.push('   — nada.'); }
+              arr.forEach(function (t2) { L.push('   · ' + t2); });
+              L.push('');
+            }
+            function soOrigem(o) { return gerados.filter(function (g) { return g.origem === o; }).map(function (g) { return g.texto; }); }
+            bloco('1) INDICADORES', soOrigem('indicador'));
+            bloco('2) CASCATA (sugestões aceitas)', soOrigem('sugestao'));
+            bloco('3) ROLLFORWARD', soOrigem('rollforward'));
+            bloco('4) ITENS LIVRES', soOrigem('livre'));
+            var texto = L.join('\n');
+            var candDocs = livres.filter(function (lv) { return lv.candidato; }).map(function (lv) {
+              return { texto: lv.texto, candidatoIndicador: true, status: 'aceita', consumidaPorReuniaoId: r.id,
+                destinoTipo: r.tipo || null, destinoSetorSigla: r.setorSigla || null,
+                origem: { reuniaoId: r.id, tipo: r.tipo || null, data: r.data || null, titulo: r.titulo || null } };
+            });
+            var passos = [Store.atualizarReuniao(r.id, { pautaTexto: texto, pautaGeradaEm: Date.now(), pautaItens: novoI }, 'pauta_gerada')];
+            if (aceitas.length) {
+              passos.push(Promise.all(aceitas.map(function (g) {
+                return Store.atualizarSugestaoPauta(g.id, { status: 'aceita', consumidaPorReuniaoId: r.id }, 'aceitar_pauta_sugestao');
+              })));
+            }
+            if (candDocs.length) { passos.push(Store.criarSugestoesPauta(candDocs)); }
+            Promise.all(passos).then(function () {
+              r.pautaTexto = texto; r.pautaGeradaEm = Date.now(); r.pautaItens = novoI;
+              if (aceitas.length) {
+                var ids = aceitas.map(function (g) { return g.id; });
+                SUGS = SUGS.filter(function (g) { return ids.indexOf(g.id) < 0; });
+              }
+              if (done) { done(texto); }
+              close();
+              toast('Pauta gerada' + (aceitas.length ? ' · ' + aceitas.length + ' sugestão(ões) aceita(s)' : '') + (candDocs.length ? ' · ' + candDocs.length + ' candidato(s) a indicador' : '') + '.');
+            }).catch(function (e) { toast(e.message, 'err'); });
+          } }));
+        }
+        return btns;
+      }
+    });
+  }
+
+  /* ===================== MODAL: PROJETO ===================== */
+  /* ===================== ESTADOS / BOOT ===================== */
+  function renderLoading() {
+    bodyEl.innerHTML = '';
+    var s = el('<div class="pj-state"><div class="pj-state-t">Carregando…</div><div class="pj-state-s">Buscando reuniões e o board de atividades.</div></div>');
+    bodyEl.appendChild(s);
+  }
+  function renderError(e) {
+    bodyEl.innerHTML = '';
+    var s = el('<div class="pj-state"></div>');
+    s.appendChild(txt('div', 'pj-state-t', 'Não deu para carregar'));
+    s.appendChild(txt('div', 'pj-state-s', (e && e.message) || 'Erro desconhecido.'));
+    var rb = UI.button({ label: 'Tentar de novo', icon: 'upload' });
+    rb.addEventListener('click', reload);
+    s.appendChild(rb);
+    bodyEl.appendChild(s);
+  }
+
+  function rerender() { renderRoot(); }
+
+  function reload() {
+    renderLoading();
+    return Promise.all([
+      KPI.carregar('band'),
+      Store.listReunioes(),
+      Store.listUsuariosAtivos(),
+      Store.listSolicPendentes(),
+      KPI.lerSnapshots(R.hojeISO()).catch(function () { return []; }),
+      Store.listSugestoesPauta()
+    ]).then(function (r) {
+      CTX = r[0]; REUN = r[1];
+      USERS = r[2]; PENDS = r[3]; SNAPS = r[4] || [];
+      SUGS = (r[5] || []).filter(function (g) { return g.status === 'pendente'; }); /* F1-F · B4 */
+      OLD_OCC = null; /* F1-F · B2: reload zera o cache da varredura */
+      rerender();
+    }).catch(function (e) { renderError(e); });
+  }
+
+  function boot() {
+    POP = document.getElementById('pj-pop');
+    BACK = document.getElementById('pj-backdrop');
+    BACK.addEventListener('click', closePop);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    titleEl = document.getElementById('pj-title');
+    actionsEl = document.getElementById('pj-actions');
+    bodyEl = document.getElementById('pj-body');
+    var app = document.getElementById('app');
+    /* R4·B2: sem abas nem hash — a tela é 100% Reuniões. Links antigos
+       com #reunioes seguem funcionando (o hash é simplesmente ignorado). */
+    app.insertBefore(UI.sidebar({ active: 'Reuniões', user: USER }), app.firstChild);
+    reload();
+  }
+
+  Guard.onReady(function (u) { USER = u; boot(); });
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

@@ -71,10 +71,28 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ---------- projetos ----------
+    // ---------- projetos (LEGADO — R4-B2) ----------
+    // "Projeto" nao existe mais: nenhuma tela escreve aqui. A leitura
+    // fica SO para o admin, porque o backup do gestor (importacao.html,
+    // BK_COLS) percorre a colecao em cadeia sem catch por colecao —
+    // negar a leitura derrubaria o backup inteiro. Escrita: morta.
     match /projetos/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ---------- planejamentos (R4-B3: 5W2H mensal do lider) ----------
+    // 1 doc por setor+competencia. Leitura ABERTA a todo ativo
+    // (prestacao de contas publica — RESUMO §4). Escrita = canWrite;
+    // a alcada R$200 (item >R$200 exige aprovLider E aprovGestor) e a
+    // autoria da assinatura sao aplicadas no cliente e auditadas no
+    // atividade_log — granularidade por item de array nao e modelavel
+    // nas rules sem explodir o doc (registrado no HANDOFF R4).
+    match /planejamentos/{id} {
       allow read: if isActive();
-      allow write: if canWrite();
+      allow create: if canWrite();
+      allow update: if canWrite();
+      allow delete: if false; // soft-delete sempre (ativo:false)
     }
 
     // ---------- atividades ----------
