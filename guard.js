@@ -38,14 +38,14 @@
 
   /* destinos LIVE (telas que já existem no repo do Grau).
      Qualquer item da sidebar fora desta lista mostra "em breve". */
-  var LIVE = { 'Hoje': 'hoje.html', 'Projetos': 'projetos.html', 'Reuniões': 'projetos.html#reunioes', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
+  var LIVE = { 'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
 
   /* Fase 1 RBAC — nav visível por PERFIL (papel novo). Rótulos = data-nav (iguais
      ao LIVE). 'gestor' NÃO entra no mapa => vê tudo. Recorte é por EXIBIÇÃO
      (Caminho C): a borda de escrita real fica nas Regras do Firestore. */
   var NAV_BY_PERFIL = {
-    lider:   { 'Hoje': 1, 'Atividades': 1, 'Projetos': 1, 'Reuniões': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Glossário': 1 },
-    usuario: { 'Hoje': 1, 'Atividades': 1, 'Projetos': 1, 'Eventos': 1, 'Glossário': 1 }
+    lider:   { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Glossário': 1 },
+    usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Eventos': 1, 'Glossário': 1 }
   };
 
   /* ---------- iniciais a partir do nome ---------- */
@@ -156,21 +156,35 @@
       item.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M8 3v4M16 3v4M3 10h18"></path></svg><span>Eventos</span>';
       ref.parentNode.insertBefore(item, ref.nextSibling);
     })();
-    /* F1-E (B5): injeta "Reuniões" logo após "Projetos" — promove a visão
-       que vivia atrás do toggle em projetos.html a item próprio (grupo
-       GESTÃO). Destino = projetos.html#reunioes; o hash liga a aba lá.
-       Ativo quando estamos em projetos.html COM o hash de reuniões
-       (senão o item Projetos assume). Idempotente.                     */
+    /* F1-E (B5) + R4·B2: injeta "Reuniões" na sidebar. Âncora = item base
+       "Projetos" do ui.js (append-only — não dá para removê-lo lá); a poda
+       por LIVE (abaixo) remove o "Projetos" logo em seguida e "Reuniões"
+       assume o lugar dele. Destino = projetos.html (a tela agora É a casa
+       da reunião — "Projeto" não existe). Idempotente.                  */
     (function injectReunioes() {
       if (document.querySelector('.ui-nav[data-nav="Reuniões"]')) { return; }
       var ref = document.querySelector('.ui-nav[data-nav="Projetos"]');
       if (!ref || !ref.parentNode) { return; }
       var item = document.createElement('div');
-      var ativo = window.location.pathname.indexOf('projetos.html') >= 0 &&
-                  String(window.location.hash || '').indexOf('reunioes') >= 0;
+      var ativo = window.location.pathname.indexOf('projetos.html') >= 0;
       item.className = 'ui-nav' + (ativo ? ' active' : '');
       item.setAttribute('data-nav', 'Reuniões');
       item.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>Reuniões</span>';
+      ref.parentNode.insertBefore(item, ref.nextSibling);
+    })();
+    /* R4·B3: injeta "Planejamento" logo após "Reuniões" (injetada acima —
+       a âncora sempre existe neste ponto). Visível a TODOS os perfis:
+       o Planejamento do Setor é prestação de contas pública (RESUMO §4).
+       Idempotente. */
+    (function injectPlanejamento() {
+      if (document.querySelector('.ui-nav[data-nav="Planejamento"]')) { return; }
+      var ref = document.querySelector('.ui-nav[data-nav="Reuniões"]');
+      if (!ref || !ref.parentNode) { return; }
+      var item = document.createElement('div');
+      var ativo = window.location.pathname.indexOf('planejamento.html') >= 0;
+      item.className = 'ui-nav' + (ativo ? ' active' : '');
+      item.setAttribute('data-nav', 'Planejamento');
+      item.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 13l2 2 4-4"></path></svg><span>Planejamento</span>';
       ref.parentNode.insertBefore(item, ref.nextSibling);
     })();
     /* C2: injeta "Glossário" e "Riscos" depois de Performance (mesma regra

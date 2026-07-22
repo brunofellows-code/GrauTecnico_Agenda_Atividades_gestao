@@ -236,6 +236,17 @@
 .at-date:disabled{color:var(--muted);background:var(--s3);cursor:not-allowed}
 .at-row2{display:flex;gap:12px;flex-wrap:wrap}
 .at-row2>*{flex:1;min-width:150px}
+.at-subs{margin:10px 0 4px 14px;border-left:2px solid var(--border);padding-left:14px}
+.at-sub{display:flex;align-items:center;gap:10px;padding:6px 0}
+.at-sub-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at-sub-sel{appearance:none;font-family:inherit;font-size:12px;font-weight:700;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer}
+.at-sub-x{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:2px;display:inline-flex}
+.at-sub-x:hover{color:var(--red)}
+.at-addsub{display:flex;gap:8px;margin-top:8px}
+.at-addsub .ui-input{flex:1}
+.at-i{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:2px;display:inline-flex;align-items:center}
+.at-i:hover{color:var(--text)}
+.at-subchip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;color:var(--doing);background:var(--chipBg);border:0;border-radius:20px;padding:2px 8px;cursor:pointer;font-family:inherit}
 .at-recbox{display:flex;flex-direction:column;gap:14px;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px}
 .at-grp{display:flex;flex-direction:column;gap:12px}
 .at-wdays{display:flex;gap:7px;flex-wrap:wrap}
@@ -342,6 +353,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="cascade.js"></script>
   <script src="ctx.js"></script>
   <script src="catalogo.js"></script>
   <script src="lentes.js"></script>
@@ -426,15 +438,39 @@
           }).catch(function (e) { throw ferr(e); });
         },
 
-        /* N4: projetos ativos p/ o vínculo opcional da atividade. */
-        listProjetosAtivos: function () {
+        /* R4-B2: subtarefas migraram do detalhe do projeto (morto) para ca.
+           Hierarquia travada: Atividade -> Subtarefa, cascade de % (cascade.js).
+           1 query GLOBAL, agrupada por atividadeId no cliente (decisao 2.8). */
+        listSubtarefas: function () {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
-            var q = f.query(f.collection(db, 'projetos'), f.where('ativo', '==', true), f.limit(200));
-            return f.getDocs(q).then(function (snap) {
-              var a = []; snap.forEach(function (d) { a.push({ id: d.id, nome: (d.data() || {}).nome || '(sem nome)' }); });
-              a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
-              return a;
+            var q = f.query(f.collection(db, 'subtarefas'), f.where('ativo', '==', true), f.limit(2000));
+            return f.getDocs(q).then(mapDocs);
+          }).catch(function (e) { throw ferr(e); });
+        },
+        criarSubtarefa: function (atividadeId, texto, ordem) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            var doc = { atividadeId: atividadeId, texto: texto, pct: 0, ordem: ordem, ativo: true, criadoEm: Date.now() };
+            return f.addDoc(f.collection(db, 'subtarefas'), doc).then(function (ref) {
+              api.log({ acao: 'criar_subtarefa', entidade: 'subtarefa', refId: ref.id, antes: null, depois: doc });
+              return ref.id;
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+        atualizarSubtarefa: function (id, patch, antes) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            return f.updateDoc(f.doc(db, 'subtarefas', id), patch).then(function () {
+              api.log({ acao: 'editar_subtarefa', entidade: 'subtarefa', refId: id, antes: antes || null, depois: patch });
+            });
+          }).catch(function (e) { throw ferr(e); });
+        },
+        inativarSubtarefa: function (id) {
+          return fb().then(function (c) {
+            var db = c.db, f = c.f;
+            return f.updateDoc(f.doc(db, 'subtarefas', id), { ativo: false }).then(function () {
+              api.log({ acao: 'inativar_subtarefa', entidade: 'subtarefa', refId: id, antes: { ativo: true }, depois: { ativo: false } });
             });
           }).catch(function (e) { throw ferr(e); });
         },
@@ -480,7 +516,7 @@
           return fb().then(function (c) {
             var db = c.db, f = c.f, now = Date.now();
             var doc = Object.assign({}, data, {
-              projetoSigla: null, ativo: true, criadoPor: uid, criadoEm: now, atualizadoEm: now
+              ativo: true, criadoPor: uid, criadoEm: now, atualizadoEm: now /* R4-B2: projetoSigla morreu */
             });
             return f.addDoc(f.collection(db, 'atividades'), doc).then(function (ref) {
               api.log({ acao: 'criar_atividade', entidade: 'atividade', refId: ref.id, antes: null, depois: doc });
@@ -639,7 +675,8 @@
     var ATIV = [];         /* TODAS as atividades ativas (filtro de setor é em memória) */
     var USERS = [];        /* usuários ativos p/ picker (pode vir vazio sem permissão) */
     var USERS_ALL = [];    /* F1-H: lista completa p/ a cadeia de supervisor (o gestor pode estar fora do escopo do líder) */
-    var PROJETOS = [];     /* N4: projetos ativos p/ vínculo opcional */
+    var SUBS = {};         /* R4-B2: atividadeId -> [subtarefas] (cascade mora aqui) */
+    var CC = window.GrautCascade; /* motor puro do % (cascade.js) — CC para nao colidir com o C do catalogo */
     var OCC_DOCS = [];     /* docs de ocorrencias na janela */
     var OCC_BY_ATIV = {};  /* atividadeId -> [override docs] */
     var PEND = [];         /* solicitacoes pendentes */
@@ -695,7 +732,7 @@
     }
 
     function safeUsers() { return Store.listUsuariosAtivos().catch(function () { return []; }); }
-    function safeProjetos() { return Store.listProjetosAtivos().catch(function () { return []; }); }
+    function safeSubs() { return Store.listSubtarefas().catch(function () { return []; }); }
 
     function indexOcc() {
       OCC_BY_ATIV = {};
@@ -716,9 +753,11 @@
     function load() {
       toolbarEl.innerHTML = '';
       renderLoading();
-      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers(), safeProjetos()])
+      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers(), safeSubs()])
         .then(function (res) {
-          SETORES = res[0]; ATIV = res[1]; PROJETOS = res[3];
+          SETORES = res[0]; ATIV = res[1];
+          SUBS = {};
+          res[3].forEach(function (sb) { (SUBS[sb.atividadeId] = SUBS[sb.atividadeId] || []).push(sb); });
           /* F1-D(b): líder enxerga só os liderados do escopo; gestor vê todos. */
           USERS_ALL = res[2]; /* F1-H */
           USERS = KPI.usuariosNoEscopo(res[2], CURRENT_USER, SETORES);
@@ -1085,6 +1124,18 @@
       if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
       /* F1-H: supervisor visível no card (rastreabilidade de quem acompanha) */
       if (o.act.supervisorNome) { var sv = el('<span class="at-mi"></span>'); sv.appendChild(ico(PATH.user, 12)); sv.appendChild(document.createTextNode('Sup.: ' + o.act.supervisorNome)); into.appendChild(sv); }
+      /* R4-B2: subtarefas da atividade — n + % (media, cascade.js). Chip
+         clicavel abre o modal (leitura p/ todos; edicao so p/ quem escreve). */
+      (function () {
+        var sl = SUBS[o.act.id] || [];
+        if (!sl.length) { return; }
+        var pc = CC.pctAtividade({ subtarefas: sl });
+        var sc = txt('button', 'at-subchip', sl.length + ' sub · ' + pc + '%');
+        sc.type = 'button';
+        sc.title = 'Subtarefas: ' + sl.length + ' · % da atividade = media dos % das subtarefas (cascade). Clique para abrir.';
+        sc.addEventListener('click', function (ev) { ev.stopPropagation(); modalSubtarefas(o.act); });
+        into.appendChild(sc);
+      })();
       if (o.act.origemTipo === 'reuniao' || (o.act.origem && o.act.origem.tipo === 'reuniao')) {
         var rg = txt('span', 'at-tag', 'Reunião'); rg.style.color = 'var(--doing)'; rg.style.background = 'var(--chipBg)';
         var og = o.act.origem || {};
@@ -1538,11 +1589,81 @@
       row('Reprogramar esta ocorrência', canApproveDirect(o.act) ? 'Aplica direto (você é dono/Admin)' : 'Cria um pedido para o dono aprovar', PATH.calendar, false, function () { reprogramarEstaModal(o); });
       if (skip) { row('Retomar', 'Tira de “pulada” e volta a pendente', PATH.play, false, function () { retomar(o); }); }
       else if (!done) { row('Pular esta ocorrência', null, PATH.skip, false, function () { pular(o); }); }
+      row('Subtarefas', 'Quebre em passos com % — a média vira o % da atividade', PATH.check, false, function () { modalSubtarefas(o.act); });
       row('Editar só esta ocorrência', 'Muda título/horário apenas deste dia', PATH.pencil, false, function () { editarEstaModal(o); });
       row('Editar a atividade (todas)', 'Altera a regra e as ocorrências futuras', PATH.repeat, false, function () { openEditor(o.act); });
       row('Inativar atividade', 'Some das listas; histórico preservado', PATH.archive, true, function () { inativarAtividade(o.act); });
 
       var m = UI.modal({ title: o.titulo, width: 440, body: function () { var box = el('<div class="at-actsheet"></div>'); rows.forEach(function (r) { box.appendChild(r); }); return box; } });
+    }
+
+    /* ----- subtarefas da atividade (R4-B2: migradas do detalhe do projeto) -----
+       Cascade travado (RESUMO 106): Atividade -> Subtarefa; % da atividade =
+       media dos % das subtarefas (cascade.js, mesmo motor de antes). Leitura
+       para todos; edicao respeita CAN_WRITE. Toda mutacao vai ao atividade_log. */
+    function modalSubtarefas(act) {
+      var body = el('<div></div>');
+      var m = UI.modal({ title: 'Subtarefas — ' + (act.titulo || '(sem título)'), width: 480, body: function () { return body; } });
+      function draw() {
+        body.innerHTML = '';
+        var subs = (SUBS[act.id] || []).slice().sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0); });
+        var pc = subs.length ? CC.pctAtividade({ subtarefas: subs }) : 0;
+        var head = el('<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"></div>');
+        head.appendChild(txt('div', 'at-gname', subs.length ? (pc + '% concluído') : 'Sem subtarefas'));
+        var ib = el('<button class="at-i" type="button" aria-label="Como o % é calculado"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
+        ib.title = 'Fórmula: % da atividade = média aritmética dos % das subtarefas (0/25/50/75/100), arredondada — cascade.js. Dados: coleção subtarefas (ativas) desta atividade. Números: ' + subs.map(function (x) { return (x.pct || 0) + '%'; }).join(' + ') + (subs.length ? ' ÷ ' + subs.length + ' = ' + pc + '%' : '');
+        head.appendChild(ib);
+        body.appendChild(head);
+        var wrap = el('<div class="at-subs"></div>');
+        subs.forEach(function (sb) {
+          var line = el('<div class="at-sub"></div>');
+          line.appendChild(txt('div', 'at-sub-t', sb.texto || '(sem texto)'));
+          var sel = document.createElement('select');
+          sel.className = 'at-sub-sel';
+          [0, 25, 50, 75, 100].forEach(function (v) { var op = document.createElement('option'); op.value = String(v); op.textContent = v + '%'; sel.appendChild(op); });
+          sel.value = String(sb.pct || 0);
+          sel.disabled = !CAN_WRITE;
+          sel.addEventListener('change', function () {
+            var novo = parseInt(sel.value, 10);
+            Store.atualizarSubtarefa(sb.id, { pct: novo }, { pct: sb.pct })
+              .then(function () { sb.pct = novo; toast('Subtarefa atualizada.'); draw(); refresh(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          });
+          line.appendChild(sel);
+          if (CAN_WRITE) {
+            var x = el('<button class="at-sub-x" type="button" aria-label="Remover"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>');
+            x.addEventListener('click', function () {
+              Store.inativarSubtarefa(sb.id)
+                .then(function () { SUBS[act.id] = (SUBS[act.id] || []).filter(function (z) { return z.id !== sb.id; }); toast('Subtarefa removida.'); draw(); refresh(); })
+                .catch(function (e) { toast(e.message, 'err'); });
+            });
+            line.appendChild(x);
+          }
+          wrap.appendChild(line);
+        });
+        if (!subs.length) { wrap.appendChild(txt('div', 'at-gcount', CAN_WRITE ? 'Crie a primeira subtarefa abaixo — o % da atividade passa a ser a média delas.' : 'Nenhuma subtarefa nesta atividade.')); }
+        if (CAN_WRITE) {
+          var addWrap = el('<div class="at-addsub"></div>');
+          var inp = UI.input({ placeholder: 'Nova subtarefa…' });
+          var add = UI.button({ label: 'Adicionar', variant: 'ghost' });
+          add.addEventListener('click', function () {
+            var t = inp.value.trim();
+            if (!t) { return; }
+            var ordem = subs.length ? (subs[subs.length - 1].ordem || 0) + 1 : 1;
+            Store.criarSubtarefa(act.id, t, ordem)
+              .then(function (id) {
+                SUBS[act.id] = (SUBS[act.id] || []).concat([{ id: id, atividadeId: act.id, texto: t, pct: 0, ordem: ordem, ativo: true }]);
+                toast('Subtarefa criada.'); draw(); refresh();
+              })
+              .catch(function (e) { toast(e.message, 'err'); });
+          });
+          addWrap.appendChild(inp); addWrap.appendChild(add);
+          wrap.appendChild(addWrap);
+        }
+        body.appendChild(wrap);
+      }
+      draw();
+      return m;
     }
 
     /* ----- reprogramar “esta” (com trava de aprovação de data) ----- */
@@ -1816,18 +1937,6 @@
       camSelect.addEventListener('change', sugerirSup);
       if (!editing) { sugerirSup(); }
 
-      /* N4: vínculo OPCIONAL a projeto (o % da atividade cascateia p/ o projeto).
-         `origem` (decisão de reunião) nunca é editada aqui — só preservada. */
-      var projOpts = PROJETOS.map(function (p) { return { value: p.id, label: p.nome }; });
-      if (editing && act.projetoId && !projOpts.some(function (o) { return o.value === act.projetoId; })) {
-        projOpts.unshift({ value: act.projetoId, label: '(projeto atual)' });
-      }
-      var projSelect = UI.select({ value: (editing && act.projetoId) ? act.projetoId : '', placeholder: '— Sem projeto —', options: projOpts });
-      var projHint = (editing && act.origem && act.origem.tipo === 'reuniao')
-        ? 'Nasceu de uma decisão de reunião (origem preservada).'
-        : 'Opcional: soma o % desta atividade ao progresso do projeto.';
-      var projField = UI.field({ label: 'Projeto (opcional)', control: projSelect, hint: projHint });
-
       /* recorrência + campos condicionais */
       var recBox = el('<div class="at-recbox"></div>');
 
@@ -1901,7 +2010,7 @@
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, supField, projField, recField, recBox, hrField, banner],
+        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, supField, recField, recBox, hrField, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -1947,7 +2056,6 @@
           deslizante: tipo === 'unico' ? !!deslizState : null,
           dataInicio: tipo !== 'unico' ? diInp.value : null,
           dataFim: (tipo !== 'unico' && dfInp.value) ? dfInp.value : null,
-          projetoId: (projSelect && projSelect.value) ? projSelect.value : null,
           catalogoId: editing ? (act.catalogoId || null) : (pre ? pre.id : null) /* F1-G: rastreio ATA->atividade */
         };
 

@@ -121,7 +121,7 @@
   /* ============================================================
      AGENDA DE EVENTOS (N4-B) · calendário mensal
      ------------------------------------------------------------
-     ARCH_EVENTOS_CALENDARIO.md — D1 projeto OPCIONAL · D2 Meu Dia
+     ARCH_EVENTOS_CALENDARIO.md — D2 Meu Dia (D1 revogada no R4·B2: "Projeto" não existe)
      segue 1ª tela (o pulso mora no hoje.html; ABRIR esta tela
      grava localStorage['graut_evt_lastSeen'] e o pulso para) ·
      D3 custo previsto + realizado em CENTAVOS (inteiro).
@@ -186,13 +186,6 @@
           return a;
         });
       }).catch(function (e) { throw ferr(e); });
-    },
-    listProjetos: function () {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'projetos'), f.where('ativo', '==', true), f.limit(200));
-        return f.getDocs(q).then(mapDocs);
-      }).catch(function () { return []; });
     },
     criarEvento: function (data) {
       return fb().then(function (c) {
@@ -276,24 +269,10 @@
   var MES = parseInt(HOJE.slice(5, 7), 10);   /* 1–12 */
   var EVTS = [];        /* eventos do mês visível */
   var SETORES = [];
-  var PROJETOS = [];
   var bodyEl, actionsEl, SHEET, SHEETBACK;
 
   function corSetor(sig) { return KPI.corSetor(sig, SETORES); }
   function nomeSetor(sig) { return KPI.nomeSetor(sig, SETORES); }
-  function nomeProjeto(id) {
-    var p = PROJETOS.filter(function (x) { return x.id === id; })[0];
-    return p ? (p.nome || '(sem nome)') : null;
-  }
-
-  /* ===================== F1-C · RECORTE POR PAPEL (RBAC de conteúdo) =====================
-     Eventos têm 1 setor RAIZ ('siglaSetor') — subsetor nunca entra em evento.
-     Reverte o calendário "escola-inteira": cada papel vê só os seus eventos.
-       gestor  -> tudo.
-       líder   -> eventos cujo setor está no conjunto de RAÍZES que ele lidera
-                  (líder de subsetor herda a raiz-pai — ex.: líder de Faltosos vê PED).
-       usuário -> eventos do SEU setor (raiz do setor de lotação; subsetor cai na raiz-pai).
-     Acoplamento por SIGLA (Princípio 18); zero leitura extra de banco. */
   function raizDe(sig) {
     var s = SETORES.filter(function (x) { return x.sigla === sig; })[0];
     if (!s) { return sig; }                                   /* desconhecido: usa a própria */
@@ -438,7 +417,7 @@
     bodyEl.appendChild(grid);
 
     if (!EVTS.length) {
-      var em = txt('div', 'ev-state-s', 'Nada agendado neste mês' + (CAN_WRITE() ? ' — toque em + Novo evento para criar, ou crie uma reunião em Projetos.' : '.'));
+      var em = txt('div', 'ev-state-s', 'Nada agendado neste mês' + (CAN_WRITE() ? ' — toque em + Novo evento para criar, ou crie uma reunião em Reuniões.' : '.'));
       em.style.padding = '18px 4px';
       bodyEl.appendChild(em);
     }
@@ -480,7 +459,7 @@
         itR.appendChild(txt('div', 'ev-it-m', mR.join(' · ')));
         var bR = el('<div class="ev-it-b"></div>');
         var goR = UI.button({ label: 'Abrir reunião', variant: 'ghost' });
-        goR.addEventListener('click', function () { window.location.href = 'projetos.html#reunioes'; });
+        goR.addEventListener('click', function () { window.location.href = 'projetos.html'; });
         bR.appendChild(goR);
         itR.appendChild(bR);
         SHEET.appendChild(itR);
@@ -505,12 +484,6 @@
       it.appendChild(txt('div', 'ev-it-m', meta.join(' · ')));
 
       var btns = el('<div class="ev-it-b"></div>');
-      if (e.projetoId) {
-        var np = nomeProjeto(e.projetoId);
-        var a = el('<a class="ev-link" href="projetos.html#p=' + encodeURIComponent(e.projetoId) + '"></a>');
-        a.textContent = 'Abrir projeto' + (np ? ' — ' + np : '');
-        btns.appendChild(a);
-      }
       if (CAN_WRITE()) {
         var ed = UI.button({ label: 'Editar', variant: 'ghost' });
         ed.addEventListener('click', function () { fecharSheet(); modalEvento(e, null); });
@@ -561,8 +534,6 @@
     var hrInp = UI.input({}); hrInp.type = 'time'; if (editing && e.hora) { hrInp.value = e.hora; }
     var setOpts = SETORES.filter(function (s) { return !s.setorPaiSigla; }).map(function (s) { return { value: s.sigla, label: (s.nome || s.sigla) + ' (' + s.sigla + ')' }; }); /* F1-C: só raiz — subsetor nunca em evento */
     var setSel = UI.select({ value: editing ? e.siglaSetor : '', placeholder: 'Escolha o setor', options: setOpts });
-    var projOpts = PROJETOS.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; });
-    var projSel = UI.select({ value: (editing && e.projetoId) ? e.projetoId : '', placeholder: '— Sem projeto —', options: projOpts });
     var locInp = UI.input({ value: editing ? (e.local || '') : '', placeholder: 'Ex.: Auditório' });
     var custoInp = UI.input({ placeholder: 'R$ 0,00', value: editing && e.custoPrevisto ? fmtBRL(e.custoPrevisto) : '' });
     custoInp.addEventListener('input', function () { custoInp.value = fmtBRL(parseBRL(custoInp.value)); });
@@ -577,7 +548,6 @@
         UI.field({ label: 'Data', required: true, control: dtInp }),
         UI.field({ label: 'Hora (opcional)', control: hrInp }),
         UI.field({ label: 'Setor', required: true, control: setSel, hint: 'A cor do evento no calendário vem do setor (acoplado por SIGLA).' }),
-        UI.field({ label: 'Projeto (opcional)', control: projSel, hint: 'Evento pode nascer solto e ser adotado por um projeto depois.' }),
         UI.field({ label: 'Local (opcional)', control: locInp }),
         UI.field({ label: 'Custo previsto', control: custoInp, hint: 'Guardado em centavos (inteiro — evita erro de vírgula).' }),
         UI.field({ label: 'Observações', control: obsTa })
@@ -590,7 +560,7 @@
             if (!setSel.value) { toast('Escolha o setor.', 'err'); return; }
             var data = {
               titulo: titInp.value.trim(), data: dtInp.value, hora: hrInp.value || null,
-              siglaSetor: setSel.value, projetoId: projSel.value || null,
+              siglaSetor: setSel.value,
               local: locInp.value.trim() || null, obs: obsTa.value.trim() || null,
               custoPrevisto: parseBRL(custoInp.value)
             };
@@ -636,7 +606,7 @@
             id: r.id, _kind: 'reuniao', titulo: r.titulo || 'Reunião',
             data: r.data, hora: r.hora || null, local: r.local || null,
             siglaSetor: r.setorSigla || null, tipo: r.tipo || null,
-            projetoId: r.projetoId || null, encerrada: !!r.encerrada,
+            encerrada: !!r.encerrada,
             souConvocado: meu && conv.indexOf(meu) !== -1,
             /* F1-N: confirmado ANTES da reunião (confirmadosUids) ou presente no dia */
             confirmei: meu && ((Array.isArray(r.confirmadosUids) && r.confirmadosUids.indexOf(meu) !== -1) || pres.indexOf(meu) !== -1),
@@ -672,7 +642,7 @@
       openPop(ib, 'Agenda de Eventos', [
         ['O que mostra', 'Os eventos ATIVOS do SEU setor no mês. Gestor vê a escola inteira; líder vê os setores que lidera; usuário vê o seu setor. A cor do chip vem do setor.'],
         ['Pulso no Meu Dia', 'O botão "Agenda de Eventos" pulsa quando há evento novo/alterado depois da sua última visita (guardado neste aparelho). Abrir esta tela zera o aviso.'],
-        ['Custos', 'Previsto e realizado guardados em CENTAVOS (número inteiro — evita erro de centavos); exibidos em R$. Projeto vinculado soma previsto × realizado.']
+        ['Custos', 'Previsto e realizado guardados em CENTAVOS (número inteiro — evita erro de centavos); exibidos em R$.']
       ]);
     });
     document.getElementById('ev-info').appendChild(ib);
@@ -683,10 +653,10 @@
       actionsEl.appendChild(nb);
     }
 
-    /* setores + projetos primeiro (cores e select), depois o mês */
+    /* setores primeiro (cores dos chips), depois o mês */
     renderLoading();
-    Promise.all([Store.listSetores(), Store.listProjetos()])
-      .then(function (r) { SETORES = r[0]; PROJETOS = r[1]; carregarMes(); })
+    Store.listSetores()
+      .then(function (r) { SETORES = r; carregarMes(); })
       .catch(renderError);
   }
 

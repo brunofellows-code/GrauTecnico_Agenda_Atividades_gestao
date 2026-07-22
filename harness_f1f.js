@@ -33,29 +33,32 @@ var REUNS = [
   { id: 'b', tipo: 'departamento', setorSigla: 'PED', data: '2026-07-02', projetoId: null, decisoes: [{ texto: 'd4' }] },
   { id: 'c', tipo: 'departamento', setorSigla: 'SEC', data: '2026-07-03', projetoId: null, decisoes: [{ texto: 'd5' }] },
   { id: 'd', tipo: 'lideres', data: '2026-07-20', projetoId: null, decisoes: [{ texto: 'd6' }] },
-  { id: 'e', tipo: 'lideres', data: '2026-07-05', projetoId: 'p1', decisoes: [{ texto: 'd7' }] }
+  { id: 'e', tipo: 'lideres', data: '2026-07-05', decisoes: [{ texto: 'd7' }] } /* R4-B2: era projetoId p1 — campo morreu; agora entra na serie por tipo */
 ];
-/* alvo líderes 10/07 sem projeto: entra só A (d1 aberta + d2 vencida);
-   d3 resolvida e d8 no_prazo NÃO; D é posterior; E é de outro projeto. */
-var r1 = K.rollforward2(REUNS, { id: 'x', tipo: 'lideres', data: '2026-07-10', projetoId: null }, stDe);
-t('rollforward líderes: 2 itens (aberta + vencida; resolvida/no_prazo ficam de fora)',
-  r1.map(function (i) { return i.dec.texto; }), ['d1', 'd2']);
+/* R4-B2: a serie e por TIPO (+setor) — projetoId saiu do escopo do
+   rollforward2 ("Projeto" nao existe). Alvo lideres 10/07: entram A
+   (d1 aberta + d2 vencida) E a antiga E (d7 — antes ficava fora por
+   ter projetoId); d3 resolvida e d8 no_prazo NAO; D e posterior. */
+var r1 = K.rollforward2(REUNS, { id: 'x', tipo: 'lideres', data: '2026-07-10' }, stDe);
+t('rollforward líderes: 3 itens em ordem de data (A: aberta+vencida, depois E)',
+  r1.map(function (i) { return i.dec.texto; }), ['d1', 'd2', 'd7']);
 t('rollforward carrega o status derivado (d2 = vencida)', r1[1].st.chave, 'vencida');
 t('rollforward carrega a reunião de origem (data)', r1[0].reuniao.data, '2026-07-01');
 /* alvo departamento PED: só B (C é de SEC). */
-var r2 = K.rollforward2(REUNS, { id: 'y', tipo: 'departamento', setorSigla: 'PED', data: '2026-07-10', projetoId: null }, stDe);
+var r2 = K.rollforward2(REUNS, { id: 'y', tipo: 'departamento', setorSigla: 'PED', data: '2026-07-10' }, stDe);
 t('rollforward departamento respeita o setor (PED pega d4, SEC fica fora)',
   r2.map(function (i) { return i.dec.texto; }), ['d4']);
 /* alvo anterior a tudo: nada rola. */
 t('reunião mais antiga que todas não recebe rollforward',
-  K.rollforward2(REUNS, { id: 'z', tipo: 'departamento', setorSigla: 'SEC', data: '2026-07-01', projetoId: null }, stDe).length, 0);
-/* alvo do projeto p1: só E (A é sem projeto). */
+  K.rollforward2(REUNS, { id: 'z', tipo: 'departamento', setorSigla: 'SEC', data: '2026-07-01' }, stDe).length, 0);
+/* R4-B2: reuniao LEGADA com projetoId gravado nao pode quebrar a serie —
+   o campo e simplesmente ignorado pelo comparador. */
 var r4 = K.rollforward2(REUNS, { id: 'w', tipo: 'lideres', data: '2026-07-10', projetoId: 'p1' }, stDe);
-t('rollforward respeita o projeto (p1 pega d7; sem-projeto fica fora)',
-  r4.map(function (i) { return i.dec.texto; }), ['d7']);
+t('rollforward IGNORA projetoId legado no alvo (mesma serie por tipo)',
+  r4.map(function (i) { return i.dec.texto; }), ['d1', 'd2', 'd7']);
 /* mesma data (empate) = NÃO é anterior. */
 t('reunião do MESMO dia não rola (anterior = data estritamente menor)',
-  K.rollforward2(REUNS, { id: 'q', tipo: 'lideres', data: '2026-07-01', projetoId: null }, stDe).length, 0);
+  K.rollforward2(REUNS, { id: 'q', tipo: 'lideres', data: '2026-07-01' }, stDe).length, 0);
 
 /* ---------- vencidasUnicasAntigas (B2 · emenda 1) ---------- */
 var J_INI = '2026-06-01', HOJE = '2026-07-16';

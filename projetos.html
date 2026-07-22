@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Projetos — GERA</title>
+<title>Reuniões — GERA</title>
 
 <link rel="stylesheet" href="theme.css">
 <link rel="manifest" href="manifest.json">
@@ -21,9 +21,6 @@
 .pj-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
 .pj-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
 .pj-top-r{display:flex;align-items:center;gap:12px}
-.pj-seg{display:inline-flex;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
-.pj-seg-b{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer}
-.pj-seg-b.on{background:var(--cta);color:var(--ctaText)}
 .pj-body{padding:18px 32px 32px}
 .pj-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
 .pj-card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap}
@@ -45,16 +42,6 @@
 .pj-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
 .pj-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
 /* lista de projetos */
-.pj-row{display:flex;align-items:center;gap:14px;padding:14px 4px;border-top:1px solid var(--border);cursor:pointer}
-.pj-row:first-child{border-top:0}
-.pj-row:hover{background:var(--s2)}
-.pj-row-main{flex:1;min-width:0}
-.pj-row-nome{font-size:14px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pj-row-sub{font-size:11.5px;font-weight:600;color:var(--muted2);margin-top:2px}
-.pj-bar{width:180px;flex:none;display:flex;align-items:center;gap:9px}
-.pj-track{flex:1;height:11px;background:var(--track);border-radius:6px;overflow:hidden}
-.pj-fill{height:100%;border-radius:6px}
-.pj-pct{width:38px;text-align:right;font-size:13px;font-weight:800}
 .pj-status{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:4px 10px;border-radius:12px;border:1px solid var(--border)}
 /* detalhe */
 .pj-back{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:0}
@@ -63,21 +50,7 @@
 .pj-dm{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px}
 .pj-dm-k{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);display:flex;align-items:center;gap:6px}
 .pj-dm-v{font-size:20px;font-weight:800;margin-top:6px}
-.pj-dm-s{font-size:11px;font-weight:600;color:var(--muted2);margin-top:3px}
 /* atividade dentro do detalhe */
-.pj-arow{border-top:1px solid var(--border);padding:12px 4px}
-.pj-arow:first-child{border-top:0}
-.pj-arow-h{display:flex;align-items:center;gap:12px;cursor:pointer}
-.pj-arow-t{flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pj-arow-meta{font-size:11px;font-weight:600;color:var(--muted2)}
-.pj-subs{margin:10px 0 4px 14px;border-left:2px solid var(--border);padding-left:14px}
-.pj-sub{display:flex;align-items:center;gap:10px;padding:6px 0}
-.pj-sub-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pj-sub-sel{appearance:none;font-family:inherit;font-size:12px;font-weight:700;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer}
-.pj-sub-x{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:2px;display:inline-flex}
-.pj-sub-x:hover{color:var(--red)}
-.pj-addsub{display:flex;gap:8px;margin-top:8px}
-.pj-addsub .ui-input{flex:1}
 /* reuniões */
 .pj-rrow{border-top:1px solid var(--border);padding:13px 4px}
 .pj-rrow:first-child{border-top:0}
@@ -92,18 +65,11 @@
 .pj-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border)}
 .pj-roll{margin-bottom:10px;padding:10px 12px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border);font-size:11.5px;font-weight:700;color:var(--muted)}
 /* eventos do projeto */
-.pj-evrow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-top:1px solid var(--border)}
-.pj-evrow:first-child{border-top:0}
-.pj-ev-dot{width:9px;height:9px;border-radius:50%;flex:none}
-.pj-ev-t{flex:1;min-width:0;font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pj-ev-m{font-size:11px;font-weight:600;color:var(--muted2);white-space:nowrap}
 /* pauta */
 .pj-pauta{width:100%;min-height:280px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px}
 @media (max-width:760px){
   .pj-top{padding:14px 16px}
   .pj-body{padding:14px 16px 28px}
-  .pj-bar{width:120px}
-  .pj-row-sub{display:none}
 }
 </style>
 </head>
@@ -132,29 +98,26 @@
 
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
-  <script src="cascade.js"></script>
   <script src="kpi.js"></script>
   <script type="module">
   (function () {
   'use strict';
 
   /* ============================================================
-     PROJETOS + REUNIÕES (N4-A) · Sistema A · Grau Técnico FSA
+     REUNIÕES · Sistema A · Grau Técnico FSA
+     R4·B2 — antes "Projetos + Reuniões". "Projeto" não existe: a
+     reunião é a entidade RAIZ do ciclo; o detalhe de projeto (com o
+     cascade de %) morreu e as subtarefas migraram para Atividades.
      ------------------------------------------------------------
      Fonte de dados: KPI.carregar('band') (board expandido — decisão
-     C1 §2.8) + 1 query global de subtarefas (ativo==true limit 1000,
-     agrupada por atividadeId no cliente) — zero índice composto.
-     Cascade: GrautCascade (média subtarefas → atividade → projeto);
-     única sem sub = 100 se concluída senão 0; recorrente sem sub = 0
-     (decisão §2.9 — declarado no "i").
-     Status do projeto DERIVADO (nunca gravado — decisão §2.10).
+     C1 §2.8) — zero índice composto.
      Decisão de reunião → atividade única em 1 clique (aberta:false,
-     origem preservada — decisão §2.11); rollforward = exibição (§2.12).
+     origem preservada — decisão §2.11); rollforward = exibição
+     (§2.12; escopo = tipo + setor — R4·B2 tirou projetoId da série).
      Toda mutação registra em atividade_log. Soft-delete sempre.
      ============================================================ */
 
   var R = window.GrautRecorrencia;
-  var C = window.GrautCascade;
 
   var USER = null;
   function CAN_WRITE() { var p = (USER && USER.profile) || ''; return p === 'Admin' || p === 'Editor'; }
@@ -179,41 +142,6 @@
   function mapDocs(snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); }); return a; }
 
   var Store = {
-    listProjetos: function () {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'projetos'), f.where('ativo', '==', true), f.limit(200));
-        return f.getDocs(q).then(mapDocs);
-      }).catch(function (e) { throw ferr(e); });
-    },
-    criarProjeto: function (data) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f, now = Date.now();
-        var doc = Object.assign({}, data, { ativo: true, donoUid: USER.uid, criadoEm: now, atualizadoEm: now });
-        return f.addDoc(f.collection(db, 'projetos'), doc).then(function (ref) {
-          Store.log({ acao: 'criar_projeto', entidade: 'projeto', refId: ref.id, antes: null, depois: doc });
-          return ref.id;
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-    atualizarProjeto: function (id, patch, antes) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
-        return f.updateDoc(f.doc(db, 'projetos', id), up).then(function () {
-          Store.log({ acao: 'editar_projeto', entidade: 'projeto', refId: id, antes: antes || null, depois: patch });
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-    inativarProjeto: function (id) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        return f.updateDoc(f.doc(db, 'projetos', id), { ativo: false, atualizadoEm: Date.now() }).then(function () {
-          Store.log({ acao: 'inativar_projeto', entidade: 'projeto', refId: id, antes: { ativo: true }, depois: { ativo: false } });
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-
     listReunioes: function () {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
@@ -241,41 +169,6 @@
       }).catch(function (e) { throw ferr(e); });
     },
 
-    /* 1 query GLOBAL (decisão §2.8): agrupa por atividadeId no cliente. */
-    listSubtarefas: function () {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'subtarefas'), f.where('ativo', '==', true), f.limit(1000));
-        return f.getDocs(q).then(mapDocs);
-      }).catch(function (e) { throw ferr(e); });
-    },
-    criarSubtarefa: function (atividadeId, texto, ordem) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var doc = { atividadeId: atividadeId, texto: texto, pct: 0, ordem: ordem, ativo: true, criadoEm: Date.now() };
-        return f.addDoc(f.collection(db, 'subtarefas'), doc).then(function (ref) {
-          Store.log({ acao: 'criar_subtarefa', entidade: 'subtarefa', refId: ref.id, antes: null, depois: doc });
-          return ref.id;
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-    atualizarSubtarefa: function (id, patch, antes) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        return f.updateDoc(f.doc(db, 'subtarefas', id), patch).then(function () {
-          Store.log({ acao: 'editar_subtarefa', entidade: 'subtarefa', refId: id, antes: antes || null, depois: patch });
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-    inativarSubtarefa: function (id) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        return f.updateDoc(f.doc(db, 'subtarefas', id), { ativo: false }).then(function () {
-          Store.log({ acao: 'inativar_subtarefa', entidade: 'subtarefa', refId: id, antes: { ativo: true }, depois: { ativo: false } });
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-
     listUsuariosAtivos: function () {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
@@ -294,27 +187,6 @@
         return f.getDocs(q).then(mapDocs);
       }).catch(function () { return []; });
     },
-    listEventosDoProjeto: function (projetoId) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'eventos'), f.where('projetoId', '==', projetoId), f.limit(200));
-        return f.getDocs(q).then(mapDocs).then(function (a) {
-          /* `ativo` filtrado NO CLIENTE (decisão §2.6 — evita índice composto) */
-          return a.filter(function (e) { return e.ativo !== false; });
-        });
-      }).catch(function () { return []; });
-    },
-    criarEvento: function (data) {
-      return fb().then(function (c) {
-        var db = c.db, f = c.f, now = Date.now();
-        var doc = Object.assign({}, data, { realizado: false, custoRealizado: null, ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now });
-        return f.addDoc(f.collection(db, 'eventos'), doc).then(function (ref) {
-          Store.log({ acao: 'criar_evento', entidade: 'evento', refId: ref.id, antes: null, depois: { titulo: doc.titulo, data: doc.data, projetoId: doc.projetoId } });
-          return ref.id;
-        });
-      }).catch(function (e) { throw ferr(e); });
-    },
-
     /* ===== F1-F · execução na reunião (B2) =====
        setOcorrencia/createSolicitacao: corpos IDÊNTICOS ao Store do
        atividades.html (mesmo docId determinístico, mesmo payload, mesmo
@@ -373,7 +245,6 @@
           horario: null, diasSemana: null, diaMes: null,
           data: dados.data,
           deslizante: false, dataInicio: null, dataFim: null,
-          projetoId: reuniao.projetoId || null,
           origem: { tipo: 'reuniao', reuniaoId: reuniao.id, reuniaoTitulo: reuniao.titulo || null, reuniaoData: reuniao.data || null },
           origemTipo: 'reuniao',
           projetoSigla: null, ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now
@@ -455,7 +326,6 @@
           horario: null, diasSemana: null, diaMes: null,
           data: dec.prazo,
           deslizante: false, dataInicio: null, dataFim: null,
-          projetoId: reuniao.projetoId || null,
           origem: { tipo: 'reuniao', reuniaoId: reuniao.id, reuniaoTitulo: reuniao.titulo || null, reuniaoData: reuniao.data || null },
           origemTipo: 'reuniao',
           projetoSigla: null, ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now
@@ -524,9 +394,7 @@
 
   /* ===================== ESTADO ===================== */
   var CTX = null;         /* resultado de KPI.carregar('band') */
-  var PROJ = [];          /* projetos ativos */
-  var REUN = [];          /* reuniões ativas (todas — filtra por projeto na tela) */
-  var SUBS = {};          /* atividadeId -> [subtarefas] */
+  var REUN = [];          /* reuniões ativas (todas) */
   var USERS = [];         /* usuários ativos (pode vir vazio) */
   var PENDS = [];         /* solicitações pendentes (p/ pauta) */
   var SNAPS = [];         /* fotos do dia (kpi_snapshots) p/ banda consecutiva — F1-E */
@@ -545,155 +413,24 @@
   var OLD_OCC = null;      /* F1-F · cache da varredura de únicas antigas (1×/sessão) */
   var TIPO_LABEL = {};
   TIPOS_REUNIAO.forEach(function (t) { TIPO_LABEL[t[0]] = t[1]; });
-  var ROOT_TAB = 'projetos';   /* projetos | reunioes */
-  var DET_TAB = 'visao';       /* visao | atividades | reunioes | eventos */
   var bodyEl, titleEl, actionsEl;
 
-  function hashProj() {
-    var m = /#p=([^&]+)/.exec(window.location.hash || '');
-    return m ? decodeURIComponent(m[1]) : null;
-  }
-
-  /* ===================== CASCADE (decisão §2.9) ===================== */
-  /* status da ÚNICA vem do board (já expandido — zero query nova) */
-  function unicaConcluida(actId) {
-    var b = CTX.board;
-    for (var i = 0; i < b.length; i++) {
-      if (b[i].act.id === actId && b[i].status === 'concluida') { return true; }
-    }
-    return false;
-  }
-  function pctAtividade(act) {
-    var subs = SUBS[act.id] || [];
-    if (subs.length) { return C.pctAtividade({ subtarefas: subs }); }
-    if (act.recorrencia === 'unico') { return unicaConcluida(act.id) ? 100 : 0; }
-    return 0; /* recorrente sem sub — declarado no "i" */
-  }
-  function ativsDoProjeto(pid) {
-    return CTX.ativ.filter(function (a) { return a.projetoId === pid; });
-  }
-  function projetoCalc(p) {
-    var ats = ativsDoProjeto(p.id);
-    var pcts = ats.map(function (a) { return { pct: pctAtividade(a) }; });
-    var pct = ats.length ? C.pctProjeto({ atividades: pcts }) : 0;
-    var temAtrasada = CTX.board.some(function (o) { return o.atrasada && o.act.projetoId === p.id; });
-    var status, tom;
-    if (ats.length && pct === 100) { status = 'Concluído'; tom = 'green'; }
-    else if (temAtrasada) { status = 'Atrasado'; tom = 'red'; }
-    else { status = 'Em dia'; tom = 'doing'; }
-    return { ats: ats, pct: pct, status: status, tom: tom, temAtrasada: temAtrasada };
-  }
-  function tomVar(t) { return t === 'red' ? 'var(--red)' : t === 'doing' ? 'var(--doing)' : 'var(--green)'; }
-
-  var I_PCT = [
-    ['Fórmula', '% do projeto = média dos % das atividades vinculadas. % da atividade = média das subtarefas; atividade ÚNICA sem subtarefa = 100 se a ocorrência foi concluída, senão 0; atividade RECORRENTE sem subtarefa = 0 (vincule únicas ou crie subtarefas para medir).'],
-    ['Dados', 'Coleções: atividades (projetoId), subtarefas (pct 0–100), ocorrências da janela padrão do board (kpi.js).']
-  ];
-  var I_STATUS = [
-    ['Regra', 'Concluído = % 100 com ao menos 1 atividade (verde) · Atrasado = ≥1 atividade vinculada com ocorrência vencida em aberto no board (vermelho) · Em dia = o restante (azul). Status é DERIVADO, nunca gravado.'],
-    ['Dados', 'Board de ocorrências da janela padrão (kpi.js) + atividades.projetoId.']
-  ];
-
-  /* ===================== RENDER: RAIZ ===================== */
-  function segRoot() {
-    var seg = el('<div class="pj-seg"></div>');
-    [['projetos', 'Projetos'], ['reunioes', 'Reuniões']].forEach(function (t) {
-      var b = txt('button', 'pj-seg-b' + (ROOT_TAB === t[0] ? ' on' : ''), t[1]);
-      b.type = 'button';
-      b.addEventListener('click', function () {
-        ROOT_TAB = t[0];
-        var alvo = t[0] === 'reunioes' ? '#reunioes' : '';
-        if ((window.location.hash || '') !== alvo) { window.location.hash = alvo; }
-        else { renderRoot(); }
-      });
-      seg.appendChild(b);
-    });
-    return seg;
-  }
-
-  /* ===================== recorte por papel (F1-C · B2-Projetos) =====================
-     1 motor, 3 lentes — mesmas telas, projeção por papel:
-       gestor  -> todos os projetos.
-       líder   -> projetos cujo siglaSetores cruza o escopo. Líder de RAIZ expande
-                  para os subsetores filhos (KPI.escopoLider, do B1); líder de
-                  subsetor cobre só o seu.
-       usuário -> projetos onde ele tem ao menos UMA atividade sua.
-     Recorta a LISTA e barra o acesso direto por URL (renderDetail). */
-  function escopoUser() {
-    var u = USER || {};
-    if (u.perfil === 'gestor') { return { tipo: 'gestor' }; }
-    if (u.perfil === 'lider') {
-      return { tipo: 'lider', esc: KPI.escopoLider(u.setoresLiderados || [], (CTX && CTX.setores) || []) };
-    }
-    return { tipo: 'usuario' };
-  }
-  function projetoVisivel(p) {
-    var e = escopoUser();
-    if (e.tipo === 'gestor') { return true; }
-    if (e.tipo === 'lider') {
-      var sigs = (p && p.siglaSetores) || [];
-      for (var i = 0; i < sigs.length; i++) { if (e.esc[sigs[i]]) { return true; } }
-      return false;
-    }
-    var uid = (USER && USER.uid) || null;
-    if (!uid || !p || !CTX) { return false; }
-    return CTX.ativ.some(function (a) { return a.projetoId === p.id && a.responsavelUid === uid; });
-  }
-  function projVisiveis() { return PROJ.filter(projetoVisivel); }
-
+  /* ===================== RENDER: RAIZ =====================
+     R4·B2: "Projeto" não existe — a tela É a casa da Reunião (entidade
+     raiz do ciclo). O toggle Projetos|Reuniões, a lista e o detalhe de
+     projeto (com subtarefas) morreram; subtarefas moram em Atividades. */
   function renderRoot() {
-    titleEl.textContent = ROOT_TAB === 'reunioes' ? 'Reuniões' : 'Projetos';
+    titleEl.textContent = 'Reuniões';
     actionsEl.innerHTML = '';
-    actionsEl.appendChild(segRoot());
     if (CAN_WRITE()) {
-      var nb = UI.button({ label: ROOT_TAB === 'projetos' ? 'Novo projeto' : 'Nova reunião', icon: 'plus', onClick: function () { ROOT_TAB === 'projetos' ? modalProjeto(null) : modalReuniao(null, VIEW_TIPO === 'todas' ? null : VIEW_TIPO); } });
+      var nb = UI.button({ label: 'Nova reunião', icon: 'plus', onClick: function () { modalReuniao(VIEW_TIPO === 'todas' ? null : VIEW_TIPO); } });
       actionsEl.appendChild(nb);
     }
     bodyEl.innerHTML = '';
-    if (ROOT_TAB === 'projetos') { renderListaProjetos(); } else { renderListaReunioes(); }
+    renderListaReunioes();
   }
 
-  function renderListaProjetos() {
-    var LP = projVisiveis();
-    var card = el('<div class="pj-card"></div>');
-    var h = el('<div class="pj-card-h"></div>');
-    var tt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
-    tt.appendChild(txt('div', 'pj-card-t', 'Todos os projetos (' + LP.length + ')'));
-    tt.appendChild(iBtn('% e status do projeto', I_PCT.concat(I_STATUS)));
-    h.appendChild(tt);
-    card.appendChild(h);
-
-    if (!LP.length) {
-      card.appendChild(txt('div', 'pj-empty2', PROJ.length ? 'Nenhum projeto no seu escopo de setor.' : (CAN_WRITE() ? 'Nenhum projeto ainda — clique em "Novo projeto" para criar o primeiro.' : 'Nenhum projeto ainda.')));
-    } else {
-      var ord = LP.slice().sort(function (a, b) { return (a.nome || '').localeCompare(b.nome || '', 'pt-BR'); });
-      ord.forEach(function (p) {
-        var c = projetoCalc(p);
-        var row = el('<div class="pj-row" role="button" tabindex="0"></div>');
-        var main = el('<div class="pj-row-main"></div>');
-        main.appendChild(txt('div', 'pj-row-nome', p.nome || '(sem nome)'));
-        main.appendChild(txt('div', 'pj-row-sub', c.ats.length + ' atividade(s) · ' + ((p.siglaSetores || []).join(', ') || 'sem setor')));
-        row.appendChild(main);
-        var bar = el('<div class="pj-bar"></div>');
-        var track = el('<div class="pj-track"></div>');
-        var fill = el('<div class="pj-fill"></div>');
-        fill.style.width = c.pct + '%'; fill.style.background = tomVar(c.tom);
-        track.appendChild(fill); bar.appendChild(track);
-        bar.appendChild(txt('div', 'pj-pct', c.pct + '%'));
-        row.appendChild(bar);
-        var st = txt('div', 'pj-status', c.status);
-        st.style.color = tomVar(c.tom);
-        row.appendChild(st);
-        function go() { window.location.hash = '#p=' + encodeURIComponent(p.id); }
-        row.addEventListener('click', go);
-        row.addEventListener('keydown', function (e) { if (e.key === 'Enter') { go(); } });
-        card.appendChild(row);
-      });
-    }
-    bodyEl.appendChild(card);
-  }
-
-  /* ===================== RENDER: REUNIÕES (raiz e detalhe) ===================== */
+  /* ===================== RENDER: REUNIÕES ===================== */
   function nomeUser(uid) {
     var u = USERS.filter(function (x) { return x.uid === uid; })[0];
     return u ? u.nome : '';
@@ -989,52 +726,6 @@
   }
 
   /* ===================== F1-E · helpers de reunião ===================== */
-  /* F1-L: vincular (ou criar) o projeto de uma reunião JÁ ABERTA e migrar
-     as atividades que ela já gerou (retrofit — corrige reuniões antigas
-     criadas sem projeto). §8.2 da Instrução: reunião = projeto.           */
-  function modalVincularProjeto(r, aoConcluir) {
-    var opts = [{ value: '__novo__', label: '➕ Criar projeto desta reunião' }]
-      .concat(PROJ.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; }));
-    var sel = UI.select({ value: '__novo__', options: opts });
-    UI.modal({
-      title: 'Vincular reunião a projeto',
-      width: 460,
-      body: [UI.field({ label: 'Projeto', control: sel,
-        hint: 'As demandas desta reunião (novas E as já criadas) passam a morar no projeto: kanban, subtarefas e % valem para elas. Reuniões futuras do mesmo tipo já sugerem este projeto.' })],
-      footer: function (close) {
-        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
-          UI.button({ label: 'Vincular', icon: 'check', onClick: function () {
-            var pv = sel.value;
-            var pProj = (pv === '__novo__')
-              ? Store.criarProjeto({ nome: r.titulo || ('Reunião ' + fmtBR(r.data)), descricao: 'Projeto da série de reuniões: ' + (TIPO_LABEL[r.tipo] || 'Reunião') + '. Criado a partir da reunião de ' + fmtBR(r.data) + ' (§8.2: reunião = projeto).', siglaSetores: r.setorSigla ? [r.setorSigla] : [] })
-              : Promise.resolve(pv);
-            var pid = null;
-            pProj.then(function (id) {
-              pid = id;
-              return Store.atualizarReuniao(r.id, { projetoId: pid }, 'reuniao_vinculada_projeto');
-            }).then(function () {
-              /* retrofit: atividades órfãs que nasceram desta reunião */
-              var orfas = (CTX.ativ || []).filter(function (a) {
-                return a.origem && a.origem.reuniaoId === r.id && !a.projetoId;
-              });
-              var seq = Promise.resolve();
-              orfas.forEach(function (a) {
-                seq = seq.then(function () {
-                  return Store.atualizarAtividadeCampos(a.id, { projetoId: pid }, 'vincular_atividade_projeto', { projetoId: null });
-                }).then(function () { a.projetoId = pid; });
-              });
-              return seq.then(function () { return orfas.length; });
-            }).then(function (n) {
-              r.projetoId = pid;
-              close();
-              toast('Reunião vinculada' + (n ? ' — ' + n + ' atividade(s) migrada(s) para o projeto.' : '.'));
-              if (aoConcluir) { aoConcluir(); }
-            }).catch(function (e) { toast(e.message, 'err'); });
-          } })];
-      }
-    });
-  }
-
   /* ocorrência da atividade-filha da decisão (única = 1 occ no board) */
   function occDaAtividade(atId) {
     if (!atId || !CTX || !CTX.board) { return null; }
@@ -1188,25 +879,11 @@
     }
     box.appendChild(cab);
 
-    /* ---------- F1-L · projeto da reunião (§8.2: reunião = projeto) ---------- */
+    /* ---------- placar da ATA (derivado; abas 2–4 da planilha) ----------
+       R4·B2: o chip "Projeto/Vincular" que abria esta linha foi removido —
+       a reunião é a entidade raiz; não existe projeto para vincular.     */
     (function () {
       var linha = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 10px"></div>');
-      if (r.projetoId) {
-        var pj = PROJ.filter(function (x) { return x.id === r.projetoId; })[0];
-        var chip = txt('button', 'pj-badge', 'Projeto: ' + ((pj && pj.nome) || '(vinculado)') + ' →');
-        chip.type = 'button'; chip.style.cssText += ';color:var(--brand);cursor:pointer;background:none;border:1px solid var(--border);border-radius:20px;padding:3px 10px;font:inherit;font-size:11px;font-weight:800';
-        chip.title = 'Abrir o projeto — as demandas desta reunião moram lá (kanban, subtarefas e %).';
-        chip.addEventListener('click', function () { window.location.hash = '#p=' + encodeURIComponent(r.projetoId); });
-        linha.appendChild(chip);
-      } else if (podeEditar()) {
-        var vb = UI.button({ label: 'Vincular a projeto', variant: 'ghost', onClick: function () { modalVincularProjeto(r, redesenhar); } });
-        vb.title = 'Sem projeto, as demandas desta reunião nascem avulsas. Vincule (ou crie) o projeto da série para elas caírem no kanban.';
-        linha.appendChild(vb);
-        var av = txt('span', 'pj-empty2', 'Sem projeto — demandas nascem avulsas.');
-        av.style.fontSize = '11.5px';
-        linha.appendChild(av);
-      }
-      /* ---------- F1-L · placar da ATA (derivado; abas 2–4 da planilha) ---------- */
       var pl = KPI.placarReuniao(r.decisoes, occDaAtividade, hoje);
       if (pl) {
         var pills = [
@@ -1635,12 +1312,7 @@
   }
 
   function converterDecisao(r, d, idx) {
-    /* setor: do projeto quando houver; senão pede (decisão §2.11) */
-    var sigProj = null;
-    if (r.projetoId) {
-      var p = PROJ.filter(function (x) { return x.id === r.projetoId; })[0];
-      if (p && p.siglaSetores && p.siglaSetores.length) { sigProj = p.siglaSetores[0]; }
-    }
+    /* R4·B2: sem projeto — o setor da atividade é sempre perguntado. */
     function criar(sig) {
       Store.criarAtividadeDeDecisao(d, r, sig)
         .then(function (atId) {
@@ -1652,14 +1324,13 @@
         .then(function () { toast('Atividade criada a partir da decisão.'); return reload(); })
         .catch(function (e) { toast(e.message, 'err'); });
     }
-    if (sigProj) { criar(sigProj); return; }
-    /* reunião SEM projeto (ou projeto sem setor) → modal pede o setor */
+    /* modal pede o setor responsável */
     var opts = CTX.setores.filter(function (s) { return s.ativo !== false; })
       .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
     var sel = UI.select({ placeholder: 'Escolha o setor', options: opts });
     var m = UI.modal({
       title: 'Setor da nova atividade', width: 420,
-      body: [txt('div', 'pj-empty2', 'Esta reunião não está vinculada a um projeto com setor — escolha o setor responsável pela atividade.'), UI.field({ label: 'Setor', required: true, control: sel })],
+      body: [txt('div', 'pj-empty2', 'Escolha o setor responsável pela atividade que nasce desta decisão.'), UI.field({ label: 'Setor', required: true, control: sel })],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
           UI.button({ label: 'Criar atividade', icon: 'check', onClick: function () {
@@ -1712,7 +1383,7 @@
 
   /* Nova reunião (F1-E): tipo → convocação automática pré-marcada + externos.
      F1-F · B6: tipoDefault pré-seleciona o tipo da visão ativa (chips).    */
-  function modalReuniao(projetoIdFixo, tipoDefault) {
+  function modalReuniao(tipoDefault) {
     var titInp = UI.input({ placeholder: 'Ex.: Reunião de líderes — semana 12' });
     var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = R.hojeISO();
     var hrInp = UI.input({}); hrInp.type = 'time';
@@ -1723,24 +1394,6 @@
     var depSel = UI.select({ placeholder: 'Escolha o setor', options: depOpts });
     var depField = UI.field({ label: 'Setor do departamento', required: true, control: depSel });
     depField.style.display = tipoIni === 'departamento' ? '' : 'none';
-    var projOpts = PROJ.map(function (p) { return { value: p.id, label: p.nome || '(sem nome)' }; });
-    /* F1-L (§8.2 da Instrução): reunião = projeto. Opção de CRIAR o projeto
-       da série na hora + sugestão automática: reuniões do MESMO TIPO apontam
-       para o mesmo projeto (recorrente). Sugestão = projeto da última reunião
-       deste tipo que tinha vínculo. Tocar no campo desliga a sugestão.      */
-    if (!projetoIdFixo) { projOpts.unshift({ value: '__novo__', label: '➕ Criar projeto desta reunião' }); }
-    function projetoDaSerie(tipo) {
-      var cand = REUN.filter(function (x) { return x.tipo === tipo && x.projetoId; })
-        .sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })[0];
-      return (cand && cand.projetoId) || '';
-    }
-    var projSel = UI.select({ value: projetoIdFixo || projetoDaSerie(tipoIni), placeholder: '— Sem projeto —', options: projOpts, disabled: !!projetoIdFixo });
-    var projTouched = false;
-    projSel.addEventListener('change', function () { projTouched = true; });
-    tipoSel.addEventListener('change', function () {
-      if (!projetoIdFixo && !projTouched) { projSel.value = projetoDaSerie(tipoSel.value); }
-    });
-
     var marcados = {};
     var convBox = el('<div style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:180px;overflow:auto"></div>');
     function desenhaConv() {
@@ -1796,12 +1449,11 @@
     UI.modal({
       title: 'Nova reunião', width: 560,
       body: [
-        UI.field({ label: 'Tipo', required: true, control: tipoSel, hint: 'O tipo define quem entra na convocação automática — ajuste os checks à vontade.' }),
+        UI.field({ label: 'Tipo', required: true, control: tipoSel, hint: 'Define a convocação automática — ajuste os checks à vontade. Decisões abertas de reuniões anteriores do mesmo tipo reaparecem (rollforward).' }),
         depField,
         UI.field({ label: 'Título', required: true, control: titInp }),
         UI.field({ label: 'Data', required: true, control: dtInp }),
         UI.field({ label: 'Hora prevista', control: hrInp, hint: 'Com "Iniciar reunião" no dia, o GERA mede o atraso em minutos.' }),
-        UI.field({ label: 'Projeto (opcional)', control: projSel, hint: 'Decisões abertas de reuniões anteriores do mesmo escopo reaparecem (rollforward).' }),
         UI.field({ label: 'Convocados', control: convBox }),
         UI.field({ label: 'Convidados externos (sem login)', control: extWrap, hint: 'Ex.: instrutores e líderes de turma — entram na presença pelo nome.' })
       ],
@@ -1827,18 +1479,10 @@
               presentes: [],
               pautaTexto: null, pautaGeradaEm: null, pautaItens: [],
               resumoTexto: '',
-              projetoId: null, /* F1-L: resolvido abaixo (pode nascer projeto novo) */
               participantesUids: [], decisoes: []
             };
-            var pv = (projetoIdFixo || projSel.value) || null;
-            var pProj = (pv === '__novo__')
-              ? Store.criarProjeto({ nome: t, descricao: 'Projeto da série de reuniões: ' + (TIPO_LABEL[tipoSel.value] || 'Reunião') + '. Criado automaticamente pela reunião (§8.2: reunião = projeto; demandas caem aqui).', siglaSetores: tipoSel.value === 'departamento' && depSel.value ? [depSel.value] : [] })
-              : Promise.resolve(pv);
-            pProj.then(function (pid) {
-              doc.projetoId = pid || null;
-              return Store.criarReuniao(doc);
-            })
-              .then(function () { close(); toast(pv === '__novo__' ? 'Reunião criada com projeto próprio — as demandas caem nele.' : 'Reunião criada — convocados veem a chamada no Hoje.'); return reload(); })
+            Store.criarReuniao(doc)
+              .then(function () { close(); toast('Reunião criada — convocados veem a chamada no Hoje.'); return reload(); })
               .catch(function (e) { toast(e.message, 'err'); });
           } })];
       }
@@ -2324,334 +1968,10 @@
   }
 
   /* ===================== MODAL: PROJETO ===================== */
-  function modalProjeto(p) {
-    var editing = !!p;
-    var nomeInp = UI.input({ value: editing ? p.nome : '', placeholder: 'Ex.: Semana pedagógica 2026' });
-    var descTa = document.createElement('textarea');
-    descTa.className = 'ui-input'; descTa.rows = 3; descTa.style.resize = 'vertical';
-    descTa.value = editing ? (p.descricao || '') : '';
-    var marc = {};
-    (editing ? (p.siglaSetores || []) : []).forEach(function (s) { marc[s] = true; });
-    var chips = el('<div style="display:flex;flex-wrap:wrap;gap:8px"></div>');
-    CTX.setores.filter(function (s) { return s.ativo !== false; }).forEach(function (s) {
-      var b = txt('button', 'pj-status', s.sigla);
-      b.type = 'button'; b.style.cursor = 'pointer';
-      function paint() { b.style.color = marc[s.sigla] ? 'var(--greenText)' : 'var(--muted)'; b.style.background = marc[s.sigla] ? 'var(--activeBg)' : 'transparent'; }
-      paint();
-      b.addEventListener('click', function () { marc[s.sigla] = !marc[s.sigla]; paint(); });
-      chips.appendChild(b);
-    });
-    UI.modal({
-      title: editing ? 'Editar projeto' : 'Novo projeto', width: 520,
-      body: [
-        UI.field({ label: 'Nome', required: true, control: nomeInp }),
-        UI.field({ label: 'Descrição', control: descTa }),
-        UI.field({ label: 'Setores envolvidos', control: chips, hint: 'O 1º setor marcado vira o setor padrão das atividades criadas a partir de decisões.' })
-      ],
-      footer: function (close) {
-        var btns = [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close })];
-        if (editing) {
-          btns.push(UI.button({ label: 'Inativar projeto', variant: 'ghost', onClick: function () {
-            if (!window.confirm('Inativar o projeto "' + (p.nome || '') + '"? Ele some das listas; as atividades vinculadas continuam existindo.')) { return; }
-            Store.inativarProjeto(p.id)
-              .then(function () { close(); toast('Projeto inativado.'); window.location.hash = ''; return reload(); })
-              .catch(function (e) { toast(e.message, 'err'); });
-          } }));
-        }
-        btns.push(UI.button({ label: editing ? 'Salvar' : 'Criar projeto', icon: 'check', onClick: function () {
-            var nome = nomeInp.value.trim();
-            if (!nome) { toast('Informe o nome.', 'err'); return; }
-            var sigs = Object.keys(marc).filter(function (k) { return marc[k]; });
-            var data = { nome: nome, descricao: descTa.value.trim(), siglaSetores: sigs };
-            var pr = editing ? Store.atualizarProjeto(p.id, data, { nome: p.nome }) : Store.criarProjeto(data);
-            pr.then(function () { close(); toast(editing ? 'Projeto salvo.' : 'Projeto criado.'); return reload(); })
-              .catch(function (e) { toast(e.message, 'err'); });
-          } }));
-        return btns;
-      }
-    });
-  }
-
-  /* ===================== RENDER: DETALHE ===================== */
-  function segDetail() {
-    var seg = el('<div class="pj-seg"></div>');
-    [['visao', 'Visão'], ['atividades', 'Atividades'], ['reunioes', 'Reuniões'], ['eventos', 'Eventos']].forEach(function (t) {
-      var b = txt('button', 'pj-seg-b' + (DET_TAB === t[0] ? ' on' : ''), t[1]);
-      b.type = 'button';
-      b.addEventListener('click', function () { DET_TAB = t[0]; renderDetail(); });
-      seg.appendChild(b);
-    });
-    return seg;
-  }
-
-  function renderDetail() {
-    var pid = hashProj();
-    var p = PROJ.filter(function (x) { return x.id === pid; })[0];
-    if (!p) { window.location.hash = ''; return; }
-    if (!projetoVisivel(p)) {
-      titleEl.textContent = 'Projeto';
-      actionsEl.innerHTML = '';
-      bodyEl.innerHTML = '';
-      var bwSP = el('<div style="margin-bottom:12px"></div>');
-      var backSP = el('<button class="pj-back" type="button">‹ Todos os projetos</button>');
-      backSP.addEventListener('click', function () { window.location.hash = ''; });
-      bwSP.appendChild(backSP); bodyEl.appendChild(bwSP);
-      var cardSP = el('<div class="pj-card"></div>');
-      cardSP.appendChild(txt('div', 'pj-empty2', 'Você não tem acesso a este projeto — ele está fora do seu escopo de setor.'));
-      bodyEl.appendChild(cardSP);
-      return;
-    }
-    var c = projetoCalc(p);
-
-    titleEl.textContent = p.nome || 'Projeto';
-    actionsEl.innerHTML = '';
-    actionsEl.appendChild(segDetail());
-    if (CAN_WRITE()) {
-      var eb = UI.button({ label: 'Editar', icon: 'gear', variant: 'ghost', onClick: function () { modalProjeto(p); } });
-      actionsEl.appendChild(eb);
-    }
-
-    bodyEl.innerHTML = '';
-    var back = el('<button class="pj-back" type="button">‹ Todos os projetos</button>');
-    back.addEventListener('click', function () { window.location.hash = ''; });
-    var bw = el('<div style="margin-bottom:12px"></div>'); bw.appendChild(back); bodyEl.appendChild(bw);
-
-    if (DET_TAB === 'visao') { renderVisao(p, c); }
-    else if (DET_TAB === 'atividades') { renderAtividadesTab(p, c); }
-    else if (DET_TAB === 'reunioes') { renderReunioesTab(p); }
-    else { renderEventosTab(p); }
-  }
-
-  function renderVisao(p, c) {
-    var grid = el('<div class="pj-dgrid"></div>');
-    function dm(k, v, s, iRows) {
-      var d = el('<div class="pj-dm"></div>');
-      var kk = el('<div class="pj-dm-k"></div>');
-      kk.appendChild(txt('span', '', k));
-      if (iRows) { kk.appendChild(iBtn(k, iRows)); }
-      d.appendChild(kk);
-      d.appendChild(txt('div', 'pj-dm-v', v));
-      if (s) { d.appendChild(txt('div', 'pj-dm-s', s)); }
-      return d;
-    }
-    grid.appendChild(dm('Progresso', c.pct + '%', c.ats.length + ' atividade(s) vinculada(s)', I_PCT));
-    var st = dm('Status', c.status, null, I_STATUS);
-    st.querySelector('.pj-dm-v').style.color = tomVar(c.tom);
-    grid.appendChild(st);
-    var nAtr = CTX.board.filter(function (o) { return o.atrasada && o.act.projetoId === p.id; }).length;
-    grid.appendChild(dm('Atrasadas', String(nAtr), 'ocorrências vencidas em aberto', [
-      ['Fórmula', 'Ocorrências das atividades vinculadas com prazo < hoje e status aberto (pendente / em andamento / reprogramada), na janela padrão do board.'],
-      ['Dados', 'kpi.js · janela padrão (−45/+30 dias) · dia civil local.']
-    ]));
-    bodyEl.appendChild(grid);
-
-    var card = el('<div class="pj-card"></div>');
-    card.appendChild(txt('div', 'pj-card-t', 'Descrição'));
-    card.appendChild(txt('div', 'pj-empty2', p.descricao || 'Sem descrição.'));
-    bodyEl.appendChild(card);
-  }
-
-  /* ---------- aba Atividades (com subtarefas) ---------- */
-  function renderAtividadesTab(p, c) {
-    var card = el('<div class="pj-card"></div>');
-    var h = el('<div class="pj-card-h"></div>');
-    var tt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
-    tt.appendChild(txt('div', 'pj-card-t', 'Atividades vinculadas (' + c.ats.length + ')'));
-    tt.appendChild(iBtn('% da atividade', I_PCT));
-    h.appendChild(tt);
-    h.appendChild(txt('div', 'pj-empty2', 'Vincule mais atividades pelo campo "Projeto" na tela Atividades.'));
-    card.appendChild(h);
-
-    if (!c.ats.length) {
-      card.appendChild(txt('div', 'pj-empty2', 'Nenhuma atividade vinculada — abra Atividades e escolha este projeto no campo "Projeto (opcional)".'));
-    }
-    c.ats.slice().sort(function (a, b) { return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR'); })
-      .forEach(function (a) { card.appendChild(renderAtivRow(a)); });
-    bodyEl.appendChild(card);
-  }
-
-  function renderAtivRow(a) {
-    var row = el('<div class="pj-arow"></div>');
-    var head = el('<div class="pj-arow-h"></div>');
-    var pct = pctAtividade(a);
-    head.appendChild(txt('div', 'pj-arow-t', a.titulo || '(sem título)'));
-    var subs = SUBS[a.id] || [];
-    var metaTxt = pct + '% · ' + (subs.length ? subs.length + ' subtarefa(s)' : (a.recorrencia === 'unico' ? 'única' : 'recorrente — crie subtarefas p/ medir'));
-    head.appendChild(txt('div', 'pj-arow-meta', metaTxt));
-    row.appendChild(head);
-
-    var open = false;
-    var box = el('<div style="display:none"></div>');
-    head.addEventListener('click', function () {
-      open = !open; box.style.display = open ? 'block' : 'none';
-      if (open) { fillSubs(a, box); }
-    });
-    row.appendChild(box);
-    return row;
-  }
-
-  function fillSubs(a, box) {
-    box.innerHTML = '';
-    var wrap = el('<div class="pj-subs"></div>');
-    var subs = (SUBS[a.id] || []).slice().sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0); });
-    if (!subs.length) { wrap.appendChild(txt('div', 'pj-empty2', 'Sem subtarefas.')); }
-    subs.forEach(function (s) {
-      var line = el('<div class="pj-sub"></div>');
-      line.appendChild(txt('div', 'pj-sub-t', s.texto || '(sem texto)'));
-      var sel = document.createElement('select');
-      sel.className = 'pj-sub-sel';
-      [0, 25, 50, 75, 100].forEach(function (v) {
-        var o = document.createElement('option'); o.value = String(v); o.textContent = v + '%';
-        sel.appendChild(o);
-      });
-      sel.value = String(s.pct || 0);
-      sel.disabled = !CAN_WRITE();
-      sel.addEventListener('change', function () {
-        var novo = parseInt(sel.value, 10);
-        Store.atualizarSubtarefa(s.id, { pct: novo }, { pct: s.pct })
-          .then(function () { s.pct = novo; toast('Subtarefa atualizada.'); rerender(); })
-          .catch(function (e) { toast(e.message, 'err'); });
-      });
-      line.appendChild(sel);
-      if (CAN_WRITE()) {
-        var x = el('<button class="pj-sub-x" type="button" aria-label="Remover"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>');
-        x.addEventListener('click', function () {
-          Store.inativarSubtarefa(s.id)
-            .then(function () { SUBS[a.id] = (SUBS[a.id] || []).filter(function (z) { return z.id !== s.id; }); toast('Subtarefa removida.'); rerender(); })
-            .catch(function (e) { toast(e.message, 'err'); });
-        });
-        line.appendChild(x);
-      }
-      wrap.appendChild(line);
-    });
-    if (CAN_WRITE()) {
-      var addWrap = el('<div class="pj-addsub"></div>');
-      var inp = UI.input({ placeholder: 'Nova subtarefa…' });
-      var add = UI.button({ label: 'Adicionar', variant: 'ghost' });
-      add.addEventListener('click', function () {
-        var t = inp.value.trim();
-        if (!t) { return; }
-        var ordem = subs.length ? (subs[subs.length - 1].ordem || 0) + 1 : 1;
-        Store.criarSubtarefa(a.id, t, ordem)
-          .then(function (id) {
-            SUBS[a.id] = (SUBS[a.id] || []).concat([{ id: id, atividadeId: a.id, texto: t, pct: 0, ordem: ordem, ativo: true }]);
-            toast('Subtarefa criada.'); rerender();
-          })
-          .catch(function (e) { toast(e.message, 'err'); });
-      });
-      addWrap.appendChild(inp); addWrap.appendChild(add);
-      wrap.appendChild(addWrap);
-    }
-    box.appendChild(wrap);
-  }
-
-  /* ---------- aba Reuniões do projeto ---------- */
-  function renderReunioesTab(p) {
-    var card = el('<div class="pj-card"></div>');
-    var h = el('<div class="pj-card-h"></div>');
-    var lista = REUN.filter(function (r) { return r.projetoId === p.id; });
-    h.appendChild(txt('div', 'pj-card-t', 'Reuniões do projeto (' + lista.length + ')'));
-    if (CAN_WRITE()) {
-      var nb = UI.button({ label: 'Nova reunião', icon: 'plus', variant: 'ghost' });
-      nb.addEventListener('click', function () { modalReuniao(p.id); });
-      h.appendChild(nb);
-    }
-    card.appendChild(h);
-    if (!lista.length) { card.appendChild(txt('div', 'pj-empty2', 'Nenhuma reunião deste projeto ainda.')); }
-    lista.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })
-      .forEach(function (r) { renderReuniaoRow(r, card); });
-    bodyEl.appendChild(card);
-  }
-
-  /* ---------- aba Eventos do projeto (D3: Σ previsto × realizado) ---------- */
-  function renderEventosTab(p) {
-    var holder = el('<div></div>');
-    holder.appendChild(txt('div', 'pj-empty2', 'Carregando eventos…'));
-    bodyEl.appendChild(holder);
-    Store.listEventosDoProjeto(p.id).then(function (evs) {
-      holder.innerHTML = '';
-      var sp = 0, sr = 0;
-      evs.forEach(function (e) { sp += Number(e.custoPrevisto) || 0; if (e.custoRealizado != null) { sr += Number(e.custoRealizado) || 0; } });
-
-      var grid = el('<div class="pj-dgrid"></div>');
-      var d = el('<div class="pj-dm"></div>');
-      var kk = el('<div class="pj-dm-k"></div>');
-      kk.appendChild(txt('span', '', 'Custos dos eventos'));
-      kk.appendChild(iBtn('Custos dos eventos', [
-        ['Fórmula', 'Σ custo previsto × Σ custo realizado dos eventos vinculados a este projeto. Valores guardados em CENTAVOS (inteiro — evita erro de vírgula); exibidos em R$.'],
-        ['Dados', 'Coleção eventos · projetoId = este projeto · ativos.']
-      ]));
-      d.appendChild(kk);
-      d.appendChild(txt('div', 'pj-dm-v', fmtBRL(sp) + ' × ' + (sr ? fmtBRL(sr) : 'R$ 0,00')));
-      d.appendChild(txt('div', 'pj-dm-s', 'previsto × realizado · ' + evs.length + ' evento(s)'));
-      grid.appendChild(d);
-      holder.appendChild(grid);
-
-      var card = el('<div class="pj-card"></div>');
-      var h = el('<div class="pj-card-h"></div>');
-      h.appendChild(txt('div', 'pj-card-t', 'Eventos do projeto (' + evs.length + ')'));
-      if (CAN_WRITE()) {
-        var nb = UI.button({ label: 'Novo evento', icon: 'plus', variant: 'ghost' });
-        nb.addEventListener('click', function () { modalEventoDoProjeto(p, function () { renderDetail(); }); });
-        h.appendChild(nb);
-      }
-      card.appendChild(h);
-      if (!evs.length) { card.appendChild(txt('div', 'pj-empty2', 'Nenhum evento vinculado — crie aqui ou vincule pelo calendário (Eventos).')); }
-      evs.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (e) {
-        var row = el('<div class="pj-evrow"></div>');
-        var dot = el('<div class="pj-ev-dot"></div>');
-        dot.style.background = 'var(--' + KPI.corSetor(e.siglaSetor, CTX.setores) + ')';
-        row.appendChild(dot);
-        row.appendChild(txt('div', 'pj-ev-t', e.titulo || '(sem título)'));
-        row.appendChild(txt('div', 'pj-ev-m', fmtBR(e.data) + (e.hora ? ' ' + e.hora : '') + ' · ' + fmtBRL(e.custoPrevisto) + ' × ' + (e.custoRealizado != null ? fmtBRL(e.custoRealizado) : '—') + ' · ' + (e.realizado ? 'Realizado' : 'Previsto')));
-        card.appendChild(row);
-      });
-      holder.appendChild(card);
-    });
-  }
-
-  function modalEventoDoProjeto(p, done) {
-    var titInp = UI.input({ placeholder: 'Ex.: Formatura turma 12' });
-    var dtInp = UI.input({}); dtInp.type = 'date';
-    var hrInp = UI.input({}); hrInp.type = 'time';
-    var setOpts = CTX.setores.filter(function (s) { return s.ativo !== false; })
-      .map(function (s) { return { value: s.sigla, label: s.nome + ' (' + s.sigla + ')' }; });
-    var setSel = UI.select({ placeholder: 'Escolha o setor', options: setOpts });
-    var custoInp = UI.input({ placeholder: 'R$ 0,00' });
-    custoInp.addEventListener('input', function () { custoInp.value = fmtBRL(parseBRL(custoInp.value)); });
-    var obsTa = document.createElement('textarea');
-    obsTa.className = 'ui-input'; obsTa.rows = 2; obsTa.style.resize = 'vertical';
-    UI.modal({
-      title: 'Novo evento — ' + (p.nome || 'projeto'), width: 500,
-      body: [
-        UI.field({ label: 'Título', required: true, control: titInp }),
-        UI.field({ label: 'Data', required: true, control: dtInp }),
-        UI.field({ label: 'Hora (opcional)', control: hrInp }),
-        UI.field({ label: 'Setor', required: true, control: setSel }),
-        UI.field({ label: 'Custo previsto', control: custoInp, hint: 'Guardado em centavos (evita erro de vírgula).' }),
-        UI.field({ label: 'Observações', control: obsTa })
-      ],
-      footer: function (close) {
-        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
-          UI.button({ label: 'Criar evento', icon: 'check', onClick: function () {
-            if (!titInp.value.trim()) { toast('Informe o título.', 'err'); return; }
-            if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
-            if (!setSel.value) { toast('Escolha o setor.', 'err'); return; }
-            Store.criarEvento({
-              titulo: titInp.value.trim(), data: dtInp.value, hora: hrInp.value || null,
-              siglaSetor: setSel.value, projetoId: p.id, local: null,
-              obs: obsTa.value.trim() || null, custoPrevisto: parseBRL(custoInp.value)
-            }).then(function () { close(); toast('Evento criado.'); if (done) { done(); } })
-              .catch(function (e) { toast(e.message, 'err'); });
-          } })];
-      }
-    });
-  }
-
   /* ===================== ESTADOS / BOOT ===================== */
   function renderLoading() {
     bodyEl.innerHTML = '';
-    var s = el('<div class="pj-state"><div class="pj-state-t">Carregando…</div><div class="pj-state-s">Buscando projetos, reuniões e o board de atividades.</div></div>');
+    var s = el('<div class="pj-state"><div class="pj-state-t">Carregando…</div><div class="pj-state-s">Buscando reuniões e o board de atividades.</div></div>');
     bodyEl.appendChild(s);
   }
   function renderError(e) {
@@ -2665,25 +1985,21 @@
     bodyEl.appendChild(s);
   }
 
-  function rerender() { hashProj() ? renderDetail() : renderRoot(); }
+  function rerender() { renderRoot(); }
 
   function reload() {
     renderLoading();
     return Promise.all([
       KPI.carregar('band'),
-      Store.listProjetos(),
       Store.listReunioes(),
-      Store.listSubtarefas(),
       Store.listUsuariosAtivos(),
       Store.listSolicPendentes(),
       KPI.lerSnapshots(R.hojeISO()).catch(function () { return []; }),
       Store.listSugestoesPauta()
     ]).then(function (r) {
-      CTX = r[0]; PROJ = r[1]; REUN = r[2];
-      SUBS = {};
-      r[3].forEach(function (s) { (SUBS[s.atividadeId] = SUBS[s.atividadeId] || []).push(s); });
-      USERS = r[4]; PENDS = r[5]; SNAPS = r[6] || [];
-      SUGS = (r[7] || []).filter(function (g) { return g.status === 'pendente'; }); /* F1-F · B4 */
+      CTX = r[0]; REUN = r[1];
+      USERS = r[2]; PENDS = r[3]; SNAPS = r[4] || [];
+      SUGS = (r[5] || []).filter(function (g) { return g.status === 'pendente'; }); /* F1-F · B4 */
       OLD_OCC = null; /* F1-F · B2: reload zera o cache da varredura */
       rerender();
     }).catch(function (e) { renderError(e); });
@@ -2698,15 +2014,9 @@
     actionsEl = document.getElementById('pj-actions');
     bodyEl = document.getElementById('pj-body');
     var app = document.getElementById('app');
-    var hashReun = (window.location.hash || '').indexOf('reunioes') >= 0;
-    if (hashReun) { ROOT_TAB = 'reunioes'; }
-    app.insertBefore(UI.sidebar({ active: hashReun ? 'Reuniões' : 'Projetos', user: USER }), app.firstChild);
-    window.addEventListener('hashchange', function () {
-      DET_TAB = 'visao';
-      if ((window.location.hash || '').indexOf('reunioes') >= 0) { ROOT_TAB = 'reunioes'; }
-      else if (!hashProj()) { ROOT_TAB = 'projetos'; }
-      rerender();
-    });
+    /* R4·B2: sem abas nem hash — a tela é 100% Reuniões. Links antigos
+       com #reunioes seguem funcionando (o hash é simplesmente ignorado). */
+    app.insertBefore(UI.sidebar({ active: 'Reuniões', user: USER }), app.firstChild);
     reload();
   }
 

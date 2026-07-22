@@ -857,9 +857,9 @@
   /* ROLLFORWARD 2.0 (F1-F · B5): decisões NÃO FECHADAS de reuniões
      ANTERIORES do MESMO ESCOPO reaparecem na reunião alvo.
        anterior     = data estritamente menor que a do alvo.
-       mesmo escopo = mesmo tipo
+       mesmo escopo = mesmo tipo (R4-B2: projetoId saiu do escopo —
+         'Projeto' nao existe; a serie e definida por tipo/setor)
                       + mesmo setorSigla (quando tipo departamento)
-                      + mesmo projetoId (null conta como igual).
        não fechada  = statusDe(dec) em {aberta, vencida} — INCLUI a
          decisão convertida em atividade ainda não feita (a v1 só
          olhava d.aberta e perdia exatamente essas).
@@ -873,7 +873,6 @@
       if ((r.data || '') >= alvo.data) { return; }
       if ((r.tipo || null) !== (alvo.tipo || null)) { return; }
       if (alvo.tipo === 'departamento' && (r.setorSigla || null) !== (alvo.setorSigla || null)) { return; }
-      if ((r.projetoId || null) !== (alvo.projetoId || null)) { return; }
       (r.decisoes || []).forEach(function (d, idx) {
         var st = statusDe(d);
         if (st && (st.chave === 'aberta' || st.chave === 'vencida')) {
@@ -1445,5 +1444,99 @@
         a.nome.localeCompare(b.nome, 'pt-BR');
     });
     return lista.slice(0, n || 3);
+  };
+})();
+
+/* ============================================================
+   R4 · BLOCO 3 — PLANEJAMENTO DO SETOR (matemática pura)
+   O 5W2H mensal do líder (RESUMO §4). Três funções DERIVADAS,
+   nunca gravadas, validadas à mão no harness_r4.js:
+     planejamentoPrazo  — fase D-5/D-3/D-0 da entrega (dia 25).
+     planejamentoItemTravado — alçada R$200 (aprovação paralela).
+     planejamentoNota   — nota 50/30/20 do mês (ranking atenção).
+   ============================================================ */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  if (!K) { return; }
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  /* PRAZO DE ENTREGA (calibrável — declarado no "i"):
+       plano da competência M vence no dia 25 do mês ANTERIOR (M-1)
+       ("entregue até o dia 25, plano do mês seguinte" — RESUMO §4).
+       Marcos, ancorados no D-0 = dia 25:
+         hoje < 20            -> 'ok'  (sem alerta)
+         20 <= hoje < 22      -> 'd5'  (alerta ao líder)
+         22 <= hoje < 25      -> 'd3'  (alerta à gestão)
+         hoje >= 25 sem plano -> 'd0'  (flag de não-conformidade)
+       NUNCA bloqueia (regra travada): entregar atrasado é sempre
+       possível; a fase é só farol/registro.
+     @param comp 'YYYY-MM' (competência do plano)
+     @param hojeISO 'YYYY-MM-DD' (dia civil local — Salvador)
+     @param entregueEm timestamp|null
+     @returns { deadline:'YYYY-MM-DD', fase:'entregue'|'ok'|'d5'|'d3'|'d0', diasParaPrazo:number } */
+  K.planejamentoPrazo = function (comp, hojeISO, entregueEm) {
+    var y = parseInt(comp.slice(0, 4), 10);
+    var m = parseInt(comp.slice(5, 7), 10);
+    var py = m === 1 ? y - 1 : y;
+    var pm = m === 1 ? 12 : m - 1;
+    var deadline = py + '-' + pad2(pm) + '-25';
+    if (entregueEm) { return { deadline: deadline, fase: 'entregue', diasParaPrazo: 0 }; }
+    /* dias civis: diferença simples via UTC (datas ISO puras) */
+    var d1 = Date.UTC(parseInt(hojeISO.slice(0, 4), 10), parseInt(hojeISO.slice(5, 7), 10) - 1, parseInt(hojeISO.slice(8, 10), 10));
+    var d2 = Date.UTC(py, pm - 1, 25);
+    var dias = Math.round((d2 - d1) / 86400000);
+    var fase = dias > 5 ? 'ok' : dias > 3 ? 'd5' : dias > 0 ? 'd3' : 'd0';
+    return { deadline: deadline, fase: fase, diasParaPrazo: dias };
+  };
+
+  /* ALÇADA R$200 (aprovação PARALELA, desenho travado da R3/R4):
+       valorCentavos <= 20000 -> autonomia do líder (gestão só lê).
+       valorCentavos  > 20000 -> o ITEM trava até ter as DUAS
+       assinaturas (aprovLider E aprovGestor) — o plano nunca trava.
+     (Divergência de fonte registrada no HANDOFF: RESUMO §4 fala
+      "gestor E sócio"; o prompt R4 trava "líder + gestor". Segue o
+      R4 — documento de execução mais recente e modelável no RBAC.) */
+  K.planejamentoItemTravado = function (item) {
+    if (!item) { return false; }
+    var v = Number(item.valorCentavos) || 0;
+    if (v <= 20000) { return false; }
+    return !(item.aprovLider && item.aprovGestor);
+  };
+
+  /* NOTA MENSAL 50/30/20 (calibrável — pesos e teto declarados no "i"):
+       aderência   = realizados ÷ previstos                × 100 (peso 50)
+       no prazo    = realizados até o quandoPrevisto ÷ realizados ×100 (peso 30)
+       atraso res. = 100 × max(0, 1 − médiaDiasAtraso ÷ 7)       (peso 20)
+         (média só dos realizados COM atraso; teto 7 dias = nota 0
+          no componente; sem nenhum atraso = 100.)
+       Sem itens -> nota null (não ranqueia). Sem realizados: noPrazo
+       e atraso contam 0 (não há entrega para pontuar) — declarado.
+     @param itens [{quandoPrevisto:'YYYY-MM-DD', quandoRealizado:'YYYY-MM-DD'|null, removido?:bool}]
+     @returns null | { nota, aderencia, noPrazoPct, atrasoPct, previstos,
+                       realizados, realizadosNoPrazo, mediaDiasAtraso } */
+  K.planejamentoNota = function (itens) {
+    var at = (Array.isArray(itens) ? itens : []).filter(function (i) { return i && !i.removido; });
+    if (!at.length) { return null; }
+    var realizados = at.filter(function (i) { return !!i.quandoRealizado; });
+    var noPrazo = realizados.filter(function (i) {
+      return i.quandoPrevisto && i.quandoRealizado <= i.quandoPrevisto;
+    });
+    var atrasos = [];
+    realizados.forEach(function (i) {
+      if (!i.quandoPrevisto || i.quandoRealizado <= i.quandoPrevisto) { return; }
+      var a = Date.UTC(parseInt(i.quandoRealizado.slice(0, 4), 10), parseInt(i.quandoRealizado.slice(5, 7), 10) - 1, parseInt(i.quandoRealizado.slice(8, 10), 10));
+      var b = Date.UTC(parseInt(i.quandoPrevisto.slice(0, 4), 10), parseInt(i.quandoPrevisto.slice(5, 7), 10) - 1, parseInt(i.quandoPrevisto.slice(8, 10), 10));
+      atrasos.push(Math.round((a - b) / 86400000));
+    });
+    var media = atrasos.length ? (atrasos.reduce(function (s, x) { return s + x; }, 0) / atrasos.length) : 0;
+    var ader = Math.round(realizados.length / at.length * 100);
+    var npz = realizados.length ? Math.round(noPrazo.length / realizados.length * 100) : 0;
+    var atr = realizados.length ? Math.round(100 * Math.max(0, 1 - media / 7)) : 0;
+    var nota = Math.round(ader * 0.5 + npz * 0.3 + atr * 0.2);
+    return { nota: nota, aderencia: ader, noPrazoPct: npz, atrasoPct: atr,
+             previstos: at.length, realizados: realizados.length,
+             realizadosNoPrazo: noPrazo.length, mediaDiasAtraso: Math.round(media * 10) / 10 };
   };
 })();

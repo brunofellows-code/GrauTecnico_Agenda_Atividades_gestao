@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planejamento — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+<script src="mnav.js"></script>
+
+<style>
+/* ============================================================
+   PLANEJAMENTO DO SETOR (R4 · Bloco 3) — zero hex (theme.css)
+   ============================================================ */
+.pl-main{flex:1;min-width:0;padding:22px 26px 90px}
+.pl-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.pl-title{font-size:19px;font-weight:800}
+.pl-compnav{display:flex;align-items:center;gap:6px;margin-left:4px}
+.pl-compbtn{appearance:none;border:1px solid var(--border);background:var(--s2);color:var(--text);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.pl-comp{font-size:13px;font-weight:800;min-width:86px;text-align:center}
+.pl-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pl-i{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:3px;display:inline-flex;align-items:center}
+.pl-i:hover{color:var(--text)}
+.pl-legenda{font-size:11px;color:var(--muted2);margin:-6px 0 14px}
+.pl-eixo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:860px){.pl-eixo{grid-template-columns:1fr}.pl-main{padding:16px 14px 110px}}
+.pl-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.pl-card-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.pl-card-t{font-size:13.5px;font-weight:800}
+.pl-count{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border-radius:20px;padding:2px 8px}
+.pl-empty{font-size:12px;color:var(--muted2);padding:4px 0}
+.pl-linha{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
+.pl-linha:first-of-type{border-top:0}
+.pl-l-dot{width:7px;height:7px;border-radius:50%;flex:none}
+.pl-l-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-l-m{font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap}
+.pl-badge{font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 8px;background:var(--chipBg);white-space:nowrap}
+.pl-srow{border-top:1px solid var(--border);padding:12px 2px}
+.pl-srow:first-of-type{border-top:0}
+.pl-shead{display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
+.pl-sname{font-size:13px;font-weight:800}
+.pl-smeta{font-size:11px;font-weight:700;color:var(--muted2)}
+.pl-nota{font-size:12px;font-weight:800;margin-left:auto;display:inline-flex;align-items:center;gap:4px}
+.pl-grade{margin-top:10px;overflow:auto}
+.pl-tb{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
+.pl-tb th{font-size:10.5px;font-weight:800;color:var(--muted2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+.pl-tb td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.pl-tb tr:last-child td{border-bottom:0}
+.pl-acao{appearance:none;border:0;background:transparent;color:var(--doing);cursor:pointer;font:inherit;font-size:11px;font-weight:800;padding:2px 4px}
+.pl-acao.red{color:var(--red)}
+.pl-acao.green{color:var(--green)}
+.pl-foot{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.pl-state{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:34px 20px;text-align:center}
+.pl-state-t{font-size:14px;font-weight:800;margin-bottom:6px}
+.pl-state-s{font-size:12px;color:var(--muted2);margin-bottom:12px}
+.pl-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:10px;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.pl-toast.err{color:var(--red)}
+.pl-pop{position:fixed;z-index:70;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;max-width:340px;font-size:12px;display:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.pl-pop.on{display:block}
+.pl-pop-k{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
+.pl-pop-k:first-child{margin-top:0}
+.pl-pop-v{color:var(--text);font-weight:600;line-height:1.45}
+.pl-backdrop{position:fixed;inset:0;z-index:69;display:none}
+.pl-backdrop.on{display:block}
+</style>
+</head>
+<body>
+  <div class="ui-app" id="app">
+    <!-- sidebar via JS -->
+    <main class="pl-main">
+      <div class="pl-top">
+        <div class="pl-title" id="pl-title">Planejamento do Setor</div>
+        <div class="pl-compnav">
+          <button class="pl-compbtn" id="pl-prev" type="button" aria-label="Mês anterior">‹</button>
+          <div class="pl-comp" id="pl-comp">—</div>
+          <button class="pl-compbtn" id="pl-next" type="button" aria-label="Próximo mês">›</button>
+        </div>
+        <span id="pl-info"></span>
+        <div class="pl-actions" id="pl-actions"></div>
+      </div>
+      <div class="pl-legenda">O QUE VEM (previsto) × O QUE FOI (realizado) — eixo próprio do planejamento, visível a todos (prestação de contas). Entrega até o <b>dia 25</b> do mês anterior; nunca bloqueia.</div>
+      <div id="pl-body"></div>
+    </main>
+  </div>
+
+  <div class="pl-backdrop" id="pl-backdrop"></div>
+  <div class="pl-pop" id="pl-pop"></div>
+
+  <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script src="kpi.js"></script>
+  <script type="module">
+  (function () {
+  'use strict';
+
+  /* ============================================================
+     PLANEJAMENTO DO SETOR · Sistema A · Grau Técnico FSA
+     R4 · BLOCO 3 — entidade nova (RESUMO §4, desenho travado R3/R4):
+       - 5W2H mensal do líder (O QUE / COMO / QUEM / QUANDO,
+         previsto × realizado) — grade estilo Excel.
+       - Entrega até o dia 25 do mês anterior (KPI.planejamentoPrazo:
+         D-5 líder · D-3 gestão · D-0 flag — NUNCA bloqueia).
+       - Visível a TODOS (line-of-sight público). Edição: gestor em
+         tudo; líder no próprio escopo (KPI.escopoLider — raiz cobre
+         subsetores).
+       - Alçada R$200 (KPI.planejamentoItemTravado): item >R$200 trava
+         até aprovLider E aprovGestor (paralelo); o PLANO nunca trava.
+       - Nota mensal 50/30/20 (KPI.planejamentoNota) + ranking "quem
+         precisa de atenção". Tudo com "i" (fórmula+dados+números).
+       - Fora das 3 lentes (eixo próprio VEM×FOI — decisão travada).
+     Fundamentos: where()+limit() sempre · SIGLA nunca ID · status e
+     nota DERIVADOS (nunca gravados) · toda mutação em atividade_log ·
+     dia civil local (R.hojeISO) · soft-remove de item (removido:true).
+     ============================================================ */
+
+  var R = window.GrautRecorrencia;
+  var USER = null;
+
+  var _fb = null;
+  function fb() {
+    if (!_fb) {
+      _fb = Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+    }
+    return _fb;
+  }
+  function ferr(e) {
+    var code = (e && e.code) || '';
+    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão. Confirme seu perfil e que as Regras do Firestore foram publicadas (bloco planejamentos).'), { code: code }); }
+    if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
+    return Object.assign(new Error((e && e.message) || 'Erro ao acessar o planejamento.'), { code: code });
+  }
+  function mapDocs(snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); }); return a; }
+
+  var Store = {
+    listSetores: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'setores'), f.where('ativo', '==', true), f.limit(200));
+        return f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.sigla = o.sigla || d.id; a.push(o); });
+          a.sort(function (x, y) { return (x.sigla || '').localeCompare(y.sigla || '', 'pt-BR'); });
+          return a;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    listUsuariosAtivos: function () {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(300));
+        return f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)' }); });
+          a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+          return a;
+        });
+      }).catch(function () { return []; }); /* líder pode não listar — degrada p/ campo livre */
+    },
+    listPlanejamentos: function (comp) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var q = f.query(f.collection(db, 'planejamentos'), f.where('competencia', '==', comp), f.limit(100));
+        return f.getDocs(q).then(mapDocs).then(function (a) {
+          return a.filter(function (p) { return p.ativo !== false; });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    criarPlanejamento: function (doc) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, now = Date.now();
+        var body = Object.assign({}, doc, { ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now });
+        return f.addDoc(f.collection(db, 'planejamentos'), body).then(function (ref) {
+          Store.log({ acao: 'planejamento_criado', entidade: 'planejamento', refId: ref.id, antes: null, depois: { setorSigla: body.setorSigla, competencia: body.competencia } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    atualizarPlanejamento: function (id, patch, acao, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f;
+        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        return f.updateDoc(f.doc(db, 'planejamentos', id), up).then(function () {
+          Store.log({ acao: acao || 'planejamento_editado', entidade: 'planejamento', refId: id, antes: antes || null, depois: patch });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    log: function (entry) {
+      return fb().then(function (c) {
+        var row = Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry);
+        return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), row);
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[planejamento] log falhou', e); } });
+    }
+  };
+
+  /* ===================== helpers ===================== */
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+  function toast(msg, kind) {
+    var t = txt('div', 'pl-toast' + (kind === 'err' ? ' err' : ''), msg);
+    document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
+  }
+  var POP, BACK;
+  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+  function openPop(anchor, title, rows) {
+    POP.innerHTML = '';
+    POP.appendChild(txt('div', 'pl-pop-k', title));
+    rows.forEach(function (r) {
+      POP.appendChild(txt('div', 'pl-pop-k', r[0]));
+      POP.appendChild(txt('div', 'pl-pop-v', r[1]));
+    });
+    var rc = anchor.getBoundingClientRect();
+    POP.style.left = Math.max(8, Math.min(window.innerWidth - 356, rc.left)) + 'px';
+    POP.style.top = (rc.bottom + 8) + 'px';
+    POP.classList.add('on'); BACK.classList.add('on');
+  }
+  function iBtn(title, rows) {
+    var b = el('<button class="pl-i" type="button" aria-label="Como funciona"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
+    b.addEventListener('click', function (e) { e.stopPropagation(); openPop(b, title, typeof rows === 'function' ? rows() : rows); });
+    return b;
+  }
+  function fmtBR(iso) { if (!iso) { return '—'; } var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function fmtBRL(cents) {
+    if (cents == null) { return '—'; }
+    var v = (Number(cents) || 0) / 100;
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+  function parseBRL(str) {
+    var d = String(str || '').replace(/\D/g, '');
+    return d ? parseInt(d, 10) : 0;
+  }
+  function compLabel(comp) {
+    var M = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    return M[parseInt(comp.slice(5, 7), 10) - 1] + '/' + comp.slice(0, 4);
+  }
+  function compShift(comp, delta) {
+    var y = parseInt(comp.slice(0, 4), 10), m = parseInt(comp.slice(5, 7), 10) + delta;
+    while (m > 12) { m -= 12; y++; }
+    while (m < 1) { m += 12; y--; }
+    return y + '-' + (m < 10 ? '0' : '') + m;
+  }
+  function compSeguinte(hojeISO) { return compShift(hojeISO.slice(0, 7), 1); }
+  function novoItemId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
+  function itensVivos(pl) { return ((pl && pl.itens) || []).filter(function (i) { return i && !i.removido; }); }
+
+  /* ===================== escopo de escrita =====================
+     Gestor: escreve em todos os planos. Líder: escreve nas siglas do
+     KPI.escopoLider (setoresLiderados; raiz cobre os subsetores).
+     Usuário/Visualizador: só leitura (a tela é pública). */
+  function escLider() {
+    if (!(Guard.isLider && Guard.isLider())) { return null; }
+    return KPI.escopoLider ? KPI.escopoLider(USER.setoresLiderados || [], SETORES) : null;
+  }
+  function escreveNoSetor(sigla) {
+    if (Guard.isGestor && Guard.isGestor()) { return true; }
+    var esc = escLider();
+    return !!(esc && esc[sigla]);
+  }
+  function minhasSiglasEscreviveis() {
+    if (Guard.isGestor && Guard.isGestor()) { return SETORES.map(function (s) { return s.sigla; }); }
+    var esc = escLider() || {};
+    return SETORES.map(function (s) { return s.sigla; }).filter(function (sg) { return esc[sg]; });
+  }
+
+  /* ===================== "i" (fórmulas) ===================== */
+  var FASES = {
+    entregue: ['✓ entregue', 'var(--green)'],
+    ok: ['no prazo', 'var(--muted2)'],
+    d5: ['D-5 · entregar até dia 25', 'var(--amber)'],
+    d3: ['D-3 · gestão avisada', 'var(--orange)'],
+    d0: ['D-0 · não conforme', 'var(--red)']
+  };
+  function iRowsPrazo(pz) {
+    return [
+      ['Fórmula', 'Plano da competência vence no dia 25 do mês ANTERIOR (D-0). Farol: até dia 19 ok · dia 20 D-5 (alerta ao líder) · dia 22 D-3 (alerta à gestão) · dia 25 D-0 (flag de não-conformidade). NUNCA bloqueia — entregar atrasado é sempre possível. Marcos calibráveis.'],
+      ['Dados', 'planejamentos.entregueEm + dia civil local (Salvador) · KPI.planejamentoPrazo (kpi.js, harness_r4 20/20).'],
+      ['Números', 'prazo ' + fmtBR(pz.deadline) + ' · ' + (pz.fase === 'entregue' ? 'entregue' : (pz.diasParaPrazo >= 0 ? pz.diasParaPrazo + ' dia(s) para o prazo' : Math.abs(pz.diasParaPrazo) + ' dia(s) de atraso')) + ' · fase ' + pz.fase.toUpperCase()]
+    ];
+  }
+  function iRowsNota(n) {
+    return [
+      ['Fórmula', 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − médiaDiasAtraso ÷ 7); teto 7 dias). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes.'],
+      ['Dados', 'itens do plano desta competência (quandoPrevisto × quandoRealizado) · KPI.planejamentoNota (kpi.js, harness_r4 20/20).'],
+      ['Números', n ? ('aderência ' + n.aderencia + '% (' + n.realizados + '/' + n.previstos + ') · no prazo ' + n.noPrazoPct + '% (' + n.realizadosNoPrazo + '/' + n.realizados + ') · atraso médio ' + n.mediaDiasAtraso + 'd → componente ' + n.atrasoPct + '% · nota ' + n.nota) : 'sem itens — não ranqueia']
+    ];
+  }
+  var I_ALCADA = [
+    ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — líder E gestor (aprovação paralela: qualquer ordem). A trava é do ITEM; o plano nunca trava.'],
+    ['Dados', 'item.valorCentavos (inteiro, em centavos) + item.aprovLider / item.aprovGestor · KPI.planejamentoItemTravado (kpi.js, harness_r4).']
+  ];
+  var I_EIXO = [
+    ['O QUE VEM', 'Itens ainda NÃO realizados da competência selecionada, em ordem de data prevista. Vermelho = data prevista já passou; âmbar = é hoje; cadeado = aguardando aprovação (alçada R$200).'],
+    ['O QUE FOI', 'Itens realizados, do mais recente para o mais antigo, com o desvio de prazo (no prazo · +N dias).'],
+    ['Dados', 'planejamentos da competência · derivado na tela, nada gravado.']
+  ];
+
+  /* ===================== ESTADO ===================== */
+  var SETORES = [];
+  var PLANOS = [];
+  var USERS = [];
+  var COMP = null;      /* 'YYYY-MM' selecionada */
+  var ABERTOS = {};     /* sigla -> bool (setor expandido) */
+  var HOJE = null;
+  var bodyEl, actionsEl, compEl;
+
+  /* ===================== EIXO: O QUE VEM × O QUE FOI ===================== */
+  function nomeSetor(sig) {
+    var s = SETORES.filter(function (x) { return x.sigla === sig; })[0];
+    return s ? (s.nome || sig) : sig;
+  }
+  function todosItens() {
+    var out = [];
+    PLANOS.forEach(function (p) {
+      itensVivos(p).forEach(function (i) { out.push({ item: i, plano: p }); });
+    });
+    return out;
+  }
+  function renderEixo() {
+    var wrap = el('<div class="pl-eixo"></div>');
+    var all = todosItens();
+
+    /* --- O QUE VEM --- */
+    var vem = all.filter(function (x) { return !x.item.quandoRealizado; })
+      .sort(function (a, b) { return (a.item.quandoPrevisto || '9999').localeCompare(b.item.quandoPrevisto || '9999'); });
+    var c1 = el('<div class="pl-card"></div>');
+    var h1 = el('<div class="pl-card-h"></div>');
+    h1.appendChild(txt('div', 'pl-card-t', 'O QUE VEM'));
+    h1.appendChild(txt('span', 'pl-count', vem.length + ' previsto(s)'));
+    h1.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
+    c1.appendChild(h1);
+    if (!vem.length) { c1.appendChild(txt('div', 'pl-empty', 'Nada previsto em aberto nesta competência.')); }
+    vem.slice(0, 12).forEach(function (x) {
+      var lin = el('<div class="pl-linha"></div>');
+      var vencido = x.item.quandoPrevisto && x.item.quandoPrevisto < HOJE;
+      var hojeE = x.item.quandoPrevisto === HOJE;
+      var dot = el('<div class="pl-l-dot"></div>');
+      dot.style.background = vencido ? 'var(--red)' : hojeE ? 'var(--amber)' : 'var(--doing)';
+      lin.appendChild(dot);
+      lin.appendChild(txt('div', 'pl-l-t', '[' + x.plano.setorSigla + '] ' + (x.item.oque || '(sem título)')));
+      if (KPI.planejamentoItemTravado(x.item)) {
+        var bd = txt('span', 'pl-badge', '🔒 aguarda aprovação');
+        bd.style.color = 'var(--amber)';
+        bd.title = 'Acima de R$ 200 — precisa de líder E gestor para executar.';
+        lin.appendChild(bd);
+      }
+      lin.appendChild(txt('div', 'pl-l-m', fmtBR(x.item.quandoPrevisto)));
+      lin.appendChild(txt('div', 'pl-l-m', x.item.quemNome || '—'));
+      wrapLinha(lin, x.plano.setorSigla);
+      c1.appendChild(lin);
+    });
+    if (vem.length > 12) { c1.appendChild(txt('div', 'pl-empty', '+ ' + (vem.length - 12) + ' — abra o setor abaixo para ver todos.')); }
+    wrap.appendChild(c1);
+
+    /* --- O QUE FOI --- */
+    var foi = all.filter(function (x) { return !!x.item.quandoRealizado; })
+      .sort(function (a, b) { return (b.item.quandoRealizado || '').localeCompare(a.item.quandoRealizado || ''); });
+    var c2 = el('<div class="pl-card"></div>');
+    var h2 = el('<div class="pl-card-h"></div>');
+    h2.appendChild(txt('div', 'pl-card-t', 'O QUE FOI'));
+    h2.appendChild(txt('span', 'pl-count', foi.length + ' realizado(s)'));
+    h2.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
+    c2.appendChild(h2);
+    if (!foi.length) { c2.appendChild(txt('div', 'pl-empty', 'Nada realizado ainda nesta competência.')); }
+    foi.slice(0, 12).forEach(function (x) {
+      var lin = el('<div class="pl-linha"></div>');
+      var noPrazo = x.item.quandoPrevisto && x.item.quandoRealizado <= x.item.quandoPrevisto;
+      var dot = el('<div class="pl-l-dot"></div>');
+      dot.style.background = noPrazo ? 'var(--green)' : 'var(--orange)';
+      lin.appendChild(dot);
+      lin.appendChild(txt('div', 'pl-l-t', '[' + x.plano.setorSigla + '] ' + (x.item.oque || '(sem título)')));
+      var desvio = noPrazo ? 'no prazo' : ('+' + diffDias(x.item.quandoPrevisto, x.item.quandoRealizado) + 'd');
+      var bd = txt('span', 'pl-badge', desvio);
+      bd.style.color = noPrazo ? 'var(--green)' : 'var(--orange)';
+      lin.appendChild(bd);
+      lin.appendChild(txt('div', 'pl-l-m', fmtBR(x.item.quandoRealizado)));
+      wrapLinha(lin, x.plano.setorSigla);
+      c2.appendChild(lin);
+    });
+    if (foi.length > 12) { c2.appendChild(txt('div', 'pl-empty', '+ ' + (foi.length - 12) + ' — abra o setor abaixo para ver todos.')); }
+    wrap.appendChild(c2);
+    bodyEl.appendChild(wrap);
+  }
+  function wrapLinha(lin, sigla) {
+    lin.style.cursor = 'pointer';
+    lin.title = 'Abrir o plano de ' + sigla;
+    lin.addEventListener('click', function () { ABERTOS[sigla] = true; render(); var n = document.getElementById('pl-s-' + sigla); if (n) { n.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+  }
+  function diffDias(a, b) {
+    if (!a || !b) { return 0; }
+    var d1 = Date.UTC(parseInt(a.slice(0, 4), 10), parseInt(a.slice(5, 7), 10) - 1, parseInt(a.slice(8, 10), 10));
+    var d2 = Date.UTC(parseInt(b.slice(0, 4), 10), parseInt(b.slice(5, 7), 10) - 1, parseInt(b.slice(8, 10), 10));
+    return Math.round((d2 - d1) / 86400000);
+  }
+
+  /* ===================== RANKING "quem precisa de atenção" ===================== */
+  function renderRanking() {
+    var linhas = PLANOS.map(function (p) {
+      return { sigla: p.setorSigla, nota: KPI.planejamentoNota(itensVivos(p)) };
+    }).filter(function (x) { return x.nota !== null; })
+      .sort(function (a, b) { return a.nota.nota - b.nota.nota; });
+    if (!linhas.length) { return; }
+    var card = el('<div class="pl-card"></div>');
+    var h = el('<div class="pl-card-h"></div>');
+    h.appendChild(txt('div', 'pl-card-t', 'Quem precisa de atenção'));
+    h.appendChild(iBtn('Ranking por nota (menor primeiro)', function () {
+      return iRowsNota(linhas[0].nota).concat([['Ordem', 'Nota crescente — o primeiro da lista é quem mais precisa de apoio AGORA. Setor sem itens não ranqueia.']]);
+    }));
+    card.appendChild(h);
+    linhas.forEach(function (x) {
+      var lin = el('<div class="pl-linha"></div>');
+      var dot = el('<div class="pl-l-dot"></div>');
+      dot.style.background = x.nota.nota >= 80 ? 'var(--green)' : x.nota.nota >= 50 ? 'var(--amber)' : 'var(--red)';
+      lin.appendChild(dot);
+      lin.appendChild(txt('div', 'pl-l-t', x.sigla + ' — ' + nomeSetor(x.sigla)));
+      lin.appendChild(txt('div', 'pl-l-m', 'nota ' + x.nota.nota + ' · aderência ' + x.nota.aderencia + '%'));
+      wrapLinha(lin, x.sigla);
+      card.appendChild(lin);
+    });
+    bodyEl.appendChild(card);
+  }
+
+  /* ===================== PAINEL POR SETOR ===================== */
+  function renderSetores() {
+    var card = el('<div class="pl-card"></div>');
+    var h = el('<div class="pl-card-h"></div>');
+    h.appendChild(txt('div', 'pl-card-t', 'Planos por setor — ' + compLabel(COMP)));
+    h.appendChild(txt('span', 'pl-count', PLANOS.length + ' de ' + SETORES.length + ' setor(es) com plano'));
+    h.appendChild(iBtn('Entrega e escalonamento', function () { return iRowsPrazo(KPI.planejamentoPrazo(COMP, HOJE, null)); }));
+    card.appendChild(h);
+
+    SETORES.forEach(function (s) {
+      var pl = PLANOS.filter(function (p) { return p.setorSigla === s.sigla; })[0];
+      var row = el('<div class="pl-srow" id="pl-s-' + s.sigla + '"></div>');
+      var head = el('<div class="pl-shead"></div>');
+      head.appendChild(txt('div', 'pl-sname', s.sigla + ' — ' + (s.nome || s.sigla)));
+
+      var pz = KPI.planejamentoPrazo(COMP, HOJE, pl && pl.entregueEm ? pl.entregueEm : null);
+      var f = FASES[pz.fase] || FASES.ok;
+      var fase = txt('span', 'pl-badge', f[0]);
+      fase.style.color = f[1];
+      fase.title = 'Prazo de entrega: ' + fmtBR(pz.deadline);
+      head.appendChild(fase);
+      head.appendChild(iBtn('Fase da entrega — ' + s.sigla, function () { return iRowsPrazo(pz); }));
+
+      if (pl) {
+        var vivos = itensVivos(pl);
+        head.appendChild(txt('span', 'pl-smeta', vivos.length + ' item(ns) · ' + vivos.filter(function (i) { return i.quandoRealizado; }).length + ' realizado(s)'));
+        var n = KPI.planejamentoNota(vivos);
+        var nb = el('<span class="pl-nota"></span>');
+        nb.appendChild(txt('span', '', n ? ('Nota ' + n.nota) : 'sem nota'));
+        if (n) { nb.style.color = n.nota >= 80 ? 'var(--green)' : n.nota >= 50 ? 'var(--amber)' : 'var(--red)'; }
+        nb.appendChild(iBtn('Nota do mês — ' + s.sigla, function () { return iRowsNota(n); }));
+        head.appendChild(nb);
+      } else {
+        head.appendChild(txt('span', 'pl-smeta', 'sem plano nesta competência'));
+        if (escreveNoSetor(s.sigla)) {
+          var nb2 = UI.button({ label: 'Criar plano', variant: 'ghost' });
+          nb2.addEventListener('click', function (ev) { ev.stopPropagation(); criarPlano(s.sigla); });
+          nb2.style.marginLeft = 'auto';
+          head.appendChild(nb2);
+        }
+      }
+      row.appendChild(head);
+
+      var box = el('<div style="display:none"></div>');
+      row.appendChild(box);
+      head.addEventListener('click', function () {
+        ABERTOS[s.sigla] = !ABERTOS[s.sigla];
+        box.style.display = ABERTOS[s.sigla] ? 'block' : 'none';
+        if (ABERTOS[s.sigla]) { box.innerHTML = ''; if (pl) { fillPlano(pl, box); } else { box.appendChild(txt('div', 'pl-empty', 'Sem plano — ' + (escreveNoSetor(s.sigla) ? 'clique em "Criar plano" para abrir o 5W2H do mês.' : 'o líder do setor ainda não criou.'))); } }
+      });
+      if (ABERTOS[s.sigla]) { box.style.display = 'block'; if (pl) { fillPlano(pl, box); } else { box.appendChild(txt('div', 'pl-empty', 'Sem plano nesta competência.')); } }
+      card.appendChild(row);
+    });
+    bodyEl.appendChild(card);
+  }
+
+  /* ---------- grade 5W2H de um plano ---------- */
+  function fillPlano(pl, box) {
+    var podeEd = escreveNoSetor(pl.setorSigla);
+    var grade = el('<div class="pl-grade"></div>');
+    var tb = el('<table class="pl-tb"></table>');
+    var thead = el('<thead><tr><th>O que</th><th>Como</th><th>Quem</th><th>Quando (prev.)</th><th>Realizado</th><th>R$</th><th></th></tr></thead>');
+    tb.appendChild(thead);
+    var tbody = document.createElement('tbody');
+    var vivos = itensVivos(pl).slice().sort(function (a, b) { return (a.quandoPrevisto || '9999').localeCompare(b.quandoPrevisto || '9999'); });
+    if (!vivos.length) {
+      var tr0 = document.createElement('tr');
+      var td0 = document.createElement('td');
+      td0.colSpan = 7; td0.appendChild(txt('span', 'pl-empty', 'Nenhum item ainda — o 5W2H do mês nasce vazio.'));
+      tr0.appendChild(td0); tbody.appendChild(tr0);
+    }
+    vivos.forEach(function (it) {
+      var tr = document.createElement('tr');
+      function td(node) { var c = document.createElement('td'); if (node) { c.appendChild(node); } tr.appendChild(c); return c; }
+      td(txt('span', '', it.oque || '—'));
+      td(txt('span', 'pl-l-m', it.como || '—'));
+      td(txt('span', 'pl-l-m', it.quemNome || '—'));
+      var tdPrev = td(txt('span', '', fmtBR(it.quandoPrevisto)));
+      if (!it.quandoRealizado && it.quandoPrevisto && it.quandoPrevisto < HOJE) { tdPrev.style.color = 'var(--red)'; }
+      var real = it.quandoRealizado ? fmtBR(it.quandoRealizado) : '—';
+      var tdReal = td(txt('span', '', real));
+      if (it.quandoRealizado) { tdReal.style.color = (it.quandoPrevisto && it.quandoRealizado <= it.quandoPrevisto) ? 'var(--green)' : 'var(--orange)'; }
+      var tdV = td(txt('span', 'pl-l-m', it.valorCentavos ? fmtBRL(it.valorCentavos) : '—'));
+      if (Number(it.valorCentavos) > 20000) {
+        var travado = KPI.planejamentoItemTravado(it);
+        var bd = txt('span', 'pl-badge', travado ? '🔒 ' + assinaturasTexto(it) : '✓ aprovado');
+        bd.style.color = travado ? 'var(--amber)' : 'var(--green)';
+        bd.style.marginLeft = '6px';
+        bd.title = 'Alçada R$200 — item acima de R$ 200 precisa de líder E gestor.';
+        tdV.appendChild(bd);
+      }
+      var tdA = td(null);
+      if (podeEd || cabeAprovar(it)) {
+        if (!it.quandoRealizado && podeEd) {
+          var br = txt('button', 'pl-acao green', '✓ realizar'); br.type = 'button';
+          if (KPI.planejamentoItemTravado(it)) { br.disabled = true; br.style.opacity = '.45'; br.title = 'Aguardando aprovação (alçada R$200).'; }
+          br.addEventListener('click', function () { modalRealizar(pl, it); });
+          tdA.appendChild(br);
+        }
+        if (cabeAprovar(it)) {
+          var ba = txt('button', 'pl-acao', 'aprovar'); ba.type = 'button';
+          ba.title = 'Assinar como ' + (Guard.isGestor() ? 'gestor' : 'líder') + ' (aprovação paralela).';
+          ba.addEventListener('click', function () { aprovarItem(pl, it); });
+          tdA.appendChild(ba);
+        }
+        if (podeEd) {
+          var be = txt('button', 'pl-acao', 'editar'); be.type = 'button';
+          be.addEventListener('click', function () { modalItem(pl, it); });
+          tdA.appendChild(be);
+          var bx = txt('button', 'pl-acao red', 'remover'); bx.type = 'button';
+          bx.addEventListener('click', function () { removerItem(pl, it); });
+          tdA.appendChild(bx);
+        }
+      }
+      tbody.appendChild(tr);
+    });
+    tb.appendChild(tbody);
+    grade.appendChild(tb);
+    box.appendChild(grade);
+
+    var foot = el('<div class="pl-foot"></div>');
+    if (podeEd) {
+      var add = UI.button({ label: '+ Item do plano', variant: 'ghost' });
+      add.addEventListener('click', function () { modalItem(pl, null); });
+      foot.appendChild(add);
+      if (!pl.entregueEm) {
+        var ent = UI.button({ label: 'Entregar plano', icon: 'check' });
+        ent.title = 'Marca o plano como entregue (dia 25 é o D-0). Itens seguem editáveis.';
+        ent.addEventListener('click', function () { entregarPlano(pl); });
+        foot.appendChild(ent);
+      } else {
+        foot.appendChild(txt('span', 'pl-smeta', 'Entregue em ' + new Date(pl.entregueEm).toLocaleDateString('pt-BR') + '.'));
+      }
+    } else {
+      foot.appendChild(txt('span', 'pl-smeta', 'Somente leitura — o plano é público; edita quem lidera ' + pl.setorSigla + ' (ou o gestor).'));
+    }
+    foot.appendChild(iBtn('Alçada R$200 (aprovação paralela)', I_ALCADA));
+    box.appendChild(foot);
+  }
+  function assinaturasTexto(it) {
+    var falta = [];
+    if (!it.aprovLider) { falta.push('líder'); }
+    if (!it.aprovGestor) { falta.push('gestor'); }
+    return 'falta ' + falta.join(' + ');
+  }
+  function cabeAprovar(it) {
+    if (!KPI.planejamentoItemTravado(it)) { return false; }
+    if (Guard.isGestor && Guard.isGestor()) { return !it.aprovGestor; }
+    if (Guard.isLider && Guard.isLider()) { return !it.aprovLider; }
+    return false;
+  }
+
+  /* ===================== mutações ===================== */
+  function salvarItens(pl, novaLista, acao, antes) {
+    return Store.atualizarPlanejamento(pl.id, { itens: novaLista }, acao, antes || null)
+      .then(function () { pl.itens = novaLista; });
+  }
+  function criarPlano(sigla) {
+    Store.criarPlanejamento({ setorSigla: sigla, competencia: COMP, itens: [], entregueEm: null })
+      .then(function () { toast('Plano de ' + sigla + ' criado — monte o 5W2H.'); ABERTOS[sigla] = true; return reload(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function entregarPlano(pl) {
+    var ts = Date.now();
+    Store.atualizarPlanejamento(pl.id, { entregueEm: ts }, 'planejamento_entregue', { entregueEm: null })
+      .then(function () { pl.entregueEm = ts; toast('Plano entregue — prestação de contas aberta a todos.'); render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function aprovarItem(pl, it) {
+    var papel = (Guard.isGestor && Guard.isGestor()) ? 'aprovGestor' : 'aprovLider';
+    var lista = (pl.itens || []).map(function (x) {
+      if (x.id !== it.id) { return x; }
+      var novo = Object.assign({}, x);
+      novo[papel] = { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() };
+      return novo;
+    });
+    salvarItens(pl, lista, 'planejamento_item_aprovar', { itemId: it.id, papel: papel })
+      .then(function () { toast('Assinatura registrada (' + (papel === 'aprovGestor' ? 'gestor' : 'líder') + ').'); render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function removerItem(pl, it) {
+    UI.modal({
+      title: 'Remover item do plano', width: 420,
+      body: [txt('div', 'pl-empty', '"' + (it.oque || '(sem título)') + '" sai do plano e do cálculo da nota (remoção reversível no banco — nada é apagado).')],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Remover', icon: 'check', onClick: function () {
+            var lista = (pl.itens || []).map(function (x) { return x.id === it.id ? Object.assign({}, x, { removido: true }) : x; });
+            salvarItens(pl, lista, 'planejamento_item_remover', { itemId: it.id, oque: it.oque })
+              .then(function () { close(); toast('Item removido.'); render(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+  function modalRealizar(pl, it) {
+    var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = HOJE;
+    UI.modal({
+      title: 'Marcar como realizado', width: 420,
+      body: [
+        txt('div', 'pl-empty', it.oque || ''),
+        UI.field({ label: 'Data realizada', required: true, control: dtInp, hint: 'Previsto: ' + fmtBR(it.quandoPrevisto) + '. O desvio alimenta a nota (30% no prazo · 20% atraso residual).' })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Confirmar', icon: 'check', onClick: function () {
+            if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
+            var lista = (pl.itens || []).map(function (x) { return x.id === it.id ? Object.assign({}, x, { quandoRealizado: dtInp.value }) : x; });
+            salvarItens(pl, lista, 'planejamento_item_realizar', { itemId: it.id, quandoRealizado: null })
+              .then(function () { close(); toast('Realizado registrado.'); render(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+  function modalItem(pl, it) {
+    var editing = !!it;
+    var oqInp = UI.input({ value: editing ? (it.oque || '') : '', placeholder: 'Ex.: Mutirão de rematrícula' });
+    var comoTa = document.createElement('textarea');
+    comoTa.className = 'ui-input'; comoTa.rows = 2; comoTa.style.resize = 'vertical';
+    comoTa.value = editing ? (it.como || '') : '';
+    var quemOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
+    var quemSel = UI.select({ value: editing && it.quemUid ? it.quemUid : '', placeholder: '— Quem executa —', options: quemOpts });
+    var qdInp = UI.input({}); qdInp.type = 'date'; qdInp.value = editing && it.quandoPrevisto ? it.quandoPrevisto : '';
+    var vInp = UI.input({ placeholder: 'R$ 0,00 (opcional)', value: editing && it.valorCentavos ? fmtBRL(it.valorCentavos) : '' });
+    vInp.addEventListener('input', function () { vInp.value = vInp.value.trim() ? fmtBRL(parseBRL(vInp.value)) : ''; });
+    UI.modal({
+      title: (editing ? 'Editar' : 'Novo') + ' item — ' + pl.setorSigla + ' · ' + compLabel(COMP), width: 520,
+      body: [
+        UI.field({ label: 'O que', required: true, control: oqInp }),
+        UI.field({ label: 'Como', control: comoTa }),
+        UI.field({ label: 'Quem', control: quemSel, hint: USERS.length ? 'Responsável pela execução.' : 'Sem lista de usuários (perfil sem acesso) — fica em branco.' }),
+        UI.field({ label: 'Quando (previsto)', required: true, control: qdInp }),
+        UI.field({ label: 'Custo estimado', control: vInp, hint: 'Guardado em CENTAVOS (inteiro). Acima de R$ 200,00 o item trava até líder + gestor aprovarem (alçada — o plano nunca trava).' })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: editing ? 'Salvar' : 'Adicionar', icon: 'check', onClick: function () {
+            if (!oqInp.value.trim()) { toast('Informe "O que".', 'err'); return; }
+            if (!R.isISO(qdInp.value)) { toast('Informe a data prevista.', 'err'); return; }
+            var quem = USERS.filter(function (u) { return u.uid === quemSel.value; })[0] || null;
+            var cents = vInp.value.trim() ? parseBRL(vInp.value) : null;
+            var base = {
+              oque: oqInp.value.trim(), como: comoTa.value.trim() || null,
+              quemUid: quem ? quem.uid : null, quemNome: quem ? quem.nome : null,
+              quandoPrevisto: qdInp.value, valorCentavos: cents
+            };
+            var lista;
+            if (editing) {
+              /* valor mudou e cruzou/permanece acima da alçada -> assinaturas zeram (o aprovado foi OUTRO valor) */
+              lista = (pl.itens || []).map(function (x) {
+                if (x.id !== it.id) { return x; }
+                var novo = Object.assign({}, x, base);
+                if ((Number(x.valorCentavos) || 0) !== (Number(cents) || 0) && (Number(cents) || 0) > 20000) {
+                  novo.aprovLider = null; novo.aprovGestor = null;
+                }
+                return novo;
+              });
+            } else {
+              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, aprovLider: null, aprovGestor: null, removido: false, criadoEm: Date.now() }, base)]);
+            }
+            salvarItens(pl, lista, editing ? 'planejamento_item_editar' : 'planejamento_item_add', editing ? { itemId: it.id } : null)
+              .then(function () { close(); toast(editing ? 'Item salvo.' : 'Item adicionado ao 5W2H.'); render(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
+  /* ===================== ESTADOS / RENDER / BOOT ===================== */
+  function renderLoading() {
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(el('<div class="pl-state"><div class="pl-state-t">Carregando…</div><div class="pl-state-s">Buscando setores e os planos da competência.</div></div>'));
+  }
+  function renderError(e) {
+    bodyEl.innerHTML = '';
+    var s = el('<div class="pl-state"></div>');
+    s.appendChild(txt('div', 'pl-state-t', 'Não deu para carregar'));
+    s.appendChild(txt('div', 'pl-state-s', (e && e.message) || 'Erro desconhecido.'));
+    var rb = UI.button({ label: 'Tentar de novo', icon: 'upload' });
+    rb.addEventListener('click', reload);
+    s.appendChild(rb);
+    bodyEl.appendChild(s);
+  }
+  function render() {
+    compEl.textContent = compLabel(COMP);
+    actionsEl.innerHTML = '';
+    var livres = minhasSiglasEscreviveis().filter(function (sg) {
+      return !PLANOS.some(function (p) { return p.setorSigla === sg; });
+    });
+    if (livres.length) {
+      var nb = UI.button({ label: 'Novo planejamento', icon: 'plus', onClick: function () {
+        if (livres.length === 1) { criarPlano(livres[0]); return; }
+        var sel = UI.select({ placeholder: 'Escolha o setor', options: livres.map(function (sg) { return { value: sg, label: sg + ' — ' + nomeSetor(sg) }; }) });
+        UI.modal({
+          title: 'Novo planejamento — ' + compLabel(COMP), width: 440,
+          body: [UI.field({ label: 'Setor', required: true, control: sel, hint: 'Um plano por setor por competência.' })],
+          footer: function (close) {
+            return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+              UI.button({ label: 'Criar', icon: 'check', onClick: function () {
+                if (!sel.value) { toast('Escolha o setor.', 'err'); return; }
+                close(); criarPlano(sel.value);
+              } })];
+          }
+        });
+      } });
+      actionsEl.appendChild(nb);
+    }
+    bodyEl.innerHTML = '';
+    if (!SETORES.length) {
+      bodyEl.appendChild(el('<div class="pl-state"><div class="pl-state-t">Sem setores cadastrados</div><div class="pl-state-s">Cadastre os setores primeiro (tela Setores) — o plano nasce por sigla.</div></div>'));
+      return;
+    }
+    renderEixo();
+    renderRanking();
+    renderSetores();
+  }
+  function reload() {
+    renderLoading();
+    return Promise.all([Store.listSetores(), Store.listPlanejamentos(COMP), Store.listUsuariosAtivos()])
+      .then(function (r) { SETORES = r[0]; PLANOS = r[1]; USERS = r[2]; render(); })
+      .catch(renderError);
+  }
+  function boot() {
+    POP = document.getElementById('pl-pop');
+    BACK = document.getElementById('pl-backdrop');
+    BACK.addEventListener('click', closePop);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    bodyEl = document.getElementById('pl-body');
+    actionsEl = document.getElementById('pl-actions');
+    compEl = document.getElementById('pl-comp');
+    HOJE = R.hojeISO();
+    COMP = compSeguinte(HOJE); /* padrão: a competência que se planeja AGORA (vence dia 25 deste mês) */
+    document.getElementById('pl-prev').addEventListener('click', function () { COMP = compShift(COMP, -1); reload(); });
+    document.getElementById('pl-next').addEventListener('click', function () { COMP = compShift(COMP, 1); reload(); });
+    var ib = iBtn('Planejamento do Setor (5W2H mensal)', [
+      ['O que é', 'O plano mensal obrigatório de cada setor (RESUMO §4): O QUE / COMO / QUEM / QUANDO, previsto × realizado. É a prestação de contas pública do líder — TODOS leem; edita quem lidera o setor (ou o gestor).'],
+      ['Entrega', 'Até o dia 25 do mês anterior à competência. Farol D-5 (dia 20, alerta ao líder) · D-3 (dia 22, gestão) · D-0 (dia 25, flag de não-conformidade). NUNCA bloqueia.'],
+      ['Alçada', 'Item até R$ 200: autonomia do líder. Acima: trava o ITEM até líder + gestor assinarem (paralelo). O plano nunca trava.'],
+      ['Nota', '50% aderência + 30% no prazo + 20% atraso residual (teto 7 dias) — ranking "quem precisa de atenção". Calibrável.']
+    ]);
+    document.getElementById('pl-info').appendChild(ib);
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Planejamento', user: USER }), app.firstChild);
+    reload();
+  }
+
+  Guard.onReady(function (u) { USER = u; boot(); });
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

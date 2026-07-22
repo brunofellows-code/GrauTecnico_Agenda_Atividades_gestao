@@ -93,7 +93,7 @@
 
     <h1 class="ix-title">Bem-vindo ao GERA</h1>
     <p class="ix-acr" aria-label="GERA: Gestão, Equipe, Rotinas e Atividades"><b>G</b>estão&nbsp;·&nbsp;<b>E</b>quipe&nbsp;·&nbsp;<b>R</b>otinas&nbsp;·&nbsp;<b>A</b>tividades</p>
-    <p class="ix-sub">Agenda, projetos e atividades do Grau Técnico FSA. Escolha por onde começar.</p>
+    <p class="ix-sub">Agenda, reuniões e atividades do Grau Técnico FSA. Escolha por onde começar.</p>
     <p class="ix-benefit" id="ix-benefit">Vamos organizar o seu dia — um passo de cada vez.</p>
 
     <section class="ix-grid">
@@ -104,17 +104,17 @@
         <span class="ix-go">Abrir →</span>
       </a><button class="ix-i" type="button" data-info="hoje" aria-label="O que é Hoje?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
-      <div class="ix-cw" data-card="Projetos"><a class="ix-card" href="projetos.html">
-        <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></span>
-        <span class="ix-ct">Projetos</span>
-        <span class="ix-cd">Entregas com começo, meio e fim — fases, responsáveis e o quanto já andou.</span>
+      <div class="ix-cw" data-card="Reuniões"><a class="ix-card" href="projetos.html">
+        <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+        <span class="ix-ct">Reuniões</span>
+        <span class="ix-cd">Pauta, presença e decisões — a cobrança volta sozinha na reunião seguinte.</span>
         <span class="ix-go">Abrir →</span>
-      </a><button class="ix-i" type="button" data-info="projetos" aria-label="O que é Projetos?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
+      </a><button class="ix-i" type="button" data-info="reunioes" aria-label="O que é Reuniões?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
       <div class="ix-cw" data-card="Setores"><a class="ix-card" href="setores.html">
         <span class="ix-ic"><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
         <span class="ix-ct">Setores</span>
-        <span class="ix-cd">Áreas da escola e suas siglas — o registro central que conecta projetos e atividades.</span>
+        <span class="ix-cd">Áreas da escola e suas siglas — o registro central que conecta reuniões e atividades.</span>
         <span class="ix-go">Abrir →</span>
       </a><button class="ix-i" type="button" data-info="setores" aria-label="O que é Setores?"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></button></div>
 
@@ -177,11 +177,11 @@
 
   var INFO = {
     hoje: { t: 'Hoje', d: 'Seu dia numa tela só: os compromissos com hora marcada, as atividades que vencem hoje, as que já estão atrasadas e as mais críticas.', u: 'Abra para começar o dia sabendo o que não pode escapar.' },
-    setores: { t: 'Setores', d: 'O cadastro das áreas da escola (Pedagógico, Secretaria, CRA…) e suas siglas. É o registro central: toda atividade e todo projeto se liga a um setor por aqui.', u: 'Abra para criar, renomear ou organizar setores e subsetores.' },
+    setores: { t: 'Setores', d: 'O cadastro das áreas da escola (Pedagógico, Secretaria, CRA…) e suas siglas. É o registro central: toda atividade e toda reunião se liga a um setor por aqui.', u: 'Abra para criar, renomear ou organizar setores e subsetores.' },
     performance: { t: 'Performance', d: 'Como cada pessoa está entregando: aderência à rotina, conclusão no prazo, tempo de ciclo e carga de trabalho por responsável. Clique num nome para ver os itens por trás de cada número.', u: 'Abra para saber quem precisa de ajuda ou de redistribuição.' },
     usuarios: { t: 'Usuários', d: 'Quem tem acesso ao sistema e com qual perfil (Admin, Editor, Visualizador, Consultor). Só o Admin cria e edita.', u: 'Abra para liberar ou remover o acesso de alguém.' },
     atividades: { t: 'Atividades', d: 'As rotinas e tarefas, com recorrência (diária, semanal, quinzenal, mensal, bimestral, trimestral). Marque como feito por ocorrência sem perder o histórico. Visões por setor, série, Kanban e quadro.', u: 'Abra para cadastrar e acompanhar o que a equipe faz.' },
-    projetos: { t: 'Projetos', d: 'Entregas com começo, meio e fim (uma reforma, uma campanha de matrícula), divididas em fases e atividades. O quanto já andou é calculado do que a equipe marca como feito — ninguém digita percentual.', u: 'Abra para acompanhar uma entrega maior do início ao fim.' },
+    reunioes: { t: 'Reuniões', d: 'A raiz do ciclo de gestão: convocação automática por tipo, pauta, presença e decisões. Decisão aberta reaparece na reunião seguinte (rollforward) e vira atividade em 1 clique — nada se perde entre uma reunião e outra.', u: 'Abra para criar a próxima reunião ou cobrar as decisões da anterior.' },
     importar: { t: 'Importar', d: 'Sobe as rotinas por planilha (.csv ou .xlsx) em vez de cadastrar uma a uma. Antes de gravar, o sistema confere coluna por coluna e mostra o que vai entrar, o que vai mudar e o que está errado. Grava só a diferença.', u: 'Abra para carregar muitas rotinas de uma vez.' },
     inteligencia: { t: 'Inteligência', d: 'O raio-x da gestão: prioriza o que atacar primeiro, mostra aderência, atrasadas, aging e carga, e entrega um plano de ação. Clique em qualquer número para ver os itens que o formam.', u: 'Abra para decidir onde agir primeiro.' }
   };

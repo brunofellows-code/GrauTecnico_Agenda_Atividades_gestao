@@ -81,11 +81,10 @@
       ['Data deslizante', 'Só para atividade única: se não foi feita, a pendência "desliza" e continua aparecendo até ser concluída.'],
       ['Reprogramada', 'Ocorrência cuja data foi adiada com aprovação. Conta no indicador de reprogramação.'],
       ['Pulada', 'Ocorrência marcada como "não vai acontecer desta vez" (ex.: feriado). Não conta como atraso nem entra na aderência.'],
-      ['Subtarefa', 'Pedaço de uma atividade, com % próprio (0, 25, 50, 75, 100). A média das subtarefas vira o % da atividade; a média das atividades vira o % do projeto (cascata).'],
-      ['Projeto', 'Um conjunto de atividades com objetivo comum (ex.: Semana Pedagógica). O % do projeto sobe sozinho conforme as atividades avançam.'],
+      ['Subtarefa', 'Pedaço de uma atividade, com % próprio (0, 25, 50, 75, 100). A média das subtarefas vira o % da atividade (cascata). Gerencie pelo menu ⋮ do cartão, na tela Atividades.'],
       ['Reunião (no sistema)', 'Registro de uma reunião com suas DECISÕES: o que foi decidido, quem é o dono e o prazo. Uma decisão pode virar atividade com 1 clique.'],
       ['Rollforward', 'Decisões ainda abertas de reuniões passadas reaparecem automaticamente na reunião seguinte — nada cai no esquecimento.'],
-      ['Evento', 'Compromisso com data no calendário (formatura, feira, visita), com custo previsto e custo realizado. Pode ou não pertencer a um projeto.'],
+      ['Evento', 'Compromisso com data no calendário (formatura, feira, visita), com custo previsto e custo realizado.'],
       ['Soft-delete', 'Nada é apagado de verdade: o registro é só "desativado" e some das telas, mas o histórico continua guardado.'],
       ['atividade_log', 'O "livro-caixa" do sistema: toda criação, edição e conclusão fica registrada com data, hora e autor. A tela Performance lê daqui.']
     ]],
@@ -119,12 +118,12 @@
       ['Responsável marca as próprias', 'Quem é o responsável de uma rotina pode concluir, iniciar e reabrir as PRÓPRIAS ocorrências no Meu Dia — mesmo no perfil usuário (padrão Asana: o assignado age na própria tarefa). Reprogramar e pular continuam com líder/gestor.'],
       ['Exportar CSV (ranking)', 'Botão na tela Performance que baixa a lente atual do ranking (setor, líder ou usuário) num arquivo que abre direto no Excel. Mesmos números da tela — nada é recalculado.'],
       ['Placar da reunião', 'Cabeçalho numérico da reunião — Realizadas (no prazo/com atraso), Em andamento, Planejadas, Vencidas e Vence hoje — igual ao topo da planilha ATA, mas AUTOMÁTICO: cada número vem do status derivado da atividade-filha de cada decisão. Ninguém digita status.'],
-      ['Reunião = projeto', 'Toda reunião pode (e deve) morar num projeto: as demandas caem nele com kanban, subtarefas e % — como você fazia no GMIX, só que com status derivado. Reuniões do mesmo tipo sugerem o mesmo projeto (a série); reunião antiga sem projeto tem o botão Vincular, que migra as atividades já criadas.'],
+      ['Reunião (entidade raiz)', 'No GERA a reunião é a raiz do ciclo: pauta, presença, decisões e cobrança automática. Decisão aberta reaparece na reunião seguinte do mesmo tipo (rollforward) e vira atividade em 1 clique — não existe \"Projeto\".'],
       ['Custo do mês (Eventos)', 'Linha no topo da Agenda de Eventos somando o previsto × realizado de todos os eventos do mês no seu recorte, com a diferença em destaque. Valores em centavos por baixo — sem erro de arredondamento.']
     ]],
     ['Perfis e permissões', [
       ['Admin', 'Vê e faz tudo, inclusive gerenciar usuários e aprovar mudanças de data automaticamente.'],
-      ['Editor', 'Cria e edita atividades, projetos, reuniões e eventos. Mudança de data de série precisa de aprovação.'],
+      ['Editor', 'Cria e edita atividades, reuniões e eventos. Mudança de data de série precisa de aprovação.'],
       ['Visualizador', 'Só enxerga: não cria nem edita nada.'],
       ['Consultor Externo', 'Acesso de visualização limitado, pensado para alguém de fora da equipe.'],
       ['RBAC', 'Controle de acesso por papel (Role-Based Access Control): o que cada perfil pode fazer é imposto também no banco (Regras do Firestore), não só na tela.']

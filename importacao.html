@@ -86,7 +86,7 @@
   /* ============================================================
      IMPORTAÇÃO + AUDITORIA (Protocolo A · aba 4)
      ------------------------------------------------------------
-     Contrato (instrução do projeto §8.2 + Protocolo A):
+     Contrato (Instrução do Projeto + Protocolo A — §8.2 revogado no R4·B2):
      · Upsert por CÓDIGO ESTÁVEL (coluna `codigo`): existe → atualiza;
        não existe → cria. Padrão que o mercado pede e não entrega
        (Asana só cria; Monday não mapeia por ID único) — registrado.
@@ -450,7 +450,7 @@
           data: null, deslizante: false, dataInicio: null, dataFim: null, subsetorSigla: null,
           camada: 'operacional',
           responsavelUid: null, responsavelNome: null,
-          projetoId: null, projetoSigla: null, todosSetores: false
+          todosSetores: false /* R4-B2: projetoId/projetoSigla morreram junto com "Projeto" */
         }, cand);
         var verr = R.validar(doc);
         if (verr.length) { plano.rejeitar.push({ linha: linha, motivo: verr[0] }); return; }
