@@ -1449,11 +1449,13 @@
 
 /* ============================================================
    R4 · BLOCO 3 — PLANEJAMENTO DO SETOR (matemática pura)
-   O 5W2H mensal do líder (RESUMO §4). Três funções DERIVADAS,
-   nunca gravadas, validadas à mão no harness_r4.js:
+   O 5W2H mensal do líder (RESUMO §4). Funções DERIVADAS, nunca
+   gravadas, validadas à mão no harness_r4.js (+ harness_r5.js):
      planejamentoPrazo  — fase D-5/D-3/D-0 da entrega (dia 25).
-     planejamentoItemTravado — alçada R$200 (aprovação paralela).
+     planejamentoItemTravado — alçada R$200 pelo custo PREVISTO (R5).
      planejamentoNota   — nota 50/30/20 do mês (ranking atenção).
+     planejamentoStatus — rascunho/submetido/aprovado (R5, derivado).
+     paretoMotivos      — Pareto de motivos de não-realização (R5).
    ============================================================ */
 (function () {
   'use strict';
@@ -1504,9 +1506,13 @@
      socio:true no cadastro. Mesma pessoa acumulando papéis pode dar as duas
      assinaturas (o objetivo travado é FORÇAR LEITURA, não anti-fraude interna);
      four-eyes estrito (uids distintos) é calibragem futura de 1 linha. */
+  /* R5-B2: a alçada trava pelo custo PREVISTO (aprovação antecede a
+     execução — padrão baseline do MS Project / planned cost do Wrike).
+     valorPrevistoCentavos é o campo novo; valorCentavos é o legado da R4
+     e vale como fallback de leitura (nunca destruído). */
   K.planejamentoItemTravado = function (item) {
     if (!item) { return false; }
-    var v = Number(item.valorCentavos) || 0;
+    var v = Number(item.valorPrevistoCentavos != null ? item.valorPrevistoCentavos : item.valorCentavos) || 0;
     if (v <= 20000) { return false; }
     return !(item.aprovGestor && item.aprovSocio);
   };
@@ -1559,5 +1565,36 @@
              previstos: at.length, realizados: realizados.length,
              realizadosNoPrazo: noPrazo.length, mediaDiasAtraso: Math.round(media * 10) / 10,
              pausadosAprovacao: pausados.length };
+  };
+
+  /* R5-B2 · ESTADO FORMAL DO PLANO (RESUMO §4) — SEMPRE DERIVADO, nunca
+     persistido (princípio: status calculado no cliente). O trabalho NUNCA
+     trava por estado (padrão Workfront: "Pending Approval" é rótulo, o item
+     segue editável):
+       rascunho  = ainda sem entregueEm (líder montando o 5W2H).
+       submetido = entregue, aguardando a CIÊNCIA de gestor E sócio no PLANO
+                   (assinatura de leitura — não confundir com a alçada por
+                   ITEM >R$200, que essa sim trava o item).
+       aprovado  = entregue + as duas ciências dadas.
+     @param pl { entregueEm|null, aprovGestor|null, aprovSocio|null } */
+  K.planejamentoStatus = function (pl) {
+    if (!pl || !pl.entregueEm) { return 'rascunho'; }
+    return (pl.aprovGestor && pl.aprovSocio) ? 'aprovado' : 'submetido';
+  };
+
+  /* R5-B2 · PARETO DE MOTIVOS de não-realização (dado gravado desde a
+     R4-EXT; barras ordenadas = padrão aprovado da biblioteca §2 / método
+     Pareto de causas Juran-Falconi). Só itens vivos declarados naoFeito.
+     Empate: ordem alfabética pt-BR (determinístico).
+     @returns [{ motivo, n }] desc por n */
+  K.paretoMotivos = function (itens) {
+    var cont = {};
+    (Array.isArray(itens) ? itens : []).forEach(function (i) {
+      if (!i || i.removido || !i.naoFeito) { return; }
+      var m = i.motivo || 'Sem motivo registrado';
+      cont[m] = (cont[m] || 0) + 1;
+    });
+    return Object.keys(cont).map(function (m) { return { motivo: m, n: cont[m] }; })
+      .sort(function (a, b) { return (b.n - a.n) || a.motivo.localeCompare(b.motivo, 'pt-BR'); });
   };
 })();

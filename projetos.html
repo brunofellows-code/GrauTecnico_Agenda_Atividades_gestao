@@ -407,6 +407,9 @@
     ['resultado_mensal', 'Resultado Mensal'] /* F1-G · D1=(a): convoca líderes + gestores (kpi.js convocadosPorTipo) */
   ];
   var SUGS = [];           /* F1-F · sugestões de pauta PENDENTES (cascata) */
+  /* R5-B1 · lista O3 do RESUMO (falta em reunião) — mesma lista do "Não vou"
+     do Hoje; 'Outro' exige detalhe. */
+  var MOTIVOS_FALTA = ['Conflito de agenda', 'Atendimento urgente', 'Ausência justificada', 'Esquecimento/não vi', 'Outro'];
   var VIEW_TIPO = 'todas'; /* F1-F · chip ativo da lista de reuniões */
   var MODO_REUN = 'lista'; /* F1-F · 'lista' | 'kanban' */
   var DEC_VIEW = 'lista';  /* F1-F · decisões: 'lista' | 'tabela' (5W2H) */
@@ -807,6 +810,38 @@
     return L.join('\n');
   }
 
+  /* R5-B1: falta justificada NO DIA — o líder registra o motivo do ausente
+     (lista O3; 'Outro' exige detalhe). Se o convocado já tinha avisado no
+     RSVP ("Não vou"), o motivo dele vem pré-selecionado. Marcar presença
+     depois LIMPA a falta (consistência). */
+  function modalJustificarFalta(r, chave, nome, onDone) {
+    var pre = ((r.recusas || {})[chave] || {});
+    var preMotivo = MOTIVOS_FALTA.indexOf(pre.motivo) >= 0 ? pre.motivo : '';
+    var motSel = UI.select({ value: preMotivo, placeholder: '— Motivo (obrigatório) —',
+      options: MOTIVOS_FALTA.map(function (m) { return { value: m, label: m }; }) });
+    var detInp = UI.input({ placeholder: 'Detalhe (obrigatório se "Outro")', value: pre.detalhe || '' });
+    UI.modal({
+      title: 'Justificar falta — ' + nome, width: 440,
+      body: [
+        UI.field({ label: 'Motivo', required: true, control: motSel,
+          hint: pre.motivo ? ('No RSVP a pessoa avisou: "' + pre.motivo + (pre.detalhe ? ' — ' + pre.detalhe : '') + '".') : 'Registro de chamada (padrão Teams: RSVP e presença real são separados).' }),
+        UI.field({ label: 'Detalhe', control: detInp })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Registrar falta', icon: 'check', onClick: function () {
+            if (!motSel.value) { toast('Escolha o motivo.', 'err'); return; }
+            if (motSel.value === 'Outro' && !detInp.value.trim()) { toast('Detalhe o motivo "Outro".', 'err'); return; }
+            var novo = {}; Object.keys(r.faltas || {}).forEach(function (k) { novo[k] = r.faltas[k]; });
+            novo[chave] = { motivo: motSel.value, detalhe: detInp.value.trim() || null, nome: nome, em: Date.now(), porUid: USER.uid };
+            Store.atualizarReuniao(r.id, { faltas: novo }, 'falta_justificada', { chave: chave })
+              .then(function () { r.faltas = novo; close(); toast('Falta justificada.'); if (onDone) { onDone(); } })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
   /* Detalhe da reunião (F1-E): horas+atraso · presença · pauta · rollforward ·
      decisões por dono · resumo/ata obrigatório para encerrar.               */
   function fillReuniao(r, box, atualizaMeta) {
@@ -911,20 +946,48 @@
     })();
 
     /* ---------- 2) presença (ausente = DERIVADO, nunca gravado) ---------- */
+    /* R5-B1: ciclo completo — RSVP antes (confirmadosUids/recusas, gravados
+       pelo próprio convocado no Hoje) + chamada no dia (presentes) + falta
+       justificada com motivo O3. Padrão Teams: RSVP e chamada real são
+       registros SEPARADOS; a chamada é do organizador. */
     var pcard = el('<div style="margin-bottom:10px"></div>');
-    pcard.appendChild(txt('div', 'pj-card-t', 'Presença'));
+    var pHead = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+    pHead.appendChild(txt('div', 'pj-card-t', 'Presença'));
+    var confMap = {}; (r.confirmadosUids || []).forEach(function (u) { confMap[u] = true; });
+    var recMap = r.recusas || {};
+    pHead.appendChild(iBtn('Presença — RSVP × chamada', function () {
+      var internosI = (r.convocados || []).length;
+      var nCi = (r.confirmadosUids || []).length;
+      var nRi = Object.keys(recMap).length;
+      return [
+        ['Fórmula', 'ANTES: cada convocado responde no Hoje — confirma (1 toque) ou avisa que não vem (motivo obrigatório). Sem resposta = convocados − confirmados − recusas. NO DIA: quem conduz marca a chamada; ausente = convocado sem check. Falta pode ser justificada com motivo (lista O3); marcar presença depois limpa a falta.'],
+        ['Dados', 'reunioes.confirmadosUids[] + reunioes.recusas{} (RSVP, gravados pelo próprio convocado) · reunioes.presentes[] + reunioes.faltas{} (chamada, gravados por quem conduz).'],
+        ['Números', internosI + ' convocado(s) interno(s): ' + nCi + ' confirmaram · ' + nRi + ' avisaram que não vêm · ' + Math.max(0, internosI - nCi - nRi) + ' sem resposta · ' + (r.presentes || []).length + ' presente(s) marcados · ' + Object.keys(r.faltas || {}).length + ' falta(s) justificada(s)']
+      ];
+    }));
+    pcard.appendChild(pHead);
     var presMap = {}; (r.presentes || []).forEach(function (p) { presMap[p] = true; });
     var linhasP = [];
-    (r.convocados || []).forEach(function (c) { linhasP.push({ chave: c.uid, nome: c.nome }); });
-    (r.convidadosExternos || []).forEach(function (c) { linhasP.push({ chave: c.nome, nome: c.nome + ' (externo)' }); });
+    (r.convocados || []).forEach(function (c) { linhasP.push({ chave: c.uid, nome: c.nome, interno: true }); });
+    (r.convidadosExternos || []).forEach(function (c) { linhasP.push({ chave: c.nome, nome: c.nome + ' (externo)', interno: false }); });
     if (!linhasP.length) { pcard.appendChild(txt('div', 'pj-empty2', 'Sem convocados registrados nesta reunião.')); }
-    var pgridEl = el('<div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px"></div>');
+    var rsvpEl = txt('div', 'pj-rrow-meta', '');
+    (function () {
+      var internos = linhasP.filter(function (l) { return l.interno; });
+      var nC = 0, nR = 0;
+      internos.forEach(function (l) { if (confMap[l.chave]) { nC++; } else if (recMap[l.chave]) { nR++; } });
+      rsvpEl.textContent = 'Antes da reunião: ' + nC + ' confirmaram · ' + nR + ' avisaram que não vêm · ' + Math.max(0, internos.length - nC - nR) + ' sem resposta';
+    })();
+    pcard.appendChild(rsvpEl);
+    var pgridEl = el('<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px"></div>');
     var resumoP = txt('div', 'pj-rrow-meta', '');
     function attP() {
       var pt2 = (r.presentes || []).length;
-      resumoP.textContent = pt2 + ' presente(s) · ' + Math.max(0, linhasP.length - pt2) + ' ausente(s) (derivado: convocado sem check de presença)';
+      var nF = Object.keys(r.faltas || {}).length;
+      resumoP.textContent = pt2 + ' presente(s) · ' + nF + ' falta(s) justificada(s) · ' + Math.max(0, linhasP.length - pt2 - nF) + ' ausente(s) sem justificativa (derivado: convocado sem check nem falta)';
     }
     linhasP.forEach(function (ln) {
+      var row = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
       var lab = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer"></label>');
       var cb = document.createElement('input'); cb.type = 'checkbox';
       cb.checked = !!presMap[ln.chave];
@@ -934,13 +997,46 @@
         var ix = novo.indexOf(ln.chave);
         if (cb.checked && ix < 0) { novo.push(ln.chave); }
         if (!cb.checked && ix >= 0) { novo.splice(ix, 1); }
-        Store.atualizarReuniao(r.id, { presentes: novo }, 'presenca_registrada')
-          .then(function () { r.presentes = novo; attP(); if (atualizaMeta) { atualizaMeta(); } })
+        var patch = { presentes: novo };
+        var falNovo = null;
+        if (cb.checked && r.faltas && r.faltas[ln.chave]) { /* presença limpa a falta */
+          falNovo = {}; Object.keys(r.faltas).forEach(function (k) { if (k !== ln.chave) { falNovo[k] = r.faltas[k]; } });
+          patch.faltas = falNovo;
+        }
+        Store.atualizarReuniao(r.id, patch, 'presenca_registrada')
+          .then(function () { r.presentes = novo; if (falNovo !== null) { r.faltas = falNovo; } redesenhar(); })
           .catch(function (e) { cb.checked = !cb.checked; toast(e.message, 'err'); });
       });
       lab.appendChild(cb);
       lab.appendChild(txt('span', '', ln.nome));
-      pgridEl.appendChild(lab);
+      row.appendChild(lab);
+      /* selo do RSVP (só convocado interno responde no Hoje) */
+      if (ln.interno && !presMap[ln.chave]) {
+        if (confMap[ln.chave]) {
+          var sc = txt('span', 'pj-badge', '✓ confirmou'); sc.style.color = 'var(--green)'; row.appendChild(sc);
+        } else if (recMap[ln.chave]) {
+          var srx = txt('span', 'pj-badge', '✗ avisou: ' + (recMap[ln.chave].motivo || '—'));
+          srx.style.color = 'var(--orange)';
+          if (recMap[ln.chave].detalhe) { srx.title = recMap[ln.chave].detalhe; }
+          row.appendChild(srx);
+        }
+      }
+      /* falta justificada (chamada do dia) */
+      var fal = (r.faltas || {})[ln.chave] || null;
+      if (fal && !presMap[ln.chave]) {
+        var sf = txt('span', 'pj-badge', 'falta: ' + (fal.motivo || '—'));
+        sf.style.color = 'var(--red)';
+        sf.title = (fal.detalhe ? fal.detalhe + ' · ' : '') + 'registrada por ' + (nomeUser(fal.porUid) || '—');
+        row.appendChild(sf);
+      } else if (!presMap[ln.chave] && podeEditar()) {
+        var bj = UI.button({ label: 'justificar falta', variant: 'ghost' });
+        bj.style.fontSize = '11px'; bj.style.padding = '2px 8px';
+        bj.addEventListener('click', (function (chave, nome) {
+          return function () { modalJustificarFalta(r, chave, nome, redesenhar); };
+        })(ln.chave, ln.nome));
+        row.appendChild(bj);
+      }
+      pgridEl.appendChild(row);
     });
     pcard.appendChild(pgridEl);
     attP();
@@ -1166,6 +1262,28 @@
     if (d.atividadeId) {
       var bv = txt('span', 'pj-badge', 'Virou atividade'); bv.style.color = 'var(--doing)';
       btns.appendChild(bv);
+      /* R5-B1: o líder vê o ACEITE do dono aqui (o dono age no Hoje).
+         Recusa não desatribui — é o sinal para reatribuir na atividade. */
+      var occA = occDaAtividade(d.atividadeId);
+      var actA = occA && occA.act;
+      if (actA) {
+        if (actA.aceite) {
+          var ba2 = txt('span', 'pj-badge', '✓ aceita');
+          ba2.style.color = 'var(--green)';
+          ba2.title = 'Aceita por ' + (actA.aceite.nome || '—');
+          btns.appendChild(ba2);
+        } else if (actA.recusaAtribuicao) {
+          var br2 = txt('span', 'pj-badge', '✗ recusada — reatribuir');
+          br2.style.color = 'var(--red)';
+          br2.title = 'Motivo: ' + (actA.recusaAtribuicao.motivo || '—') + ' (' + (actA.recusaAtribuicao.nome || '—') + '). Troque o responsável na tela Atividades.';
+          btns.appendChild(br2);
+        } else {
+          var bp2 = txt('span', 'pj-badge', 'aguarda aceite');
+          bp2.style.color = 'var(--muted)';
+          bp2.title = 'O dono ainda não aceitou nem recusou (ele decide no Hoje).';
+          btns.appendChild(bp2);
+        }
+      }
     }
     var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), R.hojeISO());
     btns.appendChild(badgeStatusDec(st));

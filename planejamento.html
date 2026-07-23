@@ -255,6 +255,23 @@
   function compSeguinte(hojeISO) { return compShift(hojeISO.slice(0, 7), 1); }
   function novoItemId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
   function itensVivos(pl) { return ((pl && pl.itens) || []).filter(function (i) { return i && !i.removido; }); }
+  /* R5-B2: custo PREVISTO efetivo — campo novo com fallback ao valorCentavos
+     legado da R4 (nunca destruído; mesma regra do KPI.planejamentoItemTravado). */
+  function valorPrev(it) {
+    if (!it) { return null; }
+    return it.valorPrevistoCentavos != null ? it.valorPrevistoCentavos : (it.valorCentavos != null ? it.valorCentavos : null);
+  }
+  /* R5-B2: rótulos do estado DERIVADO do plano (KPI.planejamentoStatus —
+     nunca persistido; padrão Workfront: rótulo, não trava). */
+  var STATUS_PLANO = {
+    rascunho: { label: 'Rascunho', cor: 'var(--muted)' },
+    submetido: { label: 'Submetido — aguarda ciência', cor: 'var(--amber)' },
+    aprovado: { label: 'Aprovado', cor: 'var(--green)' }
+  };
+  function siglasRaizParceiras(exceto) {
+    return SETORES.filter(function (s) { return !s.setorPaiSigla && s.sigla !== exceto; })
+      .map(function (s) { return s.sigla; });
+  }
 
   /* ===================== escopo de escrita =====================
      Gestor: escreve em todos os planos. Líder: escreve nas siglas do
@@ -299,7 +316,18 @@
   }
   var I_ALCADA = [
     ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — GESTOR e SÓCIO (aprovação paralela: qualquer ordem; quem cria o item não assina — four-eyes). Sócio = gestor marcado como sócio no cadastro de usuários. A mesma pessoa que acumula os dois papéis pode dar as duas assinaturas (o objetivo é forçar a leitura). A trava é do ITEM; o plano nunca trava — e o item em espera entra em clock-pause na nota.'],
-    ['Dados', 'item.valorCentavos (inteiro, em centavos) + item.aprovGestor / item.aprovSocio (uid, nome, data) · usuário.socio · KPI.planejamentoItemTravado (kpi.js, harness_r4).']
+    ['Dados', 'item.valorPrevistoCentavos (inteiro, em centavos; fallback ao valorCentavos legado) + item.aprovGestor / item.aprovSocio (uid, nome, data) · usuário.socio · KPI.planejamentoItemTravado (kpi.js, harness_r4 + r5). A alçada trava pelo custo PREVISTO — a aprovação antecede a execução (padrão baseline MS Project).']
+  ];
+  /* R5-B2: estado formal do plano (RESUMO §4) — derivado, nunca gravado. */
+  var I_STATUS = [
+    ['Estados', 'Rascunho = o líder ainda monta o 5W2H (sem "Entregar plano"). Submetido = entregue, aguardando a CIÊNCIA de gestor E sócio no PLANO (assinatura de leitura — força a gestão a LER; nada trava). Aprovado = entregue + as duas ciências. A ciência do PLANO não é a alçada do ITEM: item >R$200 continua travando sozinho até gestor+sócio assinarem o item.'],
+    ['Fórmula', 'status = sem entregueEm → rascunho · entregue e falta ciência → submetido · entregue + ciência de gestor e de sócio → aprovado (KPI.planejamentoStatus, derivado no cliente — nada persistido).'],
+    ['Calibragem', 'Editar itens depois da ciência NÃO zera a ciência do plano (ela é leitura, não aprovação de valor); só a alçada do ITEM zera assinaturas quando o custo previsto muda acima de R$200.']
+  ];
+  var I_PARETO = [
+    ['Fórmula', 'Conta os itens declarados "✗ não realizei" por motivo e ordena do maior para o menor (Pareto de causas — Juran/Falconi: poucos motivos explicam a maioria das falhas). Item removido sai; empate desempata por ordem alfabética.'],
+    ['Dados', 'itens da competência com naoFeito:true (motivo obrigatório desde a R4-EXT) · KPI.paretoMotivos (kpi.js, harness_r5).'],
+    ['Ação', 'O motivo campeão é o alvo do mês: "Dependência de outro setor" no topo → cobrança cruzada; "Falta de tempo/sobrecarga" → redistribuir carga.']
   ];
   var I_EIXO = [
     ['O QUE VEM', 'Itens ABERTOS (nem realizados, nem declarados não-feitos) da competência, em ordem de data prevista. Vermelho = data prevista já passou; âmbar = é hoje; cadeado = aguardando gestor+sócio (alçada R$200; item em pause na nota).'],
@@ -402,6 +430,34 @@
     if (foi.length > 12) { c2.appendChild(txt('div', 'pl-empty', '+ ' + (foi.length - 12) + ' — abra o setor abaixo para ver todos.')); }
     wrap.appendChild(c2);
     bodyEl.appendChild(wrap);
+
+    /* --- R5-B2: PARETO DE MOTIVOS (só quando houver não-realizados) --- */
+    var todosI = [];
+    PLANOS.forEach(function (p) { itensVivos(p).forEach(function (i) { todosI.push(i); }); });
+    var par = KPI.paretoMotivos(todosI);
+    if (par.length) {
+      var pc = el('<div class="pl-card" style="margin-top:14px"></div>');
+      var ph = el('<div class="pl-card-h"></div>');
+      ph.appendChild(txt('div', 'pl-card-t', 'Por que não foi feito — Pareto de motivos'));
+      ph.appendChild(txt('span', 'pl-count', par.reduce(function (s, x) { return s + x.n; }, 0) + ' item(ns) não realizado(s)'));
+      ph.appendChild(iBtn('Pareto de motivos', I_PARETO));
+      pc.appendChild(ph);
+      var maxN = par[0].n;
+      par.forEach(function (px) {
+        var lin = el('<div style="display:flex;align-items:center;gap:10px;margin-top:6px"></div>');
+        var lbl = txt('div', 'pl-l-m', px.motivo);
+        lbl.style.flex = '0 0 220px';
+        lin.appendChild(lbl);
+        var trilho = el('<div style="flex:1;height:14px;border-radius:7px;background:var(--s1);overflow:hidden"></div>');
+        var barra = el('<div style="height:100%;border-radius:7px;background:var(--red)"></div>');
+        barra.style.width = Math.max(6, Math.round(px.n / maxN * 100)) + '%';
+        trilho.appendChild(barra);
+        lin.appendChild(trilho);
+        lin.appendChild(txt('div', 'pl-l-m', px.n + '×'));
+        pc.appendChild(lin);
+      });
+      bodyEl.appendChild(pc);
+    }
   }
   function wrapLinha(lin, sigla) {
     lin.style.cursor = 'pointer';
@@ -488,6 +544,14 @@
       }
 
       if (pl) {
+        /* R5-B2: estado formal DERIVADO do plano (nunca gravado). */
+        var stp = KPI.planejamentoStatus(pl);
+        var stMeta = STATUS_PLANO[stp] || STATUS_PLANO.rascunho;
+        var stB = txt('span', 'pl-badge', stMeta.label);
+        stB.style.color = stMeta.cor;
+        stB.title = 'Estado derivado (KPI.planejamentoStatus) — nada trava por estado.';
+        head.appendChild(stB);
+        head.appendChild(iBtn('Estado do plano — ' + s.sigla, I_STATUS));
         var vivos = itensVivos(pl);
         head.appendChild(txt('span', 'pl-smeta', vivos.length + ' item(ns) · ' + vivos.filter(function (i) { return i.quandoRealizado; }).length + ' realizado(s)' + (vivos.filter(function (i) { return i.naoFeito; }).length ? (' · ' + vivos.filter(function (i) { return i.naoFeito; }).length + ' não realizado(s)') : '')));
         var n = KPI.planejamentoNota(vivos);
@@ -525,7 +589,7 @@
     var podeEd = escreveNoSetor(pl.setorSigla);
     var grade = el('<div class="pl-grade"></div>');
     var tb = el('<table class="pl-tb"></table>');
-    var thead = el('<thead><tr><th>O que</th><th>Como</th><th>Quem</th><th>Quando (prev.)</th><th>Realizado</th><th>R$</th><th></th></tr></thead>');
+    var thead = el('<thead><tr><th>O que</th><th>Como</th><th>Quem</th><th>Quando (prev.)</th><th>Realizado</th><th>R$ (prev → final)</th><th></th></tr></thead>');
     tb.appendChild(thead);
     var tbody = document.createElement('tbody');
     var vivos = itensVivos(pl).slice().sort(function (a, b) { return (a.quandoPrevisto || '9999').localeCompare(b.quandoPrevisto || '9999'); });
@@ -538,7 +602,24 @@
     vivos.forEach(function (it) {
       var tr = document.createElement('tr');
       function td(node) { var c = document.createElement('td'); if (node) { c.appendChild(node); } tr.appendChild(c); return c; }
-      td(txt('span', '', it.oque || '—'));
+      var tdOq = td(txt('span', '', it.oque || '—'));
+      /* R5-B2: setores parceiros (aceite por chip — quem lidera o setor
+         parceiro aceita; padrão convite: aceitar registra ciência). */
+      (it.setoresEnvolvidos || []).forEach(function (se) {
+        var chip = txt('span', 'pl-badge', se.aceite ? ('✓ ' + se.sigla) : (se.sigla + ' — aceitar?'));
+        chip.style.marginLeft = '6px';
+        chip.style.color = se.aceite ? 'var(--green)' : 'var(--muted)';
+        chip.title = se.aceite
+          ? ('Aceito por ' + (se.aceite.nome || '—') + ' (' + se.sigla + ').')
+          : ('Aguardando o aceite de quem lidera ' + se.sigla + '.');
+        if (!se.aceite && escreveNoSetor(se.sigla)) {
+          chip.style.cursor = 'pointer';
+          chip.style.color = 'var(--amber)';
+          chip.title = 'Você lidera ' + se.sigla + ' — clique para aceitar o envolvimento do seu setor neste item.';
+          chip.addEventListener('click', function () { aceitarSetorItem(pl, it, se.sigla); });
+        }
+        tdOq.appendChild(chip);
+      });
       td(txt('span', 'pl-l-m', it.como || '—'));
       td(txt('span', 'pl-l-m', it.quemNome || '—'));
       var tdPrev = td(txt('span', '', fmtBR(it.quandoPrevisto)));
@@ -554,8 +635,15 @@
         tdReal = td(txt('span', '', real));
         if (it.quandoRealizado) { tdReal.style.color = (it.quandoPrevisto && it.quandoRealizado <= it.quandoPrevisto) ? 'var(--green)' : 'var(--orange)'; }
       }
-      var tdV = td(txt('span', 'pl-l-m', it.valorCentavos ? fmtBRL(it.valorCentavos) : '—'));
-      if (Number(it.valorCentavos) > 20000) {
+      var vPrevIt = valorPrev(it);
+      var vTexto = vPrevIt != null ? fmtBRL(vPrevIt) : '—';
+      if (it.valorFinalCentavos != null) { vTexto += ' → ' + fmtBRL(it.valorFinalCentavos); }
+      var tdV = td(txt('span', 'pl-l-m', vTexto));
+      if (it.valorFinalCentavos != null && vPrevIt != null && Number(it.valorFinalCentavos) > Number(vPrevIt)) {
+        tdV.title = 'Estourou o previsto em ' + fmtBRL(Number(it.valorFinalCentavos) - Number(vPrevIt)) + '.';
+        tdV.style.color = 'var(--orange)';
+      }
+      if (Number(vPrevIt) > 20000) {
         var travado = KPI.planejamentoItemTravado(it);
         var bd = txt('span', 'pl-badge', travado ? '🔒 ' + assinaturasTexto(it) : '✓ aprovado');
         bd.style.color = travado ? 'var(--amber)' : 'var(--green)';
@@ -583,7 +671,7 @@
         }
         if (cabeAprovar(it)) {
           var ba = txt('button', 'pl-acao', 'aprovar'); ba.type = 'button';
-          ba.title = 'Assinar como ' + (Guard.isGestor() ? 'gestor' : 'líder') + ' (aprovação paralela).';
+          ba.title = 'Assinar como ' + ((Guard.isSocio && Guard.isSocio()) ? 'sócio/gestor' : 'gestor') + ' (aprovação paralela; líder não assina — four-eyes).';
           ba.addEventListener('click', function () { aprovarItem(pl, it); });
           tdA.appendChild(ba);
         }
@@ -618,6 +706,28 @@
     } else {
       foot.appendChild(txt('span', 'pl-smeta', 'Somente leitura — o plano é público; edita quem lidera ' + pl.setorSigla + ' (ou o gestor).'));
     }
+    /* R5-B2: CIÊNCIA do plano — só depois de entregue; gestor e sócio
+       assinam a leitura (rótulo derivado muda; nada trava). */
+    if (pl.entregueEm) {
+      if (pl.aprovGestor) {
+        var cg = txt('span', 'pl-smeta', '✓ ciência gestor: ' + (pl.aprovGestor.nome || '—'));
+        cg.style.color = 'var(--green)'; foot.appendChild(cg);
+      } else if (Guard.isGestor && Guard.isGestor()) {
+        var bg = txt('button', 'pl-acao', 'dar ciência (gestor)'); bg.type = 'button';
+        bg.title = 'Assina que LEU o plano entregue (prestação de contas). Não é a alçada do item.';
+        bg.addEventListener('click', function () { assinarPlano(pl, 'aprovGestor'); });
+        foot.appendChild(bg);
+      }
+      if (pl.aprovSocio) {
+        var cs = txt('span', 'pl-smeta', '✓ ciência sócio: ' + (pl.aprovSocio.nome || '—'));
+        cs.style.color = 'var(--green)'; foot.appendChild(cs);
+      } else if (Guard.isSocio && Guard.isSocio()) {
+        var bs = txt('button', 'pl-acao', 'dar ciência (sócio)'); bs.type = 'button';
+        bs.title = 'Assina que LEU o plano entregue (prestação de contas). Não é a alçada do item.';
+        bs.addEventListener('click', function () { assinarPlano(pl, 'aprovSocio'); });
+        foot.appendChild(bs);
+      }
+    }
     foot.appendChild(iBtn('Alçada R$200 (aprovação paralela)', I_ALCADA));
     box.appendChild(foot);
   }
@@ -636,6 +746,31 @@
   }
 
   /* ===================== mutações ===================== */
+  /* R5-B2: aceite do setor PARCEIRO no item (quem lidera o setor aceita —
+     registro de ciência, padrão convite; nada trava sem aceite). */
+  function aceitarSetorItem(pl, it, sigla) {
+    var lista = (pl.itens || []).map(function (x) {
+      if (x.id !== it.id) { return x; }
+      var envs = (x.setoresEnvolvidos || []).map(function (se) {
+        if (se.sigla !== sigla || se.aceite) { return se; }
+        return { sigla: se.sigla, aceite: { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() } };
+      });
+      return Object.assign({}, x, { setoresEnvolvidos: envs });
+    });
+    salvarItens(pl, lista, 'planejamento_item_aceite_setor', { itemId: it.id, sigla: sigla })
+      .then(function () { toast('Aceite de ' + sigla + ' registrado.'); render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  /* R5-B2: CIÊNCIA do plano (gestor E sócio) — assinatura de LEITURA no doc
+     do planejamento; muda só o rótulo derivado (submetido → aprovado),
+     nunca trava nada. Diferente da alçada por ITEM. */
+  function assinarPlano(pl, papel) {
+    var quem = { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() };
+    var patch = {}; patch[papel] = quem;
+    Store.atualizarPlanejamento(pl.id, patch, 'planejamento_ciencia_' + (papel === 'aprovSocio' ? 'socio' : 'gestor'), null)
+      .then(function () { pl[papel] = quem; toast('Ciência registrada (' + (papel === 'aprovSocio' ? 'sócio' : 'gestor') + ').'); render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
   function salvarItens(pl, novaLista, acao, antes) {
     return Store.atualizarPlanejamento(pl.id, { itens: novaLista }, acao, antes || null)
       .then(function () { pl.itens = novaLista; });
@@ -681,17 +816,24 @@
   }
   function modalRealizar(pl, it) {
     var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = HOJE;
+    /* R5-B2: custo FINAL na baixa (par previsto × final — padrão planned vs
+       actual cost do MS Project/Wrike). Opcional; pré-preenche com o previsto. */
+    var vp = valorPrev(it);
+    var vfInp = UI.input({ placeholder: 'R$ 0,00 (opcional)', value: it.valorFinalCentavos != null ? fmtBRL(it.valorFinalCentavos) : (vp != null ? fmtBRL(vp) : '') });
+    vfInp.addEventListener('input', function () { vfInp.value = vfInp.value.trim() ? fmtBRL(parseBRL(vfInp.value)) : ''; });
     UI.modal({
       title: 'Marcar como realizado', width: 420,
       body: [
         txt('div', 'pl-empty', it.oque || ''),
-        UI.field({ label: 'Data realizada', required: true, control: dtInp, hint: 'Previsto: ' + fmtBR(it.quandoPrevisto) + '. O desvio alimenta a nota (30% no prazo · 20% atraso residual).' })
+        UI.field({ label: 'Data realizada', required: true, control: dtInp, hint: 'Previsto: ' + fmtBR(it.quandoPrevisto) + '. O desvio alimenta a nota (30% no prazo · 20% atraso residual).' }),
+        UI.field({ label: 'Custo final', control: vfInp, hint: vp != null ? ('Previsto: ' + fmtBRL(vp) + '. O par previsto × final vira o relatório de custo do mês.') : 'Sem custo previsto neste item — informe se houve gasto.' })
       ],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
           UI.button({ label: 'Confirmar', icon: 'check', onClick: function () {
             if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
-            var lista = (pl.itens || []).map(function (x) { return x.id === it.id ? Object.assign({}, x, { quandoRealizado: dtInp.value }) : x; });
+            var vf = vfInp.value.trim() ? parseBRL(vfInp.value) : null;
+            var lista = (pl.itens || []).map(function (x) { return x.id === it.id ? Object.assign({}, x, { quandoRealizado: dtInp.value, valorFinalCentavos: vf }) : x; });
             salvarItens(pl, lista, 'planejamento_item_realizar', { itemId: it.id, quandoRealizado: null })
               .then(function () { close(); toast('Realizado registrado.'); render(); })
               .catch(function (e) { toast(e.message, 'err'); });
@@ -749,8 +891,23 @@
     var quemOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
     var quemSel = UI.select({ value: editing && it.quemUid ? it.quemUid : '', placeholder: '— Quem executa —', options: quemOpts });
     var qdInp = UI.input({}); qdInp.type = 'date'; qdInp.value = editing && it.quandoPrevisto ? it.quandoPrevisto : '';
-    var vInp = UI.input({ placeholder: 'R$ 0,00 (opcional)', value: editing && it.valorCentavos ? fmtBRL(it.valorCentavos) : '' });
+    var vPrevAtual = editing ? valorPrev(it) : null;
+    var vInp = UI.input({ placeholder: 'R$ 0,00 (opcional)', value: vPrevAtual != null && vPrevAtual !== 0 ? fmtBRL(vPrevAtual) : '' });
     vInp.addEventListener('input', function () { vInp.value = vInp.value.trim() ? fmtBRL(parseBRL(vInp.value)) : ''; });
+    /* R5-B2: setores PARCEIROS (multi, com aceite) — só siglas raiz, fora o
+       setor dono do plano; edição preserva aceites já dados. */
+    var envAtuais = {}; (editing ? (it.setoresEnvolvidos || []) : []).forEach(function (se) { envAtuais[se.sigla] = se; });
+    var parcBox = el('<div style="display:flex;flex-wrap:wrap;gap:6px 14px"></div>');
+    var parcCbs = {};
+    siglasRaizParceiras(pl.setorSigla).forEach(function (sg) {
+      var lab = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer"></label>');
+      var cb = document.createElement('input'); cb.type = 'checkbox';
+      cb.checked = !!envAtuais[sg];
+      parcCbs[sg] = cb;
+      lab.appendChild(cb);
+      lab.appendChild(txt('span', 'pl-l-m', sg));
+      parcBox.appendChild(lab);
+    });
     UI.modal({
       title: (editing ? 'Editar' : 'Novo') + ' item — ' + pl.setorSigla + ' · ' + compLabel(COMP), width: 520,
       body: [
@@ -758,7 +915,8 @@
         UI.field({ label: 'Como', control: comoTa }),
         UI.field({ label: 'Quem', control: quemSel, hint: USERS.length ? 'Responsável pela execução.' : 'Sem lista de usuários (perfil sem acesso) — fica em branco.' }),
         UI.field({ label: 'Quando (previsto)', required: true, control: qdInp }),
-        UI.field({ label: 'Custo estimado', control: vInp, hint: 'Guardado em CENTAVOS (inteiro). Acima de R$ 200,00 o item trava até líder + gestor aprovarem (alçada — o plano nunca trava).' })
+        UI.field({ label: 'Custo previsto', control: vInp, hint: 'Guardado em CENTAVOS (inteiro). Acima de R$ 200,00 o item trava até GESTOR + SÓCIO aprovarem (alçada pelo PREVISTO — o plano nunca trava). O custo final entra na baixa ("✓ realizar").' }),
+        UI.field({ label: 'Setores parceiros', control: parcBox, hint: 'Opcional. Quem lidera o setor marcado vê o item e registra o aceite no chip (nada trava sem aceite — é ciência).' })
       ],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
@@ -767,24 +925,30 @@
             if (!R.isISO(qdInp.value)) { toast('Informe a data prevista.', 'err'); return; }
             var quem = USERS.filter(function (u) { return u.uid === quemSel.value; })[0] || null;
             var cents = vInp.value.trim() ? parseBRL(vInp.value) : null;
+            var envs = [];
+            siglasRaizParceiras(pl.setorSigla).forEach(function (sg) {
+              if (!parcCbs[sg] || !parcCbs[sg].checked) { return; }
+              envs.push(envAtuais[sg] ? envAtuais[sg] : { sigla: sg, aceite: null }); /* preserva aceite já dado */
+            });
             var base = {
               oque: oqInp.value.trim(), como: comoTa.value.trim() || null,
               quemUid: quem ? quem.uid : null, quemNome: quem ? quem.nome : null,
-              quandoPrevisto: qdInp.value, valorCentavos: cents
+              quandoPrevisto: qdInp.value, valorPrevistoCentavos: cents,
+              setoresEnvolvidos: envs
             };
             var lista;
             if (editing) {
-              /* valor mudou e cruzou/permanece acima da alçada -> assinaturas zeram (o aprovado foi OUTRO valor) */
+              /* previsto mudou e cruzou/permanece acima da alçada -> assinaturas zeram (o aprovado foi OUTRO valor) */
               lista = (pl.itens || []).map(function (x) {
                 if (x.id !== it.id) { return x; }
                 var novo = Object.assign({}, x, base);
-                if ((Number(x.valorCentavos) || 0) !== (Number(cents) || 0) && (Number(cents) || 0) > 20000) {
+                if ((Number(valorPrev(x)) || 0) !== (Number(cents) || 0) && (Number(cents) || 0) > 20000) {
                   novo.aprovGestor = null; novo.aprovSocio = null; /* o aprovado foi OUTRO valor */
                 }
                 return novo;
               });
             } else {
-              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now() }, base)]);
+              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, valorFinalCentavos: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now() }, base)]);
             }
             salvarItens(pl, lista, editing ? 'planejamento_item_editar' : 'planejamento_item_add', editing ? { itemId: it.id } : null)
               .then(function () { close(); toast(editing ? 'Item salvo.' : 'Item adicionado ao 5W2H.'); render(); })
@@ -863,7 +1027,7 @@
     var ib = iBtn('Planejamento do Setor (5W2H mensal)', [
       ['O que é', 'O plano mensal obrigatório de cada setor (RESUMO §4): O QUE / COMO / QUEM / QUANDO, previsto × realizado. É a prestação de contas pública do líder — TODOS leem; edita quem lidera o setor (ou o gestor).'],
       ['Entrega', 'Até o dia 25 do mês anterior à competência. Farol D-5 (dia 20, alerta ao líder) · D-3 (dia 22, gestão) · D-0 (dia 25, flag de não-conformidade). NUNCA bloqueia.'],
-      ['Alçada', 'Item até R$ 200: autonomia do líder. Acima: trava o ITEM até líder + gestor assinarem (paralelo). O plano nunca trava.'],
+      ['Alçada', 'Item até R$ 200: autonomia do líder. Acima: trava o ITEM até GESTOR + SÓCIO assinarem (paralelo; quem cria não assina — four-eyes). A trava é pelo custo PREVISTO. O plano nunca trava.'],
       ['Nota', '50% aderência + 30% no prazo + 20% atraso residual (teto 7 dias) — ranking "quem precisa de atenção". Calibrável.']
     ]);
     document.getElementById('pl-info').appendChild(ib);

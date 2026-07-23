@@ -146,6 +146,7 @@
 .hj-act{border:1px solid var(--border);background:var(--s1);color:var(--text);font:inherit;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer}
 .hj-act:hover{background:var(--s2)}
 .hj-act.ok{color:var(--greenText);border-color:var(--green)}
+.hj-act.warn{color:var(--orange);border-color:var(--orange)} /* R5-B1 */
 .hj-rowacts{display:flex;gap:6px;margin-top:9px}
 .hj-empty{font-size:12.5px;color:var(--muted);padding:8px 2px}
 .hj-state{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px;padding:40px 20px}
@@ -285,6 +286,9 @@
   var LAST_NUM = {};              /* F1-I: números da última pintura p/ os "i" estáticos */
   var HJ_I_ATRAS = false;         /* F1-I: "i" das Atrasadas injetado 1x */
   var TIPO_LABEL_R = { lideres: 'Reunião de Líderes', integrada: 'Reunião Integrada', instrutor: 'Reunião com Instrutor', lideres_turma: 'Reunião c/ Líderes de Turmas', departamento: 'Reunião de Departamento' };
+  /* R5-B1 · lista O3 do RESUMO (falta em reunião) — mesma lista usada no
+     "justificar falta" da tela Reuniões; 'Outro' exige detalhe. */
+  var MOTIVOS_FALTA = ['Conflito de agenda', 'Atendimento urgente', 'Ausência justificada', 'Esquecimento/não vi', 'Outro'];
   function origemReuniao(act) {
     return act && (act.origemTipo === 'reuniao' || (act.origem && act.origem.tipo === 'reuniao'));
   }
@@ -358,13 +362,46 @@
       }).catch(function () { return []; });
     },
     /* F1-N: convocado confirma a própria presença (regra espelhada no
-       Firestore: só adiciona a si; nunca remove ninguém). */
-    confirmarPresenca: function (reuniaoId, atuais, uid) {
+       Firestore: só adiciona a si; nunca remove ninguém). R5-B1: a regra
+       subiu de fato (hasOnly confirmadosUids+recusas) e confirmar agora
+       LIMPA a própria recusa, se houver ("vou sim"). */
+    confirmarPresenca: function (reuniaoId, atuais, uid, recusas) {
       return fb().then(function (c) {
         var novo = (Array.isArray(atuais) ? atuais.slice() : []);
         if (novo.indexOf(uid) === -1) { novo.push(uid); }
-        return c.f.updateDoc(c.f.doc(c.db, 'reunioes', reuniaoId), { confirmadosUids: novo }).then(function () {
+        var patch = { confirmadosUids: novo };
+        if (recusas && recusas[uid]) {
+          var rc = {}; Object.keys(recusas).forEach(function (k) { if (k !== uid) { rc[k] = recusas[k]; } });
+          patch.recusas = rc;
+        }
+        return c.f.updateDoc(c.f.doc(c.db, 'reunioes', reuniaoId), patch).then(function () {
           return Store.log({ acao: 'confirmar_presenca', entidade: 'reuniao', refId: reuniaoId, antes: null, depois: { uid: uid } });
+        });
+      });
+    },
+    /* R5-B1: convocado avisa que NÃO vem, com motivo pré-definido (padrão
+       RSVP Google Calendar "Não vou"). Grava recusas[uid] e sai da lista de
+       confirmados. Só mexe no PRÓPRIO uid (auditado no atividade_log). */
+    recusarPresenca: function (reuniaoId, confirmados, recusas, uid, nome, motivo, detalhe) {
+      return fb().then(function (c) {
+        var conf = (Array.isArray(confirmados) ? confirmados : []).filter(function (u) { return u !== uid; });
+        var rc = {}; Object.keys(recusas || {}).forEach(function (k) { rc[k] = recusas[k]; });
+        rc[uid] = { motivo: motivo, detalhe: detalhe || null, nome: nome || '', em: Date.now() };
+        return c.f.updateDoc(c.f.doc(c.db, 'reunioes', reuniaoId), { confirmadosUids: conf, recusas: rc }).then(function () {
+          return Store.log({ acao: 'recusar_presenca', entidade: 'reuniao', refId: reuniaoId, antes: null, depois: { uid: uid, motivo: motivo } });
+        });
+      });
+    },
+    /* R5-B1: ACEITE DE ATRIBUIÇÃO (padrão Outlook Accept/Decline): o
+       responsável aceita ou recusa o compromisso nascido de decisão de
+       reunião. Regra espelhada: responsavelUid == auth + hasOnly(aceite,
+       recusaAtribuicao, atualizadoEm). A recusa NÃO desatribui — sinaliza
+       o líder para reatribuir (a decisão de gente é humana). */
+    aceitarAtribuicao: function (actId, patch, acao) {
+      return fb().then(function (c) {
+        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        return c.f.updateDoc(c.f.doc(c.db, 'atividades', actId), up).then(function () {
+          return Store.log({ acao: acao, entidade: 'atividade', refId: actId, antes: null, depois: patch });
         });
       });
     },
@@ -1149,6 +1186,54 @@
     return out;
   }
   function fmtBRhj(iso) { if (!iso) { return '—'; } var p = iso.split('-'); return p[2] + '/' + p[1]; }
+  /* R5-B1: "Não vou" da convocação — motivo obrigatório da lista O3
+     ('Outro' exige detalhe). Quem convocou vê o motivo na tela Reuniões. */
+  function modalRecusaConvocacao(r) {
+    var motSel = UI.select({ value: '', placeholder: '— Motivo (obrigatório) —',
+      options: MOTIVOS_FALTA.map(function (m) { return { value: m, label: m }; }) });
+    var detInp = UI.input({ placeholder: 'Detalhe (obrigatório se "Outro")' });
+    UI.modal({
+      title: 'Avisar que não vou — ' + (r.titulo || (TIPO_LABEL_R[r.tipo] || 'Reunião')), width: 440,
+      body: [
+        UI.field({ label: 'Motivo', required: true, control: motSel }),
+        UI.field({ label: 'Detalhe', control: detInp, hint: 'O motivo aparece para quem convocou (padrão RSVP: recusar informa o organizador).' })
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Enviar aviso', icon: 'check', onClick: function () {
+            if (!motSel.value) { toast('Escolha o motivo.', 'err'); return; }
+            if (motSel.value === 'Outro' && !detInp.value.trim()) { toast('Detalhe o motivo "Outro".', 'err'); return; }
+            Store.recusarPresenca(r.id, r.confirmadosUids, r.recusas, CURRENT_USER.uid, CURRENT_USER.name || CURRENT_USER.nome || '', motSel.value, detInp.value.trim() || null)
+              .then(function () {
+                r.confirmadosUids = (r.confirmadosUids || []).filter(function (u) { return u !== CURRENT_USER.uid; });
+                r.recusas = r.recusas || {};
+                r.recusas[CURRENT_USER.uid] = { motivo: motSel.value, detalhe: detInp.value.trim() || null, nome: CURRENT_USER.name || '', em: Date.now() };
+                close(); toast('Aviso enviado — quem convocou vê o motivo.'); paint();
+              })
+              .catch(function (e) { toast(e.message || 'Não deu para enviar.', 'err'); });
+          } })];
+      }
+    });
+  }
+  /* R5-B1: "Não posso" na atribuição — motivo livre obrigatório. A recusa
+     NÃO desatribui: sinaliza o líder (selo na decisão da reunião) para
+     reatribuir — padrão Outlook: recusar devolve a decisão ao delegante. */
+  function modalRecusaAtribuicao(act) {
+    var motInp = UI.input({ placeholder: 'Ex.: estou de férias na semana do prazo' });
+    UI.modal({
+      title: 'Não posso assumir — ' + (act.titulo || 'compromisso'), width: 440,
+      body: [UI.field({ label: 'Motivo', required: true, control: motInp, hint: 'A tarefa continua sua até o líder reatribuir; o motivo aparece para ele na reunião.' })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Enviar', icon: 'check', onClick: function () {
+            if (!motInp.value.trim()) { toast('Escreva o motivo.', 'err'); return; }
+            Store.aceitarAtribuicao(act.id, { recusaAtribuicao: { uid: CURRENT_USER.uid, nome: CURRENT_USER.name || '', motivo: motInp.value.trim(), em: Date.now() }, aceite: null }, 'recusar_atribuicao')
+              .then(function () { act.recusaAtribuicao = { uid: CURRENT_USER.uid, nome: CURRENT_USER.name || '', motivo: motInp.value.trim(), em: Date.now() }; act.aceite = null; close(); toast('Aviso enviado ao líder.'); paint(); })
+              .catch(function (e) { toast(e.message || 'Não deu para enviar.', 'err'); });
+          } })];
+      }
+    });
+  }
   function pintarReunioes(hoje) {
     var velho = document.getElementById('hj-reun');
     if (velho && velho.parentNode) { velho.parentNode.removeChild(velho); }
@@ -1167,21 +1252,35 @@
         var vp = txt('button', 'hj-freq', 'Ver pauta'); vp.type = 'button'; vp.style.cursor = 'pointer'; vp.style.color = 'var(--doing)';
         vp.addEventListener('click', function () { window.location.href = 'projetos.html'; });
         lin.appendChild(vp);
-        /* F1-N · U7: confirmar presença em 1 toque (achado do REDTEAM:
-           antes as regras bloqueavam o convocado de confirmar) */
+        /* F1-N · U7 + R5-B1: RSVP em 3 estados (padrão Google Calendar —
+           Vou / Não vou com motivo / sem resposta), sempre reversível. */
         var confs = Array.isArray(r.confirmadosUids) ? r.confirmadosUids : [];
+        var minhaRecusa = (r.recusas || {})[CURRENT_USER.uid] || null;
+        var confirmarFn = (function (rr) {
+          return function () {
+            Store.confirmarPresenca(rr.id, rr.confirmadosUids, CURRENT_USER.uid, rr.recusas)
+              .then(function () {
+                if ((rr.confirmadosUids || []).indexOf(CURRENT_USER.uid) === -1) { rr.confirmadosUids = (rr.confirmadosUids || []).concat([CURRENT_USER.uid]); }
+                if (rr.recusas && rr.recusas[CURRENT_USER.uid]) { delete rr.recusas[CURRENT_USER.uid]; }
+                toast('Presença confirmada — quem convocou já vê.'); paint();
+              })
+              .catch(function (e) { toast(e.message || 'Não deu para confirmar.', 'err'); });
+          };
+        })(r);
         if (confs.indexOf(CURRENT_USER.uid) !== -1) {
           var okc = txt('span', 'hj-freq', '✓ Presença confirmada');
           okc.style.color = 'var(--green)';
           lin.appendChild(okc);
+          lin.appendChild(miniBtn('Não vou', (function (rr) { return function () { modalRecusaConvocacao(rr); }; })(r), 'warn'));
+        } else if (minhaRecusa) {
+          var rk = txt('span', 'hj-freq', '✗ Avisou que não vem: ' + (minhaRecusa.motivo || '—'));
+          rk.style.color = 'var(--orange)';
+          if (minhaRecusa.detalhe) { rk.title = minhaRecusa.detalhe; }
+          lin.appendChild(rk);
+          lin.appendChild(miniBtn('Vou sim', confirmarFn, 'ok'));
         } else {
-          lin.appendChild(miniBtn('Confirmar presença', (function (rr) {
-            return function () {
-              Store.confirmarPresenca(rr.id, rr.confirmadosUids, CURRENT_USER.uid)
-                .then(function () { rr.confirmadosUids = (rr.confirmadosUids || []).concat([CURRENT_USER.uid]); toast('Presença confirmada — quem convocou já vê.'); paint(); })
-                .catch(function (e) { toast(e.message || 'Não deu para confirmar.', 'err'); });
-            };
-          })(r), 'ok'));
+          lin.appendChild(miniBtn('Confirmar presença', confirmarFn, 'ok'));
+          lin.appendChild(miniBtn('Não vou', (function (rr) { return function () { modalRecusaConvocacao(rr); }; })(r), 'warn'));
         }
         if (vencidos) {
           var pv = txt('span', 'hj-freq', 'você tem ' + vencidos + ' pendência(s) de reunião anterior');
@@ -1207,6 +1306,28 @@
         var og = c.act.origem || {};
         ch.title = 'Nasceu na reunião' + (og.reuniaoTitulo ? ' "' + og.reuniaoTitulo + '"' : '') + (og.reuniaoData ? ' de ' + fmtBRhj(og.reuniaoData) : '');
         lin.appendChild(ch);
+        /* R5-B1: ACEITE DE ATRIBUIÇÃO (Outlook Accept/Decline) — o card já
+           é filtrado pelo responsável, então quem vê é quem decide. */
+        if (c.act.aceite) {
+          var sa = txt('span', 'hj-freq', '✓ aceito');
+          sa.style.color = 'var(--green)';
+          sa.title = 'Aceito por ' + (c.act.aceite.nome || 'você') + ' — o líder vê o aceite na reunião.';
+          lin.appendChild(sa);
+        } else if (c.act.recusaAtribuicao) {
+          var sr = txt('span', 'hj-freq', '✗ recusado — aguardando o líder');
+          sr.style.color = 'var(--orange)';
+          sr.title = 'Motivo: ' + (c.act.recusaAtribuicao.motivo || '—') + '. A tarefa segue sua até o líder reatribuir.';
+          lin.appendChild(sr);
+        } else {
+          lin.appendChild(miniBtn('Aceitar', (function (act) {
+            return function () {
+              Store.aceitarAtribuicao(act.id, { aceite: { uid: CURRENT_USER.uid, nome: CURRENT_USER.name || '', em: Date.now() }, recusaAtribuicao: null }, 'aceitar_atribuicao')
+                .then(function () { act.aceite = { uid: CURRENT_USER.uid, nome: CURRENT_USER.name || '', em: Date.now() }; act.recusaAtribuicao = null; toast('Atribuição aceita — o líder vê.'); paint(); })
+                .catch(function (e) { toast(e.message || 'Não deu para aceitar.', 'err'); });
+            };
+          })(c.act), 'ok'));
+          lin.appendChild(miniBtn('Não posso', (function (act) { return function () { modalRecusaAtribuicao(act); }; })(c.act), 'warn'));
+        }
         if (c.occ && CAN_WRITE() && c.occ.status !== 'concluida') {
           lin.appendChild(miniBtn('Concluir', (function (occ) { return function () { concluir(occ); }; })(c.occ), 'ok'));
         }
