@@ -96,9 +96,20 @@ service cloud.firestore {
     }
 
     // ---------- atividades ----------
+    // R5-B1: ACEITE DE ATRIBUICAO (padrao Outlook Accept/Decline em tarefa
+    // atribuida): o RESPONSAVEL — mesmo perfil 'usuario' — registra aceite ou
+    // recusa na PROPRIA atividade. Espelha o F1-J das ocorrencias: o vinculo
+    // e verificado no doc atual (resource), e o diff trava tudo alem dos
+    // campos do aceite. Delete explicito negado (soft-delete sempre; nenhuma
+    // tela chama deleteDoc — verificado no repo em 22/07).
     match /atividades/{id} {
       allow read: if isActive();
-      allow write: if canWrite();
+      allow create: if canWrite();
+      allow update: if canWrite()
+        || (isActive()
+            && resource.data.responsavelUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aceite', 'recusaAtribuicao', 'atualizadoEm']));
+      allow delete: if false;
     }
 
     // ---------- ocorrencias ----------
@@ -154,12 +165,21 @@ service cloud.firestore {
     // F1-G (D2): participante (perfil 'usuario') pode mexer SO em pautaItens
     // (padrao Fellow: qualquer participante adiciona talking point). O diff
     // de chaves garante que nada alem da pauta e tocavel sem canWrite.
+    // R5-B1: caminho RSVP do convocado — confirmadosUids (confirmar em 1
+    // toque, F1-N) e recusas (avisar que nao vem, com motivo). O codigo do
+    // Hoje ja gravava confirmadosUids desde a F1-N, mas a regra nunca subiu:
+    // perfil 'usuario' tomava permission-denied. Mexer so no PROPRIO uid e
+    // aplicado no cliente e auditado no atividade_log (anti-spoof uid==auth);
+    // granularidade por chave de mapa nao e modelavel aqui sem explodir o doc
+    // (mesma doutrina da alcada do planejamento, HANDOFF R4).
     match /reunioes/{id} {
       allow read: if isActive();
       allow create: if canWrite();
       allow update: if canWrite()
                     || (isActive()
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pautaItens']));
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pautaItens']))
+                    || (isActive()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmadosUids', 'recusas']));
       allow delete: if false;
     }
 
