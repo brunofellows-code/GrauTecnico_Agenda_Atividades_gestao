@@ -351,7 +351,7 @@
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
   function toast(msg, kind) {
     var t = txt('div', 'ui-toast' + (kind === 'err' ? ' err' : ''), msg);
-    t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:11px;box-shadow:var(--cardShadow)';
+    t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:11px;box-shadow:var(--cardShadow)' + (kind === 'err' ? ';color:var(--red)' : '');
     document.body.appendChild(t);
     setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
   }
@@ -1514,14 +1514,33 @@
     depField.style.display = tipoIni === 'departamento' ? '' : 'none';
     var marcados = {};
     var convBox = el('<div style="display:flex;flex-wrap:wrap;gap:6px 16px;max-height:180px;overflow:auto"></div>');
+    /* R6/design: contador vivo + ações em massa — com 30 pessoas, marcar 1 a 1 é sofrimento */
+    var convCount = txt('span', 'pj-status', '');
+    function contaConv() {
+      if (!USERS.length) { convCount.textContent = ''; return; }
+      var n = 0; USERS.forEach(function (u) { if (marcados[u.uid]) { n++; } });
+      convCount.textContent = n + ' de ' + USERS.length + ' convocado(s)';
+    }
+    var convTools = el('<div style="display:flex;align-items:center;gap:8px;margin:0 0 6px;flex-wrap:wrap"></div>');
+    convTools.appendChild(convCount);
+    convTools.appendChild(UI.button({ label: 'Marcar todos', variant: 'ghost', onClick: function () {
+      USERS.forEach(function (u) { marcados[u.uid] = true; }); desenhaConv();
+    } }));
+    convTools.appendChild(UI.button({ label: 'Limpar', variant: 'ghost', onClick: function () {
+      marcados = {}; marcados[USER.uid] = true; desenhaConv(); /* quem cria permanece convocado */
+    } }));
+    var convWrap = el('<div></div>');
+    convWrap.appendChild(convTools);
+    convWrap.appendChild(convBox);
     function desenhaConv() {
       convBox.innerHTML = '';
+      contaConv();
       if (!USERS.length) { convBox.appendChild(txt('div', 'pj-empty2', 'Sem lista de usuários — você entra como único convocado.')); return; }
       USERS.forEach(function (u) {
         var lab = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer"></label>');
         var cb = document.createElement('input'); cb.type = 'checkbox';
         cb.checked = !!marcados[u.uid];
-        cb.addEventListener('change', function () { marcados[u.uid] = cb.checked; });
+        cb.addEventListener('change', function () { marcados[u.uid] = cb.checked; contaConv(); });
         lab.appendChild(cb); lab.appendChild(txt('span', '', u.nome));
         convBox.appendChild(lab);
       });
@@ -1567,12 +1586,12 @@
     UI.modal({
       title: 'Nova reunião', width: 560,
       body: [
-        UI.field({ label: 'Tipo', required: true, control: tipoSel, hint: 'Define a convocação automática — ajuste os checks à vontade. Decisões abertas de reuniões anteriores do mesmo tipo reaparecem (rollforward).' }),
+        UI.field({ label: 'Tipo', required: true, control: tipoSel, hint: 'Define quem é convocado automaticamente — ajuste a lista à vontade. Pautas não resolvidas da reunião anterior deste tipo voltam sozinhas.' }),
         depField,
         UI.field({ label: 'Título', required: true, control: titInp }),
         UI.field({ label: 'Data', required: true, control: dtInp }),
-        UI.field({ label: 'Hora prevista', control: hrInp, hint: 'Com "Iniciar reunião" no dia, o GERA mede o atraso em minutos.' }),
-        UI.field({ label: 'Convocados', control: convBox }),
+        UI.field({ label: 'Hora prevista', control: hrInp, hint: 'Se você usar "Iniciar reunião" no dia, o atraso é calculado automaticamente.' }),
+        UI.field({ label: 'Convocados', control: convWrap }),
         UI.field({ label: 'Convidados externos (sem login)', control: extWrap, hint: 'Ex.: instrutores e líderes de turma — entram na presença pelo nome.' })
       ],
       footer: function (close) {

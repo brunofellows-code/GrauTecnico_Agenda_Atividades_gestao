@@ -177,7 +177,7 @@ service cloud.firestore {
       allow create: if canWrite();
       allow update: if canWrite()
                     || (isActive()
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pautaItens']))
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pautaItens', 'atualizadoEm']))
                     || (isActive()
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmadosUids', 'recusas']));
       allow delete: if false;

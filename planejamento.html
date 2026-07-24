@@ -33,6 +33,13 @@
 .pl-card-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .pl-card-t{font-size:13.5px;font-weight:800}
 .pl-count{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border-radius:20px;padding:2px 8px}
+/* R6/design — herói: a tela responde a pergunta no topo (título = conclusão) */
+.pl-hero{display:flex;align-items:center;gap:16px;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px}
+.pl-hero-n{font-size:40px;font-weight:900;line-height:1;letter-spacing:-1px;white-space:nowrap}
+.pl-hero-den{font-size:18px;font-weight:800;color:var(--muted2)}
+.pl-hero-t{font-size:15px;font-weight:800;line-height:1.3}
+.pl-hero-s{font-size:12px;color:var(--muted2);margin-top:3px}
+@media (max-width:480px){.pl-hero{flex-direction:column;align-items:flex-start;gap:8px}.pl-hero-n{font-size:32px}}
 .pl-empty{font-size:12px;color:var(--muted2);padding:4px 0}
 .pl-linha{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
 .pl-linha:first-of-type{border-top:0}
@@ -83,7 +90,7 @@
         <span id="pl-info"></span>
         <div class="pl-actions" id="pl-actions"></div>
       </div>
-      <div class="pl-legenda">O QUE VEM (previsto) × O QUE FOI (realizado) — eixo próprio do planejamento, visível a todos (prestação de contas). Entrega até o <b>dia 25</b> do mês anterior; nunca bloqueia.</div>
+      <div class="pl-legenda">Previsto × realizado do setor — visível a todos. Entrega até o <b>dia 25</b> do mês anterior.</div><!-- R6/design: manual completo mora no "i" do eixo, não na tela (Krug) -->
       <div id="pl-body"></div>
     </main>
   </div>
@@ -344,6 +351,38 @@
   var HOJE = null;
   var bodyEl, actionsEl, compEl;
 
+  /* ===================== HERÓI: adesão dos planos (R6/design) =====================
+     Título = a conclusão (Minto): a tela responde "quantos setores entregaram?" no topo.
+     Cor pelo sinal: ≥80% verde · ≥50% âmbar · <50% vermelho. */
+  function renderHero() {
+    var n = PLANOS.length, t = SETORES.length, falta = t - n;
+    var pct = t ? n / t : 0;
+    var cor = pct >= 0.8 ? 'var(--green)' : (pct >= 0.5 ? 'var(--amber)' : 'var(--red)');
+    var titulo, sub;
+    if (n === t) {
+      titulo = (t === 1 ? 'O único setor entregou' : 'Todos os ' + t + ' setores entregaram') + ' o plano de ' + compLabel(COMP);
+      sub = 'Planejamento completo — acompanhe os desfechos em O QUE FOI.';
+    } else {
+      titulo = (pct < 0.5 ? 'Só ' : '') + n + ' de ' + t + (n === 1 ? ' setores entregou' : ' setores entregaram') + ' o plano de ' + compLabel(COMP);
+      sub = falta + (falta === 1 ? ' setor está sem plano' : ' setores estão sem plano') + ' — desça até a lista e cobre os líderes.';
+    }
+    var hero = el('<div class="pl-hero"></div>');
+    var num = el('<div class="pl-hero-n">' + n + '<span class="pl-hero-den">/' + t + '</span></div>');
+    num.style.color = cor;
+    hero.appendChild(num);
+    var tx = el('<div></div>');
+    var ht = txt('div', 'pl-hero-t', titulo); ht.style.color = cor;
+    tx.appendChild(ht);
+    tx.appendChild(txt('div', 'pl-hero-s', sub));
+    hero.appendChild(tx);
+    hero.appendChild(iBtn('Adesão do planejamento', [
+      ['Fórmula', 'Setores com plano entregue ou em rascunho na competência ÷ setores ativos. Aqui: ' + n + ' ÷ ' + t + ' = ' + Math.round(pct * 100) + '%.'],
+      ['O que diz', 'Quantos setores já montaram o plano do mês. Verde ≥80% · âmbar ≥50% · vermelho <50%.'],
+      ['Para que serve', 'Cobrança de prestação de contas: quem está sem plano aparece na lista abaixo com o farol de prazo (D-5/D-3/D-0).']
+    ]));
+    bodyEl.appendChild(hero);
+  }
+
   /* ===================== EIXO: O QUE VEM × O QUE FOI ===================== */
   function nomeSetor(sig) {
     var s = SETORES.filter(function (x) { return x.sigla === sig; })[0];
@@ -369,7 +408,7 @@
     h1.appendChild(txt('span', 'pl-count', vem.length + ' previsto(s)'));
     h1.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
     c1.appendChild(h1);
-    if (!vem.length) { c1.appendChild(txt('div', 'pl-empty', 'Nada previsto em aberto nesta competência.')); }
+    if (!vem.length) { c1.appendChild(txt('div', 'pl-empty', 'Nenhum item previsto para esta competência. Adicione itens no plano do seu setor — ou navegue de mês em ‹ ›.')); }
     vem.slice(0, 12).forEach(function (x) {
       var lin = el('<div class="pl-linha"></div>');
       var vencido = x.item.quandoPrevisto && x.item.quandoPrevisto < HOJE;
@@ -402,7 +441,7 @@
     h2.appendChild(txt('span', 'pl-count', foi.length + ' desfecho(s)'));
     h2.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
     c2.appendChild(h2);
-    if (!foi.length) { c2.appendChild(txt('div', 'pl-empty', 'Nada realizado ainda nesta competência.')); }
+    if (!foi.length) { c2.appendChild(txt('div', 'pl-empty', 'Nenhum desfecho ainda. Ao marcar "✓ realizar" (ou "✗ não realizei") num item, ele aparece aqui.')); }
     foi.slice(0, 12).forEach(function (x) {
       var lin = el('<div class="pl-linha"></div>');
       var dot = el('<div class="pl-l-dot"></div>');
@@ -529,18 +568,31 @@
         var lidsCob = USERS.filter(function (u) {
           return u.perfil === 'lider' && (u.setoresLiderados.indexOf(s.sigla) >= 0 || (s.setorPaiSigla && u.setoresLiderados.indexOf(s.setorPaiSigla) >= 0));
         });
-        var bW = txt('button', 'pl-acao', 'cobrar 📱'); bW.type = 'button';
-        bW.title = 'Abre o WhatsApp com a cobrança pronta (você escolhe o contato).';
-        bW.addEventListener('click', function (ev) { ev.stopPropagation(); window.open('https://wa.me/?text=' + encodeURIComponent(msgCob), '_blank'); });
-        head.appendChild(bW);
-        var bM = txt('button', 'pl-acao', 'cobrar ✉'); bM.type = 'button';
-        bM.title = lidsCob.length ? ('E-mail para: ' + lidsCob.map(function (u) { return u.nome; }).join(', ')) : 'E-mail com a cobrança pronta (sem destinatário — o cadastro não aponta líder deste setor).';
-        bM.addEventListener('click', function (ev) {
+        /* R6/design (regra Chanel): 1 ação visível por linha — o canal escolhe-se depois */
+        var bC = txt('button', 'pl-acao', 'cobrar ▾'); bC.type = 'button';
+        bC.title = lidsCob.length ? ('Cobrança pronta por WhatsApp ou e-mail — líder(es): ' + lidsCob.map(function (u) { return u.nome; }).join(', ')) : 'Cobrança pronta por WhatsApp ou e-mail (o cadastro não aponta líder deste setor).';
+        bC.addEventListener('click', function (ev) {
           ev.stopPropagation();
-          var to = lidsCob.map(function (u) { return u.email; }).filter(Boolean).join(',');
-          window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent('Planejamento ' + s.sigla + ' — ' + COMP) + '&body=' + encodeURIComponent(msgCob);
+          UI.modal({
+            title: 'Cobrar ' + s.sigla + ' — plano de ' + compLabel(COMP), width: 440,
+            body: [txt('div', 'pl-smeta', 'Mensagem pronta: "' + msgCob + '"')],
+            footer: function (close) {
+              return [
+                UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+                UI.button({ label: 'E-mail ✉', variant: 'ghost', onClick: function () {
+                  close();
+                  var to = lidsCob.map(function (u) { return u.email; }).filter(Boolean).join(',');
+                  window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent('Planejamento ' + s.sigla + ' — ' + COMP) + '&body=' + encodeURIComponent(msgCob);
+                } }),
+                UI.button({ label: 'WhatsApp 📱', onClick: function () {
+                  close();
+                  window.open('https://wa.me/?text=' + encodeURIComponent(msgCob), '_blank');
+                } })
+              ];
+            }
+          });
         });
-        head.appendChild(bM);
+        head.appendChild(bC);
       }
 
       if (pl) {
@@ -641,7 +693,7 @@
       var tdV = td(txt('span', 'pl-l-m', vTexto));
       if (it.valorFinalCentavos != null && vPrevIt != null && Number(it.valorFinalCentavos) > Number(vPrevIt)) {
         tdV.title = 'Estourou o previsto em ' + fmtBRL(Number(it.valorFinalCentavos) - Number(vPrevIt)) + '.';
-        tdV.style.color = 'var(--orange)';
+        tdV.style.color = 'var(--amber)'; /* fix R6: glossário e roteiro dizem "âmbar" — era --orange */
       }
       if (Number(vPrevIt) > 20000) {
         var travado = KPI.planejamentoItemTravado(it);
@@ -776,6 +828,7 @@
       .then(function () { pl.itens = novaLista; });
   }
   function criarPlano(sigla) {
+    if (PLANOS.some(function (p) { return p.setorSigla === sigla; })) { toast('O setor ' + sigla + ' já tem plano nesta competência.', 'err'); return; } /* R6: anti duplo-clique/duplicata */
     Store.criarPlanejamento({ setorSigla: sigla, competencia: COMP, itens: [], entregueEm: null })
       .then(function () { toast('Plano de ' + sigla + ' criado — monte o 5W2H.'); ABERTOS[sigla] = true; return reload(); })
       .catch(function (e) { toast(e.message, 'err'); });
@@ -1002,6 +1055,7 @@
       bodyEl.appendChild(el('<div class="pl-state"><div class="pl-state-t">Sem setores cadastrados</div><div class="pl-state-s">Cadastre os setores primeiro (tela Setores) — o plano nasce por sigla.</div></div>'));
       return;
     }
+    renderHero();   /* R6/design: a conclusão primeiro (Minto) */
     renderEixo();
     renderRanking();
     renderSetores();

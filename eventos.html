@@ -497,7 +497,7 @@
         rm.addEventListener('click', function () {
           Store.inativarEvento(e.id)
             .then(function () { toast('Evento excluído.'); fecharSheet(); carregarMes(); })
-            .catch(function (er) { toast(er.message, 'err'); });
+            .catch(function (er) { console.error('[eventos] falha ao excluir:', er); toast('Não deu para excluir o evento. Verifique a conexão e tente de novo.', 'err'); });
         });
         btns.appendChild(rm);
       }
@@ -520,7 +520,7 @@
           UI.button({ label: 'Confirmar', icon: 'check', onClick: function () {
             Store.atualizarEvento(e.id, { realizado: true, custoRealizado: parseBRL(custoInp.value) }, 'realizar_evento', { realizado: false })
               .then(function () { close(); toast('Evento marcado como realizado.'); fecharSheet(); carregarMes(); })
-              .catch(function (er) { toast(er.message, 'err'); });
+              .catch(function (er) { console.error('[eventos] falha ao marcar realizado:', er); toast('Não deu para salvar. Verifique a conexão e tente de novo.', 'err'); });
           } })];
       }
     });
@@ -568,7 +568,7 @@
               ? Store.atualizarEvento(e.id, data, 'editar_evento', { titulo: e.titulo, data: e.data })
               : Store.criarEvento(data);
             pr.then(function () { close(); toast(editing ? 'Evento salvo.' : 'Evento criado.'); carregarMes(); })
-              .catch(function (er) { toast(er.message, 'err'); });
+              .catch(function (er) { console.error('[eventos] falha ao salvar:', er); toast('Não deu para salvar o evento. Verifique a conexão e tente de novo.', 'err'); });
           } })];
       }
     });
@@ -580,10 +580,11 @@
     bodyEl.appendChild(el('<div class="ev-state"><div class="ev-state-t">Carregando…</div><div class="ev-state-s">Buscando os eventos do mês.</div></div>'));
   }
   function renderError(er) {
+    if (er) { console.error('[eventos] falha ao carregar o mês:', er); } /* detalhe técnico: só no console (R6/design) */
     bodyEl.innerHTML = '';
     var s = el('<div class="ev-state"></div>');
-    s.appendChild(txt('div', 'ev-state-t', 'Não deu para carregar'));
-    s.appendChild(txt('div', 'ev-state-s', (er && er.message) || 'Erro desconhecido.'));
+    s.appendChild(txt('div', 'ev-state-t', 'Não deu para carregar a agenda'));
+    s.appendChild(txt('div', 'ev-state-s', 'Verifique sua conexão e tente de novo. Se continuar, avise o gestor — o detalhe do erro está registrado.'));
     var rb = UI.button({ label: 'Tentar de novo', icon: 'upload' });
     rb.addEventListener('click', carregarMes);
     s.appendChild(rb);
@@ -598,7 +599,7 @@
         var evs = res[0].filter(eventoVisivel); /* F1-C: recorte por papel */
         /* F1-M: reunião normalizada como item de agenda (mesma grade).
            _kind='reuniao' distingue o chip; convocado vê badge próprio. */
-        var meu = (CURRENT_USER && CURRENT_USER.uid) || null;
+        var meu = (USER && USER.uid) || null; /* fix R6: era CURRENT_USER (inexistente nesta tela) — quebrava a Agenda de Eventos */
         var reun = (res[1] || []).map(function (r) {
           var conv = Array.isArray(r.convocadosUids) ? r.convocadosUids : [];
           var pres = Array.isArray(r.presencaUids) ? r.presencaUids : [];
