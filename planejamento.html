@@ -17,6 +17,11 @@
 /* ============================================================
    PLANEJAMENTO DO SETOR (R4 · Bloco 3) — zero hex (theme.css)
    ============================================================ */
+/* R6/bug: .ui-app não existe em components.css nem aqui → sem flex a sidebar virava
+   bloco de linha inteira e o conteúdo caía ABAIXO dela (buraco branco de ~600px).
+   Mesmo padrão que inteligencia.html (.pf-app) e importacao.html (.im-app) já usam. */
+.ui-app{display:flex;min-height:100vh;background:var(--bg)}
+.ui-app>.ui-side{position:sticky;top:0;height:100vh}
 .pl-main{flex:1;min-width:0;padding:22px 26px 90px}
 .pl-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .pl-title{font-size:19px;font-weight:800}
@@ -358,8 +363,11 @@
     /* R6/auditoria: ENTREGUE = tem entregueEm E tem ao menos 1 item. Rascunho NÃO conta
        como entregue (o badge da lista abaixo diria "Rascunho" e o número brigaria com ela).
        Denominador = setores RAIZ ativos (subsetor não entrega plano próprio). */
-    var raizes = SETORES.filter(function (s) { return !s.setorPaiSigla; });
-    var t = raizes.length || SETORES.length;
+    /* R6/fix2: o denominador é SETORES.length (todos), NÃO só os raiz — a lista
+       "Planos por setor" abaixo itera SETORES inteiro e minhasSiglasEscreviveis()
+       deixa QUALQUER setor criar plano. Com raiz o herói dizia "0 de 7" em cima de
+       uma lista de 23 — a mesma contradição que este herói veio consertar. */
+    var t = SETORES.length;
     var entregues = PLANOS.filter(function (p) {
       return p.entregueEm && Array.isArray(p.itens) && p.itens.length > 0;
     });

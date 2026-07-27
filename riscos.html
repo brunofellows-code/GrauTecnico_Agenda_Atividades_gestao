@@ -20,6 +20,10 @@
    drawer com role=dialog + gestão de foco; textos informativos em
    --muted (contraste AA), --muted2 só em decorativo.
    ============================================================ */
+/* R6/bug: .ui-app não existe em components.css → sem flex a sidebar vira bloco de
+   linha inteira e o conteúdo cai ABAIXO dela (buraco branco). Mesmo padrão de .pf-app/.im-app. */
+.ui-app{display:flex;min-height:100vh;background:var(--bg)}
+.ui-app>.ui-side{position:sticky;top:0;height:100vh}
 .rk-main{flex:1;min-width:0;padding:22px 26px 96px;max-width:1180px}
 .rk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .rk-h1{font-size:22px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
