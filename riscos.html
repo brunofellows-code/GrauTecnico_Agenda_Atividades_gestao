@@ -4,186 +4,323 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Matriz de Risco — GERA</title>
-
 <link rel="stylesheet" href="theme.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
-  <script src="mnav.js"></script>
-
+<script src="mnav.js"></script>
 <style>
-.rk-app{display:flex;min-height:100vh;background:var(--bg)}
-.rk-app>.ui-side{position:sticky;top:0;height:100vh}
-.rk-main{flex:1;min-width:0;display:flex;flex-direction:column}
-.rk-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.rk-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
-.rk-body{padding:18px 32px 40px;max-width:920px}
-.rk-intro{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px}
+/* ============================================================
+   MATRIZ DE RISCO 5×5 + MITIGAÇÃO (redesign R6) — ZERO HEX.
+   Cores só por token do theme.css (semáforo + halos translúcidos).
+   Fonte dos riscos: matrizes P×I dos 6 arquivos de setor (67 riscos).
+   a11y: células operáveis por teclado (WCAG 2.1.1), foco visível,
+   drawer com role=dialog + gestão de foco; textos informativos em
+   --muted (contraste AA), --muted2 só em decorativo.
+   ============================================================ */
+.rk-main{flex:1;min-width:0;padding:22px 26px 96px;max-width:1180px}
+.rk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.rk-h1{font-size:22px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.rk-dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 0 4px var(--haloRed)}
+.rk-sub{font-size:13px;color:var(--muted);line-height:1.5;max-width:700px;margin:4px 0 20px}
 .rk-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex}
 .rk-i:hover{color:var(--greenText)}
-.rk-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px;border-left:4px solid var(--border)}
-.rk-card.red{border-left-color:var(--red)}
-.rk-card.amber{border-left-color:var(--amber)}
-.rk-card.green{border-left-color:var(--green)}
-.rk-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.rk-rank{font-size:11px;font-weight:800;color:var(--muted2);flex:none}
-.rk-t{font-size:14px;font-weight:800;flex:1;min-width:200px}
-.rk-badge{font-size:10px;font-weight:800;padding:3px 10px;border-radius:11px;border:1px solid var(--border)}
-.rk-meta{font-size:11px;font-weight:700;color:var(--muted2);margin-top:5px}
-.rk-desc{font-size:12.5px;color:var(--text);line-height:1.55;margin-top:8px}
-.rk-mit{margin-top:10px;padding:10px 12px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border)}
-.rk-mit-k{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2);margin-bottom:3px}
-.rk-mit-v{font-size:12.5px;color:var(--text);line-height:1.5}
-.rk-pop{position:fixed;z-index:41;display:none;width:300px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.rk-cell:focus-visible,.rk-hcell:focus-visible,.rk-i:focus-visible,.rk-x:focus-visible{outline:2px solid var(--greenText);outline-offset:2px}
+.rk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:720px){.rk-stats{grid-template-columns:repeat(2,1fr)}}
+.rk-stat{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:15px 16px}
+.rk-stat .n{font-size:32px;font-weight:900;line-height:1;letter-spacing:-1px}
+.rk-stat .k{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:6px;line-height:1.35}
+.rk-stat.red .n{color:var(--red)}.rk-stat.orange .n{color:var(--orange)}
+.rk-grid2{display:grid;grid-template-columns:minmax(0,460px) 1fr;gap:14px;align-items:start}
+@media(max-width:860px){.rk-grid2{grid-template-columns:1fr}}
+.rk-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+.rk-ch{display:flex;align-items:center;gap:9px;margin-bottom:3px}
+.rk-ct{font-size:14px;font-weight:800}
+.rk-cs{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.45}
+.rk-mx{display:flex;gap:10px}
+.rk-yttl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:14px 0}
+.rk-mxbody{flex:1}
+.rk-mrow{display:flex;gap:6px;margin-bottom:6px}
+.rk-yax{width:16px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted)}
+.rk-cell{flex:1;aspect-ratio:1/1;border-radius:9px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;transition:transform .12s,filter .12s}
+.rk-cell.on{cursor:pointer}
+.rk-cell.on:hover{transform:scale(1.07);filter:brightness(1.25);z-index:2}
+.rk-cell.void{cursor:default}
+.rk-bub{min-width:27px;height:27px;padding:0 7px;border-radius:20px;color:var(--onBrand);font-weight:900;font-size:13.5px;display:flex;align-items:center;justify-content:center}
+.rk-xrow{display:flex;gap:6px;margin-top:2px}
+.rk-xrow .rk-yax{visibility:hidden}
+.rk-xax{flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
+.rk-xttl{text-align:center;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 0 26px}
+.rk-leg{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+.rk-leg span{font-size:11px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.rk-sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+.rk-hm{width:100%;border-collapse:separate;border-spacing:6px}
+.rk-hm th{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;text-align:center}
+.rk-hm th.rowh{text-align:left}
+.rk-hcell{width:100%;height:38px;border-radius:9px;border:1px solid var(--border);background:var(--chipBg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--onBrand);transition:transform .12s,filter .12s}
+.rk-hcell:not(.empty){cursor:pointer}
+.rk-hcell:not(.empty):hover{transform:translateY(-2px);filter:brightness(1.08)}
+.rk-hcell.empty{color:var(--muted2);cursor:default;background:transparent}
+.rk-rn{font-size:12.5px;font-weight:700;color:var(--text);text-align:left}
+.rk-tot{font-size:12px;font-weight:800;color:var(--muted);text-align:center}
+.rk-back{position:fixed;inset:0;background:rgba(2,6,15,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
+.rk-back.on{opacity:1;pointer-events:auto}
+.rk-drawer{position:fixed;top:0;right:0;height:100%;width:min(480px,94vw);background:var(--s1);border-left:1px solid var(--border);box-shadow:var(--cardShadow);transform:translateX(100%);transition:transform .26s cubic-bezier(.22,.61,.36,1);z-index:61;display:flex;flex-direction:column}
+.rk-drawer.on{transform:translateX(0)}
+.rk-dh{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.rk-dt{font-size:15px;font-weight:800;line-height:1.3}
+.rk-dcap{font-size:11px;color:var(--muted);margin-top:6px}
+.rk-x{appearance:none;border:1px solid var(--border);background:var(--chipBg);color:var(--text);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px;flex:none}
+.rk-dbody{padding:16px 20px;overflow:auto}
+.rk-field{margin-bottom:15px}
+.rk-fk{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.rk-fv{font-size:13px;line-height:1.55;color:var(--text)}
+.rk-fv.mit{background:var(--chipBg);border:1px solid var(--border);border-radius:11px;padding:11px 12px}
+.rk-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;color:var(--onBrand)}
+.rk-pop{position:fixed;z-index:70;width:330px;max-width:calc(100vw - 28px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow);display:none}
 .rk-pop.on{display:block}
-.rk-back{position:fixed;inset:0;z-index:40;display:none}
-.rk-back.on{display:block}
-.rk-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
-.rk-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:8px}
-@media (max-width:760px){.rk-top{padding:14px 16px}.rk-body{padding:14px 16px 28px}}
+.rk-pt{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.rk-pv{font-size:12px;color:var(--muted);line-height:1.45;margin-bottom:8px}
+.rk-note{font-size:11.5px;color:var(--muted);line-height:1.5;border-top:1px dashed var(--border);margin-top:6px;padding-top:12px}
+.rk-note b{color:var(--greenText)}
 </style>
 </head>
 <body>
   <div id="graut-gate" class="graut-gate">
-    <div class="graut-gate__box">
-      <div class="graut-gate__spin" aria-hidden="true"></div>
-      <p class="graut-gate__msg">Verificando acesso…</p>
-    </div>
+    <div class="graut-gate__box"><div class="graut-gate__spin" aria-hidden="true"></div><p class="graut-gate__msg">Verificando acesso…</p></div>
   </div>
 
-  <div class="rk-app" id="app">
+  <div class="ui-app" id="app">
     <main class="rk-main">
-      <div class="rk-top"><div class="rk-h1"><span>Matriz de Risco + Mitigação</span><span id="rk-info"></span></div></div>
-      <div class="rk-body" id="rk-body"></div>
+      <div class="rk-top">
+        <div>
+          <div class="rk-h1"><span class="rk-dot"></span>Matriz de Risco 5×5 + Mitigação <button class="rk-i" id="i-metodo" aria-label="Como priorizamos"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+          <p class="rk-sub"><b id="hcount">0</b> riscos da operação, tirados dos manuais dos 6 setores, posicionados por Probabilidade × Impacto (ISO 31000). Clique numa célula ou risco para a mitigação do manual.</p>
+        </div>
+      </div>
+
+      <div class="rk-stats" id="stats"></div>
+
+      <div class="rk-grid2">
+        <div class="rk-card">
+          <div class="rk-ch"><span class="rk-ct">Matriz 5×5 — Probabilidade × Impacto</span><button class="rk-i" id="i-mx" aria-label="Como ler"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+          <p class="rk-cs">Cada bolha = quantos riscos caem naquele cruzamento. Canto superior-direito (provável + grave) = fogo.</p>
+          <div class="rk-mx"><div class="rk-yttl">Impacto →</div><div class="rk-mxbody" id="matrix"></div></div>
+          <div class="rk-xttl">Probabilidade →</div>
+          <div class="rk-leg">
+            <span><i class="rk-sw" style="background:var(--red)"></i>Crítico 15–25</span>
+            <span><i class="rk-sw" style="background:var(--orange)"></i>Alto 10–14</span>
+            <span><i class="rk-sw" style="background:var(--amber)"></i>Moderado 5–9</span>
+            <span><i class="rk-sw" style="background:var(--green)"></i>Baixo 1–4</span>
+          </div>
+        </div>
+        <div class="rk-card">
+          <div class="rk-ch"><span class="rk-ct">Concentração por setor</span><button class="rk-i" id="i-hm" aria-label="Como ler"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+          <p class="rk-cs">Setor × severidade — clique numa célula para os riscos daquele setor e banda.</p>
+          <table class="rk-hm" id="hm"></table>
+        </div>
+      </div>
     </main>
   </div>
 
-  <div class="rk-back" id="rk-back"></div>
-  <div class="rk-pop" id="rk-pop" role="dialog" aria-label="Como priorizamos"></div>
+  <div class="rk-back" id="back"></div>
+  <aside class="rk-drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-t"><div class="rk-dh"><div><div class="rk-dt" id="d-t">—</div><div class="rk-dcap" id="d-cap"></div></div><button class="rk-x" id="d-x" aria-label="Fechar">✕</button></div><div class="rk-dbody" id="d-body"></div></aside>
+  <div class="rk-pop" id="pop" role="dialog"></div>
 
   <script src="ui.js"></script>
   <script>
   (function () {
   'use strict';
-
-  /* ============================================================
-     MATRIZ DE RISCO + MITIGAÇÃO (Protocolo A · aba 3)
-     Priorização Pareto: score = impacto × probabilidade (1–5 cada);
-     lista ordenada do maior para o menor — os primeiros itens
-     concentram a maior parte do dano possível.
-     ============================================================ */
-
-  /* [titulo, impacto 1-5, probabilidade 1-5, descrição leiga, mitigação] */
   var RISCOS = [
-    ['Perda de dados por edição sobre versão velha', 5, 4,
-      'Alguém sobe ao GitHub um arquivo antigo por cima do atual e apaga trabalho já feito. Já quase aconteceu no projeto — é a causa nº 1 de retrabalho.',
-      'Regra "nunca editar sobre versão velha": toda sessão começa clonando o repositório real; entrega consolidada única no fim (cada arquivo 1×); SHA256 registrado dos arquivos protegidos (ui.js, components.css) antes e depois.'],
-    ['Regras do Firestore desatualizadas (banco exposto ou tela quebrada)', 5, 3,
-      'O código novo usa uma coleção que as Regras ainda não liberaram → tela quebra com "sem permissão". Pior: regra aberta demais deixaria qualquer pessoa ler/escrever.',
-      'Regras POR COLEÇÃO com catch-all final que NEGA tudo; blocos novos pré-provisionados junto do código; roteiro de deploy sempre inclui "publicar Regras no Console"; erro de permissão tem mensagem própria apontando as Regras.'],
-    ['Sigla de setor alterada em uso (dados órfãos)', 4, 3,
-      'Atividades, eventos e indicadores acoplam ao setor pela SIGLA. Trocar a sigla de um setor em uso deixa tudo apontando para um setor que "não existe mais".',
-      'Acoplamento por sigla é decisão consciente (Princípio 18) com regra operacional: sigla é ESTÁVEL — para renomear o setor, muda-se o NOME, nunca a sigla; o Glossário avisa; futura trava de edição de sigla com dados vinculados.'],
-    ['Importação sobrescrevendo dados bons', 5, 2,
-      'Uma planilha errada importada "por cima" apagaria títulos, datas e responsáveis corretos.',
-      'Importação é DELTA, nunca sobrescrita total: célula vazia PRESERVA o valor atual; de-para crítico BLOQUEIA (sem coluna "codigo" não importa); preview obrigatório antes de gravar; teto de 200 linhas; tudo registrado no atividade_log com rótulo de importação.'],
-    ['Estouro de cota do Firebase (plano gratuito)', 4, 2,
-      'O plano gratuito tem teto diário de leituras/escritas. Uma tela mal feita que lê a coleção inteira várias vezes derruba o sistema para todo mundo no resto do dia.',
-      'Disciplina where()+limit() em TODA query (teto por consulta); importação por delta (só grava o que mudou); snapshot diário idempotente (1 doc/dia, 1 tentativa/sessão); zero listener em tempo real desnecessário.'],
-    ['Fuso horário errando o dia (Salvador, UTC−3)', 4, 2,
-      'Datas tratadas em UTC "viram o dia" 3 horas antes: atividade de segunda apareceria como domingo à noite, atraso contado errado.',
-      'Todo o motor de recorrência e KPIs usa DIA CIVIL LOCAL: datas trafegam como texto AAAA-MM-DD e viram Date sempre no horário local — decisão validada por bateria de testes (harness 27/27).'],
-    ['Perfil errado com poder demais (RBAC furado)', 5, 1,
-      'Um Visualizador conseguindo editar, ou um Editor aprovando a própria mudança de data, quebraria a governança.',
-      'RBAC imposto em DUAS camadas: a tela esconde/bloqueia botões E as Regras do Firestore recusam a escrita no banco (canWrite/isAdmin). Aprovação de data: Admin ou dono da atividade; Editor não auto-aprova.'],
-    ['Indicador mentindo (número certo, leitura errada)', 3, 3,
-      'Um KPI mal calculado ou sem contexto leva a decisão errada — pior que não ter número.',
-      'Matemática dos KPIs validada em bateria de testes (27/27) ANTES de ir à tela; "i" obrigatório em todo número (fórmula + dados + conta do dia); sem previstas → "—" (nunca inventa 0%); sem medição retroativa declarada em banner; card sem foto não mostra tendência.'],
-    ['Dependência de uma pessoa só (fator ônibus)', 3, 3,
-      'O conhecimento do sistema concentrado numa pessoa: se ela sai, ninguém sabe operar nem evoluir.',
-      'HANDOFF documentado ao fim de cada sessão de build; Glossário em linguagem leiga; arquitetura registrada nos ARCH_*.md dentro do próprio repositório; repo público clonável em qualquer sessão.'],
-    ['Excesso de recorrências gerando ruído', 2, 3,
-      'Rotinas demais cadastradas viram uma parede de pendências que ninguém olha — o sistema perde credibilidade.',
-      'Indicador de aderência por setor expõe rotina morta; "pular ocorrência" para exceções legítimas; disciplina de 3–5 indicadores em destaque; revisão nas reuniões de líderes com a pauta gerada pelo sistema.'],
-    ['Evento com custo digitado errado (centavos)', 2, 2,
-      'Valores com vírgula guardados como número quebrado geram somas erradas no projeto (R$ 0,10 + R$ 0,20 ≠ R$ 0,30 em ponto flutuante).',
-      'Custo guardado em CENTAVOS (número inteiro) — decisão registrada no ARCH de Eventos; máscara R$ na digitação; o "i" do card de custos declara a regra.'],
-    ['Navegador antigo sem suporte a módulos', 1, 2,
-      'Um computador muito antigo na escola pode não rodar as partes modernas (import de módulos do Firebase).',
-      'Código ES5 em tudo que é lógica própria; Firebase via CDN oficial; requisito operacional declarado: Chrome atualizado (padrão da escola).']
+  {p:5,i:5,s:"Central Rel.",r:"LFI negociado sem receber todas as parcelas no mesmo mês → vira MT no dia seguinte e mantém inadimplência",m:"Receber todas as parcelas dentro do próprio mês da negociação",ind:"Inadimplência de Ativos (Gráfico Indicadores); Situação do Aluno Analítico (LFI/MT)"},
+  {p:4,i:5,s:"Central Rel.",r:"Inadimplência de Ativos acima da meta (Grau T 9,5% / Grau P 12%) no fechamento",m:"Cobrança diária (ligações/WhatsApp/SMS) e acordos até dia 30/31",ind:"% da Inadimplência de Ativos ao longo do mês"},
+  {p:4,i:5,s:"Central Rel.",r:"Aumento de NC/CAC/LFI estourando a meta de Evasão (2,6% Grau T / 5% Grau P)",m:"Atenção a turmas que iniciam na penúltima semana; acordos de LFI; reversão de NC com o Pedagógico",ind:"Situação do Aluno por Período Analítico (verificação diária)"},
+  {p:4,i:4,s:"Central Rel.",r:"Recebimento parcial de LFI reduz Recuperados abaixo de 5%",m:"Fechar acordos que recebam o total no dia/mês; acordar LFI até penúltimo dia",ind:"Valor médio de parcelas recebidas/faturado (Gráfico Indicadores)"},
+  {p:3,i:4,s:"Central Rel.",r:"Cancelamento/reorganização da 1ª parcela após dia 1º derruba a meta de 1ªs Parcelas (80%)",m:"Acompanhar 1ªs parcelas na planilha da franqueadora; reverter NC antes de virar CAC",ind:"Contas Baixadas / Contas em Aberto Analítico"},
+  {p:3,i:4,s:"Central Rel.",r:"Autorização de desconto de pontualidade não sai a tempo (acordo não fecha até 30/31)",m:"Apresentar acordos à gestão até o dia 30/31 / penúltimo dia",ind:"Acordos pendentes de autorização"},
+  {p:3,i:3,s:"Central Rel.",r:"Recebimento fora da unidade atrasa a baixa da inadimplência",m:"Preferência de recebimento na unidade para baixa imediata",ind:"Contas em Aberto Analítico"},
+  {p:3,i:4,s:"Central Rel.",r:"Falha em verificar diariamente o relatório Analítico (LFI/NC/CAC não resolvidos)",m:"Rotina diária de verificação do Situação do Aluno Analítico",ind:"Situação do Aluno por Período Analítico"},
+  {p:5,i:5,s:"Pedagógico",r:"Evasão de alunos (faltas não tratadas no início do curso)",m:"Controle diário de faltosos; ligação a cada falta nos 2 primeiros meses; lançar retorno no histórico e planilha",ind:"Faltas consecutivas; taxa de evasão semanal"},
+  {p:3,i:5,s:"Pedagógico",r:"Descredenciamento do curso por falha em estágio (sem convênio, seguro ou registro de horas)",m:"Registro das horas, convênios e ativação do seguro; supervisão semanal; arquivo dos documentos comprobatórios (atas, apólice)",ind:"Fiscalização MP/Secretaria de Educação; documentação incompleta de estágio"},
+  {p:4,i:4,s:"Pedagógico",r:"Faltas lançadas fora do prazo (>2 dias) distorcendo indicadores",m:"Lançamento pelo instrutor no mesmo dia; conferência ADM em até 2 dias; reconferência da ata pelo Pedagógico",ind:"Divergência na ata; atraso no lançamento"},
+  {p:3,i:4,s:"Pedagógico",r:"Turma iniciada com preenchimento insuficiente (≤15 alunos ou <90%)",m:"Não iniciar turma ≤15; colocar em minicurso se <90%; realocar/devolver dinheiro; respeitar limites de entrada",ind:"Preenchimento vs. capacidade da sala (análise semanal)"},
+  {p:3,i:4,s:"Pedagógico",r:"Aluno LAC não regularizado no prazo de 7 dias (perda de conclusão)",m:"Prevenção de pendências; inserir aluno/lançar nota em ≤7 dias; requerimento assinado",ind:"Coluna pendência acadêmica PV/PR/PF (15 dias antes do fim)"},
+  {p:3,i:4,s:"Pedagógico",r:"Cancelamento não passar pela Coordenação Pedagógica (perda de retenção)",m:"Todo cancelamento passa antes pelo Pedagógico; pessoa dedicada à reversão; ligação periódica a cancelados",ind:"% de conversão de cancelamento em queda"},
+  {p:3,i:3,s:"Pedagógico",r:"Divergência entre o vendido e o entregado (informação incorreta na venda)",m:"Coordenação acompanha atendimentos no salão de vendas; treinamento da equipe comercial",ind:"Reclamações no pós-venda; insatisfação"},
+  {p:2,i:5,s:"Pedagógico",r:"Comercialização indevida de Radiologia/Especialização sem pré-requisito (dano ao aluno e à Franquia)",m:"Exigir histórico de ensino médio (Radiologia) ou técnico concluído (Especialização); adendo assinado",ind:"Matrícula sem documentação comprobatória"},
+  {p:3,i:3,s:"Pedagógico",r:"Queda de qualidade das aulas / instrutor mal avaliado",m:"Assistir aulas semanalmente; avaliação mensal de instrutores; café pedagógico e treinamento semestral",ind:"Avaliação do instrutor por disciplina; retenção da turma"},
+  {p:3,i:3,s:"Pedagógico",r:"Baixa satisfação do aluno (pesquisa)",m:"Apuração quinzenal/semanal (score); retorno em mural; Degustando com a coordenação",ind:"Score semanal; ranking gráfico"},
+  {p:3,i:3,s:"Pedagógico",r:"Falta de instrutor sem substituição",m:"Substituição imediata; palestra de mercado como contingência; cancelar aula só em último caso",ind:"Ausência comunicada pelo instrutor"},
+  {p:4,i:5,s:"CSA",r:"Aluno sem acompanhamento nos 10 primeiros dias (falha na régua D0–D+10)",m:"Cronograma ativo por coorte; visualização em tempo real do status de cada aluno; roteiros D+1/D+5/D+10 obrigatórios",ind:"Contatos de pós-venda não finalizados no relatório diário"},
+  {p:4,i:5,s:"CSA",r:"Evasão/cancelamento não revertido por escuta fria",m:"Tratativa consultiva com escuta ativa e contraproposta sob medida (turno/turma, negociação, Agência, trancamento)",ind:"Alta na evasão; painel diário de controle da evasão"},
+  {p:4,i:4,s:"CSA",r:"Retorno do aluno acima de 48h em insatisfação pedagógica/infraestrutura",m:"Registro em ouvidoria e acionamento imediato de Pedagógico/Administrativo; SLA de 48h",ind:"Pesquisa de satisfação (pilar Resolução); reclamações reincidentes"},
+  {p:3,i:4,s:"CSA",r:"Baixo FCR — demanda não resolvida no primeiro contato (\"jogo de empurra\")",m:"Perfis ACADWEB corretos; capacitação cruzada (CRA aprende Pedagógico/Adm.); padrão de atendimento",ind:"FCR abaixo de 88%"},
+  {p:3,i:4,s:"CSA",r:"Expectativa comercial desalinhada gerando frustração no pós",m:"Alinhamento de expectativas nos 10 primeiros dias; integração D+1; feedback ao Comercial",ind:"Insatisfação no D+10; quedas nos pilares de satisfação"},
+  {p:3,i:4,s:"CSA",r:"Registro incompleto no ACADWEB / planilha diária não enviada",m:"Manual de redação de observações; tag padronizada; e-mail obrigatório fim de expediente",ind:"Lacunas na planilha unificada; ausência do e-mail diário"},
+  {p:3,i:3,s:"CSA",r:"Fila/lentidão nas janelas de pico (09–10h e 17–18h) elevando o TMA",m:"Reforço de colaboradores nas janelas de maior fluxo; escala de revezamento",ind:"TMA acima de 8 min; aumento na área de espera"},
+  {p:3,i:3,s:"CSA",r:"Dupla abordagem ao aluno (CSA x CRA) na negociação de débito",m:"Delimitar limites de negociação da CSA e cobrança ativa da CRA; réguas autorizadas pela diretoria",ind:"Reclamações de cobrança duplicada; divergência de valores"},
+  {p:2,i:4,s:"CSA",r:"Documento oficial travado no fluxo Pedagógico → Administrativo",m:"Fluxo documental com validação em duas instâncias e prazos; livro de registro de diplomas",ind:"Pendências no controle logístico de documentos"},
+  {p:2,i:4,s:"CSA",r:"Perfis/permissões ACADWEB mal configurados no go-live",m:"Testes de homologação antes do go-live; vinculação aos grupos corretos",ind:"Travas de sistema reportadas na homologação"},
+  {p:3,i:2,s:"CSA",r:"Perda de dados/percepção por baixa adesão às pesquisas (QR Code)",m:"Incentivo ao QR Code ao fim do atendimento; acompanhamento do volume por colaborador",ind:"Baixo volume de respostas por PA/colaborador"},
+  {p:2,i:3,s:"CSA",r:"Baixa adesão do aluno ao App GRAU / Portal (mantém fluxo presencial)",m:"Campanha de comunicação, visitas às salas, orientação ativa no atendimento",ind:"Volume presencial estável apesar da digitalização"},
+  {p:4,i:5,s:"Agência",r:"Poucas empresas parceiras → falta de vagas (\"elo mais forte\" rompido)",m:"Pesquisa de mercado contínua; meta de novas parcerias todo mês; Minuta padrão (Apêndice A); ligações/e-mails ativos",ind:"Nº de novas parcerias/mês; nº de vagas abertas"},
+  {p:4,i:5,s:"Agência",r:"Não atingir a meta de 3% de alunos contratados",m:"Rotina de captação + banco de talentos atualizado + registro fotográfico obrigatório; acompanhamento mensal do indicador",ind:"Taxa de contratados mensal em queda"},
+  {p:4,i:4,s:"Agência",r:"Banco de Talentos desatualizado → sem candidatos no perfil solicitado",m:"Coleta contínua (salas, redes sociais, site, AcadWeb, sala da Agência); organização por curso/módulo/sexo",ind:"Nº de vagas não preenchidas por falta de currículo"},
+  {p:3,i:4,s:"Agência",r:"Assessor sobrecarregado com outra função após 500 alunos",m:"Aplicar regra do manual: dedicação exclusiva a partir de 500 alunos",ind:"Nº de alunos ativos da unidade; acúmulo de funções"},
+  {p:3,i:3,s:"Agência",r:"Vaga cadastrada incorretamente no AcadWeb → não aparece no app",m:"Checagem do cadastro; padronização do lançamento no Sistema de Gestão",ind:"Vagas sem candidaturas pelo app; divergência sistema × mural"},
+  {p:3,i:4,s:"Agência",r:"Encaminhamento de aluno inelegível (frequência <75%, nota <7,0, inadimplente, <16 anos)",m:"Validar critérios de encaminhamento antes do envio; conferência com Pedagógico e Financeiro",ind:"Reclamação de empresa; devolução de candidato"},
+  {p:3,i:3,s:"Agência",r:"Estagiário sem acompanhamento mensal (Ficha D) → insatisfação/rompimento",m:"Ligações e e-mails mensais; orientar empresa sobre preenchimento e envio da Ficha D",ind:"Nº de estagiários sem ficha/contato no mês"},
+  {p:3,i:3,s:"Agência",r:"Indicador de contratado invalidado por falta de registro fotográfico",m:"Coletar foto autorizada no ato do encaminhamento; incluir na rotina de fechamento",ind:"Contratados sem foto no sistema"},
+  {p:3,i:3,s:"Agência",r:"Feira de Empregabilidade fraca (<10 empresas ou <2 processos seletivos)",m:"Iniciar organização 60 dias antes; confirmar ≥10 empresas e ≥2 processos seletivos; assessoria de imprensa",ind:"Nº de empresas confirmadas a X dias do evento"},
+  {p:2,i:4,s:"Agência",r:"Quebra de sigilo de dados de candidatos/alunos (Apêndices B e C)",m:"Sigilo profissional (competência exigida do assessor); guarda em armário/arquivo e sistema",ind:"Acesso indevido a fichas/pastas"},
+  {p:3,i:5,s:"ADM/Fin",r:"Divergência/desvio no caixa não detectada (caixa x sistema)",m:"Fechar e conferir caixa (dinheiro/cartão/despesas) e conciliar no mínimo semanalmente, sem exceção; assinar relatório",ind:"Fechamento de caixa atrasado; divergências recorrentes"},
+  {p:4,i:5,s:"ADM/Fin",r:"Inadimplência crescente / perda de receita",m:"Prevenção 5 dias antes do vencimento; ligações diárias; conferência de baixas; SPC/Serasa; acordos; reuniões semanais com pedagógico",ind:"Relatório de inadimplência subindo; alunos frequentando inadimplentes"},
+  {p:3,i:3,s:"ADM/Fin",r:"Boleto não registrado pago pelo aluno gera tarifa/multa alta",m:"Enviar arquivo remessa como última atividade do dia; não entregar boleto antes do registro",ind:"Remessa não enviada no dia; reclamação de tarifa"},
+  {p:2,i:5,s:"ADM/Fin",r:"Fraude na expedição de diploma por mau uso da senha do Sistec/MEC",m:"Restringir senha do Sistec apenas ao gestor; guarda responsável; conferir alunos no Sistec x gestão",ind:"Senha compartilhada; divergência Sistec x gestão"},
+  {p:2,i:5,s:"ADM/Fin",r:"Folha paga após o 5º dia útil / passivo trabalhista",m:"Conferir, validar cálculo e pagar até o 5º dia útil; enviar documentos ao contador no prazo",ind:"Documentos atrasados à contabilidade"},
+  {p:2,i:5,s:"ADM/Fin",r:"Perda do banco de dados (falha/infecção) sem backup válido",m:"Backup off-line semanal em HD externo/máquina desconectada; exceção de antivírus para Acadweb",ind:"Backup não realizado; antivírus bloqueando sistema"},
+  {p:2,i:5,s:"ADM/Fin",r:"Uso de apostila paralela (crime contra direitos autorais / infração ao contrato)",m:"Pedido de MD pelo site conforme sistema; controle rigoroso de estoque; termo de recusa",ind:"Estoque de MD divergente; apostila fora do padrão"},
+  {p:3,i:4,s:"ADM/Fin",r:"Erro de conciliação bancária/cartão não identificado",m:"Conciliação Extrato x Sistema x Operadora no mínimo semanal",ind:"Conciliação não realizada na semana"},
+  {p:3,i:3,s:"ADM/Fin",r:"Matrícula on-line lançada sem crédito confirmado em conta",m:"Verificar crédito em conta/maquineta antes de liberar; contrato assinado na mesma semana",ind:"Matrícula lançada sem comprovante; contrato não assinado"},
+  {p:2,i:4,s:"ADM/Fin",r:"Mudança de situação/redatamento indevido no sistema",m:"Ações restritas ao Líder ADM/Gestor; requerimento assinado por aluno, gestor e líder",ind:"Ação sem requerimento assinado"},
+  {p:3,i:3,s:"ADM/Fin",r:"Documentação de matrícula incompleta/não digitalizada",m:"Digitalização semanal obrigatória; pasta de pendências acompanhada com o comercial",ind:"Pasta de pendências crescente"},
+  {p:2,i:4,s:"ADM/Fin",r:"Cadastro/atualização do Sistec e Censo em atraso",m:"Acompanhar cadastro conforme comunicado do Inep; conferir turmas Sistec x gestão",ind:"Turmas não cadastradas no prazo oficial"},
+  {p:4,i:5,s:"Gestor",r:"Evasão Real acima da meta (4,8% GT / 5% GP)",m:"Leitura diária da evasão + perdas ofensoras; Reunião Integrada; prevenção LFR (2ª falta); reunião Agência x setores",ind:"% Evasão Real diário; LFR sem negociação; faltas não lançadas"},
+  {p:4,i:5,s:"Gestor",r:"Inadimplência acima da meta (9,5% GT / 12% GP)",m:"Central acompanha 1-2 parcelas em atraso; pós-venda; SPC/SERASA; controle de redatamento",ind:"Inadim. (ativos) diário; recebimento de parcelas < 85%"},
+  {p:3,i:5,s:"Gestor",r:"Redatamento indevido de parcelas mascarando inadimplência",m:"Liberar redatamento só em adiamento de turma e mediante autorização do gestor",ind:"Nº de redatamentos fora de adiamento de turma"},
+  {p:3,i:5,s:"Gestor",r:"Contratos sem assinatura / pendência de documentação",m:"Auditoria quinzenal COM+ADM; sanar pendências dentro do mês da matrícula",ind:"Relatório de pendência de documentação/assinatura"},
+  {p:2,i:5,s:"Gestor",r:"Curso operando com portaria/parecer vencido",m:"Acompanhamento semestral de prazos via portarias/pareceres",ind:"Data de vencimento próxima no parecer"},
+  {p:2,i:5,s:"Gestor",r:"Descumprimento de Censo Escolar / SISTEC (prazo do Governo Federal)",m:"Garantir que Pedagógico e ADM cumpram os prazos; acompanhar cadastro de turmas no SISTEC",ind:"Turmas não cadastradas no SISTEC; janela do Censo aberta"},
+  {p:3,i:4,s:"Gestor",r:"Divergência de caixa (físico x sistema) / falha de conciliação",m:"Conciliação bancária diária e fechamento de caixa (Acadweb vs. operadora/extrato)",ind:"Diferença no fechamento diário de caixa"},
+  {p:4,i:4,s:"Gestor",r:"Ritmo comercial insuficiente para a meta do mês",m:"Validar Raio-X diário (25/8/1-2); não acumular pendentes; abrir turmas com 90 dias",ind:"Raio-X abaixo do mínimo; conversão de potenciais < 50%"},
+  {p:2,i:5,s:"Gestor",r:"Folha não paga até o 5º dia útil / falhas trabalhistas (banco de horas, EPI)",m:"Conferir contracheques; pagar até 5º dia útil; controlar banco de horas e termo de EPI",ind:"Pendências na conferência da folha"},
+  {p:2,i:5,s:"Gestor",r:"Perda de dados do Acadweb (backup Qualinfo não realizado)",m:"Verificar backup diário da pasta C://Qualinfo (disco externo/nuvem); exceções de antivírus",ind:"Ausência de registro de backup"},
+  {p:3,i:4,s:"Gestor",r:"Turmas insuficientes à venda para os próximos meses",m:"Acompanhar cronograma de turmas à venda; abrir novas com 90 dias; usar minicurso",ind:"Dashboard: turmas à venda vs. volume de matrículas necessário"},
+  {p:3,i:4,s:"Gestor",r:"Falta de plano de ação integrado entre setores",m:"Plano de ação da gestão contemplando o de cada líder; Reunião Integrada semanal",ind:"Reuniões sem plano de ação/registro de congruência"},
+  {p:3,i:3,s:"Gestor",r:"% de Contratados da Agência abaixo de 3%",m:"Cobrar evidências de captação; reunião de retenção; supervisão de parcerias",ind:"% de Contratados; ausência de evidências de vagas"},
+  {p:3,i:3,s:"Gestor",r:"Pesquisa de Satisfação/Institucional abaixo de 8,15",m:"Leitura quinzenal + plano de ação sobre comentários negativos",ind:"Nota por setor < 8,15; comentários negativos recorrentes"}
+];
+  var SETORES = ['Central Rel.','Pedagógico','Gestor','ADM/Fin','Agência','CSA'];
+  var BANDS = [
+    {k:'crit',lab:'Crítico',min:15,col:'var(--red)',bg:'var(--haloRed)'},
+    {k:'alto',lab:'Alto',min:10,col:'var(--orange)',bg:'var(--haloOrange)'},
+    {k:'mod',lab:'Moderado',min:5,col:'var(--amber)',bg:'var(--haloAmber)'},
+    {k:'baixo',lab:'Baixo',min:1,col:'var(--green)',bg:'var(--haloGreen)'}
   ];
+  function bandOf(n){ for (var i=0;i<BANDS.length;i++){ if (n>=BANDS[i].min){ return BANDS[i]; } } return BANDS[3]; }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function countUp(el,to){ var dur=650,t0=null; function s(ts){ if(!t0){t0=ts;} var p=Math.min(1,(ts-t0)/dur); el.textContent=Math.round(p*to); if(p<1){ requestAnimationFrame(s); } } requestAnimationFrame(s); }
 
-  function nivel(score) { return score >= 12 ? 'red' : score >= 6 ? 'amber' : 'green'; }
-  function nivelTxt(score) { return score >= 12 ? 'ALTO' : score >= 6 ? 'MÉDIO' : 'BAIXO'; }
-
-  var POP, BACK;
-  function boot(USER) {
-    var app = document.getElementById('app');
-    app.insertBefore(UI.sidebar({ active: 'Riscos', user: USER }), app.firstChild);
-    POP = document.getElementById('rk-pop');
-    BACK = document.getElementById('rk-back');
-    BACK.addEventListener('click', function () { POP.classList.remove('on'); BACK.classList.remove('on'); });
-
-    var ib = document.createElement('button');
-    ib.className = 'rk-i'; ib.type = 'button'; ib.setAttribute('aria-label', 'Como priorizamos');
-    ib.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>';
-    ib.addEventListener('click', function () {
-      POP.innerHTML = '';
-      var t = document.createElement('div'); t.className = 'rk-pop-t'; t.textContent = 'Como priorizamos (Pareto)';
-      POP.appendChild(t);
-      [['Fórmula', 'Score do risco = Impacto (1–5) × Probabilidade (1–5). Lista ordenada do maior score para o menor: os primeiros itens concentram a maior parte do dano possível (regra 80/20).'],
-       ['Níveis', 'ALTO ≥ 12 (vermelho) · MÉDIO 6–11 (amarelo) · BAIXO < 6 (verde).'],
-       ['Fonte', 'Riscos levantados do próprio histórico do projeto (incidentes reais e quase-incidentes) + fundamentos das decisões de arquitetura registradas nos ARCH.']].forEach(function (r) {
-        var v = document.createElement('div'); v.className = 'rk-pop-v';
-        v.textContent = r[0] + ': ' + r[1];
-        POP.appendChild(v);
-      });
-      POP.classList.add('on'); BACK.classList.add('on');
-      var r = ib.getBoundingClientRect();
-      POP.style.top = (r.bottom + 8) + 'px';
-      POP.style.left = Math.max(12, Math.min(r.left, window.innerWidth - 316)) + 'px';
-    });
-    document.getElementById('rk-info').appendChild(ib);
-
-    var body = document.getElementById('rk-body');
-    var intro = document.createElement('div'); intro.className = 'rk-intro';
-    intro.textContent = 'Os riscos da operação do Sistema A, ordenados por Pareto (impacto × probabilidade — os primeiros concentram a maior parte do dano possível). Cada risco tem a sua mitigação: o que JÁ está feito ou combinado para ele não acontecer.';
-    body.appendChild(intro);
-
-    var lista = RISCOS.map(function (r) {
-      return { t: r[0], imp: r[1], prob: r[2], desc: r[3], mit: r[4], score: r[1] * r[2] };
-    }).sort(function (a, b) { return b.score - a.score; });
-
-    lista.forEach(function (r, i) {
-      var lv = nivel(r.score);
-      var card = document.createElement('div'); card.className = 'rk-card ' + lv;
-      var h = document.createElement('div'); h.className = 'rk-h';
-      var rk = document.createElement('div'); rk.className = 'rk-rank'; rk.textContent = '#' + (i + 1);
-      var t = document.createElement('div'); t.className = 'rk-t'; t.textContent = r.t;
-      var bd = document.createElement('span'); bd.className = 'rk-badge';
-      bd.textContent = nivelTxt(r.score) + ' · ' + r.score;
-      bd.style.color = 'var(--' + lv + ')';
-      h.appendChild(rk); h.appendChild(t); h.appendChild(bd);
-      card.appendChild(h);
-      var meta = document.createElement('div'); meta.className = 'rk-meta';
-      meta.textContent = 'Impacto ' + r.imp + '/5 × Probabilidade ' + r.prob + '/5 = ' + r.score;
-      card.appendChild(meta);
-      var d = document.createElement('div'); d.className = 'rk-desc'; d.textContent = r.desc;
-      card.appendChild(d);
-      var m = document.createElement('div'); m.className = 'rk-mit';
-      var mk = document.createElement('div'); mk.className = 'rk-mit-k'; mk.textContent = 'Mitigação';
-      var mv = document.createElement('div'); mv.className = 'rk-mit-v'; mv.textContent = r.mit;
-      m.appendChild(mk); m.appendChild(mv);
-      card.appendChild(m);
-      body.appendChild(card);
-    });
+  function renderStats(){
+    var crit=RISCOS.filter(function(x){ return x.p*x.i>=15; }).length;
+    var alto=RISCOS.filter(function(x){ var n=x.p*x.i; return n>=10&&n<15; }).length;
+    var setC={}; RISCOS.forEach(function(x){ if (x.p*x.i>=15){ setC[x.s]=1; } });
+    var nSet=0, kk; for (kk in setC){ if (setC.hasOwnProperty(kk)){ nSet++; } }
+    var max25=RISCOS.filter(function(x){ return x.p*x.i===25; }).length;
+    var d=[{n:crit,k:'Riscos críticos (ação imediata)',c:'red'},{n:alto,k:'Riscos altos (a vigiar)',c:'orange'},{n:nSet,k:'setores com risco crítico',c:''},{n:max25,k:'no nível máximo (25)',c:'red'}];
+    var h=document.getElementById('stats'); h.innerHTML='';
+    d.forEach(function(o){ var e=document.createElement('div'); e.className='rk-stat '+o.c; e.innerHTML='<div class="n">0</div><div class="k">'+o.k+'</div>'; h.appendChild(e); countUp(e.querySelector('.n'),o.n); });
+    document.getElementById('hcount').textContent=RISCOS.length;
   }
 
-  Guard.onReady(boot);
+  function renderMatrix(){
+    var host=document.getElementById('matrix'), html='', pr, im;
+    for (im=5; im>=1; im--){
+      html+='<div class="rk-mrow"><div class="rk-yax">'+im+'</div>';
+      for (pr=1; pr<=5; pr++){
+        var b=bandOf(pr*im);
+        var list=RISCOS.filter(function(x){ return x.p===pr&&x.i===im; });
+        if (list.length){
+          html+='<div class="rk-cell on" role="button" tabindex="0" data-p="'+pr+'" data-i="'+im+'" aria-label="Probabilidade '+pr+', impacto '+im+', nível '+(pr*im)+', '+list.length+' risco(s)" style="background:'+b.bg+'"><span class="rk-bub" style="background:'+b.col+'">'+list.length+'</span></div>';
+        } else {
+          html+='<div class="rk-cell void" aria-hidden="true" style="background:'+b.bg+'"></div>';
+        }
+      }
+      html+='</div>';
+    }
+    html+='<div class="rk-xrow"><div class="rk-yax"></div>';
+    for (pr=1; pr<=5; pr++){ html+='<div class="rk-xax">'+pr+'</div>'; }
+    html+='</div>';
+    host.innerHTML=html;
+    function openCell(c){
+      var p1=+c.getAttribute('data-p'), i1=+c.getAttribute('data-i');
+      var list=RISCOS.filter(function(x){ return x.p===p1&&x.i===i1; });
+      openList('Probabilidade '+p1+' × Impacto '+i1+' = nível '+(p1*i1), list.length+' risco(s) neste cruzamento', list);
+    }
+    host.addEventListener('click', function(e){ var c=e.target.closest('.rk-cell.on'); if (c){ openCell(c); } });
+    host.addEventListener('keydown', function(e){ if (e.key==='Enter'||e.key===' '){ var c=e.target.closest('.rk-cell.on'); if (c){ e.preventDefault(); openCell(c); } } });
+  }
+
+  function renderHeatmap(){
+    var vis=BANDS.filter(function(b){ return RISCOS.some(function(x){ return bandOf(x.p*x.i).k===b.k; }); });
+    var t=document.getElementById('hm');
+    var head='<tr><th class="rowh">Setor</th>'; vis.forEach(function(b){ head+='<th>'+b.lab+'</th>'; }); head+='<th>Σ</th></tr>'; t.innerHTML=head;
+    SETORES.forEach(function(s){
+      var tr=document.createElement('tr'), tot=RISCOS.filter(function(x){ return x.s===s; }).length;
+      var row='<td class="rk-rn">'+esc(s)+'</td>';
+      vis.forEach(function(b){
+        var list=RISCOS.filter(function(x){ return x.s===s&&bandOf(x.p*x.i).k===b.k; });
+        row+=list.length?'<td><div class="rk-hcell" role="button" tabindex="0" aria-label="'+esc(s)+', '+b.lab+', '+list.length+' risco(s)" style="background:'+b.col+'" data-s="'+esc(s)+'" data-b="'+b.k+'">'+list.length+'</div></td>':'<td><div class="rk-hcell empty" aria-hidden="true">·</div></td>';
+      });
+      row+='<td class="rk-tot">'+tot+'</td>'; tr.innerHTML=row; t.appendChild(tr);
+    });
+    function openHc(c){
+      var s=c.getAttribute('data-s'), bk=c.getAttribute('data-b');
+      var list=RISCOS.filter(function(x){ return x.s===s&&bandOf(x.p*x.i).k===bk; });
+      var lab=BANDS.filter(function(b){ return b.k===bk; })[0].lab;
+      openList(s+' · '+lab, list.length+' risco(s)', list);
+    }
+    t.addEventListener('click', function(e){ var c=e.target.closest('.rk-hcell'); if (c&&c.className.indexOf('empty')===-1){ openHc(c); } });
+    t.addEventListener('keydown', function(e){ if (e.key==='Enter'||e.key===' '){ var c=e.target.closest('.rk-hcell'); if (c&&c.className.indexOf('empty')===-1){ e.preventDefault(); openHc(c); } } });
+  }
+
+  var back=document.getElementById('back'), drawer=document.getElementById('drawer'), lastFocus=null;
+  function openD(){ lastFocus=document.activeElement; back.classList.add('on'); drawer.classList.add('on'); var x=document.getElementById('d-x'); if (x&&x.focus){ x.focus(); } }
+  function closeD(){ back.classList.remove('on'); drawer.classList.remove('on'); if (lastFocus&&lastFocus.focus){ lastFocus.focus(); } }
+  back.addEventListener('click', closeD);
+  document.getElementById('d-x').addEventListener('click', closeD);
+  drawer.addEventListener('keydown', function(e){ if (e.key==='Tab'){ e.preventDefault(); var x=document.getElementById('d-x'); if (x){ x.focus(); } } });
+  document.addEventListener('keydown', function(e){ if (e.key==='Escape'){ closeD(); closePop(); } });
+
+  function openList(title, cap, list){
+    document.getElementById('d-t').textContent=title;
+    document.getElementById('d-cap').textContent=cap;
+    var h=''; list.sort(function(a,b){ return b.p*b.i-a.p*a.i; }).forEach(function(x){
+      var b=bandOf(x.p*x.i);
+      h+='<div class="rk-field"><div class="rk-fk"><span class="rk-pill" style="background:'+b.col+'">'+b.lab+' · '+(x.p*x.i)+'</span> &nbsp;<span style="color:var(--muted)">P'+x.p+'×I'+x.i+' · '+esc(x.s)+'</span></div><div class="rk-fv" style="font-weight:700;margin:5px 0 6px">'+esc(x.r)+'</div><div class="rk-fk">Mitigação (do manual)</div><div class="rk-fv mit">'+esc(x.m)+'</div><div class="rk-fk" style="margin-top:8px">Indicador que antecipa</div><div class="rk-fv">'+esc(x.ind)+'</div></div>';
+    });
+    document.getElementById('d-body').innerHTML=h; openD();
+  }
+
+  var pop=document.getElementById('pop');
+  function openPop(a, title, rows, note){
+    var h='<div class="rk-pt">'+title+'</div>'; rows.forEach(function(r){ h+='<div class="rk-pv"><b>'+r[0]+':</b> '+r[1]+'</div>'; });
+    if (note){ h+='<div class="rk-note">'+note+'</div>'; }
+    pop.innerHTML=h; pop.setAttribute('aria-label', title); pop.classList.add('on');
+    var r=a.getBoundingClientRect();
+    pop.style.top=(r.bottom+8)+'px'; pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-342))+'px';
+  }
+  function closePop(){ pop.classList.remove('on'); }
+  document.addEventListener('click', function(e){ if (!e.target.closest('.rk-pop')&&!e.target.closest('.rk-i')){ closePop(); } });
+
+  function bindPops(){
+    document.getElementById('i-metodo').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Como priorizamos (ISO 31000)',[['Fórmula','Nível = Probabilidade (1–5) × Impacto (1–5). A posição no grid é o risco.'],['Bandas','Crítico 15–25 · Alto 10–14 · Moderado 5–9 · Baixo 1–4.'],['Fonte','Prob, Impacto e mitigação saem das matrizes de risco dos 6 arquivos de setor.']],'<b>Este é o risco INERENTE</b> (antes da mitigação surtir efeito). O nível seguinte — risco <b>residual</b> (onde a bolha vai DEPOIS da mitigação) — precisa da nota P/I pós-controle, a validar.'); });
+    document.getElementById('i-mx').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Como ler o 5×5',[['Eixos','→ direita = mais provável · ↑ acima = mais grave.'],['Cor','A célula herda a cor da banda (P×I).'],['Ação','Bolhas no vermelho (canto sup-dir) exigem ação imediata do gestor/sócio.']]); });
+    document.getElementById('i-hm').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Concentração por setor',[['O que mostra','Quantos riscos cada setor carrega em cada banda.'],['Leitura (fonte: mapa integrado)','Os críticos se concentram em Evasão e Inadimplência — as frentes de vigilância diária.']]); });
+  }
+
+  var USER=null;
+  function boot(){
+    var app=document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active:'Riscos', user:USER }), app.firstChild);
+    renderStats(); renderMatrix(); renderHeatmap(); bindPops();
+  }
+  Guard.onReady(function (u){ USER=u; boot(); });
   })();
   </script>
-<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
 </html>

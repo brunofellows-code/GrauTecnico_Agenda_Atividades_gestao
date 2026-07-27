@@ -355,16 +355,28 @@
      Título = a conclusão (Minto): a tela responde "quantos setores entregaram?" no topo.
      Cor pelo sinal: ≥80% verde · ≥50% âmbar · <50% vermelho. */
   function renderHero() {
-    var n = PLANOS.length, t = SETORES.length, falta = t - n;
+    /* R6/auditoria: ENTREGUE = tem entregueEm E tem ao menos 1 item. Rascunho NÃO conta
+       como entregue (o badge da lista abaixo diria "Rascunho" e o número brigaria com ela).
+       Denominador = setores RAIZ ativos (subsetor não entrega plano próprio). */
+    var raizes = SETORES.filter(function (s) { return !s.setorPaiSigla; });
+    var t = raizes.length || SETORES.length;
+    var entregues = PLANOS.filter(function (p) {
+      return p.entregueEm && Array.isArray(p.itens) && p.itens.length > 0;
+    });
+    var n = entregues.length;
+    var rascunhos = PLANOS.length - n;
+    var falta = t - n;
     var pct = t ? n / t : 0;
     var cor = pct >= 0.8 ? 'var(--green)' : (pct >= 0.5 ? 'var(--amber)' : 'var(--red)');
     var titulo, sub;
-    if (n === t) {
+    if (n === t && t > 0) {
       titulo = (t === 1 ? 'O único setor entregou' : 'Todos os ' + t + ' setores entregaram') + ' o plano de ' + compLabel(COMP);
       sub = 'Planejamento completo — acompanhe os desfechos em O QUE FOI.';
     } else {
-      titulo = (pct < 0.5 ? 'Só ' : '') + n + ' de ' + t + (n === 1 ? ' setores entregou' : ' setores entregaram') + ' o plano de ' + compLabel(COMP);
-      sub = falta + (falta === 1 ? ' setor está sem plano' : ' setores estão sem plano') + ' — desça até a lista e cobre os líderes.';
+      titulo = (pct < 0.5 ? 'Só ' : '') + n + ' de ' + t + (n === 1 ? ' setor entregou' : ' setores entregaram') + ' o plano de ' + compLabel(COMP);
+      sub = falta + (falta === 1 ? ' setor sem plano entregue' : ' setores sem plano entregue')
+          + (rascunhos ? ' — sendo ' + rascunhos + ' em rascunho' : '')
+          + '. Desça até a lista e cobre os líderes.';
     }
     var hero = el('<div class="pl-hero"></div>');
     var num = el('<div class="pl-hero-n">' + n + '<span class="pl-hero-den">/' + t + '</span></div>');
@@ -376,8 +388,9 @@
     tx.appendChild(txt('div', 'pl-hero-s', sub));
     hero.appendChild(tx);
     hero.appendChild(iBtn('Adesão do planejamento', [
-      ['Fórmula', 'Setores com plano entregue ou em rascunho na competência ÷ setores ativos. Aqui: ' + n + ' ÷ ' + t + ' = ' + Math.round(pct * 100) + '%.'],
-      ['O que diz', 'Quantos setores já montaram o plano do mês. Verde ≥80% · âmbar ≥50% · vermelho <50%.'],
+      ['Fórmula', 'Planos ENTREGUES (com data de entrega e ao menos 1 item) ÷ setores raiz ativos. Aqui: ' + n + ' ÷ ' + t + ' = ' + Math.round(pct * 100) + '%.'],
+      ['Dados', 'planejamentos da competência ' + COMP + ' (campo entregueEm + itens[]) × setores ativos sem setor-pai. Rascunho (sem entregueEm) NÃO entra no numerador: ' + rascunhos + ' em rascunho agora.'],
+      ['O que diz', 'Quantos setores já ENTREGARAM o plano do mês. Verde ≥80% · âmbar ≥50% · vermelho <50%.'],
       ['Para que serve', 'Cobrança de prestação de contas: quem está sem plano aparece na lista abaixo com o farol de prazo (D-5/D-3/D-0).']
     ]));
     bodyEl.appendChild(hero);
@@ -869,17 +882,30 @@
   }
   function modalRealizar(pl, it) {
     var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = HOJE;
-    /* R5-B2: custo FINAL na baixa (par previsto × final — padrão planned vs
-       actual cost do MS Project/Wrike). Opcional; pré-preenche com o previsto. */
+    /* R5-B2: custo FINAL na baixa (par previsto × final — padrão planned vs actual
+       cost do MS Project/Wrike).
+       R6/auditoria: NÃO pré-preencher com o previsto. Pré-preencher fazia o operador
+       confirmar em 2 cliques e gravar final == previsto sempre → o alerta de estouro
+       NUNCA disparava e o relatório de custo virava ficção. Agora nasce vazio: em branco
+       grava null ("não informado", que é a verdade); há um atalho de 1 clique p/ repetir o previsto. */
     var vp = valorPrev(it);
-    var vfInp = UI.input({ placeholder: 'R$ 0,00 (opcional)', value: it.valorFinalCentavos != null ? fmtBRL(it.valorFinalCentavos) : (vp != null ? fmtBRL(vp) : '') });
+    var vfInp = UI.input({ placeholder: vp != null ? ('R$ 0,00 — em branco = não informado') : 'R$ 0,00 (opcional)', value: it.valorFinalCentavos != null ? fmtBRL(it.valorFinalCentavos) : '' });
     vfInp.addEventListener('input', function () { vfInp.value = vfInp.value.trim() ? fmtBRL(parseBRL(vfInp.value)) : ''; });
+    var vfWrap = el('<div></div>');
+    vfWrap.appendChild(vfInp);
+    if (vp != null) {
+      var bIgual = txt('button', 'pl-acao', 'gastou o previsto (' + fmtBRL(vp) + ')'); bIgual.type = 'button';
+      bIgual.style.marginTop = '6px';
+      bIgual.title = 'Preenche o custo final com o valor previsto.';
+      bIgual.addEventListener('click', function () { vfInp.value = fmtBRL(vp); });
+      vfWrap.appendChild(bIgual);
+    }
     UI.modal({
       title: 'Marcar como realizado', width: 420,
       body: [
         txt('div', 'pl-empty', it.oque || ''),
         UI.field({ label: 'Data realizada', required: true, control: dtInp, hint: 'Previsto: ' + fmtBR(it.quandoPrevisto) + '. O desvio alimenta a nota (30% no prazo · 20% atraso residual).' }),
-        UI.field({ label: 'Custo final', control: vfInp, hint: vp != null ? ('Previsto: ' + fmtBRL(vp) + '. O par previsto × final vira o relatório de custo do mês.') : 'Sem custo previsto neste item — informe se houve gasto.' })
+        UI.field({ label: 'Custo final', control: vfWrap, hint: vp != null ? ('Previsto: ' + fmtBRL(vp) + '. Deixe em branco se não souber — o par previsto × final vira o relatório de custo do mês.') : 'Sem custo previsto neste item — informe se houve gasto.' })
       ],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),

@@ -85,7 +85,7 @@
     <main class="pj-main">
       <div class="pj-top">
         <div>
-          <div class="pj-h1" id="pj-title">Projetos</div>
+          <div class="pj-h1" id="pj-title">Reuniões</div>
         </div>
         <div class="pj-top-r" id="pj-actions"></div>
       </div>
@@ -1115,7 +1115,7 @@
       var roll = el('<div class="pj-roll"></div>');
       var rollH = el('<div style="display:flex;align-items:center;gap:8px"></div>');
       rollH.appendChild(txt('div', '', 'Pendências de reuniões anteriores (' + ant.length + ') — atualização obrigatória'));
-      rollH.appendChild(iBtn('Rollforward 2.0', [
+      rollH.appendChild(iBtn('Pendências que voltaram', [
         ['Regra', 'Toda decisão NÃO FECHADA (em aberto ou vencida — inclusive a que virou atividade e ainda não foi feita) de reunião ANTERIOR do MESMO ESCOPO (mesmo tipo; mesmo setor, se departamento; mesmo projeto) reaparece aqui. Para ENCERRAR esta reunião, cada uma precisa de um "Registrar andamento" — ou do "Não tratado nesta reunião", que registra a verdade e mantém a pendência rolando.'],
         ['Dados', 'reunioes.decisoes[] das reuniões anteriores + status derivado da atividade-filha (kpi.js). A atualização é gravada DENTRO da decisão, no doc da reunião de ORIGEM (atualizacoes[]).']
       ]));
@@ -1171,7 +1171,7 @@
     var dHead = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
     dHead.appendChild(txt('div', 'pj-card-t', 'Decisões (' + (r.decisoes || []).length + ')'));
     dHead.appendChild(iBtn('Decisões 5W2H', [
-      ['Formato', 'Cada decisão carrega O QUE (obrigatório), COMO e POR QUÊ (opcionais), QUEM (dono), QUANDO (prazo) e o STATUS derivado na hora. As AVALIAÇÕES (atualizações de rollforward) ficam dentro da decisão — o mesmo desenho da planilha de ata.'],
+      ['Formato', 'Cada decisão carrega O QUE (obrigatório), COMO e POR QUÊ (opcionais), QUEM (dono), QUANDO (prazo) e o STATUS derivado na hora. As AVALIAÇÕES (o que foi dito sobre ela nas reuniões seguintes) ficam dentro da decisão — o mesmo desenho da planilha de ata.'],
       ['Visualização', 'Lista agrupa por dono (prestação de contas). Tabela mostra as colunas 5W2H lado a lado, com rolagem horizontal. "Baixar CSV" gera o arquivo no formato da planilha-mãe (abre no Excel).']
     ]));
     var btnVLista = UI.button({ label: 'Lista', variant: DEC_VIEW === 'lista' ? undefined : 'ghost', onClick: function () { DEC_VIEW = 'lista'; redesenhar(); } });
@@ -1842,7 +1842,7 @@
     if (!gg.length) { L.push('   — nenhum gargalo detectado (só conta setor com previsto vencido).'); }
     gg.forEach(function (g) { L.push('   · ' + g.sigla + ' — ' + g.motivo); });
     L.push('');
-    L.push('4) DECISÕES ABERTAS (rollforward)');
+    L.push('4) DECISÕES AINDA EM ABERTO');
     var nAb = 0;
     REUN.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (r) {
       (r.decisoes || []).forEach(function (d) {
@@ -1952,7 +1952,7 @@
       ['Recorte', nomeRecorte + ' (departamento usa o setor + subsetores; os demais tipos e reunião sem tipo olham a escola toda).'],
       ['Seção 1', 'Vermelhos da janela ' + fmtBR(m.janela.jIni) + ' a ' + fmtBR(m.janela.jFim) + ': aderência < 80% com previsto vencido (banda), atrasadas > 0 por setor e decisões vencidas que rolam p/ esta reunião. Pré-marcados — desmarque o que não entra.'],
       ['Seção 2', 'Sugestões encaminhadas de outras reuniões p/ este destino. Aceitar grava "aceita" e tira da fila; desmarcada continua pendente.'],
-      ['Seção 3', 'Rollforward informativo: os itens já entram no bloco 4 da reunião. Vencida marcada na seção 1 não repete no texto.'],
+      ['Seção 3', 'Pendências que voltaram (informativo): os itens já entram no bloco 4 da reunião. Vencida marcada na seção 1 não repete no texto.'],
       ['Seção 4', 'Itens livres. "Candidato a indicador" também grava na fila da Inteligência (pauta_sugestoes).'],
       ['Gravação', 'Gerar substitui os itens gerados anteriores (com origem) e preserva os adicionados à mão. pautaItens exige perfil com escrita (canWrite).']
     ]));
@@ -1996,12 +1996,12 @@
     });
     bodyF.appendChild(s2);
 
-    var s3 = secao('3) Rollforward — itens que rolam p/ esta reunião (' + rolados.length + ') · informativo');
+    var s3 = secao('3) Pendências que voltam para esta reunião (' + rolados.length + ') · informativo');
     if (!rolados.length) { s3.appendChild(txt('div', 'pj-empty2', 'Nada rolando de reuniões anteriores.')); }
     rolados.forEach(function (g) {
       s3.appendChild(txt('div', 'pj-dec-m', '· [' + g.st.rotulo + '] ' + g.dec.texto + ' — ' + (g.dec.donoNome || nomeUser(g.dec.donoUid) || '—') + ' · reunião ' + fmtBR(g.reuniao.data)));
     });
-    if (rolados.length) { s3.appendChild(txt('div', 'pj-dec-m', 'Esses itens entram no bloco Rollforward da reunião com ou sem pauta.')); }
+    if (rolados.length) { s3.appendChild(txt('div', 'pj-dec-m', 'Esses itens entram no bloco de pendências da reunião com ou sem pauta.')); }
     bodyF.appendChild(s3);
 
     var livres = [];
@@ -2054,7 +2054,7 @@
             aceitas.forEach(function (g) { gerados.push({ texto: g.texto, origem: 'sugestao', uid: USER.uid, nome: USER.name || USER.nome || '' }); });
             rolados.forEach(function (g, gi) {
               if (vencidaMarcada[gi]) { return; }
-              gerados.push({ texto: '[rollforward · ' + g.st.rotulo + '] ' + g.dec.texto, origem: 'rollforward', uid: USER.uid, nome: USER.name || USER.nome || '' });
+              gerados.push({ texto: '[pendência · ' + g.st.rotulo + '] ' + g.dec.texto, origem: 'rollforward', uid: USER.uid, nome: USER.name || USER.nome || '' });
             });
             livres.forEach(function (lv) { gerados.push({ texto: lv.texto + (lv.candidato ? ' (candidato a indicador)' : ''), origem: 'livre', uid: USER.uid, nome: USER.name || USER.nome || '' }); });
             var manuais = (r.pautaItens || []).filter(function (it) { return !it.origem; });
@@ -2072,7 +2072,7 @@
             function soOrigem(o) { return gerados.filter(function (g) { return g.origem === o; }).map(function (g) { return g.texto; }); }
             bloco('1) INDICADORES', soOrigem('indicador'));
             bloco('2) CASCATA (sugestões aceitas)', soOrigem('sugestao'));
-            bloco('3) ROLLFORWARD', soOrigem('rollforward'));
+            bloco('3) PENDÊNCIAS QUE VOLTARAM', soOrigem('rollforward'));
             bloco('4) ITENS LIVRES', soOrigem('livre'));
             var texto = L.join('\n');
             var candDocs = livres.filter(function (lv) { return lv.candidato; }).map(function (lv) {
