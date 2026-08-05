@@ -18,7 +18,7 @@
 .im-app>.ui-side{position:sticky;top:0;height:100vh}
 .im-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .im-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.im-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.im-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin:0}
 .im-body{padding:18px 32px 40px;max-width:940px}
 .im-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
 .im-card-t{font-size:14px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:8px}
@@ -68,7 +68,7 @@
 
   <div class="im-app" id="app">
     <main class="im-main">
-      <div class="im-top"><div class="im-h1"><span>Importar atividades</span><span id="im-info"></span></div></div>
+      <div class="im-top"><h1 class="im-h1"><span>Importar atividades</span><span id="im-info"></span></h1></div>
       <div class="im-body" id="im-body"></div>
     </main>
   </div>
@@ -539,7 +539,7 @@
       var rd = new FileReader();
       rd.onerror = function () { toast('Não consegui ler o arquivo. Tente salvar como CSV e colar.', 'err'); fileInp.value = ''; };
       if (ext === 'xlsx' || ext === 'xls') {
-        if (!window.XLSX) { toast('Leitor de Excel não carregou (sem internet no CDN?). Salve como CSV e cole.', 'err'); fileInp.value = ''; return; }
+        if (!window.XLSX) { toast('Não consegui abrir o Excel. Verifique a conexão — ou salve a planilha como CSV e cole aqui.', 'err'); fileInp.value = ''; return; }
         rd.onload = function () {
           try {
             var wb = window.XLSX.read(new Uint8Array(rd.result), { type: 'array' });
@@ -621,7 +621,7 @@
     var card = el('<div class="im-card" style="margin-top:16px"></div>');
     card.appendChild(txt('div', 'im-step', 'Zona de manutenção · Gestor'));
     card.appendChild(txt('div', 'im-card-t', 'Limpar dados de teste'));
-    card.appendChild(txt('div', 'im-hint', 'Para a estreia começar limpa após o treino. Toda limpeza mostra um preview, pede confirmação e registra um resumo no histórico (atividade_log). Nada é apagado de verdade: checks voltam a "pendente" e atividades são desativadas (reversível em "Inativas").'));
+    card.appendChild(txt('div', 'im-hint', 'Para a estreia começar limpa após o treino. Toda limpeza mostra um preview, pede confirmação e registra um resumo no histórico. Nada é apagado de verdade: checks voltam a "pendente" e atividades são desativadas (reversível em "Inativas").'));
 
     /* --- ação 1: zerar checks de um período --- */
     var r1 = el('<div class="im-row" style="align-items:center;flex-wrap:wrap;margin-top:10px"></div>');
@@ -751,7 +751,7 @@
     bodyEl.innerHTML = '';
     var audit = auditarHeader(parsed.header);
     var card = el('<div class="im-card"></div>');
-    card.appendChild(txt('div', 'im-step', 'Passo 2 de 3 — auditoria de-para'));
+    card.appendChild(txt('div', 'im-step', 'Passo 2 de 3 — conferência das colunas'));
     card.appendChild(txt('div', 'im-card-t', 'Colunas: esperado × encontrado'));
 
     var tbl = el('<table class="im-tbl"><thead><tr><th>Coluna esperada</th><th>Situação</th></tr></thead><tbody></tbody></table>');
@@ -811,7 +811,7 @@
     bodyEl.innerHTML = '';
     var plano = PLANO;
     var card = el('<div class="im-card"></div>');
-    card.appendChild(txt('div', 'im-step', 'Passo 3 de 3 — preview do delta'));
+    card.appendChild(txt('div', 'im-step', 'Passo 3 de 3 — confira o que vai mudar'));
     card.appendChild(txt('div', 'im-card-t', 'O que vai acontecer (nada foi gravado ainda)'));
 
     var sum = el('<div class="im-sum"></div>');
@@ -887,7 +887,7 @@
   /* ===================== estados / boot ===================== */
   function renderLoading() {
     bodyEl.innerHTML = '';
-    bodyEl.appendChild(el('<div class="im-state"><div class="im-state-t">Carregando…</div><div class="im-state-s">Lendo setores e atividades atuais (base do delta).</div></div>'));
+    bodyEl.appendChild(el('<div class="im-state"><div class="im-state-t">Carregando…</div><div class="im-state-s">Lendo os setores e atividades atuais (a base da comparação).</div></div>'));
   }
   function renderError(e) {
     bodyEl.innerHTML = '';
@@ -923,7 +923,7 @@
        ['Delta', 'Só grava o que MUDOU. Célula vazia PRESERVA o valor atual. Linha idêntica é pulada. Nunca sobrescreve tudo.'],
        ['Responsável', 'Coluna "responsavel" = NOME de usuário ativo (com login). Vazia: camada GESTOR/SÓCIO recebe o líder/gestor do setor; OPERACIONAL fica em branco pro líder direcionar.'],
        ['Apelido', 'Coluna "apelido" = etiqueta VISUAL sem login (ex.: "Assis. PED 1"). Aparece no card pro líder ver a divisão planejada, mas NÃO loga e conta como "sem responsável" nos indicadores até virar pessoa real. Responsável real sempre ganha do apelido.'],
-       ['Auditoria', 'De-para do cabeçalho: sem "codigo"/"titulo" BLOQUEIA · coluna faltando/extra ALERTA e pede confirmação. Cada gravação vai ao atividade_log com rótulo de importação + 1 registro-resumo.'],
+       ['Auditoria', 'Conferência do cabeçalho: sem "codigo"/"titulo" BLOQUEIA · coluna faltando/extra ALERTA e pede confirmação. Cada gravação fica registrada no histórico com o rótulo de importação + 1 resumo.'],
        ['Quota', 'Teto de 200 linhas por importação — protege o limite diário de escritas do banco.']].forEach(function (r) {
         var v = txt('div', 'im-pop-v', r[0] + ': ' + r[1]);
         POP.appendChild(v);

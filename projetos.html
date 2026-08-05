@@ -19,7 +19,7 @@
 .pj-app>.ui-side{position:sticky;top:0;height:100vh}
 .pj-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .pj-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.pj-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pj-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .pj-top-r{display:flex;align-items:center;gap:12px}
 .pj-body{padding:18px 32px 32px}
 .pj-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
@@ -43,6 +43,7 @@
 .pj-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
 /* lista de projetos */
 .pj-status{flex:none;font-size:10.5px;font-weight:800;letter-spacing:.03em;padding:4px 10px;border-radius:12px;border:1px solid var(--border)}
+.pj-status:empty{display:none} /* R7: selo de autosave vazio não vira chip fantasma */
 /* detalhe */
 .pj-back{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:0}
 .pj-back:hover{color:var(--text)}
@@ -85,7 +86,7 @@
     <main class="pj-main">
       <div class="pj-top">
         <div>
-          <div class="pj-h1" id="pj-title">Reuniões</div>
+          <h1 class="pj-h1" id="pj-title">Reuniões</h1>
         </div>
         <div class="pj-top-r" id="pj-actions"></div>
       </div>
@@ -159,12 +160,23 @@
         });
       }).catch(function (e) { throw ferr(e); });
     },
-    atualizarReuniao: function (id, patch, acao, antes) {
+    atualizarReuniao: function (id, patch, acao, antes, opts) {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
         var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
         return f.updateDoc(f.doc(db, 'reunioes', id), up).then(function () {
-          Store.log({ acao: acao || 'editar_reuniao', entidade: 'reuniao', refId: id, antes: antes || null, depois: patch });
+          var dep = patch;
+          if (opts && opts.resumoLog) {
+            /* R7 (autosave): o log guarda um RESUMO do texto — o texto completo
+               vive no doc da reunião; sem isso, cada pausa de digitação gerava
+               um doc de log com a ata inteira (inflação de atividade_log). */
+            dep = {};
+            Object.keys(patch).forEach(function (k) {
+              var v = patch[k];
+              dep[k] = (typeof v === 'string' && v.length > 200) ? v.slice(0, 200) + '… (' + v.length + ' caracteres)' : v;
+            });
+          }
+          Store.log({ acao: acao || 'editar_reuniao', entidade: 'reuniao', refId: id, antes: antes || null, depois: dep });
         });
       }).catch(function (e) { throw ferr(e); });
     },
@@ -506,7 +518,7 @@
   }
   function canDirect(act) { return (Guard.isGestor && Guard.isGestor()) || (act && act.criadoPor === USER.uid); }
 
-  function painelExecucao(r) {
+  function painelExecucao(r, aposVarredura) {
     function podeAgir() { return CAN_WRITE() && !r.encerradaEm; }
     var escolaToda = false;
     var card = el('<div style="margin-bottom:10px"></div>');
@@ -594,8 +606,15 @@
         corpo.appendChild(rodape);
       }
     }
+    var primeiraVarredura = !OLD_OCC; /* R7·B1.4 */
     garanteVarredura()
-      .then(function () { desenha(); })
+      .then(function () {
+        desenha();
+        /* na 1ª varredura, redesenha a reunião inteira: badges "fora da
+           janela" resolvem para o status real via OLD_OCC (cacheado — o
+           redesenhar não dispara varredura de novo). */
+        if (primeiraVarredura && aposVarredura) { aposVarredura(); }
+      })
       .catch(function () { OLD_OCC = { itens: [], extra: 0 }; desenha(); toast('Falha na varredura de atrasadas antigas — mostrando só a janela.', 'err'); });
     return card;
   }
@@ -734,12 +753,21 @@
     if (!atId || !CTX || !CTX.board) { return null; }
     var b = CTX.board;
     for (var i = 0; i < b.length; i++) { if (b[i].act.id === atId) { return b[i]; } }
+    /* R7·B1.4: fora da janela −45/+30, tenta a varredura de únicas antigas
+       (OLD_OCC, Store.listOccAntigas — lotes de 30, teto 120 declarado).
+       Sem resolver, o statusDecisao devolve "indisponível", nunca "aberta". */
+    if (OLD_OCC && OLD_OCC.itens) {
+      for (var j = 0; j < OLD_OCC.itens.length; j++) {
+        if (OLD_OCC.itens[j].act && OLD_OCC.itens[j].act.id === atId) { return OLD_OCC.itens[j]; }
+      }
+    }
     return null;
   }
   function badgeStatusDec(st) {
     var cor = st.chave === 'vencida' ? 'var(--red)'
       : st.chave === 'atraso' ? 'var(--orange)'
       : st.chave === 'aberta' ? 'var(--doing)'
+      : st.chave === 'sem_janela' ? 'var(--muted)'
       : 'var(--green)';
     var rot = st.rotulo.charAt(0).toUpperCase() + st.rotulo.slice(1);
     var b = txt('span', 'pj-badge', rot);
@@ -842,6 +870,76 @@
     });
   }
 
+  /* ===== R7·B1.1 — rascunhos que sobrevivem ao redesenhar() + autosave =====
+     redesenhar() destrói o DOM e reidratava os textareas DO BANCO — a ata
+     digitada era PERDIDA ao marcar presença, adicionar item de pauta ou
+     registrar andamento. Padrão Fellow/Notion: rascunho em memória por
+     reunião + autosave com debounce (~800ms) e selo "Salvo às HH:MM". */
+  var DRAFTS = {};
+  function draftDe(rid) {
+    if (!DRAFTS[rid]) { DRAFTS[rid] = { pauta: null, resumo: null, itemPauta: null, andamento: {} }; }
+    return DRAFTS[rid];
+  }
+  function horaAgora() {
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  /* Geração por (reunião, campo): cada redesenhar cria instância nova e a
+     ANTIGA morre aqui — timer zumbi de textarea destacado não grava nada
+     (auditoria 27/07: zumbi podia regredir texto novo para texto velho). */
+  var AS_GEN = {};
+  /* Liga autosave num textarea. campo = chave em r (fonte do valor salvo);
+     chaveDraft = chave no rascunho; getPatch(v) monta o patch do Store.
+     Erro de gravação NÃO perde texto: o rascunho fica e re-tenta (até 3x
+     sozinho; depois, no próximo input/blur — declarado no ESTADO). */
+  function ligaAutosave(ta, selo, r, campo, chaveDraft, acaoLog, getPatch) {
+    var d = draftDe(r.id);
+    var genKey = r.id + '|' + chaveDraft;
+    var minhaGen = (AS_GEN[genKey] || 0) + 1;
+    AS_GEN[genKey] = minhaGen;
+    var timer = null, salvando = false, tentativas = 0, horaSalvo = null;
+    selo.setAttribute('aria-live', 'polite');
+    function morta() { return AS_GEN[genKey] !== minhaGen; }
+    function poeSelo(t, cor) { selo.textContent = t; selo.style.color = cor || 'var(--muted)'; }
+    function agenda(ms) { if (timer) { clearTimeout(timer); } timer = setTimeout(salva, ms || 800); }
+    function salva() {
+      timer = null;
+      if (morta()) { return; }                     /* instância substituída pelo redesenhar */
+      if (r.encerradaEm) { return; }               /* reunião fechou — congela (o Encerrar já deu flush) */
+      var v = d[chaveDraft];
+      if (v == null) { poeSelo(r[campo] ? 'Salvo' + (horaSalvo ? ' às ' + horaSalvo : '') : ''); return; }
+      if (v === (r[campo] || '')) { d[chaveDraft] = null; poeSelo(r[campo] ? 'Salvo' + (horaSalvo ? ' às ' + horaSalvo : '') : ''); return; }
+      if (salvando) { agenda(); return; }
+      salvando = true;
+      poeSelo('Salvando…');
+      Store.atualizarReuniao(r.id, getPatch(v), acaoLog, null, { resumoLog: true })
+        .then(function () {
+          salvando = false; tentativas = 0;
+          if (morta()) { return; }
+          r[campo] = v;
+          if (d[chaveDraft] === v) { d[chaveDraft] = null; }
+          horaSalvo = horaAgora();
+          poeSelo('Salvo às ' + horaSalvo, 'var(--green)');
+          if (d[chaveDraft] != null) { agenda(); } /* digitou durante a gravação */
+        })
+        .catch(function () {
+          salvando = false; tentativas++;
+          if (morta()) { return; }
+          poeSelo('Não salvo ainda — o texto está guardado e vou tentar de novo.', 'var(--red)');
+          if (tentativas <= 3) { agenda(4000); }
+        });
+    }
+    ta.addEventListener('input', function () { if (morta()) { return; } d[chaveDraft] = ta.value; tentativas = 0; poeSelo('Digitando…'); agenda(); });
+    ta.addEventListener('blur', function () { if (morta()) { return; } if (d[chaveDraft] != null) { agenda(200); } });
+    /* reidrata rascunho pendente (ex.: redesenhar no meio da digitação) */
+    if (d[chaveDraft] != null && d[chaveDraft] !== (r[campo] || '')) {
+      ta.value = d[chaveDraft];
+      poeSelo('Rascunho recuperado — salvando…');
+      agenda(300);
+    } else if (r[campo]) { poeSelo('Salvo'); }
+    return { agenda: agenda };
+  }
+
   /* Detalhe da reunião (F1-E): horas+atraso · presença · pauta · rollforward ·
      decisões por dono · resumo/ata obrigatório para encerrar.               */
   function fillReuniao(r, box, atualizaMeta) {
@@ -898,9 +996,22 @@
           var ag2 = new Date();
           var hh2 = ('0' + ag2.getHours()).slice(-2) + ':' + ('0' + ag2.getMinutes()).slice(-2);
           var patch = { resumoTexto: resumo, encerradaEm: Date.now() };
+          /* R7: FLUSH do rascunho da pauta no MESMO write do encerramento
+             (auditoria 27/07: autosave pendente gravava DEPOIS da reunião
+             encerrada e a pauta digitada podia sumir da tela). */
+          var dEnc = draftDe(r.id);
+          if (dEnc.pauta != null && dEnc.pauta !== (r.pautaTexto || '')) {
+            patch.pautaTexto = dEnc.pauta;
+            patch.pautaGeradaEm = Date.now();
+          }
           if (!r.horaInicioReal) { patch.horaInicioReal = r.horaPrevista || hh2; }
           Store.atualizarReuniao(r.id, patch, 'reuniao_encerrada')
-            .then(function () { Object.assign(r, patch); toast('Reunião encerrada — ata registrada.'); redesenhar(); })
+            .then(function () {
+              Object.assign(r, patch);
+              dEnc.pauta = null; dEnc.resumo = null; /* congelou — rascunhos cumpridos */
+              toast('Reunião encerrada — ata registrada.');
+              redesenhar();
+            })
             .catch(function (e) { toast(e.message, 'err'); });
         } }));
       }
@@ -928,7 +1039,8 @@
           ['Em andamento', pl.andamento, 'var(--doing)'],
           ['Planejadas', pl.planejadas, 'var(--muted2)'],
           ['Vencidas', pl.vencidas, 'var(--red)'],
-          ['Vence hoje', pl.venceHoje, 'var(--amber)']
+          ['Vence hoje', pl.venceHoje, 'var(--amber)'],
+          ['· fora da janela', pl.indisponiveis || 0, 'var(--muted)'] /* R7·B1.4: nunca vira "planejada" */
         ];
         pills.forEach(function (q) {
           if (!q[1] && q[0].charAt(0) === '·') { return; } /* sub-linha zerada não polui */
@@ -979,6 +1091,43 @@
       rsvpEl.textContent = 'Antes da reunião: ' + nC + ' confirmaram · ' + nR + ' avisaram que não vêm · ' + Math.max(0, internos.length - nC - nR) + ' sem resposta';
     })();
     pcard.appendChild(rsvpEl);
+    /* R7·B2.8 — chamada em LOTE: 12 presenças eram 12 cliques e 12 writes;
+       agora 1 clique = 1 write (mesmo padrão "Marcar todos" do modal de criação). */
+    if (podeEditar() && linhasP.length) {
+      var aplicaChamada = function (novo, rotulo) {
+        /* R7 (auditoria): o lote pode DESFAZER registro feito à mão — avisar
+           antes de desmarcar presente já marcado ou apagar falta justificada. */
+        var removidos = (r.presentes || []).filter(function (k) { return novo.indexOf(k) < 0; });
+        var faltasApagadas = r.faltas ? Object.keys(r.faltas).filter(function (k) { return novo.indexOf(k) >= 0; }) : [];
+        var avisos = [];
+        if (removidos.length) { avisos.push('desmarca ' + removidos.length + ' pessoa(s) já marcada(s) presente(s)'); }
+        if (faltasApagadas.length) { avisos.push('apaga ' + faltasApagadas.length + ' falta(s) justificada(s)'); }
+        if (avisos.length && !window.confirm('Atenção: isso ' + avisos.join(' e ') + '. Continuar?')) { return; }
+        var patch = { presentes: novo };
+        var falNovo = null;
+        if (r.faltas && Object.keys(r.faltas).length) { /* presença limpa a falta de quem entrou */
+          var resto = {};
+          Object.keys(r.faltas).forEach(function (k) { if (novo.indexOf(k) < 0) { resto[k] = r.faltas[k]; } });
+          if (Object.keys(resto).length !== Object.keys(r.faltas).length) { falNovo = resto; patch.faltas = resto; }
+        }
+        Store.atualizarReuniao(r.id, patch, 'presenca_registrada')
+          .then(function () { r.presentes = novo; if (falNovo !== null) { r.faltas = falNovo; } toast(rotulo); redesenhar(); })
+          .catch(function (e) { toast(e.message, 'err'); });
+      };
+      var lote = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
+      lote.appendChild(UI.button({ label: 'Todos presentes', variant: 'ghost', onClick: function () {
+        aplicaChamada(linhasP.map(function (l) { return l.chave; }), 'Chamada: ' + linhasP.length + ' marcado(s) presente(s) de uma vez.');
+      } }));
+      lote.appendChild(UI.button({ label: 'Só quem confirmou', variant: 'ghost', onClick: function () {
+        var novo = linhasP.filter(function (l) { return l.interno && confMap[l.chave]; }).map(function (l) { return l.chave; });
+        if (!novo.length) { toast('Ninguém confirmou presença antes da reunião.', 'err'); return; }
+        aplicaChamada(novo, 'Chamada: ' + novo.length + ' confirmado(s) marcados presentes.');
+      } }));
+      lote.appendChild(UI.button({ label: 'Limpar chamada', variant: 'ghost', onClick: function () {
+        aplicaChamada([], 'Chamada limpa — ninguém marcado.');
+      } }));
+      pcard.appendChild(lote);
+    }
     var pgridEl = el('<div style="display:flex;flex-direction:column;gap:4px;margin-top:6px"></div>');
     var resumoP = txt('div', 'pj-rrow-meta', '');
     function attP() {
@@ -1043,24 +1192,24 @@
     pcard.appendChild(resumoP);
     box.appendChild(pcard);
 
-    /* ---------- 3) pauta ---------- */
+    /* ---------- 3) pauta (R7·B1.1: autosave — sem botão "Salvar pauta") ---------- */
     var pauCard = el('<div style="margin-bottom:10px"></div>');
-    pauCard.appendChild(txt('div', 'pj-card-t', 'Pauta'));
+    var pauHead = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+    pauHead.appendChild(txt('div', 'pj-card-t', 'Pauta'));
+    var seloP = txt('span', 'pj-status', '');
+    pauHead.appendChild(seloP);
+    pauCard.appendChild(pauHead);
     var taP = document.createElement('textarea');
     taP.className = 'pj-pauta'; taP.rows = 6;
     taP.value = r.pautaTexto || '';
     taP.disabled = !podeEditar();
     pauCard.appendChild(taP);
     if (podeEditar()) {
+      var asP = ligaAutosave(taP, seloP, r, 'pautaTexto', 'pauta', 'pauta_salva',
+        function (v) { return { pautaTexto: v, pautaGeradaEm: Date.now() }; });
       var pbWrap = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
-      pbWrap.appendChild(UI.button({ label: 'Salvar pauta', variant: 'ghost', onClick: function () {
-        var v = taP.value;
-        Store.atualizarReuniao(r.id, { pautaTexto: v, pautaGeradaEm: Date.now() }, 'pauta_salva')
-          .then(function () { r.pautaTexto = v; r.pautaGeradaEm = Date.now(); toast('Pauta salva.'); })
-          .catch(function (e) { toast(e.message, 'err'); });
-      } }));
       pbWrap.appendChild(UI.button({ label: 'Gerar pauta automática', variant: 'ghost', onClick: function () {
-        modalPauta(r, function (novoTexto) { taP.value = novoTexto; });
+        modalPauta(r, function (novoTexto) { taP.value = novoTexto; draftDe(r.id).pauta = novoTexto; asP.agenda(); });
       } }));
       pauCard.appendChild(pbWrap);
     }
@@ -1094,6 +1243,8 @@
     });
     if (!r.encerradaEm) {   /* F1-G (D2): sugerir é de TODOS; encerrou, congelou */
       var itInp = UI.input({ placeholder: 'Sugerir item de pauta' });
+      itInp.value = draftDe(r.id).itemPauta || ''; /* R7·B1.1: rascunho sobrevive ao redesenhar */
+      itInp.addEventListener('input', function () { draftDe(r.id).itemPauta = itInp.value; });
       var itWrap = el('<div style="display:flex;gap:8px;margin-top:6px;align-items:center"></div>');
       itInp.style.flex = '1';
       itWrap.appendChild(itInp);
@@ -1102,7 +1253,7 @@
         if (!t) { toast('Escreva o item.', 'err'); return; }
         var novoI = (r.pautaItens || []).concat([{ texto: t, uid: USER.uid, nome: USER.name || USER.nome || '' }]);
         Store.atualizarReuniao(r.id, { pautaItens: novoI }, 'pauta_item_adicionado')
-          .then(function () { r.pautaItens = novoI; redesenhar(); })
+          .then(function () { r.pautaItens = novoI; draftDe(r.id).itemPauta = null; redesenhar(); })
           .catch(function (e) { toast(e.message, 'err'); });
       } }));
       pauCard.appendChild(itWrap);
@@ -1143,18 +1294,24 @@
           var taU = document.createElement('textarea');
           taU.className = 'pj-pauta'; taU.rows = 2;
           taU.placeholder = 'O que foi feito desde a última reunião?';
+          /* R7·B1.1: rascunho do andamento sobrevive ao redesenhar (chave =
+             reunião de origem + índice da decisão — estável nesta sessão). */
+          var chaveAnd = it.reuniao.id + '#' + it.idx;
+          var dAnd = draftDe(r.id).andamento;
+          if (dAnd[chaveAnd]) { taU.value = dAnd[chaveAnd]; }
+          taU.addEventListener('input', function () { dAnd[chaveAnd] = taU.value; });
           linha.appendChild(taU);
           var bW = el('<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
           bW.appendChild(UI.button({ label: 'Registrar andamento', variant: 'ghost', onClick: function () {
             var v = taU.value.trim();
             if (!v) { toast('Escreva o andamento — ou use "Não tratado nesta reunião".', 'err'); return; }
             registrarAndamento(it, { texto: v, reuniaoId: r.id, dataISO: hoje, uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() }, 'registrar_andamento')
-              .then(function () { toast('Andamento registrado na decisão de origem.'); redesenhar(); })
+              .then(function () { delete dAnd[chaveAnd]; toast('Andamento registrado na decisão de origem.'); redesenhar(); })
               .catch(function (e) { toast(e.message, 'err'); });
           } }));
           bW.appendChild(UI.button({ label: 'Não tratado nesta reunião', variant: 'ghost', onClick: function () {
             registrarAndamento(it, { texto: '(não tratado nesta reunião)', naoTratado: true, reuniaoId: r.id, dataISO: hoje, uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() }, 'rollforward_nao_tratado')
-              .then(function () { toast('Registrado: não tratado — a pendência continua rolando.'); redesenhar(); })
+              .then(function () { delete dAnd[chaveAnd]; toast('Registrado: não tratado — a pendência continua rolando.'); redesenhar(); })
               .catch(function (e) { toast(e.message, 'err'); });
           } }));
           linha.appendChild(bW);
@@ -1165,7 +1322,9 @@
     }
 
     /* ---------- 4.5) EXECUÇÃO AO VIVO (F1-F · B2) ---------- */
-    box.appendChild(painelExecucao(r));
+    /* R7·B1.4: quando a varredura de antigas chega (1ª vez), redesenha a
+       reunião — os badges "fora da janela" resolvem para o status real. */
+    box.appendChild(painelExecucao(r, redesenhar));
 
     /* ---------- 5) decisões AGRUPADAS POR DONO (F1-E · 4.2) + F1-F: tabela 5W2H e CSV ---------- */
     var dHead = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
@@ -1200,38 +1359,36 @@
           cont[st.chave] = (cont[st.chave] || 0) + 1;
         });
         var partes = [];
-        [['no_prazo', 'no prazo'], ['feita', 'feita(s)'], ['atraso', 'com atraso'], ['vencida', 'vencida(s)'], ['aberta', 'em aberto'], ['resolvida', 'resolvida(s)']].forEach(function (pp) {
+        [['no_prazo', 'no prazo'], ['feita', 'feita(s)'], ['atraso', 'com atraso'], ['vencida', 'vencida(s)'], ['aberta', 'em aberto'], ['resolvida', 'resolvida(s)'], ['sem_janela', 'fora da janela']].forEach(function (pp) {
           if (cont[pp[0]]) { partes.push(cont[pp[0]] + ' ' + pp[1]); }
         });
         var gh = txt('div', 'pj-rrow-meta', dono + ' — ' + grupo.length + ' decisão(ões): ' + partes.join(' · '));
         gh.style.marginTop = '8px'; gh.style.fontWeight = '600';
         box.appendChild(gh);
-        grupo.forEach(function (g) { box.appendChild(renderDecisao(r, g.d, g.idx)); });
+        grupo.forEach(function (g) { box.appendChild(renderDecisao(r, g.d, g.idx, redesenhar)); });
       });
     }
     if (podeEditar()) {
       var add = UI.button({ label: 'Adicionar decisão', icon: 'plus', variant: 'ghost' });
-      add.addEventListener('click', function () { modalDecisao(r); });
+      add.addEventListener('click', function () { modalDecisao(r, redesenhar); });
       var wrapD = el('<div style="margin-top:8px"></div>'); wrapD.appendChild(add); box.appendChild(wrapD);
     }
 
-    /* ---------- 6) resumo / ata (obrigatório para encerrar) ---------- */
+    /* ---------- 6) resumo / ata (R7·B1.1: autosave — sem botão "Salvar resumo") ---------- */
     var rCard = el('<div style="margin-top:10px"></div>');
-    rCard.appendChild(txt('div', 'pj-card-t', 'Resumo / ata (obrigatório para encerrar)'));
+    var rHead = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+    rHead.appendChild(txt('div', 'pj-card-t', 'Resumo / ata (obrigatório para encerrar)'));
+    var seloR = txt('span', 'pj-status', '');
+    rHead.appendChild(seloR);
+    rCard.appendChild(rHead);
     taResumo = document.createElement('textarea');
     taResumo.className = 'pj-pauta'; taResumo.rows = 5;
     taResumo.value = r.resumoTexto || '';
     taResumo.disabled = !podeEditar();
     rCard.appendChild(taResumo);
     if (podeEditar()) {
-      var rw = el('<div style="margin-top:6px"></div>');
-      rw.appendChild(UI.button({ label: 'Salvar resumo', variant: 'ghost', onClick: function () {
-        var v = taResumo.value;
-        Store.atualizarReuniao(r.id, { resumoTexto: v }, 'resumo_salvo')
-          .then(function () { r.resumoTexto = v; toast('Resumo salvo.'); })
-          .catch(function (e) { toast(e.message, 'err'); });
-      } }));
-      rCard.appendChild(rw);
+      ligaAutosave(taResumo, seloR, r, 'resumoTexto', 'resumo', 'resumo_salvo',
+        function (v) { return { resumoTexto: v }; });
     }
     rCard.appendChild(botoesEnvio(function () {
       return textoResumoReuniao(Object.assign({}, r, { resumoTexto: taResumo.value }));
@@ -1239,7 +1396,9 @@
     box.appendChild(rCard);
   }
 
-  function renderDecisao(r, d, idx) {
+  /* R7·B2.9: done = repintura LOCAL da reunião (redesenhar) — registrar uma
+     decisão não colapsa mais a tela inteira (antes: rerender() global). */
+  function renderDecisao(r, d, idx, done) {
     var line = el('<div class="pj-dec"></div>');
     var main = el('<div class="pj-dec-main"></div>');
     main.appendChild(txt('div', 'pj-dec-t', d.texto || '(sem texto)'));
@@ -1292,7 +1451,7 @@
       toAct.addEventListener('click', function () { converterDecisao(r, d, idx); });
       btns.appendChild(toAct);
       var res = UI.button({ label: 'Marcar resolvida', variant: 'ghost' });
-      res.addEventListener('click', function () { marcarResolvida(r, idx); });
+      res.addEventListener('click', function () { marcarResolvida(r, idx, done); });
       btns.appendChild(res);
     }
     line.appendChild(btns);
@@ -1420,12 +1579,12 @@
       .then(function () { r.decisoes = novaLista; });
   }
 
-  function marcarResolvida(r, idx) {
+  function marcarResolvida(r, idx, done) {
     var lista = (r.decisoes || []).map(function (d, i) {
       return i === idx ? Object.assign({}, d, { aberta: false }) : d;
     });
     salvarDecisoes(r, lista, 'resolver_decisao')
-      .then(function () { toast('Decisão marcada como resolvida.'); rerender(); })
+      .then(function () { toast('Decisão marcada como resolvida.'); if (done) { done(); } else { rerender(); } })
       .catch(function (e) { toast(e.message, 'err'); });
   }
 
@@ -1459,7 +1618,7 @@
     });
   }
 
-  function modalDecisao(r) {
+  function modalDecisao(r, done) {
     if (r.encerradaEm) { toast('Reunião encerrada — só um gestor pode reabrir para editar.', 'err'); return; }
     var txtInp = UI.input({ placeholder: 'O que foi decidido' });
     /* F1-F · 5W2H: COMO e POR QUÊ opcionais — sem eles não vira texto-lixo */
@@ -1492,7 +1651,7 @@
               atividadeId: null, aberta: true, atualizacoes: [] };
             var lista = (r.decisoes || []).concat([nova]);
             salvarDecisoes(r, lista, 'criar_decisao')
-              .then(function () { close(); toast('Decisão adicionada.'); rerender(); })
+              .then(function () { close(); toast('Decisão adicionada.'); if (done) { done(); } else { rerender(); } })
               .catch(function (e) { toast(e.message, 'err'); });
           } })];
       }
@@ -1791,7 +1950,10 @@
         cd.addEventListener('click', function () {
           var boxM = el('<div></div>');
           UI.modal({ title: (r.titulo || 'Reunião') + ' — ' + fmtBR(r.data), width: 760, body: [boxM] });
-          fillReuniao(r, boxM, null);
+          /* R7 (auditoria): atualizaMeta = rerender — o modal vive fora do
+             root, então o kanban ATRÁS atualiza os contadores na hora (antes
+             ficava defasado até fechar o modal). */
+          fillReuniao(r, boxM, function () { rerender(); });
         });
         col.appendChild(cd);
       });

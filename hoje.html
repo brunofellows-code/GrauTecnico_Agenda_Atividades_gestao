@@ -21,14 +21,14 @@
 .hj-main{flex:1;min-width:0;display:flex;flex-direction:column}
 
 .hj-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.hj-hi{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.hj-hi{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .hj-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
 .hj-topactions{display:flex;align-items:center;gap:12px}
 .hj-search{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:10px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:13px;width:230px}
 .hj-search svg{width:16px;height:16px;flex:none}
 
 .hj-mhead{display:none;align-items:flex-start;justify-content:space-between;padding:14px 20px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
-.hj-mg{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.hj-mg{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:0}
 .hj-md{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
 
 .hj-content{flex:1;padding:24px 32px 32px}
@@ -142,8 +142,8 @@
 /* ---- Meu Dia: adições ---- */
 .hj-scope{display:inline-flex;gap:4px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:16px}
 .hj-seg-b{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer}
-.hj-seg-b.on{background:var(--s1);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.18)}
-.hj-act{border:1px solid var(--border);background:var(--s1);color:var(--text);font:inherit;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer}
+.hj-seg-b.on{background:var(--s1);color:var(--text);box-shadow:var(--shadowPill)}
+.hj-act{border:1px solid var(--border);background:var(--s1);color:var(--text);font:inherit;font-size:11px;font-weight:700;padding:5px 10px;min-height:24px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}/* R6/fix17: min-height 24px (WCAG 2.2 AA alvo de toque) */
 .hj-act:hover{background:var(--s2)}
 .hj-act.ok{color:var(--greenText);border-color:var(--green)}
 .hj-act.warn{color:var(--orange);border-color:var(--orange)} /* R5-B1 */
@@ -152,11 +152,11 @@
 .hj-state{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:320px;padding:40px 20px}
 .hj-state-t{font-size:16px;font-weight:800;color:var(--text)}
 .hj-state-s{font-size:13px;color:var(--muted);max-width:460px;line-height:1.5}
-.hj-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;z-index:80;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.hj-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;z-index:80;box-shadow:var(--cardShadow)}
 .hj-toast.err{border-color:var(--red);color:var(--red)}
 /* ---- F1-I: streak, i, supervisiona e cobranças ---- */
 .hj-fire{font-size:11.5px;font-weight:800;color:var(--orange);background:var(--s2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;margin-left:8px;white-space:nowrap}
-.hj-i{width:18px;height:18px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--muted2);font-size:11px;font-weight:800;line-height:1;cursor:pointer;margin-left:8px;flex:0 0 auto}
+.hj-i{width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:var(--s2);color:var(--muted2);font-size:11px;font-weight:800;line-height:1;cursor:pointer;margin-left:8px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}/* R6/fix17: 18->24px (WCAG 2.2 AA) */
 .hj-i:hover{color:var(--text);border-color:var(--brand)}
 .hj-xcard{background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:12px 16px;margin-bottom:14px;box-shadow:var(--shadowSoft)}
 .hj-xhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
@@ -190,7 +190,7 @@
     </div>
   </div>
 
-  <button class="hj-dev" data-theme-toggle type="button" title="Alternar tema (temporário)"><span class="pin"></span>Tema</button>
+  <button class="hj-dev" data-theme-toggle type="button" title="Alternar tema claro/escuro"><span class="pin"></span>Tema</button>
 
   <div class="hj-app" id="app">
     <!-- sidebar inserida via JS (desktop) -->
@@ -198,22 +198,20 @@
 
       <div class="hj-top">
         <div style="line-height:1.2">
-          <div class="hj-hi">Olá</div>
-          <div class="hj-dd">Quinta-feira, 26 de junho de 2026 · Agenda do dia</div>
+          <h1 class="hj-hi">Olá</h1>
+          <div class="hj-dd">Carregando o dia…</div>
         </div>
         <div class="hj-topactions">
-          <div class="hj-search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4-4"></path></svg>
-            <span>Buscar reunião ou atividade</span>
-          </div>
+          <!-- R7·B4.15: a "busca" era um <div> decorativo sem input nem handler
+               (órfão) — removida até existir busca de verdade. -->
           <span id="hj-cta"></span>
         </div>
       </div>
 
       <div class="hj-mhead">
         <div>
-          <div class="hj-mg">Olá</div>
-          <div class="hj-md">Quinta, 26 de junho · 12 atividades</div>
+          <h1 class="hj-mg">Olá</h1>
+          <div class="hj-md">Carregando o dia…</div>
         </div>
         <span id="hj-mav"></span>
       </div>
@@ -227,19 +225,19 @@
         <div class="hj-cols" data-lente="eufaco">
           <div class="hj-card">
             <div class="hj-cardhead">
-              <div class="hj-ctitle">Linha do tempo de hoje</div>
-              <div class="hj-nowbadge"><span class="pin"></span> 11:24 agora</div>
+              <div class="hj-ctitle">Com horário — linha do tempo de hoje</div>
+              <div class="hj-nowbadge"><span class="pin"></span> agora</div>
             </div>
             <div class="hj-tl" id="hj-timeline"></div>
           </div>
 
           <div class="hj-rstack">
             <div class="hj-card">
-              <div class="hj-rhead"><div class="hj-rtitle">Atividades do dia</div><span class="hj-rcount">5 de 12</span></div>
+              <div class="hj-rhead"><div class="hj-rtitle">Sem horário — no seu ritmo</div><span class="hj-rcount"></span></div>
               <div class="hj-list" id="hj-daytasks"></div>
             </div>
             <div class="hj-card">
-              <div class="hj-rhead"><span class="hj-reddot"></span><div class="hj-rtitle">Atrasadas e críticas</div><span class="hj-late-badge">4</span></div>
+              <div class="hj-rhead"><span class="hj-reddot"></span><div class="hj-rtitle">Atrasadas e críticas</div><span class="hj-late-badge"></span></div>
               <div class="hj-list" id="hj-atrasadas"></div>
             </div>
           </div>
@@ -347,6 +345,18 @@
         });
       }).catch(function (e) { throw ferr(e); });
     },
+    /* R7·B2.6: pedido de adiamento — corpo IDÊNTICO ao createSolicitacao do
+       atividades/projetos (duplicação mínima declarada: páginas sem módulo
+       compartilhado de escrita; contrato único = este comentário + grep). */
+    createSolicitacao: function (d) {
+      return fb().then(function (c) {
+        var doc = Object.assign({ status: 'pendente', criadoEm: Date.now() }, d);
+        return c.f.addDoc(c.f.collection(c.db, 'solicitacoes'), doc).then(function (ref) {
+          Store.log({ acao: 'solicitar_data', entidade: 'solicitacao', refId: ref.id, antes: { data: d.dataAtual }, depois: { data: d.dataProposta } });
+          return ref.id;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
     /* F1-E · 3.1: convocações do usuário — reuniões abertas onde ele foi
        convocado. where('convocadosUids','array-contains') + limit; filtro de
        ativo/encerrada NO CLIENTE (evita índice composto). Falha degrada p/ []. */
@@ -436,15 +446,68 @@
     if (CAN_WRITE()) { return true; }
     return !!(o && o.act && CURRENT_USER && o.act.responsavelUid === CURRENT_USER.uid);
   }
+  /* R7·B2.5: o gate era CAN_WRITE — o RESPONSÁVEL (perfil 'usuario') passava
+     no PODE_AGIR da linha e batia aqui em "Seu perfil só visualiza": operador
+     bloqueado por engano. As rules F1-J (firestore.rules:116-138) JÁ permitem
+     ao responsável concluir/iniciar/reabrir as próprias — o gate certo é
+     PODE_AGIR. Devolve Promise<boolean> p/ o checkbox reverter (R7·B1.3). */
   function mutar(o, patch, acao, msg) {
-    if (!CAN_WRITE()) { toast('Seu perfil só visualiza.', 'err'); return; }
-    Store.setOcorrencia(o.act, o.origData, patch, acao)
-      .then(function () { toast(msg); refresh(); })
-      .catch(function (e) { toast(e.message, 'err'); });
+    if (!PODE_AGIR(o)) { toast('Só o responsável (ou líder/gestor) mexe nesta atividade.', 'err'); return Promise.resolve(false); }
+    return Store.setOcorrencia(o.act, o.origData, patch, acao)
+      .then(function () { toast(msg); refresh(); return true; })
+      .catch(function (e) { toast(e.message, 'err'); return false; });
   }
-  function concluir(o) { mutar(o, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia', 'Concluída. ✔'); }
-  function reabrir(o) { mutar(o, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia', 'Reaberta.'); }
-  function iniciar(o) { mutar(o, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia', 'Em andamento.'); }
+  function concluir(o) { return mutar(o, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia', 'Concluída. ✔'); }
+  function reabrir(o) { return mutar(o, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia', 'Reaberta.'); }
+  function iniciar(o) { return mutar(o, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia', 'Em andamento.'); }
+  /* R7·B2.6 — ADIAR (a tela MEDE "Reprogramação 20%" e não tinha COMO
+     reprogramar). Líder/gestor aplica direto (mesma trava F1-J: reprogramar
+     é deles); o responsável comum manda PEDIDO ao dono (solicitacoes). */
+  function isoAmanha(hoje) {
+    var dt = R.fromISO(hoje);
+    dt.setDate(dt.getDate() + 1);
+    return dt.getFullYear() + '-' + pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate());
+  }
+  function modalAdiar(o) {
+    var hoje = R.hojeISO();
+    var direct = CAN_WRITE();
+    var dtInp = el('<input type="date" class="ui-input">');
+    dtInp.value = isoAmanha(hoje);
+    var motTa = el('<textarea class="ui-input" rows="2"></textarea>');
+    motTa.placeholder = direct ? 'Motivo (fica no histórico)' : 'Por que precisa mudar a data? (o dono decide com isso)';
+    var aviso = txt('div', 'hj-prog-s', direct
+      ? 'A reprogramação aplica na hora e conta no índice de reprogramação.'
+      : 'Você não é líder/gestor — vira um pedido para o dono (ou gestor) aprovar.');
+    UI.modal({
+      title: 'Adiar — ' + (o.act.titulo || ''), width: 440,
+      body: [aviso,
+        UI.field({ label: 'Nova data', required: true, control: dtInp, hint: 'Sugerida: amanhã. Data atual: ' + o.effDate.split('-').reverse().join('/') + '.' }),
+        UI.field({ label: 'Motivo', required: true, control: motTa })],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: direct ? 'Adiar' : 'Enviar pedido', icon: 'check', onClick: function () {
+            var nova = dtInp.value;
+            var motivo = motTa.value.trim();
+            if (!R.isISO(nova)) { toast('Escolha uma data válida.', 'err'); return; }
+            if (R.compareISO(nova, hoje) <= 0) { toast('Adiar é para frente — escolha uma data a partir de amanhã.', 'err'); return; }
+            if (motivo.length < 3) { toast('Escreva o motivo (mínimo 3 caracteres) — é ele que explica o índice de reprogramação.', 'err'); return; }
+            if (direct) {
+              Store.setOcorrencia(o.act, o.origData, { status: 'reprogramada', dataOverride: nova, reprogMotivo: motivo }, 'reprogramar_ocorrencia')
+                .then(function () { close(); toast('Adiada para ' + nova.split('-').reverse().join('/') + '.'); refresh(); })
+                .catch(function (e) { toast(e.message, 'err'); });
+              return;
+            }
+            Store.createSolicitacao({
+              atividadeId: o.act.id, ocorrenciaData: o.origData, escopo: 'esta',
+              dataAtual: o.effDate, dataProposta: nova, motivo: motivo,
+              solicitanteUid: CURRENT_USER.uid, solicitanteNome: USER.name || USER.nome || '',
+              tituloAtividade: o.act.titulo, donoUid: o.act.criadoPor || null
+            }).then(function () { close(); toast('Pedido de adiamento enviado ao dono.'); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
 
   /* ---------- helpers de exibição ---------- */
   function pad2(n) { return n < 10 ? '0' + n : '' + n; }
@@ -526,7 +589,12 @@
     var done = o.status === 'concluida';
     row.appendChild(UI.checkbox({
       checked: done, label: o.titulo,
-      onToggle: function () { if (!PODE_AGIR(o)) { toast('Só o responsável (ou líder/gestor) marca esta.', 'err'); refresh(); return; } if (done) { reabrir(o); } else { concluir(o); } }
+      /* R7·B1.3: devolver false/Promise → o checkbox REVERTE o visual quando
+         a gravação é barrada ou falha (antes pintava ✓ e mentia). */
+      onToggle: function () {
+        if (!PODE_AGIR(o)) { toast('Só o responsável (ou líder/gestor) marca esta.', 'err'); return false; }
+        return done ? reabrir(o) : concluir(o);
+      }
     }));
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-freq', 'Em andamento'); em.style.color = 'var(--doing)'; row.appendChild(em); }
     else if (!done && PODE_AGIR(o)) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
@@ -561,26 +629,35 @@
       chL.title = 'Nasceu na reunião' + (ogL.reuniaoTitulo ? ' "' + ogL.reuniaoTitulo + '"' : '') + (ogL.reuniaoData ? ' de ' + ogL.reuniaoData : '');
       row.appendChild(chL);
     }
-    if (PODE_AGIR(o)) { row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok')); }
+    if (PODE_AGIR(o)) {
+      row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok'));
+      /* R7·B2.6: a tela mede "Reprogramação 20%" mas não tinha COMO adiar. */
+      row.appendChild(miniBtn('Adiar', function () { modalAdiar(o); }));
+    }
     row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
     return row;
   }
 
   /* ---------- F1-I · "i" leve (Protocolo A: fórmula + dados + números) ---------- */
+  /* R7·B3.10: modal do "i" extraído (abreInfo) — os kpiCards do topo agora
+     chamam direto via onInfo (o "i" deles era <span> decorativo sem handler). */
+  function abreInfo(titulo, d) {
+    var dd = (typeof d === 'function') ? d() : d;   /* função = números do momento */
+    var body = [];
+    [['FÓRMULA', dd.formula], ['DADOS', dd.dados], ['NÚMEROS DESTE CÁLCULO', dd.numeros]].forEach(function (r) {
+      if (!r[1]) { return; }
+      var k = txt('div', 'hj-prog-s', r[0]); k.style.marginTop = '8px';
+      var v = txt('div', '', r[1]); v.style.cssText = 'font-size:12.5px;line-height:1.5';
+      body.push(k); body.push(v);
+    });
+    UI.modal({ title: titulo, width: 460, body: body,
+      footer: function (close) { return [UI.button({ label: 'Entendi', onClick: close })]; } });
+  }
   function infoHj(titulo, d) {
     var b = el('<button type="button" class="hj-i" aria-label="Como este número é calculado">i</button>');
     b.addEventListener('click', function (ev) {
       ev.stopPropagation();
-      var dd = (typeof d === 'function') ? d() : d;   /* função = números do momento */
-      var body = [];
-      [['FÓRMULA', dd.formula], ['DADOS', dd.dados], ['NÚMEROS DESTE CÁLCULO', dd.numeros]].forEach(function (r) {
-        if (!r[1]) { return; }
-        var k = txt('div', 'hj-prog-s', r[0]); k.style.marginTop = '8px';
-        var v = txt('div', '', r[1]); v.style.cssText = 'font-size:12.5px;line-height:1.5';
-        body.push(k); body.push(v);
-      });
-      UI.modal({ title: titulo, width: 460, body: body,
-        footer: function (close) { return [UI.button({ label: 'Entendi', onClick: close })]; } });
+      abreInfo(titulo, d);
     });
     return b;
   }
@@ -737,6 +814,60 @@
       linha.innerHTML = '';
       linha.appendChild(txt('span', 'hj-freq', 'Não deu para carregar — toque para abrir.'));
     });
+    return card;
+  }
+
+  /* R7·B2.7 — SEUS ITENS DO PLANO (5W2H): o item com QUEM = você e prazo até
+     hoje agora chega a QUEM EXECUTA (antes só o líder via o farol do setor).
+     Só leitura + link — a baixa ("✓ realizar") continua no Planejamento
+     (evita dupla-entrada). CUIDADO mantido: NÃO entra no denominador da
+     aderência das rotinas — são dois motores de nota distintos. */
+  function cardMeuPlano(hoje) {
+    var uid = CURRENT_USER.uid;
+    if (!uid) { return null; }
+    var comp = hoje.slice(0, 7);
+    var card = el('<div class="hj-xcard"></div>');
+    card.style.display = 'none'; /* só aparece se houver item seu */
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Seus itens do plano do setor — ' + comp.slice(5, 7) + '/' + comp.slice(0, 4)));
+    hd.appendChild(infoHj('Seus itens do plano (5W2H)', {
+      formula: 'itens do plano 5W2H desta competência em que QUEM = você, ainda não realizados, com QUANDO (previsto) até hoje. NÃO entram na aderência das rotinas — plano e rotina são contas separadas. A baixa é na tela Planejamento.',
+      dados: 'coleção planejamentos · competencia == ' + comp + ' · itens com quemUid = você.',
+      numeros: 'atualizado ao abrir a tela.'
+    }));
+    card.appendChild(hd);
+    var listaMP = el('<div></div>');
+    card.appendChild(listaMP);
+    Store.listPlanejamentosComp(comp).then(function (planos) {
+      var meus = [];
+      planos.forEach(function (p) {
+        (p.itens || []).forEach(function (it) {
+          if (it.removido || it.naoFeito || it.quandoRealizado) { return; }
+          if (it.quemUid !== uid) { return; }
+          if (!it.quandoPrevisto || it.quandoPrevisto > hoje) { return; }
+          meus.push({ p: p, it: it });
+        });
+      });
+      if (!meus.length) { return; } /* sem item seu = card nem aparece */
+      meus.sort(function (a, b) { return (a.it.quandoPrevisto || '').localeCompare(b.it.quandoPrevisto || ''); });
+      card.style.display = '';
+      meus.slice(0, 6).forEach(function (x) {
+        var row = el('<div class="hj-xrow"></div>');
+        var venc = x.it.quandoPrevisto < hoje;
+        row.appendChild(el('<span class="hj-xdot" style="background:var(--' + (venc ? 'red' : 'amber') + ')"></span>'));
+        var t = el('<span class="hj-xtit"></span>');
+        t.textContent = x.it.oque || '(sem título)'; t.title = t.textContent;
+        row.appendChild(t);
+        var mt = el('<span class="hj-xmeta"></span>');
+        var trava = (Number(x.it.valorPrevistoCentavos) || 0) > 20000 && !(x.it.aprovGestor && x.it.aprovSocio);
+        mt.textContent = x.p.setorSigla + ' · previsto ' + x.it.quandoPrevisto.split('-').reverse().join('/') + (venc ? ' · vencido' : '') + (trava ? ' · aguarda alçada' : '');
+        row.appendChild(mt);
+        listaMP.appendChild(row);
+      });
+      if (meus.length > 6) { listaMP.appendChild(txt('div', 'hj-prog-s', '+ ' + (meus.length - 6) + ' outro(s).')); }
+      var lk = el('<a class="hj-xlink" href="planejamento.html">Dar baixa no Planejamento →</a>');
+      listaMP.appendChild(lk);
+    }).catch(function () { /* sem dado, sem invenção: o card só não aparece */ });
     return card;
   }
 
@@ -1004,6 +1135,20 @@
         CELEBRADO = hoje;
         toast('Dia fechado! 🎯' + (stk.dias >= 2 ? ' Sequência de ' + stk.dias + ' dias. 🔥' : ''));
       }
+    } else if (stk.dias >= 1 || stk.recorde >= 2) {
+      /* R7·B4.20: dia sem previstas escondia a sequência — parecia punição.
+         Dia livre não quebra o 🔥 (regra do streak80): mostrar, não sumir. */
+      var pbox0 = el('<div class="hj-prog"></div>');
+      pbox0.setAttribute('data-lente', 'eufaco');
+      var pt0 = el('<div class="hj-prog-t"></div>');
+      pt0.appendChild(el('<span>Dia livre — nada previsto para hoje.</span>'));
+      var fire0 = el('<span class="hj-fire"></span>');
+      fire0.textContent = stk.dias >= 1
+        ? '🔥 ' + stk.dias + (stk.dias === 1 ? ' dia' : ' dias') + ' — dia livre não quebra a sequência'
+        : 'recorde: ' + stk.recorde + ' dias';
+      pt0.appendChild(fire0);
+      pbox0.appendChild(pt0);
+      pg.appendChild(pbox0);
     }
     /* F1-I: Cobranças do PEF (escalonamento D-5/D-3/D-0 dos planos de ação) */
     /* R3 · lentes: cada card já existente ganha a etiqueta da sua pergunta */
@@ -1013,24 +1158,48 @@
     /* F1-N · G1: Cockpit do líder (KPIs do MEU setor, sem trocar de tela) */
     var g1 = cardCockpitLider(m, hoje); if (g1) { g1.setAttribute('data-lente', 'numeros'); pg.appendChild(g1); }
     var gp = cardPlanejamentoLider(hoje); if (gp) { gp.setAttribute('data-lente', 'eufaco'); pg.appendChild(gp); } /* R4-B3 */
+    /* R7·B2.7: item do plano chega a quem executa */
+    var mpk = cardMeuPlano(hoje); if (mpk) { mpk.setAttribute('data-lente', 'eufaco'); pg.appendChild(mpk); }
     /* F1-N · G3: Radar do gestor (pior × melhor equipe do dia → agir) */
     var g3 = cardRadarGestor(m, hoje); if (g3) { g3.setAttribute('data-lente', 'numeros'); pg.appendChild(g3); }
     /* F1-N · G2: Quem precisa de ajuda hoje (cobrança vira conversa 1:1) */
     var g2 = cardAjuda(m, hoje); if (g2) { g2.setAttribute('data-lente', 'eucobro'); pg.appendChild(g2); }
 
-    /* KPIs do topo */
+    /* KPIs do topo — R7·B3.10: cada card tem "i" REAL (onInfo) e drill
+       (onClick leva à lista/tela que compõe o número). R7·B4.20: dia sem
+       previstas é dia LIVRE (verde), não alerta âmbar. */
     var kg = document.getElementById('hj-kpis'); kg.innerHTML = '';
+    function rolaAte(id) {
+      var alvo = document.getElementById(id);
+      if (alvo) { alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
     var kpis = [
-      { label: 'Para hoje', value: String(d.doHoje.length), sub: d.feitasHoje === 0 && d.doHoje.length ? 'comece pela primeira ✓' : d.feitasHoje + ' concluída(s)', tone: d.doHoje.length ? 'green' : 'amber' },
-      { label: 'Concluídas hoje', value: String(d.feitasHoje), sub: pctDia + '% do dia', tone: pctDia >= 60 ? 'green' : 'amber' },
-      { label: 'Atrasadas', value: String(d.atras.length), sub: d.atras.length ? 'resolver primeiro' : 'nada vencido', tone: d.atras.length ? 'red' : 'green' },
-      { label: 'Em andamento', value: String(mm.totais.andamento), sub: 'já iniciadas', tone: mm.totais.andamento ? 'amber' : 'green' },
+      { label: 'Para hoje', value: String(d.doHoje.length),
+        sub: !d.doHoje.length ? 'dia livre — nada previsto' : (d.feitasHoje === 0 ? 'comece pela primeira ✓' : d.feitasHoje + ' concluída(s)'),
+        tone: 'green',
+        onClick: function () { rolaAte(d.semHora.length ? 'hj-daytasks' : 'hj-timeline'); },
+        onInfo: function () { abreInfo('Para hoje', { formula: 'ocorrências com data de HOJE, menos as puladas (com e sem horário — a soma das duas listas abaixo).', dados: 'as mesmas ocorrências do painel, no seu escopo e filtros atuais; dia civil de Salvador.', numeros: d.comHora.length + ' com horário + ' + d.semHora.length + ' sem horário = ' + d.doHoje.length }); } },
+      { label: 'Concluídas hoje', value: String(d.feitasHoje),
+        sub: !d.doHoje.length ? 'dia livre' : pctDia + '% do dia',
+        tone: !d.doHoje.length ? 'green' : (pctDia >= 60 ? 'green' : 'amber'),
+        onClick: function () { rolaAte('hj-daytasks'); },
+        onInfo: function () { abreInfo('Concluídas hoje', { formula: 'das previstas para hoje, quantas já estão com status "concluída".', dados: 'as mesmas ocorrências do painel.', numeros: d.feitasHoje + ' ÷ ' + d.doHoje.length + ' = ' + pctDia + '%' }); } },
+      { label: 'Atrasadas', value: String(d.atras.length), sub: d.atras.length ? 'resolver primeiro' : 'nada vencido', tone: d.atras.length ? 'red' : 'green',
+        onClick: function () { rolaAte('hj-atrasadas'); },
+        onInfo: function () { abreInfo('Atrasadas', { formula: 'ocorrências com data ANTERIOR a hoje e ainda abertas (pendente, em andamento ou reprogramada).', dados: 'as mesmas ocorrências do painel; a lista completa está na seção "Atrasadas e críticas".', numeros: d.atras.length + ' pendente(s) agora' }); } },
+      { label: 'Em andamento', value: String(mm.totais.andamento), sub: 'já iniciadas', tone: mm.totais.andamento ? 'amber' : 'green',
+        onClick: function () { rolaAte('hj-daytasks'); },
+        onInfo: function () { abreInfo('Em andamento', { formula: 'ocorrências da janela com status "em andamento" (alguém clicou Iniciar e ainda não concluiu).', dados: 'ocorrências da janela no seu escopo.', numeros: mm.totais.andamento + ' iniciada(s) sem conclusão' }); } },
       { label: 'Aderência (janela)',
         /* F1-D(e): partida fria = mesmo tratamento do "sem previstas" (nunca 0% vermelho falso) */
         value: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? '—' : mm.aderencia + '%',
         sub: mm.totais.previstasVencidas === 0 ? 'coletando' : 'meta 90%',
-        tone: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red') },
-      { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green' }
+        tone: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red'),
+        onClick: function () { window.location.href = 'performance.html'; },
+        onInfo: function () { abreInfo('Aderência (janela)', { formula: 'concluídas ÷ previstas até hoje × 100 (meta 90%; puladas fora). O detalhe por setor e por pessoa está na Performance — toque no card para abrir.', dados: 'ocorrências da janela no seu escopo.', numeros: (mm.aderencia == null ? '—' : mm.aderencia + '%') + ' · ' + mm.totais.previstasVencidas + ' prevista(s) vencida(s)' }); } },
+      { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green',
+        onClick: function () { window.location.href = 'performance.html'; },
+        onInfo: function () { abreInfo('Reprogramação', { formula: 'reprogramadas ÷ total da janela × 100 (limite saudável: 20%). O detalhe está na Performance — toque no card para abrir.', dados: 'ocorrências da janela no seu escopo.', numeros: mm.reprogPct + '%' }); } }
     ];
     kpis.forEach(function (k) { kg.appendChild(UI.kpiCard(k)); });
     /* F1-I: "i" único cobrindo os 6 números do topo (Protocolo A) — números vivos */
@@ -1078,7 +1247,15 @@
        (sócio→gestor→operacional) e depois título. Motor puro: KPI.gruposDoDia
        (testado no harness). Colapso vive em memória (reabre expandido). */
     var dt = document.getElementById('hj-daytasks'); dt.innerHTML = '';
-    var rc = document.querySelector('.hj-rcount'); if (rc) { rc.textContent = d.feitasHoje + ' de ' + d.doHoje.length; }
+    /* R7·B1.2: o contador contava d.doHoje (o DIA inteiro, com e sem horário)
+       em cima da lista que só renderiza d.semHora — "5 de 12" sobre lista de
+       7. Agora conta A PRÓPRIA lista que rotula. O total do dia continua no
+       herói ("X de Y concluídas hoje") e no KPI "Para hoje". */
+    var rc = document.querySelector('.hj-rcount');
+    if (rc) {
+      var fSem = d.semHora.filter(function (o) { return o.status === 'concluida'; }).length;
+      rc.textContent = d.semHora.length ? fSem + ' de ' + d.semHora.length + ' feita(s)' : '';
+    }
     if (d.semHora.length) {
       var grupos = KPI.gruposDoDia(d.semHora, m.setores);
       if (grupos.length === 1) {

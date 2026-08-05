@@ -17,8 +17,27 @@
    Cores só por token do theme.css (semáforo + halos translúcidos).
    Fonte dos riscos: matrizes P×I dos 6 arquivos de setor (67 riscos).
    a11y: células operáveis por teclado (WCAG 2.1.1), foco visível,
-   drawer com role=dialog + gestão de foco; textos informativos em
-   --muted (contraste AA), --muted2 só em decorativo.
+   drawer com role=dialog + gestão de foco; TODO texto informativo usa
+   --muted (AA). --muted2 sobrou em UM lugar só: o glifo do botão "i"
+   (.rk-i), que é ícone e não texto — e ali o limiar é 3:1 (WCAG 1.4.11),
+   não 4,5:1. Antes a legenda de banda vazia também usava --muted2 em
+   TEXTO de 11px/700 (3,95:1) e reprovava a 1.4.3; foi trocada para
+   --muted2Text, o par de texto do mesmo cinza (theme.css, append 03/08),
+   que mantém o ar rebaixado e passa no limiar. O rebaixamento visual da
+   legenda vem do opacity do swatch, não da cor da letra.
+
+   ESCALA TIPOGRÁFICA — 5 DEGRAUS, SÓ ESTES:
+     32px  número de destaque (.rk-stat .n)
+     19px  título da tela e números dentro da matriz/heatmap
+     14px  título de cartão e TEXTO DE LEITURA (corpo, gaveta, tabela)
+     12.5px  apoio: subtítulo de cartão, botão, célula secundária
+     11px  rótulo, legenda, eixo, nota de rodapé (piso legível)
+   Antes havia ~18 tamanhos (9,5 · 10,5 · 11 · 11,5 · 12 · 12,5 · 13 · 13,5
+   · 14 · 15 · 19 · 22 · 26 · 32…), diferenças de meio pixel que o olho não
+   lê como hierarquia — lê como desalinho. O caso pior era .rk-fk em 9,5px:
+   é o rótulo de "Mitigação (do manual)" e "Sinal de alerta", os dois campos
+   pelos quais a gaveta existe, impressos menor que qualquer outra coisa da
+   tela. Subiu para 11px.
    ============================================================ */
 /* R6/bug: .ui-app não existe em components.css → sem flex a sidebar vira bloco de
    linha inteira e o conteúdo cai ABAIXO dela (buraco branco). Mesmo padrão de .pf-app/.im-app. */
@@ -26,26 +45,50 @@
 .ui-app>.ui-side{position:sticky;top:0;height:100vh}
 .rk-main{flex:1;min-width:0;padding:22px 26px 96px;max-width:1180px}
 .rk-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.rk-h1{font-size:22px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
-.rk-dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 0 4px var(--haloRed)}
-.rk-sub{font-size:13px;color:var(--muted);line-height:1.5;max-width:700px;margin:4px 0 20px}
-.rk-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex}
+/* h1/h2 reais (WCAG 1.3.1 / 2.4.6): a hierarquia de título tem de existir na
+   MARCAÇÃO, não só no tamanho da fonte. margin:0 zera o padrão do navegador
+   para que o desenho fique idêntico ao que era com <div>/<span>. */
+.rk-h1{font-size:19px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;margin:0}
+.rk-dot{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 0 4px var(--haloRed);flex:none}
+.rk-sub{font-size:14px;color:var(--muted);line-height:1.5;max-width:700px;margin:4px 0 20px}
+/* 24×24 na regra BASE (WCAG 2.5.8): antes só os "i" dos cards de número tinham
+   alvo mínimo; os três "i" de cabeçalho ficavam em 15–17px. */
+.rk-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;min-width:24px;min-height:24px;align-items:center;justify-content:center;flex:none}
 .rk-i:hover{color:var(--greenText)}
-.rk-cell:focus-visible,.rk-hcell:focus-visible,.rk-i:focus-visible,.rk-x:focus-visible{outline:2px solid var(--greenText);outline-offset:2px}
+.rk-cell:focus-visible,.rk-hcell:focus-visible,.rk-i:focus-visible,.rk-x:focus-visible,.rk-go:focus-visible,.rk-skip:focus{outline:2px solid var(--greenText);outline-offset:2px}
+/* Só para leitor de tela: nome acessível da tabela sem duplicar texto na tela. */
+.rk-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* Pular para o conteúdo: some até receber foco pelo Tab (WCAG 2.4.1). */
+.rk-skip{position:absolute;left:12px;top:-60px;z-index:100;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:9px 14px;font-size:12.5px;font-weight:800;text-decoration:none;transition:top .15s}
+.rk-skip:focus{top:12px}
 .rk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
 @media(max-width:720px){.rk-stats{grid-template-columns:repeat(2,1fr)}}
 .rk-stat{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:15px 16px}
 .rk-stat .n{font-size:32px;font-weight:900;line-height:1;letter-spacing:-1px}
-.rk-stat .k{font-size:11.5px;font-weight:700;color:var(--muted);margin-top:6px;line-height:1.35}
+.rk-sth{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.rk-sth .rk-i{margin:-3px -4px 0 0}
+.rk-stat .k{font-size:12.5px;font-weight:700;color:var(--muted);margin-top:6px;line-height:1.35}
+/* Nome do setor dentro do rótulo do 3º cartão: leva ao Registro já filtrado.
+   Saber QUAL setor concentra os críticos sem poder ver QUAIS são deixava o
+   número no vazio. É <a> de verdade porque navega de verdade. */
+.rk-stat .k a{color:var(--greenText);text-decoration:underline;text-underline-offset:2px}
+.rk-stat .k a:focus-visible{outline:2px solid var(--greenText);outline-offset:2px;border-radius:4px}
 .rk-stat.red .n{color:var(--red)}.rk-stat.orange .n{color:var(--orange)}
 .rk-grid2{display:grid;grid-template-columns:minmax(0,460px) 1fr;gap:14px;align-items:start}
 @media(max-width:860px){.rk-grid2{grid-template-columns:1fr}}
 .rk-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
 .rk-ch{display:flex;align-items:center;gap:9px;margin-bottom:3px}
-.rk-ct{font-size:14px;font-weight:800}
-.rk-cs{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.45}
+.rk-ct{font-size:14px;font-weight:800;margin:0}
+.rk-cs{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.45}
 .rk-mx{display:flex;gap:10px}
-.rk-yttl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:14px 0}
+.rk-yttl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:14px 0}
+/* O texto do eixo agora é 'Impacto ↑' — o leitor de tela anuncia 'seta para
+   cima', que é o que o eixo VERTICAL significa. Antes era '→' ('seta para a
+   direita'), escolhido só porque o writing-mode vertical gira o glifo -90° e
+   o '→' ACABAVA parecendo uma seta para cima na tela. Mentia para o áudio
+   para acertar o visual. Agora o caractere certo é '↑' e esta regra desfaz o
+   giro do layout (+90°) para que ele continue apontando para cima na tela. */
+.rk-yttl .seta{display:inline-block;transform:rotate(90deg)}
 .rk-mxbody{flex:1}
 .rk-mrow{display:flex;gap:6px;margin-bottom:6px}
 .rk-yax{width:16px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted)}
@@ -53,43 +96,155 @@
 .rk-cell.on{cursor:pointer}
 .rk-cell.on:hover{transform:scale(1.07);filter:brightness(1.25);z-index:2}
 .rk-cell.void{cursor:default}
-.rk-bub{min-width:27px;height:27px;padding:0 7px;border-radius:20px;color:var(--onBrand);font-weight:900;font-size:13.5px;display:flex;align-items:center;justify-content:center}
+.rk-bub{min-width:30px;height:30px;padding:0 8px;border-radius:20px;color:var(--onBrand);font-weight:900;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center}
 .rk-xrow{display:flex;gap:6px;margin-top:2px}
 .rk-xrow .rk-yax{visibility:hidden}
 .rk-xax{flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
-.rk-xttl{text-align:center;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 0 26px}
+.rk-xttl{text-align:center;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 0 26px}
 .rk-leg{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
 .rk-leg span{font-size:11px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+/* Banda sem nenhum risco: rebaixada, para não competir com as que têm.
+   O rebaixamento forte é o opacity do SWATCH, não a cor do texto: --muted2
+   cru em 11px/700 dava 3,95:1 e reprovava a WCAG 1.4.3 (texto pequeno pede
+   4,5:1). --muted2Text é o mesmo cinza recalibrado para servir de TEXTO,
+   então a legenda continua um degrau abaixo das outras sem ficar ilegível.
+   'Menos importante' não pode significar 'não dá para ler'. */
+.rk-leg span.vazia{color:var(--muted2Text)}
+.rk-leg span.vazia .rk-sw{opacity:.4}
 .rk-sw{width:12px;height:12px;border-radius:4px;display:inline-block}
 .rk-hm{width:100%;border-collapse:separate;border-spacing:6px}
-.rk-hm th{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;text-align:center}
+.rk-hm th{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;text-align:center}
 .rk-hm th.rowh{text-align:left}
-.rk-hcell{width:100%;height:38px;border-radius:9px;border:1px solid var(--border);background:var(--chipBg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--onBrand);transition:transform .12s,filter .12s}
+.rk-hcell{width:100%;height:38px;border-radius:9px;border:1px solid var(--border);background:var(--chipBg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;line-height:1;color:var(--onBrand);transition:transform .12s,filter .12s}
 .rk-hcell:not(.empty){cursor:pointer}
 .rk-hcell:not(.empty):hover{transform:translateY(-2px);filter:brightness(1.08)}
-.rk-hcell.empty{color:var(--muted2);cursor:default;background:transparent}
-.rk-rn{font-size:12.5px;font-weight:700;color:var(--text);text-align:left}
-.rk-tot{font-size:12px;font-weight:800;color:var(--muted);text-align:center}
-.rk-back{position:fixed;inset:0;background:rgba(2,6,15,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
+.rk-hcell.empty{color:var(--muted);cursor:default;background:transparent}
+/* o nome do setor virou <th scope="row"> — precisa vencer a regra .rk-hm th acima */
+.rk-hm th.rk-rn{font-size:12.5px;font-weight:700;color:var(--text);text-align:left;text-transform:none;letter-spacing:normal}
+.rk-tot{font-size:12.5px;font-weight:800;color:var(--muted);text-align:center}
+.rk-nota{font-size:11px;color:var(--muted);line-height:1.45;margin:10px 0 0}
+.rk-nota:empty{display:none}
+.rk-back{position:fixed;inset:0;background:var(--scrim);opacity:0;pointer-events:none;transition:opacity .2s;z-index:60}
 .rk-back.on{opacity:1;pointer-events:auto}
-.rk-drawer{position:fixed;top:0;right:0;height:100%;width:min(480px,94vw);background:var(--s1);border-left:1px solid var(--border);box-shadow:var(--cardShadow);transform:translateX(100%);transition:transform .26s cubic-bezier(.22,.61,.36,1);z-index:61;display:flex;flex-direction:column}
-.rk-drawer.on{transform:translateX(0)}
+/* Fechada, a gaveta sai da ordem de tabulação e da árvore de acessibilidade (visibility:hidden),
+   senão o ✕ e a lista continuam tabuláveis por trás da tela. */
+.rk-drawer{position:fixed;top:0;right:0;height:100%;width:min(480px,94vw);background:var(--s1);border-left:1px solid var(--border);box-shadow:var(--cardShadow);transform:translateX(100%);visibility:hidden;transition:transform .26s cubic-bezier(.22,.61,.36,1),visibility 0s linear .26s;z-index:61;display:flex;flex-direction:column}
+.rk-drawer.on{transform:translateX(0);visibility:visible;transition:transform .26s cubic-bezier(.22,.61,.36,1),visibility 0s}
 .rk-dh{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.rk-dt{font-size:15px;font-weight:800;line-height:1.3}
+.rk-dt{font-size:14px;font-weight:800;line-height:1.3}
 .rk-dcap{font-size:11px;color:var(--muted);margin-top:6px}
-.rk-x{appearance:none;border:1px solid var(--border);background:var(--chipBg);color:var(--text);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px;flex:none}
+.rk-x{appearance:none;border:1px solid var(--border);background:var(--chipBg);color:var(--text);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:14px;flex:none}
 .rk-dbody{padding:16px 20px;overflow:auto}
 .rk-field{margin-bottom:15px}
-.rk-fk{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-.rk-fv{font-size:13px;line-height:1.55;color:var(--text)}
+/* 11px, não 9,5px: este é o rótulo de "Mitigação (do manual)" e "Sinal de
+   alerta" — o conteúdo pelo qual a gaveta existe. Estava impresso no menor
+   corpo da tela inteira, menor que a nota de rodapé. */
+.rk-fk{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.rk-fv{font-size:14px;line-height:1.55;color:var(--text)}
 .rk-fv.mit{background:var(--chipBg);border:1px solid var(--border);border-radius:11px;padding:11px 12px}
-.rk-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;color:var(--onBrand)}
-.rk-pop{position:fixed;z-index:70;width:330px;max-width:calc(100vw - 28px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow);display:none}
+.rk-fonte{font-size:11px;color:var(--muted);line-height:1.55;border-top:1px dashed var(--border);margin:18px 0 0;padding-top:12px}
+.rk-fonte b{color:var(--text)}
+/* Rodapé da gaveta: atalho para o glossário. A gaveta despeja siglas cruas do
+   manual (NC, CAC, LFI, LFR, PV/PR/PF, MD, PA, "Ficha D") em cima de quem
+   talvez não seja do setor — o líder de Agência lendo um risco da Central. */
+.rk-dlinks{margin:10px 0 0}
+/* A cor do texto vem por token de banda (--onRed/--onOrange/…), aplicada inline
+   junto com o fundo. O antigo color:var(--onBrand) dava só 3,54:1 sobre --red no
+   tema claro — reprova a WCAG 1.4.3 para texto de 11px. Os números grandes
+   (.rk-bub, .rk-hcell, 19px) seguem no --onBrand: acima de 18,66px o limiar é 3:1. */
+.rk-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px}
+/* Falha de render não pode virar tela branca muda. O contêiner nasce vazio e SEM
+   a classe: só ganha borda/fundo quando há erro (a regra :empty não bastaria,
+   porque o box recebe tabindex e foco). */
+.rk-erro{background:var(--s1);border:1px solid var(--red);border-radius:14px;padding:18px 20px;margin:0 0 18px;font-size:14px;line-height:1.55;color:var(--text)}
+.rk-erro b{color:var(--red)}
+.rk-erro:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+.rk-erro-tec{font-size:11px;color:var(--muted)}
+.rk-pop{position:fixed;z-index:70;width:330px;max-width:calc(100vw - 28px);max-height:calc(100vh - 24px);overflow:auto;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow);display:none}
 .rk-pop.on{display:block}
+.rk-pop:focus-visible{outline:2px solid var(--greenText);outline-offset:2px}
+.rk-pfech{appearance:none;border:1px solid var(--border);background:var(--chipBg);color:var(--text);border-radius:8px;font-size:12.5px;font-weight:800;min-height:24px;padding:3px 12px;cursor:pointer;margin-top:4px}
 .rk-pt{font-size:12.5px;font-weight:800;margin-bottom:9px}
-.rk-pv{font-size:12px;color:var(--muted);line-height:1.45;margin-bottom:8px}
-.rk-note{font-size:11.5px;color:var(--muted);line-height:1.5;border-top:1px dashed var(--border);margin-top:6px;padding-top:12px}
+.rk-pv{font-size:12.5px;color:var(--muted);line-height:1.45;margin-bottom:8px}
+.rk-note{font-size:11px;color:var(--muted);line-height:1.5;border-top:1px dashed var(--border);margin-top:6px;padding-top:12px}
 .rk-note b{color:var(--greenText)}
+/* Próxima ação (drill-down). A tela inteira terminava em beco sem saída: o
+   usuário via O QUE é grave e não tinha para onde ir. Mesmo desenho do
+   .rk-pfech (o outro botão da tela), como <a> porque navega de fato. */
+.rk-go{display:inline-flex;align-items:center;gap:6px;margin-top:10px;border:1px solid var(--border);background:var(--chipBg);color:var(--text);border-radius:8px;font-size:12.5px;font-weight:800;min-height:28px;padding:5px 12px;text-decoration:none}
+.rk-go:hover{border-color:var(--greenText);color:var(--greenText)}
+
+/* ============================================================
+   REGISTRO DE RISCOS (risk register)
+   ------------------------------------------------------------
+   Benchmark do segmento (LogicManager, AuditBoard, Riskonnect,
+   Diligent; ISO 31010 anexo A.3): a matriz de calor é a CAPA de
+   um painel de risco — o PRODUTO é o registro. A matriz responde
+   "onde está o fogo?"; ela não responde "qual é o risco, qual a
+   mitigação e de quem é". Sem o registro, ver um risco exigia
+   adivinhar em qual das 25 células ele caiu e clicar — e não
+   havia NENHUMA forma de procurar um risco pelo nome. Aqui os 67
+   ficam listados, buscáveis e ordenáveis, com a mitigação e o
+   sinal de alerta na própria linha.
+   ============================================================ */
+.rk-reg{margin-top:14px}
+.rk-regbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.rk-fgroup{display:flex;flex-direction:column;gap:5px;min-width:0}
+.rk-fgroup.cresce{flex:1 1 240px}
+.rk-flab{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rk-in,.rk-sel{width:100%;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;min-height:34px}
+.rk-in::placeholder{color:var(--muted);font-weight:500}
+.rk-in:focus,.rk-sel:focus{outline:2px solid var(--greenText);outline-offset:1px;border-color:var(--greenText)}
+.rk-sel{cursor:pointer}
+.rk-regcount{font-size:11px;font-weight:700;color:var(--muted);margin:0 0 10px}
+.rk-regcount b{color:var(--text)}
+.rk-regwrap{overflow-x:auto}
+.rk-regtb{width:100%;border-collapse:collapse;min-width:860px}
+.rk-regtb caption{caption-side:top;text-align:left;font-size:11px;color:var(--muted);line-height:1.5;padding:0 0 10px}
+.rk-regtb th{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:bottom}
+.rk-regtb td{font-size:12.5px;font-weight:500;color:var(--text);line-height:1.5;padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.rk-regtb tbody tr:last-child td{border-bottom:0}
+.rk-regtb tbody tr:hover td{background:var(--s2)}
+.rk-regtb td.setor{font-weight:700;white-space:nowrap}
+.rk-regtb td.risco{font-weight:700;min-width:220px}
+/* A linha inteira abre a MESMA gaveta da matriz — mas o gatilho de verdade é o
+   <button> do nome do risco. <tr> com onclick não recebe foco nem é anunciado
+   como ação (WCAG 2.1.1 / 4.1.2); o clique na linha é só um atalho de mouse
+   por cima de um alvo que já é acessível por teclado. */
+.rk-regtb tbody tr.rk-regrow{cursor:pointer}
+.rk-regab{appearance:none;border:0;background:transparent;padding:0;margin:0;font:inherit;color:var(--text);text-align:left;font-weight:700;cursor:pointer;min-height:24px}
+.rk-regab:hover{color:var(--greenText);text-decoration:underline;text-underline-offset:2px}
+.rk-regab:focus-visible{outline:2px solid var(--greenText);outline-offset:2px;border-radius:4px}
+.rk-regtb td.nivel{white-space:nowrap}
+.rk-regtb td.mit,.rk-regtb td.sinal{color:var(--muted);min-width:200px}
+.rk-regpi{font-size:11px;font-weight:700;color:var(--muted);margin-top:5px}
+/* Cabeçalho ordenável: <button> de verdade dentro do <th>, porque ordenar é
+   uma AÇÃO — <th> com onclick não é alcançável por teclado (WCAG 2.1.1). */
+.rk-sort{appearance:none;border:0;background:transparent;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px;min-height:24px}
+.rk-sort:hover{color:var(--greenText)}
+.rk-sort:focus-visible{outline:2px solid var(--greenText);outline-offset:2px;border-radius:4px}
+.rk-regvazio{font-size:12.5px;color:var(--muted);line-height:1.55;padding:18px 10px;text-align:center}
+.rk-regvazio b{color:var(--text)}
+
+/* ≤900px: a sidebar de 240px comia a largura útil e cada célula da matriz
+   ficava com ~8,6px em telas de 375px — alvo abaixo do mínimo e número
+   ilegível. Some porque o mnav.js injeta, no MESMO breakpoint (900px), um
+   FAB com a navegação equivalente: escondê-la aqui não tira nada do usuário. */
+@media(max-width:900px){
+  .ui-app>.ui-side{display:none}
+  .rk-main{padding:16px 14px 96px}
+}
+
+/* PRECISA ficar por último. Media query NÃO soma especificidade: enquanto este
+   bloco vinha ANTES, '.rk-drawer' (0-1-0) empatava/perdia para '.rk-drawer.on'
+   (0-2-0) e, no empate, quem vence é a ORDEM DE ORIGEM — a gaveta continuava
+   deslizando para quem pediu para reduzir o movimento. Estar no fim do <style>
+   resolve pela ordem, que é o critério real. Se acrescentar regras de
+   transition/transform depois daqui, elas voltam a ganhar. */
+@media (prefers-reduced-motion: reduce){
+  .rk-cell,.rk-hcell,.rk-back,.rk-drawer,.rk-drawer.on,.rk-skip{transition:none}
+  .rk-cell.on:hover,.rk-hcell:not(.empty):hover{transform:none}
+}
 </style>
 </head>
 <body>
@@ -97,12 +252,21 @@
     <div class="graut-gate__box"><div class="graut-gate__spin" aria-hidden="true"></div><p class="graut-gate__msg">Verificando acesso…</p></div>
   </div>
 
+  <a class="rk-skip" href="#rk-main">Pular para o conteúdo</a>
+
   <div class="ui-app" id="app">
-    <main class="rk-main">
+    <main class="rk-main" id="rk-main" tabindex="-1">
+      <!-- Live region: precisa existir no HTML ESTÁTICO. Um role="alert" criado
+           no mesmo tique em que recebe o texto não é anunciado pelo leitor. -->
+      <div id="rk-erro" role="alert"></div>
       <div class="rk-top">
         <div>
-          <div class="rk-h1"><span class="rk-dot"></span>Matriz de Risco 5×5 + Mitigação <button class="rk-i" id="i-metodo" aria-label="Como priorizamos"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
-          <p class="rk-sub"><b id="hcount">0</b> riscos da operação, tirados dos manuais dos 6 setores, posicionados por Probabilidade × Impacto (ISO 31000). Clique numa célula ou risco para a mitigação do manual.</p>
+          <!-- O botao "i" fica FORA do titulo. Dentro dele, o texto do botao
+               entrava no nome acessivel ("...Mitigacao Como priorizamos") e
+               sujava a lista de cabecalhos do leitor de tela. Os dois subtitulos
+               ja faziam assim; o titulo principal era a excecao. -->
+          <div class="rk-ch"><h1 class="rk-h1"><span class="rk-dot" aria-hidden="true"></span>Matriz de Risco 5×5 + Mitigação</h1><button type="button" class="rk-i" id="i-metodo" aria-expanded="false" aria-controls="pop" aria-label="Como priorizamos"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+          <p class="rk-sub"><b id="hcount">0</b> riscos da operação dos 6 setores, posicionados por Probabilidade × Impacto (ISO 31000). Clique numa célula para ver os riscos e a mitigação do manual.</p>
         </div>
       </div>
 
@@ -110,124 +274,237 @@
 
       <div class="rk-grid2">
         <div class="rk-card">
-          <div class="rk-ch"><span class="rk-ct">Matriz 5×5 — Probabilidade × Impacto</span><button class="rk-i" id="i-mx" aria-label="Como ler"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+          <div class="rk-ch"><h2 class="rk-ct">Matriz 5×5 — Probabilidade × Impacto</h2><button type="button" class="rk-i" id="i-mx" aria-expanded="false" aria-controls="pop" aria-label="Como ler a matriz 5×5"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
           <p class="rk-cs">Cada bolha = quantos riscos caem naquele cruzamento. Canto superior-direito (provável + grave) = fogo.</p>
-          <div class="rk-mx"><div class="rk-yttl">Impacto →</div><div class="rk-mxbody" id="matrix"></div></div>
+          <div class="rk-mx"><div class="rk-yttl">Impacto <span class="seta">↑</span></div><div class="rk-mxbody" id="matrix"></div></div>
           <div class="rk-xttl">Probabilidade →</div>
-          <div class="rk-leg">
-            <span><i class="rk-sw" style="background:var(--red)"></i>Crítico 15–25</span>
-            <span><i class="rk-sw" style="background:var(--orange)"></i>Alto 10–14</span>
-            <span><i class="rk-sw" style="background:var(--amber)"></i>Moderado 5–9</span>
-            <span><i class="rk-sw" style="background:var(--green)"></i>Baixo 1–4</span>
-          </div>
+          <!-- A contagem de cada banda entra por JS (renderLegenda). A legenda
+               fixa dizia "Baixo 1-4" como se houvesse riscos ali; nao ha
+               nenhum, e a celula verde do canto inferior-esquerdo esta pintada
+               so' porque a COR da banda pinta a celula, cheia ou vazia. -->
+          <div class="rk-leg" id="leg"></div>
+          <!-- A ressalva de banda vazia vivia SÓ no title= do item da legenda:
+               invisível para teclado, para toque e para quem não passa o mouse.
+               Ressalva que só o mouse alcança é ressalva que não existe. Agora
+               ela é texto visível aqui (o title continua, como reforço). -->
+          <p class="rk-nota" id="leg-nota"></p>
         </div>
         <div class="rk-card">
-          <div class="rk-ch"><span class="rk-ct">Concentração por setor</span><button class="rk-i" id="i-hm" aria-label="Como ler"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+          <div class="rk-ch"><h2 class="rk-ct">Concentração por setor</h2><button type="button" class="rk-i" id="i-hm" aria-expanded="false" aria-controls="pop" aria-label="Como ler a concentração por setor"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
           <p class="rk-cs">Setor × severidade — clique numa célula para os riscos daquele setor e banda.</p>
           <table class="rk-hm" id="hm"></table>
+          <p class="rk-nota" id="hm-nota"></p>
         </div>
       </div>
+
+      <!-- REGISTRO DE RISCOS — o produto, não a capa.
+           A matriz e o heatmap acima respondem ONDE está o fogo. Nenhum dos
+           dois responde QUAL é o risco: para ler um, era obrigatório acertar
+           em qual das 25 células ele caiu e clicar. Não havia como procurar
+           um risco pelo nome, nem ver os 67 de uma vez, nem comparar
+           mitigações. É o risk register do benchmark (LogicManager,
+           AuditBoard, Riskonnect; ISO 31010 A.3). -->
+      <section class="rk-card rk-reg" id="rk-reg" aria-labelledby="reg-t">
+        <div class="rk-ch"><h2 class="rk-ct" id="reg-t">Registro de riscos</h2><button type="button" class="rk-i" id="i-reg" aria-expanded="false" aria-controls="pop" aria-label="Como ler o registro de riscos"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div>
+        <p class="rk-cs">Os riscos dos manuais em lista, com a mitigação e o sinal de alerta na própria linha. Busque pelo texto do risco, da mitigação, do sinal ou do setor — e clique numa linha para abrir a ficha completa.</p>
+        <div class="rk-regbar">
+          <div class="rk-fgroup cresce">
+            <label class="rk-flab" for="reg-q">Buscar</label>
+            <input class="rk-in" type="search" id="reg-q" placeholder="ex.: backup, estágio, cobrança, Ficha D…" autocomplete="off">
+          </div>
+          <div class="rk-fgroup">
+            <label class="rk-flab" for="reg-setor">Setor</label>
+            <select class="rk-sel" id="reg-setor"></select>
+          </div>
+          <div class="rk-fgroup">
+            <label class="rk-flab" for="reg-banda">Banda</label>
+            <select class="rk-sel" id="reg-banda"></select>
+          </div>
+        </div>
+        <!-- role=status: o resultado da busca muda sem recarregar a página; sem
+             live region, quem usa leitor de tela digita e não ouve nada mudar. -->
+        <p class="rk-regcount" id="reg-count" role="status" aria-live="polite"></p>
+        <div class="rk-regwrap"><table class="rk-regtb" id="reg-tb"></table></div>
+      </section>
     </main>
   </div>
 
   <div class="rk-back" id="back"></div>
-  <aside class="rk-drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-t"><div class="rk-dh"><div><div class="rk-dt" id="d-t">—</div><div class="rk-dcap" id="d-cap"></div></div><button class="rk-x" id="d-x" aria-label="Fechar">✕</button></div><div class="rk-dbody" id="d-body"></div></aside>
-  <div class="rk-pop" id="pop" role="dialog"></div>
+  <aside class="rk-drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="d-t"><div class="rk-dh"><div><div class="rk-dt" id="d-t">—</div><div class="rk-dcap" id="d-cap"></div></div><button class="rk-x" id="d-x" aria-label="Fechar">✕</button></div><div class="rk-dbody" id="d-body" tabindex="0" role="region" aria-label="Riscos e mitigações — use as setas para rolar"></div></aside>
+  <!-- role=dialog exigiria modalidade e armadilha de foco; isto e um disclosure
+       (conteudo revelado por um botao). group + aria-label descreve o que e,
+       sem prometer comportamento modal que a tela nao implementa. -->
+  <div class="rk-pop" id="pop" role="group" tabindex="-1"></div>
 
   <script src="ui.js"></script>
+  <script src="riscos-catalogo.js"></script>
   <script>
   (function () {
   'use strict';
-  var RISCOS = [
-  {p:5,i:5,s:"Central Rel.",r:"LFI negociado sem receber todas as parcelas no mesmo mês → vira MT no dia seguinte e mantém inadimplência",m:"Receber todas as parcelas dentro do próprio mês da negociação",ind:"Inadimplência de Ativos (Gráfico Indicadores); Situação do Aluno Analítico (LFI/MT)"},
-  {p:4,i:5,s:"Central Rel.",r:"Inadimplência de Ativos acima da meta (Grau T 9,5% / Grau P 12%) no fechamento",m:"Cobrança diária (ligações/WhatsApp/SMS) e acordos até dia 30/31",ind:"% da Inadimplência de Ativos ao longo do mês"},
-  {p:4,i:5,s:"Central Rel.",r:"Aumento de NC/CAC/LFI estourando a meta de Evasão (2,6% Grau T / 5% Grau P)",m:"Atenção a turmas que iniciam na penúltima semana; acordos de LFI; reversão de NC com o Pedagógico",ind:"Situação do Aluno por Período Analítico (verificação diária)"},
-  {p:4,i:4,s:"Central Rel.",r:"Recebimento parcial de LFI reduz Recuperados abaixo de 5%",m:"Fechar acordos que recebam o total no dia/mês; acordar LFI até penúltimo dia",ind:"Valor médio de parcelas recebidas/faturado (Gráfico Indicadores)"},
-  {p:3,i:4,s:"Central Rel.",r:"Cancelamento/reorganização da 1ª parcela após dia 1º derruba a meta de 1ªs Parcelas (80%)",m:"Acompanhar 1ªs parcelas na planilha da franqueadora; reverter NC antes de virar CAC",ind:"Contas Baixadas / Contas em Aberto Analítico"},
-  {p:3,i:4,s:"Central Rel.",r:"Autorização de desconto de pontualidade não sai a tempo (acordo não fecha até 30/31)",m:"Apresentar acordos à gestão até o dia 30/31 / penúltimo dia",ind:"Acordos pendentes de autorização"},
-  {p:3,i:3,s:"Central Rel.",r:"Recebimento fora da unidade atrasa a baixa da inadimplência",m:"Preferência de recebimento na unidade para baixa imediata",ind:"Contas em Aberto Analítico"},
-  {p:3,i:4,s:"Central Rel.",r:"Falha em verificar diariamente o relatório Analítico (LFI/NC/CAC não resolvidos)",m:"Rotina diária de verificação do Situação do Aluno Analítico",ind:"Situação do Aluno por Período Analítico"},
-  {p:5,i:5,s:"Pedagógico",r:"Evasão de alunos (faltas não tratadas no início do curso)",m:"Controle diário de faltosos; ligação a cada falta nos 2 primeiros meses; lançar retorno no histórico e planilha",ind:"Faltas consecutivas; taxa de evasão semanal"},
-  {p:3,i:5,s:"Pedagógico",r:"Descredenciamento do curso por falha em estágio (sem convênio, seguro ou registro de horas)",m:"Registro das horas, convênios e ativação do seguro; supervisão semanal; arquivo dos documentos comprobatórios (atas, apólice)",ind:"Fiscalização MP/Secretaria de Educação; documentação incompleta de estágio"},
-  {p:4,i:4,s:"Pedagógico",r:"Faltas lançadas fora do prazo (>2 dias) distorcendo indicadores",m:"Lançamento pelo instrutor no mesmo dia; conferência ADM em até 2 dias; reconferência da ata pelo Pedagógico",ind:"Divergência na ata; atraso no lançamento"},
-  {p:3,i:4,s:"Pedagógico",r:"Turma iniciada com preenchimento insuficiente (≤15 alunos ou <90%)",m:"Não iniciar turma ≤15; colocar em minicurso se <90%; realocar/devolver dinheiro; respeitar limites de entrada",ind:"Preenchimento vs. capacidade da sala (análise semanal)"},
-  {p:3,i:4,s:"Pedagógico",r:"Aluno LAC não regularizado no prazo de 7 dias (perda de conclusão)",m:"Prevenção de pendências; inserir aluno/lançar nota em ≤7 dias; requerimento assinado",ind:"Coluna pendência acadêmica PV/PR/PF (15 dias antes do fim)"},
-  {p:3,i:4,s:"Pedagógico",r:"Cancelamento não passar pela Coordenação Pedagógica (perda de retenção)",m:"Todo cancelamento passa antes pelo Pedagógico; pessoa dedicada à reversão; ligação periódica a cancelados",ind:"% de conversão de cancelamento em queda"},
-  {p:3,i:3,s:"Pedagógico",r:"Divergência entre o vendido e o entregado (informação incorreta na venda)",m:"Coordenação acompanha atendimentos no salão de vendas; treinamento da equipe comercial",ind:"Reclamações no pós-venda; insatisfação"},
-  {p:2,i:5,s:"Pedagógico",r:"Comercialização indevida de Radiologia/Especialização sem pré-requisito (dano ao aluno e à Franquia)",m:"Exigir histórico de ensino médio (Radiologia) ou técnico concluído (Especialização); adendo assinado",ind:"Matrícula sem documentação comprobatória"},
-  {p:3,i:3,s:"Pedagógico",r:"Queda de qualidade das aulas / instrutor mal avaliado",m:"Assistir aulas semanalmente; avaliação mensal de instrutores; café pedagógico e treinamento semestral",ind:"Avaliação do instrutor por disciplina; retenção da turma"},
-  {p:3,i:3,s:"Pedagógico",r:"Baixa satisfação do aluno (pesquisa)",m:"Apuração quinzenal/semanal (score); retorno em mural; Degustando com a coordenação",ind:"Score semanal; ranking gráfico"},
-  {p:3,i:3,s:"Pedagógico",r:"Falta de instrutor sem substituição",m:"Substituição imediata; palestra de mercado como contingência; cancelar aula só em último caso",ind:"Ausência comunicada pelo instrutor"},
-  {p:4,i:5,s:"CSA",r:"Aluno sem acompanhamento nos 10 primeiros dias (falha na régua D0–D+10)",m:"Cronograma ativo por coorte; visualização em tempo real do status de cada aluno; roteiros D+1/D+5/D+10 obrigatórios",ind:"Contatos de pós-venda não finalizados no relatório diário"},
-  {p:4,i:5,s:"CSA",r:"Evasão/cancelamento não revertido por escuta fria",m:"Tratativa consultiva com escuta ativa e contraproposta sob medida (turno/turma, negociação, Agência, trancamento)",ind:"Alta na evasão; painel diário de controle da evasão"},
-  {p:4,i:4,s:"CSA",r:"Retorno do aluno acima de 48h em insatisfação pedagógica/infraestrutura",m:"Registro em ouvidoria e acionamento imediato de Pedagógico/Administrativo; SLA de 48h",ind:"Pesquisa de satisfação (pilar Resolução); reclamações reincidentes"},
-  {p:3,i:4,s:"CSA",r:"Baixo FCR — demanda não resolvida no primeiro contato (\"jogo de empurra\")",m:"Perfis ACADWEB corretos; capacitação cruzada (CRA aprende Pedagógico/Adm.); padrão de atendimento",ind:"FCR abaixo de 88%"},
-  {p:3,i:4,s:"CSA",r:"Expectativa comercial desalinhada gerando frustração no pós",m:"Alinhamento de expectativas nos 10 primeiros dias; integração D+1; feedback ao Comercial",ind:"Insatisfação no D+10; quedas nos pilares de satisfação"},
-  {p:3,i:4,s:"CSA",r:"Registro incompleto no ACADWEB / planilha diária não enviada",m:"Manual de redação de observações; tag padronizada; e-mail obrigatório fim de expediente",ind:"Lacunas na planilha unificada; ausência do e-mail diário"},
-  {p:3,i:3,s:"CSA",r:"Fila/lentidão nas janelas de pico (09–10h e 17–18h) elevando o TMA",m:"Reforço de colaboradores nas janelas de maior fluxo; escala de revezamento",ind:"TMA acima de 8 min; aumento na área de espera"},
-  {p:3,i:3,s:"CSA",r:"Dupla abordagem ao aluno (CSA x CRA) na negociação de débito",m:"Delimitar limites de negociação da CSA e cobrança ativa da CRA; réguas autorizadas pela diretoria",ind:"Reclamações de cobrança duplicada; divergência de valores"},
-  {p:2,i:4,s:"CSA",r:"Documento oficial travado no fluxo Pedagógico → Administrativo",m:"Fluxo documental com validação em duas instâncias e prazos; livro de registro de diplomas",ind:"Pendências no controle logístico de documentos"},
-  {p:2,i:4,s:"CSA",r:"Perfis/permissões ACADWEB mal configurados no go-live",m:"Testes de homologação antes do go-live; vinculação aos grupos corretos",ind:"Travas de sistema reportadas na homologação"},
-  {p:3,i:2,s:"CSA",r:"Perda de dados/percepção por baixa adesão às pesquisas (QR Code)",m:"Incentivo ao QR Code ao fim do atendimento; acompanhamento do volume por colaborador",ind:"Baixo volume de respostas por PA/colaborador"},
-  {p:2,i:3,s:"CSA",r:"Baixa adesão do aluno ao App GRAU / Portal (mantém fluxo presencial)",m:"Campanha de comunicação, visitas às salas, orientação ativa no atendimento",ind:"Volume presencial estável apesar da digitalização"},
-  {p:4,i:5,s:"Agência",r:"Poucas empresas parceiras → falta de vagas (\"elo mais forte\" rompido)",m:"Pesquisa de mercado contínua; meta de novas parcerias todo mês; Minuta padrão (Apêndice A); ligações/e-mails ativos",ind:"Nº de novas parcerias/mês; nº de vagas abertas"},
-  {p:4,i:5,s:"Agência",r:"Não atingir a meta de 3% de alunos contratados",m:"Rotina de captação + banco de talentos atualizado + registro fotográfico obrigatório; acompanhamento mensal do indicador",ind:"Taxa de contratados mensal em queda"},
-  {p:4,i:4,s:"Agência",r:"Banco de Talentos desatualizado → sem candidatos no perfil solicitado",m:"Coleta contínua (salas, redes sociais, site, AcadWeb, sala da Agência); organização por curso/módulo/sexo",ind:"Nº de vagas não preenchidas por falta de currículo"},
-  {p:3,i:4,s:"Agência",r:"Assessor sobrecarregado com outra função após 500 alunos",m:"Aplicar regra do manual: dedicação exclusiva a partir de 500 alunos",ind:"Nº de alunos ativos da unidade; acúmulo de funções"},
-  {p:3,i:3,s:"Agência",r:"Vaga cadastrada incorretamente no AcadWeb → não aparece no app",m:"Checagem do cadastro; padronização do lançamento no Sistema de Gestão",ind:"Vagas sem candidaturas pelo app; divergência sistema × mural"},
-  {p:3,i:4,s:"Agência",r:"Encaminhamento de aluno inelegível (frequência <75%, nota <7,0, inadimplente, <16 anos)",m:"Validar critérios de encaminhamento antes do envio; conferência com Pedagógico e Financeiro",ind:"Reclamação de empresa; devolução de candidato"},
-  {p:3,i:3,s:"Agência",r:"Estagiário sem acompanhamento mensal (Ficha D) → insatisfação/rompimento",m:"Ligações e e-mails mensais; orientar empresa sobre preenchimento e envio da Ficha D",ind:"Nº de estagiários sem ficha/contato no mês"},
-  {p:3,i:3,s:"Agência",r:"Indicador de contratado invalidado por falta de registro fotográfico",m:"Coletar foto autorizada no ato do encaminhamento; incluir na rotina de fechamento",ind:"Contratados sem foto no sistema"},
-  {p:3,i:3,s:"Agência",r:"Feira de Empregabilidade fraca (<10 empresas ou <2 processos seletivos)",m:"Iniciar organização 60 dias antes; confirmar ≥10 empresas e ≥2 processos seletivos; assessoria de imprensa",ind:"Nº de empresas confirmadas a X dias do evento"},
-  {p:2,i:4,s:"Agência",r:"Quebra de sigilo de dados de candidatos/alunos (Apêndices B e C)",m:"Sigilo profissional (competência exigida do assessor); guarda em armário/arquivo e sistema",ind:"Acesso indevido a fichas/pastas"},
-  {p:3,i:5,s:"ADM/Fin",r:"Divergência/desvio no caixa não detectada (caixa x sistema)",m:"Fechar e conferir caixa (dinheiro/cartão/despesas) e conciliar no mínimo semanalmente, sem exceção; assinar relatório",ind:"Fechamento de caixa atrasado; divergências recorrentes"},
-  {p:4,i:5,s:"ADM/Fin",r:"Inadimplência crescente / perda de receita",m:"Prevenção 5 dias antes do vencimento; ligações diárias; conferência de baixas; SPC/Serasa; acordos; reuniões semanais com pedagógico",ind:"Relatório de inadimplência subindo; alunos frequentando inadimplentes"},
-  {p:3,i:3,s:"ADM/Fin",r:"Boleto não registrado pago pelo aluno gera tarifa/multa alta",m:"Enviar arquivo remessa como última atividade do dia; não entregar boleto antes do registro",ind:"Remessa não enviada no dia; reclamação de tarifa"},
-  {p:2,i:5,s:"ADM/Fin",r:"Fraude na expedição de diploma por mau uso da senha do Sistec/MEC",m:"Restringir senha do Sistec apenas ao gestor; guarda responsável; conferir alunos no Sistec x gestão",ind:"Senha compartilhada; divergência Sistec x gestão"},
-  {p:2,i:5,s:"ADM/Fin",r:"Folha paga após o 5º dia útil / passivo trabalhista",m:"Conferir, validar cálculo e pagar até o 5º dia útil; enviar documentos ao contador no prazo",ind:"Documentos atrasados à contabilidade"},
-  {p:2,i:5,s:"ADM/Fin",r:"Perda do banco de dados (falha/infecção) sem backup válido",m:"Backup off-line semanal em HD externo/máquina desconectada; exceção de antivírus para Acadweb",ind:"Backup não realizado; antivírus bloqueando sistema"},
-  {p:2,i:5,s:"ADM/Fin",r:"Uso de apostila paralela (crime contra direitos autorais / infração ao contrato)",m:"Pedido de MD pelo site conforme sistema; controle rigoroso de estoque; termo de recusa",ind:"Estoque de MD divergente; apostila fora do padrão"},
-  {p:3,i:4,s:"ADM/Fin",r:"Erro de conciliação bancária/cartão não identificado",m:"Conciliação Extrato x Sistema x Operadora no mínimo semanal",ind:"Conciliação não realizada na semana"},
-  {p:3,i:3,s:"ADM/Fin",r:"Matrícula on-line lançada sem crédito confirmado em conta",m:"Verificar crédito em conta/maquineta antes de liberar; contrato assinado na mesma semana",ind:"Matrícula lançada sem comprovante; contrato não assinado"},
-  {p:2,i:4,s:"ADM/Fin",r:"Mudança de situação/redatamento indevido no sistema",m:"Ações restritas ao Líder ADM/Gestor; requerimento assinado por aluno, gestor e líder",ind:"Ação sem requerimento assinado"},
-  {p:3,i:3,s:"ADM/Fin",r:"Documentação de matrícula incompleta/não digitalizada",m:"Digitalização semanal obrigatória; pasta de pendências acompanhada com o comercial",ind:"Pasta de pendências crescente"},
-  {p:2,i:4,s:"ADM/Fin",r:"Cadastro/atualização do Sistec e Censo em atraso",m:"Acompanhar cadastro conforme comunicado do Inep; conferir turmas Sistec x gestão",ind:"Turmas não cadastradas no prazo oficial"},
-  {p:4,i:5,s:"Gestor",r:"Evasão Real acima da meta (4,8% GT / 5% GP)",m:"Leitura diária da evasão + perdas ofensoras; Reunião Integrada; prevenção LFR (2ª falta); reunião Agência x setores",ind:"% Evasão Real diário; LFR sem negociação; faltas não lançadas"},
-  {p:4,i:5,s:"Gestor",r:"Inadimplência acima da meta (9,5% GT / 12% GP)",m:"Central acompanha 1-2 parcelas em atraso; pós-venda; SPC/SERASA; controle de redatamento",ind:"Inadim. (ativos) diário; recebimento de parcelas < 85%"},
-  {p:3,i:5,s:"Gestor",r:"Redatamento indevido de parcelas mascarando inadimplência",m:"Liberar redatamento só em adiamento de turma e mediante autorização do gestor",ind:"Nº de redatamentos fora de adiamento de turma"},
-  {p:3,i:5,s:"Gestor",r:"Contratos sem assinatura / pendência de documentação",m:"Auditoria quinzenal COM+ADM; sanar pendências dentro do mês da matrícula",ind:"Relatório de pendência de documentação/assinatura"},
-  {p:2,i:5,s:"Gestor",r:"Curso operando com portaria/parecer vencido",m:"Acompanhamento semestral de prazos via portarias/pareceres",ind:"Data de vencimento próxima no parecer"},
-  {p:2,i:5,s:"Gestor",r:"Descumprimento de Censo Escolar / SISTEC (prazo do Governo Federal)",m:"Garantir que Pedagógico e ADM cumpram os prazos; acompanhar cadastro de turmas no SISTEC",ind:"Turmas não cadastradas no SISTEC; janela do Censo aberta"},
-  {p:3,i:4,s:"Gestor",r:"Divergência de caixa (físico x sistema) / falha de conciliação",m:"Conciliação bancária diária e fechamento de caixa (Acadweb vs. operadora/extrato)",ind:"Diferença no fechamento diário de caixa"},
-  {p:4,i:4,s:"Gestor",r:"Ritmo comercial insuficiente para a meta do mês",m:"Validar Raio-X diário (25/8/1-2); não acumular pendentes; abrir turmas com 90 dias",ind:"Raio-X abaixo do mínimo; conversão de potenciais < 50%"},
-  {p:2,i:5,s:"Gestor",r:"Folha não paga até o 5º dia útil / falhas trabalhistas (banco de horas, EPI)",m:"Conferir contracheques; pagar até 5º dia útil; controlar banco de horas e termo de EPI",ind:"Pendências na conferência da folha"},
-  {p:2,i:5,s:"Gestor",r:"Perda de dados do Acadweb (backup Qualinfo não realizado)",m:"Verificar backup diário da pasta C://Qualinfo (disco externo/nuvem); exceções de antivírus",ind:"Ausência de registro de backup"},
-  {p:3,i:4,s:"Gestor",r:"Turmas insuficientes à venda para os próximos meses",m:"Acompanhar cronograma de turmas à venda; abrir novas com 90 dias; usar minicurso",ind:"Dashboard: turmas à venda vs. volume de matrículas necessário"},
-  {p:3,i:4,s:"Gestor",r:"Falta de plano de ação integrado entre setores",m:"Plano de ação da gestão contemplando o de cada líder; Reunião Integrada semanal",ind:"Reuniões sem plano de ação/registro de congruência"},
-  {p:3,i:3,s:"Gestor",r:"% de Contratados da Agência abaixo de 3%",m:"Cobrar evidências de captação; reunião de retenção; supervisão de parcerias",ind:"% de Contratados; ausência de evidências de vagas"},
-  {p:3,i:3,s:"Gestor",r:"Pesquisa de Satisfação/Institucional abaixo de 8,15",m:"Leitura quinzenal + plano de ação sobre comentários negativos",ind:"Nota por setor < 8,15; comentários negativos recorrentes"}
-];
-  var SETORES = ['Central Rel.','Pedagógico','Gestor','ADM/Fin','Agência','CSA'];
+  /* Os 67 riscos e os 6 setores vivem em riscos-catalogo.js — fonte
+     ÚNICA, compartilhada com planejamento.html. O contrato append-only
+     está lá. Aqui só lemos.
+     Falhar alto NÃO pode ser 'throw' aqui em cima: um throw solto no topo do
+     IIFE mata o script ANTES de Guard.onReady(boot) ser registrado — boot()
+     nunca roda, a sidebar nunca é inserida e #rk-erro (role=alert) fica vazio.
+     Resultado: tela branca, sem mensagem e sem navegação, exatamente o que se
+     queria evitar. Aqui só ANOTAMOS a falha; quem a mostra é boot(), depois
+     de já ter colocado o menu na tela. */
+  var FALHA_CATALOGO = null;
+  if (!window.RISCOS_CATALOGO || !window.RISCOS_SETORES) {
+    FALHA_CATALOGO = new Error('riscos-catalogo.js nao carregou ou esta invalido.');
+  }
+  var RISCOS = window.RISCOS_CATALOGO || [];
+  var SETORES = window.RISCOS_SETORES || [];
+  /* col = preenchimento · bg = halo translúcido · fg = cor de TEXTO legível
+     sobre col (token por tema; ver theme.css). Nunca escrever texto pequeno
+     sobre col usando outra cor que não a fg da própria banda. */
   var BANDS = [
-    {k:'crit',lab:'Crítico',min:15,col:'var(--red)',bg:'var(--haloRed)'},
-    {k:'alto',lab:'Alto',min:10,col:'var(--orange)',bg:'var(--haloOrange)'},
-    {k:'mod',lab:'Moderado',min:5,col:'var(--amber)',bg:'var(--haloAmber)'},
-    {k:'baixo',lab:'Baixo',min:1,col:'var(--green)',bg:'var(--haloGreen)'}
+    {k:'crit',lab:'Crítico',min:15,col:'var(--red)',bg:'var(--haloRed)',fg:'var(--onRed)'},
+    {k:'alto',lab:'Alto',min:10,col:'var(--orange)',bg:'var(--haloOrange)',fg:'var(--onOrange)'},
+    {k:'mod',lab:'Moderado',min:5,col:'var(--amber)',bg:'var(--haloAmber)',fg:'var(--onAmber)'},
+    {k:'baixo',lab:'Baixo',min:1,col:'var(--green)',bg:'var(--haloGreen)',fg:'var(--onGreen)'}
   ];
   function bandOf(n){ for (var i=0;i<BANDS.length;i++){ if (n>=BANDS[i].min){ return BANDS[i]; } } return BANDS[3]; }
+  /* C9 — UMA redacao para UMA verdade. Este aviso aparecia em 3 lugares
+     (rodape da gaveta, "i" do metodo, "i" dos cartoes) com 3 textos parecidos
+     mas diferentes: quem lesse os tres poderia concluir coisas distintas sobre
+     o que o sistema mede. Centralizado aqui; quem precisar mudar, muda 1 vez. */
+  var AVISO = {
+    fonte: 'Probabilidade, Impacto e mitigação vêm das matrizes dos 6 manuais de setor.',
+    reescrita: 'O título e o sinal de alerta de parte dos riscos foram reescritos para descrever a ATIVIDADE que a liderança controla, e não o resultado de negócio (que é acompanhado em outro sistema). Probabilidade e Impacto NÃO foram alterados — a severidade continua a do manual.',
+    naoMede: 'Os sinais de alerta NÃO são apurados pelo sistema: são o que a liderança precisa conferir na fonte (Acadweb, planilha, relatório). Esta tela não mede nada — ela organiza o que os manuais já definiram.',
+    inerente: 'O nível mostrado é o risco INERENTE, antes de a mitigação surtir efeito.',
+    formula: 'Nível = Probabilidade (1–5) × Impacto (1–5).'
+  };
+
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-  function countUp(el,to){ var dur=650,t0=null; function s(ts){ if(!t0){t0=ts;} var p=Math.min(1,(ts-t0)/dur); el.textContent=Math.round(p*to); if(p<1){ requestAnimationFrame(s); } } requestAnimationFrame(s); }
+  function semMovimento(){ return !!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  function countUp(el,to){ if (semMovimento()){ el.textContent=to; return; } var dur=650,t0=null; function s(ts){ if(!t0){t0=ts;} var p=Math.min(1,(ts-t0)/dur); el.textContent=Math.round(p*to); if(p<1){ requestAnimationFrame(s); } } requestAnimationFrame(s); }
 
   function renderStats(){
     var crit=RISCOS.filter(function(x){ return x.p*x.i>=15; }).length;
     var alto=RISCOS.filter(function(x){ var n=x.p*x.i; return n>=10&&n<15; }).length;
-    var setC={}; RISCOS.forEach(function(x){ if (x.p*x.i>=15){ setC[x.s]=1; } });
-    var nSet=0, kk; for (kk in setC){ if (setC.hasOwnProperty(kk)){ nSet++; } }
+    /* A10 — este cartao contava "setores com pelo menos 1 risco critico".
+       Os 6 setores TEM risco critico: o numero era 6 de 6, todo dia, para
+       sempre. Cartao que nunca muda nao informa nada e ainda ocupa o lugar
+       de um que informaria. Benchmark (LogicManager, AuditBoard, Resolver):
+       o terceiro numero de um painel de risco e' CONCENTRACAO — onde olhar
+       primeiro —, nao uma contagem que satura. Passa a ser o setor com mais
+       riscos criticos, com o nome no rotulo. */
+    var porSetor={}, kk;
+    RISCOS.forEach(function(x){ if (x.p*x.i>=15){ porSetor[x.s]=(porSetor[x.s]||0)+1; } });
+    var piorN=0, piores=[];
+    for (kk in porSetor){ if (porSetor.hasOwnProperty(kk)){
+      if (porSetor[kk]>piorN){ piorN=porSetor[kk]; piores=[kk]; }
+      else if (porSetor[kk]===piorN){ piores.push(kk); }
+    } }
+    /* 'A e B e C' não é português. Vírgula em tudo, 'e' só antes do último. */
+    piores.sort();
+    var piorNome = piores.length ? piores.join(', ').replace(/, ([^,]*)$/,' e $1') : '—';
+    /* Mesma lista, mas cada setor é um LINK para o registro já filtrado por ele.
+       Nomes de setor não contêm vírgula (ver riscos-catalogo.js), então a mesma
+       regex de conjunção funciona sobre o HTML sem risco de cortar uma tag. */
+    var piorNomeHtml = piores.length
+      ? piores.map(function(nm){ return '<a href="#rk-reg" class="rk-klink" data-setor="'+esc(nm)+'">'+esc(nm)+'</a>'; }).join(', ').replace(/, ([^,]*)$/,' e $1')
+      : '—';
+    /* Empate: o número do cartão é o de CADA setor empatado, não a soma deles.
+       O rótulo antigo ('críticos no setor mais carregado (A e B)') com o número 5
+       convidava o leitor a somar 5 entre A e B. Ou pior, a ler 5 num só. */
+    var piorRot = piores.length>1
+      ? 'Críticos · em cada um dos setores mais carregados ('+piorNome+')'
+      : 'Críticos · setor mais carregado ('+piorNome+')';
+    var piorRotHtml = piores.length>1
+      ? 'Críticos · em cada um dos setores mais carregados ('+piorNomeHtml+')'
+      : 'Críticos · setor mais carregado ('+piorNomeHtml+')';
+    var nSet=0; for (kk in porSetor){ if (porSetor.hasOwnProperty(kk)){ nSet++; } }
     var max25=RISCOS.filter(function(x){ return x.p*x.i===25; }).length;
-    var d=[{n:crit,k:'Riscos críticos (ação imediata)',c:'red'},{n:alto,k:'Riscos altos (a vigiar)',c:'orange'},{n:nSet,k:'setores com risco crítico',c:''},{n:max25,k:'no nível máximo (25)',c:'red'}];
+    var tot=RISCOS.length;
+    /* C6 — os quatro rótulos na MESMA forma, sem exceção:
+         [substantivo no plural] + ' · ' + [qualificação curta em minúscula].
+       Havia quatro construções diferentes ('Riscos críticos (ação imediata)',
+       'Riscos altos (a vigiar)', 'Críticos no setor mais carregado (…)', 'No
+       nível máximo (25)'): duas começavam com 'Riscos', uma começava por
+       preposição e nem sequer tinha substantivo, e a pontuação alternava entre
+       parênteses e nada. Quatro cartões lado a lado que não se parecem exigem
+       quatro leituras em vez de uma varredura — o olho perde a fileira.
+       O 4º passou a começar por 'Críticos' porque é o que ele conta de fato:
+       P×I=25 está dentro da banda Crítico (15–25); ele é um recorte do 1º
+       cartão, não uma quinta categoria. */
+    var d=[
+      {n:crit,k:'Críticos · ação imediata',c:'red',pop:['Como se conta','Risco cujo nível P×I fica entre 15 e 25 (banda Crítico).',
+        'Números',crit+' de '+tot+' riscos ('+Math.round(crit/tot*100)+'%).','O que fazer','No Planejamento, o bloco "Sugeridos pelos manuais" oferece ao líder até 5 riscos por mês (os mais graves ainda em aberto, banda alta ou crítica). Entrar no plano depende de o líder incluir — nada é lançado automaticamente.']},
+      /* A6 — o texto anterior ('Não exigem ação imediata, mas entram na vigilância
+         da rotina') contradizia o resto do sistema: planejamento.html descarta
+         'nivel < 10', ou seja, TODA a banda Alta (10–14) é sugerida para o plano
+         do mês junto com a crítica. O cartão dizia 'só vigiar' e a outra tela
+         mandava planejar. O que separa alto de crítico é o PRAZO, não o dever.
+         O rótulo também saiu de 'a vigiar' para 'no plano do mês': deixar a
+         correção só dentro do "i" mantinha a frase errada no lugar que todo
+         mundo lê e a certa no lugar que quase ninguém abre. */
+      {n:alto,k:'Altos · no plano do mês',c:'orange',pop:['Como se conta','Risco cujo nível P×I fica entre 10 e 14 (banda Alto).',
+        'Números',alto+' de '+tot+' riscos ('+Math.round(alto/tot*100)+'%).','O que fazer','Entram no plano do mês: o Planejamento sugere ao líder os riscos de banda Alta e Crítica ainda em aberto. A diferença para o crítico é o prazo — o alto não exige ação no mesmo dia, mas não pode ficar fora do plano.']},
+      /* c:'red' e não 'orange': este cartão conta CRÍTICOS, e na matriz ao lado
+         laranja é a cor da banda ALTO. Pintar crítico de laranja fazia a tela
+         contradizer a própria legenda. */
+      {n:piorN,k:piorRot,kh:piorRotHtml,c:'red',pop:['Como se conta','Contamos os riscos críticos (P×I ≥ 15) de cada setor e mostramos o MAIOR. Havendo empate, todos os empatados aparecem no rótulo e o número é o de CADA um deles — não a soma.',
+        'Números',piorNome+' com '+piorN+' crítico(s), de '+crit+' críticos em toda a unidade. '+nSet+' dos '+SETORES.length+' setores têm ao menos 1 crítico'+(nSet===SETORES.length?' — por isso o que importa é ONDE se concentram, não se existem.':'.'),'O que fazer','É por onde a reunião de risco começa. Clique no nome do setor para abrir o Registro de riscos já filtrado por ele.']},
+      {n:max25,k:'Críticos · nível máximo (25)',c:'red',pop:['Como se conta','Risco com P×I exatamente 25 — Probabilidade 5 (quase certo) × Impacto 5 (gravíssimo). É o teto da matriz.',
+        'Números',max25+' de '+tot+' riscos.','O que fazer','São os casos do canto superior-direito do 5×5. Nenhum plano de setor deveria fechar o mês sem tratar estes.']}
+    ];
     var h=document.getElementById('stats'); h.innerHTML='';
-    d.forEach(function(o){ var e=document.createElement('div'); e.className='rk-stat '+o.c; e.innerHTML='<div class="n">0</div><div class="k">'+o.k+'</div>'; h.appendChild(e); countUp(e.querySelector('.n'),o.n); });
+    d.forEach(function(o){
+      var e=document.createElement('div'); e.className='rk-stat '+o.c;
+      /* o.k é sempre TEXTO puro (vai para o aria-label do "i"); o.kh, quando
+         existe, é o mesmo rótulo já com os links de setor — os nomes que entram
+         nele passaram por esc() na montagem. */
+      e.innerHTML='<div class="rk-sth"><div class="n">0</div><button class="rk-i" type="button" aria-expanded="false" aria-controls="pop" aria-label="Como este número é calculado: '+esc(o.k)+'"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button></div><div class="k">'+(o.kh||esc(o.k))+'</div>';
+      h.appendChild(e); countUp(e.querySelector('.n'),o.n);
+      e.querySelector('.rk-i').addEventListener('click', function(ev){
+        ev.stopPropagation();
+        openPop(this, o.k, [[o.pop[0],o.pop[1]],[o.pop[2],o.pop[3]],[o.pop[4],o.pop[5]]], esc(AVISO.fonte+' '+tot+' riscos ao todo. '+AVISO.formula+' '+AVISO.reescrita));
+      });
+      /* O link do setor não é só âncora: aplica o filtro do registro antes de
+         o navegador pular para lá, senão o usuário cairia nos 67 sem filtro. */
+      var ks=e.querySelectorAll('.rk-klink'), q;
+      for (q=0;q<ks.length;q++){
+        ks[q].addEventListener('click', function(){ filtrarRegistroPorSetor(this.getAttribute('data-setor')); });
+      }
+    });
     document.getElementById('hcount').textContent=RISCOS.length;
+  }
+
+  /* A11 — a legenda das 4 bandas era texto fixo. Como a banda Baixo (1–4) não
+     tem NENHUM risco e a célula do canto inferior-esquerdo mesmo assim aparece
+     pintada de verde (a cor vem da faixa, não da contagem), a legenda induzia a
+     ler "há riscos baixos ali". Agora cada banda mostra quantos riscos tem, e a
+     banda zerada diz que está zerada. */
+  var FAIXA={crit:'15–25',alto:'10–14',mod:'5–9',baixo:'1–4'};
+  var RESSALVA_VAZIA='A faixa aparece colorida na matriz porque a cor marca a severidade da célula, não a existência de risco nela.';
+  function renderLegenda(){
+    var host=document.getElementById('leg');
+    if (!host){ return; }
+    host.innerHTML='';
+    var temVazia=false;
+    BANDS.forEach(function(b){
+      var n=RISCOS.filter(function(x){ return bandOf(x.p*x.i).k===b.k; }).length;
+      var sp=document.createElement('span');
+      var sw=document.createElement('i');
+      sw.className='rk-sw'; sw.style.background=b.col;
+      sp.appendChild(sw);
+      sp.appendChild(document.createTextNode(b.lab+' '+FAIXA[b.k]+' · '+(n ? n+' risco'+(n>1?'s':'') : 'nenhum risco')));
+      if (!n){
+        temVazia=true;
+        sp.className='vazia';
+        sp.title=RESSALVA_VAZIA;
+      }
+      host.appendChild(sp);
+    });
+    /* A mesma ressalva do title=, agora como TEXTO na tela: title não é
+       alcançável por teclado nem por toque, então metade dos usuários nunca a
+       via. O title fica como reforço para quem usa mouse. */
+    var nota=document.getElementById('leg-nota');
+    if (nota){ nota.textContent = temVazia ? RESSALVA_VAZIA : ''; }
   }
 
   function renderMatrix(){
@@ -240,7 +517,7 @@
         if (list.length){
           html+='<div class="rk-cell on" role="button" tabindex="0" data-p="'+pr+'" data-i="'+im+'" aria-label="Probabilidade '+pr+', impacto '+im+', nível '+(pr*im)+', '+list.length+' risco(s)" style="background:'+b.bg+'"><span class="rk-bub" style="background:'+b.col+'">'+list.length+'</span></div>';
         } else {
-          html+='<div class="rk-cell void" aria-hidden="true" style="background:'+b.bg+'"></div>';
+          html+='<div class="rk-cell void" role="img" aria-label="Probabilidade '+pr+', impacto '+im+', nenhum risco" style="background:'+b.bg+'"></div>';
         }
       }
       html+='</div>';
@@ -252,79 +529,431 @@
     function openCell(c){
       var p1=+c.getAttribute('data-p'), i1=+c.getAttribute('data-i');
       var list=RISCOS.filter(function(x){ return x.p===p1&&x.i===i1; });
-      openList('Probabilidade '+p1+' × Impacto '+i1+' = nível '+(p1*i1), list.length+' risco(s) neste cruzamento', list);
+      openList('Probabilidade '+p1+' × Impacto '+i1+' = nível '+(p1*i1), list.length+' risco(s) neste cruzamento', list, c);
     }
     host.addEventListener('click', function(e){ var c=e.target.closest('.rk-cell.on'); if (c){ openCell(c); } });
     host.addEventListener('keydown', function(e){ if (e.key==='Enter'||e.key===' '){ var c=e.target.closest('.rk-cell.on'); if (c){ e.preventDefault(); openCell(c); } } });
   }
 
+  /* Soma REAL das células desenhadas no quadro de concentração. O "i" do quadro
+     afirmava que essa soma é RISCOS.length — não é: o quadro só desenha as
+     linhas de SETORES e as colunas de banda não vazias, então um risco cujo
+     setor não esteja em SETORES some da tela sem aviso. Este número é contado
+     no render, célula a célula, e é o que o "i" passa a mostrar. */
+  var SOMA_HM=0;
   function renderHeatmap(){
+    SOMA_HM=0;
     var vis=BANDS.filter(function(b){ return RISCOS.some(function(x){ return bandOf(x.p*x.i).k===b.k; }); });
+    /* Colunas de banda SEM nenhum risco são omitidas. Isso é um filtro, e filtro
+       escondido é meia-verdade: a legenda ao lado lista as 4 bandas e o usuário
+       poderia achar que a coluna sumiu por bug. O caption declara quais faltam. */
+    var fora=BANDS.filter(function(b){ return vis.indexOf(b)===-1; }).map(function(b){ return b.lab; });
     var t=document.getElementById('hm');
-    var head='<tr><th class="rowh">Setor</th>'; vis.forEach(function(b){ head+='<th>'+b.lab+'</th>'; }); head+='<th>Σ</th></tr>'; t.innerHTML=head;
+    var cap='<caption class="rk-sr">Riscos por setor e faixa de severidade. '+RISCOS.length+' riscos em '+SETORES.length+' setores.'
+          + (fora.length ? ' A coluna '+esc(fora.join(' e '))+' não é exibida porque nenhum risco caiu nessa faixa.' : '')
+          + ' Clique numa célula para ver os riscos daquela combinação.</caption>';
+    var head=cap+'<thead><tr><th class="rowh" scope="col">Setor</th>'; vis.forEach(function(b){ head+='<th scope="col">'+b.lab+'</th>'; }); head+='<th scope="col">Total</th></tr></thead><tbody id="hm-body"></tbody>';
+    t.innerHTML=head;
+    var corpo=document.getElementById('hm-body');
+    var nota=document.getElementById('hm-nota');
+    if (nota){ nota.textContent = fora.length ? ('A faixa ' + fora.join(' e ') + ' não aparece como coluna: nenhum dos ' + RISCOS.length + ' riscos caiu nela.') : ''; }
     SETORES.forEach(function(s){
       var tr=document.createElement('tr'), tot=RISCOS.filter(function(x){ return x.s===s; }).length;
-      var row='<td class="rk-rn">'+esc(s)+'</td>';
+      var row='<th class="rk-rn" scope="row">'+esc(s)+'</th>';
       vis.forEach(function(b){
         var list=RISCOS.filter(function(x){ return x.s===s&&bandOf(x.p*x.i).k===b.k; });
-        row+=list.length?'<td><div class="rk-hcell" role="button" tabindex="0" aria-label="'+esc(s)+', '+b.lab+', '+list.length+' risco(s)" style="background:'+b.col+'" data-s="'+esc(s)+'" data-b="'+b.k+'">'+list.length+'</div></td>':'<td><div class="rk-hcell empty" aria-hidden="true">·</div></td>';
+        SOMA_HM+=list.length;
+        row+=list.length?'<td><div class="rk-hcell" role="button" tabindex="0" aria-label="'+esc(s)+', '+b.lab+', '+list.length+' risco(s)" style="background:'+b.col+'" data-s="'+esc(s)+'" data-b="'+b.k+'">'+list.length+'</div></td>':'<td><div class="rk-hcell empty"><span aria-hidden="true">·</span><span class="rk-sr">'+esc(s)+', '+b.lab+', nenhum risco</span></div></td>';
       });
-      row+='<td class="rk-tot">'+tot+'</td>'; tr.innerHTML=row; t.appendChild(tr);
+      row+='<td class="rk-tot">'+tot+'</td>'; tr.innerHTML=row; corpo.appendChild(tr);
     });
     function openHc(c){
       var s=c.getAttribute('data-s'), bk=c.getAttribute('data-b');
       var list=RISCOS.filter(function(x){ return x.s===s&&bandOf(x.p*x.i).k===bk; });
       var lab=BANDS.filter(function(b){ return b.k===bk; })[0].lab;
-      openList(s+' · '+lab, list.length+' risco(s)', list);
+      openList(s+' · '+lab, list.length+' risco(s)', list, c);
     }
     t.addEventListener('click', function(e){ var c=e.target.closest('.rk-hcell'); if (c&&c.className.indexOf('empty')===-1){ openHc(c); } });
     t.addEventListener('keydown', function(e){ if (e.key==='Enter'||e.key===' '){ var c=e.target.closest('.rk-hcell'); if (c&&c.className.indexOf('empty')===-1){ e.preventDefault(); openHc(c); } } });
   }
 
-  var back=document.getElementById('back'), drawer=document.getElementById('drawer'), lastFocus=null;
-  function openD(){ lastFocus=document.activeElement; back.classList.add('on'); drawer.classList.add('on'); var x=document.getElementById('d-x'); if (x&&x.focus){ x.focus(); } }
-  function closeD(){ back.classList.remove('on'); drawer.classList.remove('on'); if (lastFocus&&lastFocus.focus){ lastFocus.focus(); } }
+  /* ============================================================
+     REGISTRO DE RISCOS (risk register)
+     ------------------------------------------------------------
+     A matriz e o heatmap são a CAPA: dizem ONDE está o fogo. O
+     produto de um sistema de risco é o REGISTRO — a lista dos
+     riscos com mitigação e dono, buscável (LogicManager,
+     AuditBoard, Riskonnect; ISO 31010 anexo A.3). Sem ele, ler um
+     risco exigia adivinhar em qual das 25 células caiu e clicar, e
+     procurar "backup" ou "estágio" era impossível.
+     Mesmas funções de sempre: esc(), bandOf(), BANDS, AVISO.
+     ============================================================ */
+  var REG={q:'',setor:'',banda:'',desc:true};
+  function nivelDe(x){ return x.p*x.i; }
+  function regFiltrados(){
+    var q=REG.q.toLowerCase();
+    var out=RISCOS.filter(function(x){
+      if (REG.setor&&x.s!==REG.setor){ return false; }
+      if (REG.banda&&bandOf(nivelDe(x)).k!==REG.banda){ return false; }
+      if (!q){ return true; }
+      /* Busca no texto do risco, na mitigação, no sinal de alerta E no setor:
+         quem procura "backup" não sabe se a palavra está no risco ou na
+         mitigação, e não deveria precisar saber. */
+      return (x.r+' '+x.m+' '+x.ind+' '+x.s).toLowerCase().indexOf(q)!==-1;
+    });
+    out.sort(function(a,b){
+      var d=nivelDe(a)-nivelDe(b);
+      if (d!==0){ return REG.desc?-d:d; }
+      /* Desempate fixo (setor, depois texto): sem ele, riscos de mesmo nível
+         trocariam de posição a cada redesenho e a lista pareceria instável. */
+      if (a.s!==b.s){ return a.s.localeCompare(b.s,'pt-BR'); }
+      return a.r.localeCompare(b.r,'pt-BR');
+    });
+    return out;
+  }
+  function contarSetor(s){ return RISCOS.filter(function(x){ return x.s===s; }).length; }
+  function contarBanda(k){ return RISCOS.filter(function(x){ return bandOf(nivelDe(x)).k===k; }).length; }
+  function rotuloFiltro(){
+    var p=[];
+    if (REG.setor){ p.push('setor ' + REG.setor); }
+    if (REG.banda){ p.push('banda ' + BANDS.filter(function(b){ return b.k===REG.banda; })[0].lab); }
+    if (REG.q){ p.push('busca "' + REG.q + '"'); }
+    return p.join(' · ');
+  }
+  function desenharRegistro(){
+    var tb=document.getElementById('reg-tb'), cont=document.getElementById('reg-count');
+    if (!tb||!cont){ return; }
+    var list=regFiltrados();
+    var ord=REG.desc?'descending':'ascending';
+    /* Nível é a PRIMEIRA coluna porque é por ela que a lista vem ordenada:
+       coluna de ordenação à esquerda deixa a varredura vertical (mais grave →
+       menos grave) coincidir com a leitura natural. Depois vem o que o risco É,
+       de quem é, o que olhar e o que fazer. */
+    var h='<caption>Os '+RISCOS.length+' riscos das matrizes P×I dos 6 manuais de setor. '+esc(AVISO.inerente)+' '+esc(AVISO.formula)+' Clique na linha (ou no nome do risco) para abrir a ficha completa.</caption>'
+      + '<thead><tr>'
+      + '<th scope="col" aria-sort="'+ord+'"><button type="button" class="rk-sort" id="reg-sort" aria-label="Nível P×I. Ordenado '+(REG.desc?'do mais grave para o menos grave':'do menos grave para o mais grave')+'. Ativar para inverter.">Nível (P×I) <span aria-hidden="true">'+(REG.desc?'↓':'↑')+'</span></button></th>'
+      + '<th scope="col">Risco</th>'
+      + '<th scope="col">Setor</th>'
+      + '<th scope="col">Sinal de alerta</th>'
+      + '<th scope="col">Mitigação (do manual)</th>'
+      + '</tr></thead><tbody>';
+    if (!list.length){
+      /* Estado vazio tratado: diz POR QUE está vazio e oferece a saída. Uma
+         tabela em branco faria o usuário achar que a tela quebrou. */
+      h+='<tr><td colspan="5" class="rk-regvazio"><b>Nenhum risco corresponde a este filtro.</b><br>Filtro atual: '+esc(rotuloFiltro()||'nenhum')+'. <button type="button" class="rk-pfech" id="reg-limpar">Limpar filtros</button></td></tr>';
+    } else {
+      list.forEach(function(x){
+        var n=nivelDe(x), b=bandOf(n);
+        /* data-idx é a posição no catálogo (RISCOS), não na lista filtrada: a
+           lista é reordenada e refiltrada o tempo todo, o índice do catálogo não. */
+        h+='<tr class="rk-regrow" data-idx="'+RISCOS.indexOf(x)+'">'
+          + '<td class="nivel"><span class="rk-pill" style="background:'+b.col+';color:'+b.fg+'">'+b.lab+' · '+n+'</span><div class="rk-regpi">P'+x.p+'×I'+x.i+'</div></td>'
+          + '<td class="risco"><button type="button" class="rk-regab" aria-label="Abrir a ficha do risco: '+esc(x.r)+'">'+esc(x.r)+'</button></td>'
+          + '<td class="setor">'+esc(x.s)+'</td>'
+          + '<td class="sinal">'+esc(x.ind)+'</td>'
+          + '<td class="mit">'+esc(x.m)+'</td></tr>';
+      });
+    }
+    h+='</tbody>';
+    tb.innerHTML=h;
+    var srt=document.getElementById('reg-sort');
+    if (srt){ srt.addEventListener('click', function(){ REG.desc=!REG.desc; desenharRegistro(); var s2=document.getElementById('reg-sort'); if (s2&&s2.focus){ s2.focus(); } }); }
+    var lim=document.getElementById('reg-limpar');
+    if (lim){ lim.addEventListener('click', function(){ limparRegistro(); }); }
+    var rot=rotuloFiltro();
+    cont.innerHTML='Mostrando <b>'+list.length+'</b> de <b>'+RISCOS.length+'</b> riscos'+(rot?' · filtro: '+esc(rot):'')+'.';
+  }
+  /* A linha do registro abre a MESMA gaveta da matriz e do heatmap — mesma
+     função openList(), mesma ficha, mesmo aviso, mesmo link para o
+     Planejamento. Duas fichas diferentes para o mesmo risco seriam duas
+     versões da verdade. O foco volta para o botão da linha ao fechar. */
+  function abrirRiscoDoRegistro(tr){
+    var x=RISCOS[+tr.getAttribute('data-idx')];
+    if (!x){ return; }
+    var n=nivelDe(x), b=bandOf(n);
+    openList(x.s+' · '+b.lab, 'Nível '+n+' — Probabilidade '+x.p+' × Impacto '+x.i, [x], tr.querySelector('.rk-regab'));
+  }
+  function limparRegistro(){
+    REG.q=''; REG.setor=''; REG.banda='';
+    var q=document.getElementById('reg-q'), s=document.getElementById('reg-setor'), b=document.getElementById('reg-banda');
+    if (q){ q.value=''; }
+    if (s){ s.value=''; }
+    if (b){ b.value=''; }
+    desenharRegistro();
+    if (q&&q.focus){ q.focus(); }
+  }
+  /* Chamado pelo nome do setor no 3º cartão. Filtra por setor E por banda
+     Crítica, porque o número do cartão é o de CRÍTICOS daquele setor: mandar o
+     usuário para a lista completa do setor mostraria um total diferente do que
+     ele acabou de clicar. */
+  function filtrarRegistroPorSetor(nome){
+    var s=document.getElementById('reg-setor');
+    if (!s){ return; }
+    REG.q=''; REG.setor=nome; REG.banda='crit';
+    var q=document.getElementById('reg-q'), b=document.getElementById('reg-banda');
+    if (q){ q.value=''; }
+    s.value=nome;
+    if (b){ b.value='crit'; }
+    desenharRegistro();
+  }
+  function renderRegistro(){
+    var q=document.getElementById('reg-q'), s=document.getElementById('reg-setor'), b=document.getElementById('reg-banda');
+    if (!q||!s||!b){ throw new Error('Estrutura do registro de riscos incompleta (busca/filtros).'); }
+    var oS='<option value="">Todos os setores ('+RISCOS.length+')</option>';
+    SETORES.forEach(function(nm){ oS+='<option value="'+esc(nm)+'">'+esc(nm)+' ('+contarSetor(nm)+')</option>'; });
+    s.innerHTML=oS;
+    /* Banda sem nenhum risco entra DESABILITADA e dizendo que está zerada, em vez
+       de sumir: some da lista, o usuário acha que o filtro está incompleto. */
+    var oB='<option value="">Todas as bandas ('+RISCOS.length+')</option>';
+    BANDS.forEach(function(bd){
+      var n=contarBanda(bd.k);
+      oB+='<option value="'+bd.k+'"'+(n?'':' disabled')+'>'+esc(bd.lab)+' '+FAIXA[bd.k]+' ('+(n?n:'nenhum')+')</option>';
+    });
+    b.innerHTML=oB;
+    q.addEventListener('input', function(){ REG.q=this.value.replace(/^\s+|\s+$/g,''); desenharRegistro(); });
+    s.addEventListener('change', function(){ REG.setor=this.value; desenharRegistro(); });
+    b.addEventListener('change', function(){ REG.banda=this.value; desenharRegistro(); });
+    /* Delegação no <table>, que sobrevive aos innerHTML do corpo — e ligada UMA
+       vez, aqui, não dentro de desenharRegistro(): lá seria um listener novo a
+       cada tecla digitada na busca, e a gaveta abriria N vezes por clique.
+       O clique no cabeçalho de ordenação e no "Limpar filtros" não é linha e
+       cai fora por não achar um tr.rk-regrow. */
+    var tb=document.getElementById('reg-tb');
+    if (tb){
+      tb.addEventListener('click', function(e){
+        var tr=e.target.closest('tr.rk-regrow');
+        if (tr){ abrirRiscoDoRegistro(tr); }
+      });
+    }
+    desenharRegistro();
+  }
+
+  /* Nada de tocar no DOM aqui fora. Estas referências são preenchidas por
+     ligarDialogos(), que roda DENTRO do try/catch de boot(). Antes, os
+     getElementById e os addEventListener ficavam soltos no topo do IIFE: se
+     qualquer um devolvesse null, a exceção subia, o Guard.onReady nunca chegava
+     a ser registrado e a tela ficava branca e muda — exatamente o que o
+     try/catch dizia impedir. A rede estava pendurada abaixo do trapézio. */
+  var back=null, drawer=null, pop=null, popOrigem=null, lastFocus=null;
+  /* Rolagem do fundo enquanto a gaveta está aberta. Ela é aria-modal="true": o
+     leitor de tela é impedido de sair dela, mas o MOUSE e o dedo continuavam
+     rolando a página atrás do véu — a matriz deslizava sozinha e o usuário
+     voltava, ao fechar, num ponto que não escolheu. Mesmo tratamento que
+     UI.modal já faz em ui.js: guarda o valor anterior e devolve no fechamento
+     (nunca 'auto' fixo, que apagaria um overflow definido por outra tela). */
+  var bodyOverflow='';
+  /* origem = o elemento que o usuário ativou (a célula). Vem por PARÂMETRO, e não
+     de document.activeElement, porque no clique o activeElement pode ser o <body>
+     ou o popover que estava aberto — foi assim que a versão anterior devolvia o
+     foco para o botão "i" em vez da célula clicada. */
+  function openD(origem){
+    closePop();
+    lastFocus = origem || null;
+    /* Só guarda o overflow original se a gaveta ainda NÃO estava aberta; abrir
+       uma célula por cima de outra gravaria 'hidden' como valor a restaurar e a
+       página ficaria travada para sempre. */
+    if (!drawer.classList.contains('on')){
+      bodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+    back.classList.add('on'); drawer.classList.add('on'); drawer.removeAttribute('aria-hidden');
+    var x=document.getElementById('d-x'); if (x&&x.focus){ x.focus(); }
+  }
+  function closeD(){
+    if (!drawer.classList.contains('on')){ return; }
+    back.classList.remove('on'); drawer.classList.remove('on');
+    /* ORDEM IMPORTA: o foco sai da gaveta ANTES do aria-hidden="true". Marcar
+       aria-hidden num elemento que ainda CONTÉM o foco é erro de a11y (o
+       navegador/leitor passa a ignorar uma subárvore onde o cursor de foco
+       está: alguns leitores emudecem, outros anunciam o nada). Antes o
+       setAttribute vinha na mesma linha do remove('on'), com o foco ainda no ✕.
+       Devolve o foco SEMPRE, não só quando ele estava dentro da gaveta: fechar
+       pelo scrim deixa o activeElement no <body> e o Tab recomeçava do topo. */
+    if (lastFocus&&lastFocus.focus&&document.contains(lastFocus)){ lastFocus.focus(); }
+    else if (document.activeElement&&drawer.contains(document.activeElement)&&document.activeElement.blur){ document.activeElement.blur(); }
+    lastFocus=null;
+    drawer.setAttribute('aria-hidden','true');
+    document.body.style.overflow = bodyOverflow;
+    bodyOverflow='';
+  }
+  function ligarDialogos(){
+  back=document.getElementById('back'); drawer=document.getElementById('drawer'); pop=document.getElementById('pop');
+  if (!back||!drawer||!pop){ throw new Error('Estrutura da tela incompleta (back/drawer/pop).'); }
+  drawer.setAttribute('aria-hidden','true');
   back.addEventListener('click', closeD);
   document.getElementById('d-x').addEventListener('click', closeD);
-  drawer.addEventListener('keydown', function(e){ if (e.key==='Tab'){ e.preventDefault(); var x=document.getElementById('d-x'); if (x){ x.focus(); } } });
+  drawer.addEventListener('keydown', function(e){
+    if (e.key!=='Tab'||!drawer.classList.contains('on')){ return; }
+    /* Armadilha de foco de verdade: lê os focáveis do DOM em vez de assumir que são
+       exatamente dois. Com dois, ir para frente e para trás coincide — a versão
+       anterior dependia dessa coincidência e ignorava a shiftKey, então quebraria
+       silenciosamente no dia em que um terceiro focável entrasse na gaveta. */
+    var f=drawer.querySelectorAll('button,[href],[tabindex]:not([tabindex="-1"])');
+    if (!f.length){ return; }
+    var i=-1, k;
+    for (k=0;k<f.length;k++){ if (f[k]===document.activeElement){ i=k; break; } }
+    var prox = e.shiftKey ? (i<=0 ? f.length-1 : i-1) : (i===f.length-1 ? 0 : i+1);
+    e.preventDefault();
+    f[prox].focus();
+  });
   document.addEventListener('keydown', function(e){ if (e.key==='Escape'){ closeD(); closePop(); } });
+  document.addEventListener('click', function(e){ if (!e.target.closest('.rk-pop')&&!e.target.closest('.rk-i')){ closePop(); } });
+  /* O popover é position:fixed e foi posicionado com getBoundingClientRect() no
+     instante do clique — coordenadas de VIEWPORT, congeladas. Rolar a página ou
+     girar o telefone move o "i" e deixa o balão parado, apontando para o nada,
+     às vezes por cima de outro número. Fechar é a correção honesta (reposicionar
+     a cada quadro custaria layout em toda rolagem).
+     capture=true: rolagem que acontece dentro de um contêiner com overflow (o
+     corpo da gaveta, o wrapper da tabela do registro) NÃO sobe por bubbling —
+     o evento 'scroll' não borbulha. Sem a fase de captura, esses casos passariam
+     batido justamente onde há mais rolagem interna. */
+  window.addEventListener('scroll', function(e){
+    /* Exceção: o próprio popover tem overflow:auto (o "i" do método é longo).
+       Rolar DENTRO dele não pode fechá-lo — seria impossível ler o fim do texto. */
+    if (e&&e.target&&e.target.nodeType===1&&pop.contains(e.target)){ return; }
+    closePop();
+  }, true);
+  window.addEventListener('resize', function(){ closePop(); });
+  }
 
-  function openList(title, cap, list){
+  function openList(title, cap, list, origem){
     document.getElementById('d-t').textContent=title;
     document.getElementById('d-cap').textContent=cap;
     var h=''; list.sort(function(a,b){ return b.p*b.i-a.p*a.i; }).forEach(function(x){
       var b=bandOf(x.p*x.i);
-      h+='<div class="rk-field"><div class="rk-fk"><span class="rk-pill" style="background:'+b.col+'">'+b.lab+' · '+(x.p*x.i)+'</span> &nbsp;<span style="color:var(--muted)">P'+x.p+'×I'+x.i+' · '+esc(x.s)+'</span></div><div class="rk-fv" style="font-weight:700;margin:5px 0 6px">'+esc(x.r)+'</div><div class="rk-fk">Mitigação (do manual)</div><div class="rk-fv mit">'+esc(x.m)+'</div><div class="rk-fk" style="margin-top:8px">Indicador que antecipa</div><div class="rk-fv">'+esc(x.ind)+'</div></div>';
+      /* C2 — próxima ação. A tela dizia o que é grave e parava aí. O link leva ao
+         Planejamento, que é onde o risco vira ação. planejamento.html hoje não lê
+         parâmetro nenhum de URL, então NÃO inventamos um: o link abre a tela, sem
+         prometer um filtro que não existe do outro lado. */
+      h+='<div class="rk-field"><div class="rk-fk"><span class="rk-pill" style="background:'+b.col+';color:'+b.fg+'">'+b.lab+' · '+(x.p*x.i)+'</span> &nbsp;<span style="color:var(--muted)">P'+x.p+'×I'+x.i+' · '+esc(x.s)+'</span></div><div class="rk-fv" style="font-weight:700;margin:5px 0 6px">'+esc(x.r)+'</div><div class="rk-fk">Mitigação (do manual)</div><div class="rk-fv mit">'+esc(x.m)+'</div><div class="rk-fk" style="margin-top:8px">Sinal de alerta — o que olhar</div><div class="rk-fv">'+esc(x.ind)+'</div><a class="rk-go" href="planejamento.html" aria-label="Levar ao Planejamento o risco: '+esc(x.r)+'">Levar ao Planejamento →</a></div>';
     });
-    document.getElementById('d-body').innerHTML=h; openD();
+    /* Verdade do dado: o rótulo anterior era "Indicador que antecipa", o que sugere
+       (a) que o sinal é sempre preditivo e (b) que o sistema o mede. Nenhum dos dois
+       é verdade hoje: parte dos sinais só aparece DEPOIS do fato e NENHUM é apurado
+       automaticamente. O aviso abaixo diz isso na tela, em vez de deixar implícito. */
+    /* AVISO.reescrita entra AQUI, e não só no "i" do método. A gaveta é o único
+       lugar da tela onde o TÍTULO do risco e o SINAL DE ALERTA aparecem — são
+       justamente os dois campos que foram reescritos. O aviso vivia a dois
+       cliques de distância, num popover do cabeçalho, enquanto o texto reescrito
+       era lido aqui sem nenhuma marca. Ressalva longe do dado não é ressalva. */
+    h+='<p class="rk-fonte">'+esc(AVISO.fonte)+' '+esc(AVISO.naoMede)+' '+esc(AVISO.inerente)+' '+esc(AVISO.reescrita)+'</p>';
+    /* Siglas do manual (NC, CAC, LFI, LFR, PV/PR/PF, MD, PA, "Ficha D") chegam
+       cruas nos textos do catálogo e a gaveta é lida por líderes de OUTROS
+       setores, que não as conhecem. O glossário já existe na mesma pasta. */
+    h+='<p class="rk-dlinks"><a class="rk-go" href="glossario.html">Glossário de siglas (NC, CAC, LFI, LFR, MD, Ficha D…) →</a></p>';
+    var db=document.getElementById('d-body'); db.innerHTML=h; db.scrollTop=0; openD(origem);
   }
 
-  var pop=document.getElementById('pop');
   function openPop(a, title, rows, note){
-    var h='<div class="rk-pt">'+title+'</div>'; rows.forEach(function(r){ h+='<div class="rk-pv"><b>'+r[0]+':</b> '+r[1]+'</div>'; });
+    /* Fecha o "i" anterior ANTES de abrir este: sem isto, dois botões ficariam
+       com aria-expanded="true" ao mesmo tempo, com um único popover na tela. */
+    closePop();
+    /* title e rows sao dados; so a 'note' e' HTML autoral (usa <b>). */
+    var h='<div class="rk-pt">'+esc(title)+'</div>'; rows.forEach(function(r){ h+='<div class="rk-pv"><b>'+esc(r[0])+':</b> '+esc(r[1])+'</div>'; });
     if (note){ h+='<div class="rk-note">'+note+'</div>'; }
+    h+='<button type="button" class="rk-pfech" id="pop-x">Fechar</button>';
+    popOrigem=a;
+    if (a.setAttribute){ a.setAttribute('aria-expanded','true'); }
     pop.innerHTML=h; pop.setAttribute('aria-label', title); pop.classList.add('on');
+    document.getElementById('pop-x').addEventListener('click', function(e){ e.stopPropagation(); closePop(); });
     var r=a.getBoundingClientRect();
-    pop.style.top=(r.bottom+8)+'px'; pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-342))+'px';
+    pop.style.left=Math.max(12, Math.min(r.left, window.innerWidth-342))+'px';
+    /* Clamp vertical: se não couber abaixo do "i", abre acima; nunca sai da tela. */
+    pop.style.top='0px';
+    var alt=pop.offsetHeight, topo=r.bottom+8;
+    if (topo+alt>window.innerHeight-12){ topo=Math.max(12, r.top-8-alt); }
+    pop.style.top=topo+'px';
+    /* O conteúdo do "i" É a base de cálculo: leva o foco pra dentro, senão o leitor de tela não o anuncia.
+       preventScroll: agora que rolar a página FECHA o popover, um focus() que
+       rolasse a página o mataria no mesmo quadro em que abriu. Navegador antigo
+       ignora o argumento e o comportamento volta a ser o de antes. */
+    pop.focus({ preventScroll: true });
   }
-  function closePop(){ pop.classList.remove('on'); }
-  document.addEventListener('click', function(e){ if (!e.target.closest('.rk-pop')&&!e.target.closest('.rk-i')){ closePop(); } });
+  function closePop(){
+    if (!pop.classList.contains('on')){ return; }
+    pop.classList.remove('on');
+    if (popOrigem){
+      if (popOrigem.setAttribute){ popOrigem.setAttribute('aria-expanded','false'); }
+      /* Só devolve o foco se ele estiver DENTRO do popover. Se o usuário clicou
+         em outro lugar da tela, roubar o foco de volta para o "i" é pior do que
+         não fazer nada — foi o que a versão anterior fazia. */
+      if (popOrigem.focus&&pop.contains(document.activeElement)){ popOrigem.focus(); }
+    }
+    popOrigem=null;
+  }
 
   function bindPops(){
-    document.getElementById('i-metodo').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Como priorizamos (ISO 31000)',[['Fórmula','Nível = Probabilidade (1–5) × Impacto (1–5). A posição no grid é o risco.'],['Bandas','Crítico 15–25 · Alto 10–14 · Moderado 5–9 · Baixo 1–4.'],['Fonte','Prob, Impacto e mitigação saem das matrizes de risco dos 6 arquivos de setor.']],'<b>Este é o risco INERENTE</b> (antes da mitigação surtir efeito). O nível seguinte — risco <b>residual</b> (onde a bolha vai DEPOIS da mitigação) — precisa da nota P/I pós-controle, a validar.'); });
+    document.getElementById('i-metodo').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Como priorizamos (ISO 31000)',[['Fórmula','Nível = Probabilidade (1–5) × Impacto (1–5). A posição no grid é o risco.'],['Bandas','Crítico 15–25 · Alto 10–14 · Moderado 5–9 · Baixo 1–4.'],['Fonte',AVISO.fonte+' '+RISCOS.length+' riscos ao todo.'],['O que NÃO é',AVISO.naoMede]],'<b>Risco inerente.</b> '+esc(AVISO.inerente)+' O nível seguinte — risco <b>residual</b> (onde a bolha vai DEPOIS da mitigação) — precisa da nota P/I pós-controle, ainda a validar.<br><br><b>Textos reescritos:</b> '+esc(AVISO.reescrita)); });
     document.getElementById('i-mx').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Como ler o 5×5',[['Eixos','→ direita = mais provável · ↑ acima = mais grave.'],['Cor','A célula herda a cor da banda (P×I).'],['Ação','Bolhas no vermelho (canto sup-dir) exigem ação imediata do gestor/sócio.']]); });
-    document.getElementById('i-hm').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Concentração por setor',[['O que mostra','Quantos riscos cada setor carrega em cada banda.'],['Leitura (fonte: mapa integrado)','Os críticos se concentram em Evasão e Inadimplência — as frentes de vigilância diária.']]); });
+    /* SOMA_HM (contada no render), nunca RISCOS.length: se algum risco tiver
+       setor fora de SETORES, ele não é desenhado e a soma NÃO fecha com o
+       catálogo — a diferença é dita em voz alta em vez de escondida. */
+    document.getElementById('i-hm').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Concentração por setor',[['Como se conta','Cada risco entra em exatamente 1 célula (setor × banda P×I). A soma da linha = total de riscos daquele setor; a soma de todas as células desenhadas = '+SOMA_HM+(SOMA_HM===RISCOS.length?', que é o total do catálogo.':' — o catálogo tem '+RISCOS.length+', logo '+(RISCOS.length-SOMA_HM)+' não aparecem aqui porque o setor deles não está entre os listados.')],['Como ler','A linha mostra o peso do setor; a coluna, a gravidade. Célula cheia no Crítico = onde a vigilância diária tem de estar.'],['Ação','Clique numa célula para ver os riscos daquele setor naquela banda, com a mitigação do manual.']]); });
+    document.getElementById('i-reg').addEventListener('click', function(e){ e.stopPropagation(); openPop(this,'Como ler o registro',[['Base','Os '+RISCOS.length+' riscos do catálogo dos manuais, um por linha. Nenhum é calculado aqui: setor, texto, P, I, mitigação e sinal de alerta são transcritos dos manuais de setor.'],['Nível','Nível = P × I, o mesmo número da matriz acima. A lista começa pelo mais grave; clique no cabeçalho "Nível" para inverter.'],['Busca e filtros','A busca procura no texto do risco, na mitigação, no sinal de alerta e no nome do setor ao mesmo tempo. A contagem acima da tabela diz sempre quantos dos '+RISCOS.length+' estão à vista.']],'<b>Risco inerente.</b> '+esc(AVISO.inerente)+' '+esc(AVISO.naoMede)+'<br><br><b>Textos reescritos:</b> '+esc(AVISO.reescrita)); });
+  }
+
+  /* O contêiner #rk-erro já nasce no HTML COM role="alert" (ver markup). Uma live
+     region criada no mesmo instante em que recebe conteúdo não é anunciada: o
+     leitor de tela precisa da região registrada ANTES da mutação. Por isso aqui
+     só preenchemos — e movemos o foco, que é o que garante o anúncio. */
+  function mostrarFalha(e){
+    var box=document.getElementById('rk-erro');
+    if (window.console&&console.error){ console.error('[riscos] falha ao montar a tela', e); }
+    /* Falha PARCIAL era pior do que falha total: os cartões, a matriz e o
+       registro nascem no HTML com "0" e ficavam na tela ao lado do aviso de
+       erro. O leitor via, em letra grande, "0 críticos" e o subtítulo "0 riscos
+       da operação dos 6 setores" — uma frase perfeitamente legível, perfeitamente
+       falsa, dita com a autoridade de um número. Zero por falha e zero por
+       ausência de risco são a mesma pintura na tela e significam o oposto.
+       Some com tudo que exibe contagem e neutraliza o subtítulo. */
+    var esconder=['.rk-stats','.rk-grid2','.rk-reg'], z, alvo;
+    for (z=0;z<esconder.length;z++){
+      alvo=document.querySelector(esconder[z]);
+      if (alvo){ alvo.style.display='none'; }
+    }
+    var sub=document.querySelector('.rk-sub');
+    if (sub){ sub.textContent='Os riscos da operação não puderam ser carregados. Nenhum número desta tela está disponível agora.'; }
+    if (!box){ return; }
+    box.className='rk-erro';
+    var p1=document.createElement('p'); p1.style.margin='0 0 8px';
+    var b=document.createElement('b'); b.textContent='Esta tela não carregou por completo.';
+    p1.appendChild(b);
+    p1.appendChild(document.createTextNode(' Os riscos podem estar ausentes ou incompletos — NÃO use esta tela como base de decisão agora. Atualize a página; se continuar, avise a gestão. Para navegar, use o menu lateral ou volte à tela anterior.'));
+    var p2=document.createElement('p'); p2.style.margin='0';
+    p2.className='rk-erro-tec';
+    /* Mensagem técnica: é o que o líder repassa para quem vai consertar. Fica
+       visualmente rebaixada e rotulada como tal, para não parecer instrução. */
+    p2.textContent='Código para informar ao suporte: '+((e&&e.message)||e);
+    box.appendChild(p1); box.appendChild(p2);
+    box.setAttribute('tabindex','-1');
+    if (box.focus){ box.focus(); }
   }
 
   var USER=null;
   function boot(){
-    var app=document.getElementById('app');
-    app.insertBefore(UI.sidebar({ active:'Riscos', user:USER }), app.firstChild);
-    renderStats(); renderMatrix(); renderHeatmap(); bindPops();
+    try {
+      var app=document.getElementById('app');
+      /* A sidebar vem PRIMEIRO e fora do resto: se ela falhar, o usuário fica sem
+         navegação e não consegue nem sair da tela. É a única coisa que precisa
+         existir mesmo quando todo o conteúdo falha. */
+      app.insertBefore(UI.sidebar({ active:'Riscos', user:USER }), app.firstChild);
+    } catch (eNav) {
+      mostrarFalha(eNav); return;
+    }
+    /* Só AGORA a falha do catálogo pode ser mostrada: o menu já está na tela, o
+       #rk-erro (role=alert) já existe e o usuário tem para onde ir. É por isso
+       que lá em cima anotamos em FALHA_CATALOGO em vez de dar throw. */
+    if (FALHA_CATALOGO){ mostrarFalha(FALHA_CATALOGO); return; }
+    try {
+      ligarDialogos();
+      renderStats(); renderLegenda(); renderMatrix(); renderHeatmap(); renderRegistro(); bindPops();
+    } catch (e) {
+      mostrarFalha(e);
+    }
   }
   Guard.onReady(function (u){ USER=u; boot(); });
   })();
   </script>
-  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js')['catch'](function(e){ if(window.console&&console.warn){ console.warn('[riscos] service worker nao registrado (a tela funciona sem ele):', e); } });}</script>
 </body>
 </html>

@@ -21,11 +21,11 @@
 .at-main{flex:1;min-width:0;display:flex;flex-direction:column}
 
 .at-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.at-hi{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.at-hi{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .at-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
 
 .at-mhead{display:none;align-items:flex-start;justify-content:space-between;padding:14px 20px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
-.at-mg{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.at-mg{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:0}
 .at-md{font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
 
 .at-content{flex:1;padding:22px 32px 48px}
@@ -327,14 +327,14 @@
 
       <div class="at-top">
         <div style="line-height:1.2">
-          <div class="at-hi">Atividades</div>
+          <h1 class="at-hi">Atividades</h1>
           <div class="at-dd">Rotinas e tarefas recorrentes por setor · cada cartão é uma ocorrência da agenda</div>
         </div>
       </div>
 
       <div class="at-mhead">
         <div>
-          <div class="at-mg">Atividades</div>
+          <h1 class="at-mg">Atividades</h1>
           <div class="at-md">Rotinas por setor</div>
         </div>
         <span id="at-mav"></span>
@@ -831,8 +831,8 @@
 
       if (CAN_WRITE) {
         var actions = el('<div class="at-onb-actions"></div>');
-        actions.appendChild(UI.button({ label: 'Do catálogo', icon: 'list', variant: 'ghost', onClick: abrirCatalogo }));
-        actions.appendChild(UI.button({ label: 'Nova atividade', icon: 'plus', onClick: function () { openEditor(null); } }));
+        actions.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', onClick: abrirCatalogo }));
+        actions.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { openEditor(null); } }));
         var inb = UI.button({ label: 'Ver inativas', variant: 'ghost', icon: 'repeat', onClick: openInativas });
         actions.appendChild(inb);
         box.appendChild(actions);
@@ -941,8 +941,8 @@
 
       /* nova atividade */
       if (CAN_WRITE) {
-        right.appendChild(UI.button({ label: 'Do catálogo', icon: 'list', variant: 'ghost', onClick: abrirCatalogo }));
-        right.appendChild(UI.button({ label: 'Nova atividade', icon: 'plus', onClick: function () { openEditor(null); } }));
+        right.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', onClick: abrirCatalogo }));
+        right.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { openEditor(null); } }));
       }
 
       bar.appendChild(right);
@@ -1875,7 +1875,7 @@
       repaintExtras();
       var multiWrap = el('<div class="at-multibox"></div>');
       multiWrap.appendChild(todosChk); multiWrap.appendChild(extraHolder);
-      var multiField = UI.field({ label: 'Também aparece em (opcional)', control: multiWrap, hint: 'Multi-homing: a atividade surge em cada área marcada. O responsável continua sendo um só.' });
+      var multiField = UI.field({ label: 'Também aparece em (opcional)', control: multiWrap, hint: 'A mesma atividade aparece em cada área marcada. O responsável continua sendo um só.' });
       setorSelect.addEventListener('change', function () { repaintExtras(); });
 
       /* responsável (usuários ativos; fallback p/ auto-atribuição) */
@@ -1903,7 +1903,7 @@
         value: (editing && act.camada) ? act.camada : 'operacional',
         options: [{ value: 'socio', label: 'Sócio (gestão indireta)' }, { value: 'gestor', label: 'Gestor (gestão direta)' }, { value: 'operacional', label: 'Operacional (líder + assistente)' }]
       });
-      var camField = UI.field({ label: 'Camada', control: camSelect, hint: 'Organograma: define em qual lente (Sócio/Gestor/Operacional) a rotina aparece.' });
+      var camField = UI.field({ label: 'Camada', control: camSelect, hint: 'Quem acompanha essa rotina: Sócio, Gestor ou Operacional.' });
 
       /* F1-H · SUPERVISOR (padrão Jira/Asana: quem acompanha por cima do
          responsável). Campo NULLABLE + sugestão determinística subindo a
@@ -1974,7 +1974,7 @@
       var deslizState = editing ? !!act.deslizante : false;
       var grpUnico = el('<div class="at-grp"></div>');
       grpUnico.appendChild(UI.field({ label: 'Data', required: true, control: unInp, hint: unicoNonOwner ? 'Você não é o dono: mudar a data exige pedido (botão abaixo).' : 'Dia único desta tarefa.' }));
-      var deslizChk = UI.checkbox({ checked: deslizState, label: 'Deslizante (rola para Hoje até concluir)', onToggle: function (v) { deslizState = v; } });
+      var deslizChk = UI.checkbox({ checked: deslizState, label: 'Fica no Hoje todo dia até você concluir', onToggle: function (v) { deslizState = v; } });
       grpUnico.appendChild(UI.field({ label: 'Comportamento', control: deslizChk, hint: 'Se marcado, enquanto não concluída a ocorrência aparece sempre em Hoje.' }));
       if (unicoNonOwner) { grpUnico.appendChild(UI.button({ label: 'Solicitar nova data', variant: 'ghost', icon: 'calendar', onClick: function () { solicitarSerieModal(act); } })); }
 

@@ -21,7 +21,7 @@
 /* topbar desktop */
 .pf-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
 .pf-top-l{display:flex;flex-direction:column;gap:3px}
-.pf-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pf-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .pf-top-r{display:flex;align-items:center;gap:12px}
 
 /* header mobile */
@@ -29,7 +29,7 @@
 .pf-mhead-top{display:flex;align-items:center;gap:12px}
 .pf-back{width:34px;height:34px;border-radius:10px;background:var(--s2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none}
 .pf-back svg{width:18px;height:18px;color:var(--text)}
-.pf-mtitle{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.pf-mtitle{font-size:17px;font-weight:800;letter-spacing:-.02em;margin:0}
 
 /* segmented período */
 .pf-seg{display:inline-flex;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
@@ -44,7 +44,7 @@
 .pf-body{padding:18px 32px 32px}
 
 /* KPI cards (foco + scorecard) */
-.pf-focus{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:13px}
+.pf-focus{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:13px;margin-bottom:13px}/* R6/fix: era repeat(5) mas o código gera 4 cards -> coluna fantasma. auto-fit adapta a qualquer nº */
 .pf-score{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:22px}
 .pf-big,.pf-small{background:var(--s1);border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadowSoft)}
 .pf-big{padding:16px 16px 14px}
@@ -229,7 +229,7 @@
 
       <div class="pf-top">
         <div class="pf-top-l">
-          <div class="pf-h1">Inteligência</div>
+          <h1 class="pf-h1">Inteligência</h1>
         </div>
         <div class="pf-top-r">
           <div class="pf-seg">
@@ -244,7 +244,7 @@
       <div class="pf-mhead">
         <div class="pf-mhead-top">
           <div class="pf-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></div>
-          <div class="pf-mtitle">Inteligência</div>
+          <h1 class="pf-mtitle">Inteligência</h1>
         </div>
         <div class="pf-seg">
           <button class="pf-seg-b on" type="button" data-periodo="band">Atrasadas + 30d</button>
@@ -260,13 +260,7 @@
     </main>
   </div>
 
-  <div class="pf-tabbar">
-    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><span>Hoje</span></div>
-    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>Reuniões</span></div>
-    <div class="pf-fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></div>
-    <div class="pf-tab on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span>Inteligência</span></div>
-    <div class="pf-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 16 0"></path><path d="M4 11v3a8 8 0 0 0 16 0v-3"></path></svg><span>Perfil</span></div>
-  </div>
+  <!-- R6/fix: tab bar mock removida — era markup morto (5 <div> sem handler), só sobrevivia escondida por mnav.js com !important. A navegação mobile real é do mnav.js. -->
 
   <div class="pf-backdrop" id="pf-backdrop"></div>
   <div class="pf-pop" id="pf-pop"></div>
@@ -566,7 +560,7 @@
         info: { title: 'Aging médio das atrasadas', formula: 'média de (hoje − data efetiva) das atrasadas', dados: 'atrasadas: data efetiva', numeros: t.atrasadas ? ('soma de dias ÷ ' + t.atrasadas + ' = ' + fmtDias(m.agingMedio)) : 'sem atrasadas' } },
       { label: 'Reprogramação', value: m.reprogPct + '%', tone: m.reprogPct > 20 ? 'orange' : 'green',
         drill: function () { return DD.reprogramadas(); },
-        info: { title: 'Evasão de prazo (reprogramação)', formula: 'reprogramadas ÷ total de ocorrências × 100', dados: 'ocorrências: status reprogramada', numeros: t.reprogramadas + ' ÷ ' + t.ocorrencias + ' = ' + m.reprogPct + '%' } },
+        info: { title: 'Adiamento de prazo (reprogramação)', formula: 'De tudo que estava previsto, quanto foi adiado. reprogramadas ÷ total de ocorrências × 100', dados: 'ocorrências: status reprogramada', numeros: t.reprogramadas + ' ÷ ' + t.ocorrencias + ' = ' + m.reprogPct + '%' } },
       { label: 'Puladas', value: String(t.puladas), tone: t.puladas ? 'amber' : 'green',
         drill: function () { return DD.puladas(); },
         info: { title: 'Ocorrências puladas', formula: 'ocorrências com status = pulada', dados: 'ocorrências: override de status', numeros: t.puladas + ' pulada(s)' } },
@@ -854,6 +848,10 @@
         { tipo: 'sobrecarga',      label: 'Sobrecarga de pessoas' },
         { tipo: 'sem_dono',        label: 'Sem responsável' }
       ];
+      /* R6/fix13: a ação recomendada não pode nascer escondida. Abrir por padrão o
+         PRIMEIRO grupo vermelho (maior severidade); se nenhum for vermelho, o primeiro
+         grupo renderizado. O usuário abre o dia sabendo o que fazer, sem caçar. */
+      var jaAbriu = false, primeiroGrp = null, primeiroHd = null;
       PG_DEF.forEach(function (gd) {
         var arr = itens.filter(function (it) { return (it.pl && it.pl.tipo) === gd.tipo; });
         if (!arr.length) { return; }
@@ -874,7 +872,10 @@
         });
         grp.appendChild(hd); grp.appendChild(bd);
         list.appendChild(grp);
+        if (!primeiroGrp) { primeiroGrp = grp; primeiroHd = hd; }
+        if (!jaAbriu && pior === 'red') { grp.classList.add('open'); hd.setAttribute('aria-expanded', 'true'); jaAbriu = true; }
       });
+      if (!jaAbriu && primeiroGrp) { primeiroGrp.classList.add('open'); primeiroHd.setAttribute('aria-expanded', 'true'); }
       /* itens fora dos 4 tipos conhecidos (defensivo): mostram soltos, sem sumir */
       itens.filter(function (it) { return !PG_DEF.some(function (g) { return (it.pl && it.pl.tipo) === g.tipo; }); })
         .forEach(function (it) { list.appendChild(planoRow(it)); });
@@ -1208,7 +1209,7 @@
     h.appendChild(infoBtn({
       title: 'Planos de ação vivos',
       formula: '% do plano = média, entre as atividades vinculadas COM previstas, de (concluídas ÷ previstas até hoje) das ocorrências da janela. Status derivado (nunca gravado): Concluído (100%) · Vencido (prazo < hoje) · Em risco (faltam ≤ 5 dias e < 70%) · No prazo · Coletando (sem previstas ainda). Atividade sem ocorrência na janela fica fora do % e é sinalizada.',
-      dados: 'coleção planos_acao (ativo = true) + as MESMAS ocorrências do board desta tela',
+      dados: 'os planos de ação ativos + as MESMAS ocorrências do board desta tela',
       numeros: 'janela ' + (m && m.janela ? m.janela.jIni + ' a ' + m.janela.jFim : '—')
     }));
     card.appendChild(h);
@@ -1266,7 +1267,7 @@
                   }).then(function () {
                     logPlano('arquivar_plano', p.id, { ativo: true }, { ativo: false });
                     close(); carregar();
-                  }).catch(function (e) { alert((e && e.message) || 'Não consegui arquivar.'); });
+                  }).catch(function (e) { if (window.console && console.error) { console.error('[inteligencia] falha ao arquivar plano:', e); } alert('Não consegui arquivar agora. Verifique a conexão e tente de novo.'); });
                 } })];
             }
           });
@@ -1276,7 +1277,8 @@
     }).catch(function (e) {
       if (meu !== PLANO_TOKEN) { return; }
       list.innerHTML = '';
-      list.appendChild(el('<div class="pf-plano-act">Não consegui ler os planos (' + ((e && e.message) || 'erro') + '). Publique as regras novas (planos_acao).</div>'));
+      if (window.console && console.error) { console.error('[inteligencia] falha ao ler planos_acao:', e); }
+      list.appendChild(el('<div class="pf-plano-act">Não consegui carregar os planos de ação agora. Verifique a conexão e tente de novo — se continuar, avise o gestor.</div>'));
     });
     return card;
   }

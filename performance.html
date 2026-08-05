@@ -19,10 +19,10 @@
 .pf-app>.ui-side{position:sticky;top:0;height:100vh}
 .pf-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .pf-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.pf-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.pf-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .pf-top-r{display:flex;align-items:center;gap:12px}
 .pf-mhead{display:none;flex-direction:column;gap:12px;padding:14px 16px;background:var(--s1);border-bottom:1px solid var(--border)}
-.pf-mtitle{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.pf-mtitle{font-size:17px;font-weight:800;letter-spacing:-.02em;margin:0}
 .pf-seg{display:inline-flex;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
 .pf-seg-b{appearance:none;border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--muted);padding:7px 14px;border-radius:7px;cursor:pointer}
 .pf-seg-b.on{background:var(--cta);color:var(--ctaText)}
@@ -171,7 +171,7 @@
     <main class="pf-main">
 
       <div class="pf-top">
-        <div class="pf-h1">Performance</div>
+        <h1 class="pf-h1">Performance</h1>
         <div class="pf-top-r">
           <div class="pf-seg">
             <button class="pf-seg-b on" type="button" data-periodo="band">Atrasadas + 30d</button>
@@ -183,7 +183,7 @@
       </div>
 
       <div class="pf-mhead">
-        <div class="pf-mtitle">Performance</div>
+        <h1 class="pf-mtitle">Performance</h1>
         <div class="pf-seg">
           <button class="pf-seg-b on" type="button" data-periodo="band">Atrasadas + 30d</button>
           <button class="pf-seg-b" type="button" data-periodo="semana">Semana</button>
@@ -192,7 +192,7 @@
       </div>
 
       <div class="pf-stamp" id="pf-stamp">Desempenho por pessoa, calculado das ocorrências reais.</div>
-      <div class="pf-banner"><span class="dot"></span>Sem medição retroativa — os indicadores nascem do uso: ocorrências e atividade_log registrados a partir da adoção do sistema.</div>
+      <div class="pf-banner"><span class="dot"></span>Sem medição retroativa — os indicadores nascem do uso: ocorrências e registros de atividade a partir da adoção do sistema.</div>
 
       <div class="pf-body" id="pf-body"></div>
 
@@ -404,7 +404,8 @@
           concluidas:    { r: 'Concluídas',                 f: function (o) { return o.status === 'concluida'; } },
           ciclo:         { r: 'Concluídas com par medido',  f: function (o) { return o.status === 'concluida' && o.ov && o.ov.iniciadaEm && o.ov.concluidaEm; } },
           reprogramadas: { r: 'Reprogramadas',              f: function (o) { return o.status === 'reprogramada'; } },
-          atrasadas:     { r: 'Atrasadas',                  f: function (o) { return o.atrasada; } }
+          atrasadas:     { r: 'Atrasadas',                  f: function (o) { return o.atrasada; } },
+          todas:         { r: 'Todas as ocorrências (base do Score)', f: function () { return true; } }
         };
         var atual = null;
         function aplicar(chave, cardEl) {
@@ -427,7 +428,7 @@
           }
           return d;
         }
-        grid.appendChild(pm('Score', p.score == null ? (p.coletando ? '— coletando' : '—') : p.score, p.score == null ? (p.coletando ? 'nada venceu ainda — a medição começa quando a primeira rotina vence' : 'sem previstas na janela') : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC));
+        grid.appendChild(pm('Score', p.score == null ? (p.coletando ? '— coletando' : '—') : p.score, p.score == null ? (p.coletando ? 'nada venceu ainda — a medição começa quando a primeira rotina vence' : 'sem previstas na janela') : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC, p.score == null ? null : 'todas'));/* R6/fix11: Score agora clica -> lista a base do cálculo (era a única métrica sem drill) */
         grid.appendChild(pm('Aderência', fmtPct(p.ader), p.concluidasAteHoje + ' ÷ ' + p.previstas + ' previstas até hoje', 'previstas'));
         grid.appendChild(pm('No prazo', fmtPct(p.pctNoPrazo), p.noPrazo + ' de ' + p.concluidasTotal + ' concluída(s), por dia civil local', 'concluidas'));
         grid.appendChild(pm('Ciclo', fmtDias(p.cicloDias), p.pares ? p.pares + ' par(es) iniciada→concluída' : 'sem par iniciada/concluída — não inventa', 'ciclo'));
@@ -439,7 +440,7 @@
         box.appendChild(el('<div class="pf-acoes-t">Ocorrências da pessoa — clique numa métrica acima para trocar o recorte</div>'));
         box.appendChild(ddWrap);
         aplicar('abertas', null);            /* recorte inicial: o mais acionável */
-        box.appendChild(el('<div class="pf-acoes-t">Últimas ações (atividade_log)</div>'));
+        box.appendChild(el('<div class="pf-acoes-t">Últimas ações</div>'));
         if (!p.uid) {
           box.appendChild(el('<div class="pf-acoes-note">Sem pessoa vinculada — atribua um responsável às atividades.</div>'));
         } else {

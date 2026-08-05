@@ -18,7 +18,7 @@
 .gl-app>.ui-side{position:sticky;top:0;height:100vh}
 .gl-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .gl-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.gl-h1{font-size:21px;font-weight:800;letter-spacing:-.02em}
+.gl-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .gl-body{padding:18px 32px 40px;max-width:860px}
 .gl-intro{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px}
 .gl-search{width:100%;margin-bottom:14px}
@@ -43,7 +43,7 @@
 
   <div class="gl-app" id="app">
     <main class="gl-main">
-      <div class="gl-top"><div class="gl-h1">Glossário</div></div>
+      <div class="gl-top"><h1 class="gl-h1">Glossário</h1></div>
       <div class="gl-body" id="gl-body"></div>
     </main>
   </div>
@@ -69,6 +69,17 @@
       ['SOC — Sócios', 'Os donos do negócio: as rotinas de prestação de contas e decisão que sobem do gestor para os sócios.'],
       ['Subsetor', 'Uma divisão dentro de um setor-raiz (ex.: FIN dentro da SEC). Tem sigla própria e permite dar a um líder o acesso a só uma fatia do setor.'],
       ['SIGLA', 'Código curto e ESTÁVEL de cada setor ou subsetor (ex.: PED, FIN). É por ela que o sistema liga atividades, eventos e indicadores ao setor — por isso mudar a sigla de um setor em uso é perigoso.']
+    ]],
+    ['Siglas da operação (situação do aluno) — ⚠ definição oficial PENDENTE', [
+      ['⚠ Leia antes', 'Estas siglas vêm dos manuais dos setores e do relatório "Situação do Aluno por Período Analítico" (sistema da franqueadora) — NÃO nasceram no GERA. O que está escrito abaixo é só o que dá para AFIRMAR com segurança: o que o manual manda fazer com cada sigla e como uma vira a outra. O significado das LETRAS ainda não foi definido oficialmente por ninguém — e o GERA não inventa significado. Enquanto estiver assim, cada verbete abaixo diz "letras: PENDENTE". Quem fecha a definição: a Gestão (GES), com a Central de Relacionamento (CRA).'],
+      ['NC — letras: PENDENTE', 'O que se sabe pelo manual: é o primeiro estado de alerta do aluno, ligado à 1ª parcela e a turmas que iniciam na penúltima semana do mês. TEM PRAZO: se não for revertido, VIRA CAC. A reversão é feita pela Central de Relacionamento JUNTO com o Pedagógico — não é decisão de um setor só. Aparece no relatório Analítico.'],
+      ['CAC — letras: PENDENTE', 'O que se sabe pelo manual: é o estado SEGUINTE ao NC que não foi revertido a tempo. Ou seja, chegar em CAC já é a falha do prazo anterior. Aparece no relatório Analítico junto com LFI e NC — os três são o bloco que o manual manda conferir TODO DIA.'],
+      ['LFI — letras: PENDENTE', 'O que se sabe pelo manual: é o estado que se resolve por ACORDO de parcelas. Duas regras duras: o acordo tem de receber o TOTAL dentro do próprio mês da negociação, e tem de ser fechado até o penúltimo dia. TEM PRAZO: parcela que escapa do mês faz o aluno VIRAR MT no dia seguinte. Aparece no relatório Analítico.'],
+      ['MT — letras: PENDENTE', 'O que se sabe pelo manual: é o estado SEGUINTE ao LFI cujo acordo não foi recebido por inteiro dentro do mês — vira MT no dia seguinte. Aparece no relatório Analítico como "LFI/MT".'],
+      ['LFR — letras: PENDENTE', 'O que se sabe pelo manual: é o estado ligado a FALTAS, não a dinheiro. A prevenção é na 2ª FALTA — é essa a hora de negociar, e é isso que o manual chama de "prevenção LFR". Depende de as faltas estarem lançadas em dia: falta não lançada é LFR que ninguém enxerga.'],
+      ['LAC — letras: PENDENTE', 'O que se sabe pelo manual: aluno em LAC precisa ser REGULARIZADO em até 7 DIAS. Passou disso, o manual trata como perda.'],
+      ['Situação do Aluno por Período (Analítico)', 'O relatório da franqueadora onde essas siglas aparecem. O manual manda VERIFICAR TODO DIA — é dessa verificação diária que saem os riscos de LFI/NC/CAC "não resolvidos". Atenção: o relatório é de outro sistema; o GERA acompanha se a rotina de olhar foi FEITA, e não o número de alunos em cada situação (isso é o Sistema B).'],
+      ['Por que o GERA cobra a ROTINA e não o número', 'Todas as siglas acima são RESULTADO (quantos alunos estão em cada situação). O GERA é o sistema da ATIVIDADE: ele cobra a verificação diária, o acordo fechado no prazo, a reversão registrada com o Pedagógico. O número de alunos por situação pertence ao Sistema B. Por isso você vê "dias sem a verificação registrada" e nunca "taxa de NC do mês".']
     ]],
     ['Termos do dia a dia', [
       ['Atividade', 'Uma tarefa cadastrada no sistema. Pode acontecer uma vez só (única) ou se repetir (recorrente).'],

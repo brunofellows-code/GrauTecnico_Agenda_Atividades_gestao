@@ -43,8 +43,14 @@
   /* Fase 1 RBAC — nav visível por PERFIL (papel novo). Rótulos = data-nav (iguais
      ao LIVE). 'gestor' NÃO entra no mapa => vê tudo. Recorte é por EXIBIÇÃO
      (Caminho C): a borda de escrita real fica nas Regras do Firestore. */
+  /* 'Riscos' liberado ao lider: no Modelo das Três Linhas (IIA, 2020) a PRIMEIRA LINHA
+     — a gestão operacional — É a dona do risco e de quem executa a mitigação. Esconder a
+     matriz de quem responde por ela é o oposto do modelo, e aqui era contradição interna:
+     o planejamento já sugere ao líder os riscos do setor dele, então o líder já lê esse
+     conteúdo — só não conseguia chegar à matriz pelo menu. 'usuario' segue fora: não é
+     dono de risco (a tela é leitura da matriz do manual; a borda real fica nas Regras). */
   var NAV_BY_PERFIL = {
-    lider:   { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Glossário': 1 },
+    lider:   { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Riscos': 1, 'Glossário': 1 },
     usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Eventos': 1, 'Glossário': 1 }
   };
 

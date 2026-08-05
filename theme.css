@@ -155,3 +155,73 @@ body {
   --easeSwift: cubic-bezier(.22,.8,.32,1); /* saída rápida, chegada macia */
   --shadowSoft: 0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.06);
 }
+
+/* ============================================================
+   --scrim · véu por trás de diálogo/gaveta (append)
+   No escuro o véu escurece o fundo. No CLARO, véu quase preto é a
+   escolha errada (o salto de luminância destoa da superfície
+   branca): usa-se ardósia com menos opacidade, que rebaixa o
+   fundo sem apagá-lo. Uso: background: var(--scrim).
+   ============================================================ */
+:root,
+[data-theme="dark"]  { --scrim: rgba(2,6,15,.62); }
+[data-theme="light"] { --scrim: rgba(15,23,42,.38); }
+
+/* ============================================================
+   TEXTO SOBRE COR DE SEMÁFORO (append)
+   --onBrand (#06210A) só alcança ~3,5:1 sobre --red no tema claro:
+   serve para número grande (≥18,66px = limiar 3:1 da WCAG 1.4.3),
+   NÃO para rótulo pequeno. Estes tokens são o par legível de cada
+   cor de banda em texto normal (limiar 4,5:1), tema a tema.
+   Uso: background:var(--red); color:var(--onRed).
+   Contrastes medidos: escuro 4,5–8,4:1 · claro 4,8–5,4:1.
+   ============================================================ */
+:root,
+[data-theme="dark"] {
+  --onRed:    #0B1220;
+  --onOrange: #0B1220;
+  --onAmber:  #0B1220;
+  --onGreen:  #0B1220;
+}
+[data-theme="light"] {
+  --onRed:    #FFFFFF; /* escuro sobre #DC2626 não chega a 4,5:1; branco dá 4,83:1 */
+  --onOrange: #0E1726;
+  --onAmber:  #0E1726;
+  --onGreen:  #0E1726;
+}
+
+/* ============================================================
+   --shadowPill · relevo do botão de segmento selecionado (append)
+   --shadowSoft (5-6% de opacidade) foi desenhado para o tema CLARO e
+   some no escuro. O seletor "Hoje/Semana" precisa de relevo visível
+   nos dois temas, senão a opção ativa deixa de parecer ativa.
+   ============================================================ */
+:root,
+[data-theme="dark"]  { --shadowPill: 0 1px 2px rgba(0,0,0,.45); }
+[data-theme="light"] { --shadowPill: 0 1px 2px rgba(2,6,23,.18); }
+
+/* ============================================================
+   --shadowInk · COR da sombra de camada flutuante (append)
+   FAB e gaveta mobile precisam de geometrias de sombra diferentes
+   (uma projeta para baixo, a outra para o lado), então não cabe um
+   token de sombra pronta: o que muda por tema é a COR. Uso:
+   box-shadow: 0 10px 26px var(--shadowInk).
+   No claro, preto a 35% é pesado demais sobre superfície branca.
+   ============================================================ */
+:root,
+[data-theme="dark"]  { --shadowInk: rgba(0,0,0,.35); }
+[data-theme="light"] { --shadowInk: rgba(2,6,23,.16); }
+
+/* ============================================================
+   Tokens de TEXTO sobre chip/superfície (append · 03/08)
+   --bandaAlta/--bandaCritica: a cor da BANDA de risco quando usada
+   como TEXTO (badge de 10,5px). --orange e --red foram calibrados
+   para preenchimento, não para texto: sobre --chipBg do tema claro
+   davam 3,14:1 e 4,27:1, reprovando WCAG 1.4.3 justamente no
+   elemento que comunica severidade.
+   --muted2Text: --muted2 (#64748B) dá 3,58:1 sobre --s2 no escuro.
+   Serve de borda/ícone, não de texto.
+   ============================================================ */
+:root,
+[data-theme="dark"]  { --bandaAlta:#F97316; --bandaCritica:#EF4444; --muted2Text:#8C9AAE; }
+[data-theme="light"] { --bandaAlta:#9A3412; --bandaCritica:#B91C1C; --muted2Text:#5A6678; }

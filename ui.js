@@ -139,6 +139,12 @@
     var head = [h('span', { class: 'dot' })];
     if (compact) {
       if (o.sub != null) { head.push(h('span', { class: 'sub' }, o.sub)); }
+    } else if (typeof o.onInfo === 'function') {
+      /* R7·B3.10 (aditivo, retrocompatível): com onInfo o "i" vira BOTÃO real
+         (era <span> decorativo sem handler). Sem onInfo, nada muda. */
+      var infoBtn = h('button', { class: 'info', type: 'button', 'aria-label': 'Como "' + o.label + '" é calculado' }, icon('info', 14));
+      infoBtn.addEventListener('click', function (ev) { ev.stopPropagation(); o.onInfo(); });
+      head.push(infoBtn);
     } else if (o.info !== false) {
       head.push(h('span', { class: 'info' }, icon('info', 14)));
     }
@@ -149,7 +155,19 @@
       h('div', { class: 'label' }, o.label)
     ];
     if (!compact && o.sub != null) { body.push(h('div', { class: 'sub' }, o.sub)); }
-    return h('div', { class: 'ui-kpi' + (compact ? ' compact' : ''), style: styleVars }, body);
+    var card = h('div', { class: 'ui-kpi' + (compact ? ' compact' : ''), style: styleVars }, body);
+    if (typeof o.onClick === 'function') {
+      /* R7·B3.10 (aditivo): onClick = drill-down — o card vira botão de
+         verdade (teclado incluso). Sem onClick, segue estático. */
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', function () { o.onClick(); });
+      card.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') { ev.preventDefault(); o.onClick(); }
+      });
+    }
+    return card;
   };
 
   /* ---------- 3) ProgressBar ---------- */
@@ -203,7 +221,23 @@
         box.innerHTML = '';
         if (checked) { box.appendChild(icon('check', 12)); }
         if (label) { label.classList.toggle('done', checked); }
-        o.onToggle(checked);
+        /* R7·B1.3 (aditivo, retrocompatível): o check pinta OTIMISTA, mas não
+           pode mentir — se onToggle devolver false, uma Promise rejeitada ou
+           uma Promise resolvida com false (gravação falhou/barrada), o visual
+           REVERTE (optimistic-UI do Linear). Callers antigos devolvem
+           undefined: nada muda. */
+        var reverte = function () {
+          checked = !checked;
+          box.classList.toggle('on', checked);
+          box.innerHTML = '';
+          if (checked) { box.appendChild(icon('check', 12)); }
+          if (label) { label.classList.toggle('done', checked); }
+        };
+        var rev = o.onToggle(checked);
+        if (rev === false) { reverte(); }
+        else if (rev && typeof rev.then === 'function') {
+          rev.then(function (okv) { if (okv === false) { reverte(); } }, reverte);
+        }
       });
     }
     return wrap;

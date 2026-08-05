@@ -447,7 +447,7 @@
 
   /* ============================================================
      N2 · SNAPSHOTS DIÁRIOS — coleção kpi_snapshots (1 doc/dia,
-     id = YYYY-MM-DD; campo `data` duplica o id de propósito para
+     id = YYYY-MM-DD; campo 'data' duplica o id de propósito para
      permitir where('data','>=',X)+orderBy('data')+limit sem range
      em documentId). Acoplamento por SIGLA (Princípio 18).
      ============================================================ */
@@ -575,13 +575,13 @@
     return { pessoas: pessoas, semResp: semResp, hoje: hoje, periodo: ctx.periodo, janela: ctx.janela, setores: setores };
   };
 
-  /* Leitura da tendência: últimos 20 dias (where em `data`, mesmo
+  /* Leitura da tendência: últimos 20 dias (where em 'data', mesmo
      campo do orderBy → índice simples, sem índice composto).
      Falha (ex.: regras ainda não publicadas) degrada para [] —
      a tela mostra "coletando 0/7" e segue viva. */
   /* N3: últimas ações — UMA query global (orderBy ts desc + limit 200),
      agrupada por uid no cliente. Evita o índice composto (uid+ts) que a
-     forma where(uid)+orderBy(ts) exigiria criar no Console. Campo `ts`
+     forma where(uid)+orderBy(ts) exigiria criar no Console. Campo 'ts'
      CONFERIDO no atividade_log real (Date.now() ms). Falha → []. */
   K.lerLogRecente = function () {
     return fb().then(function (c) {
@@ -617,9 +617,9 @@
 
   /* Usuários visíveis no picker de responsável, por papel.
      gestor  -> todos os ativos.
-     líder   -> quem tem `setor` (lotação) dentro do escopo expandido
+     líder   -> quem tem 'setor' (lotação) dentro do escopo expandido
                 (raiz liderada + subsetores filhos) + ele mesmo.
-                Usuário sem `setor` definido fica FORA do picker do líder
+                Usuário sem 'setor' definido fica FORA do picker do líder
                 (não dá para provar o escopo) — exceto o próprio líder.
      usuario -> ninguém (a tela nem abre o modal; fail-safe).       */
   K.usuariosNoEscopo = function (usuarios, user, setores) {
@@ -704,7 +704,7 @@
   var R = window.GrautRecorrencia;
 
   /* Classifica m.porSetor para a PAUTA honesta (F1-E · 0.1):
-       morta     -> sigla que não existe ATIVA em `setores` (dado órfão);
+       morta     -> sigla que não existe ATIVA em 'setores' (dado órfão);
        coletando -> setor ativo com previstas na janela mas NADA vencido
                     ainda (prevVencidas === 0) — medir amanhã, não punir hoje;
        abaixo    -> setor ativo, com previsto vencido, aderência < banda.
@@ -799,7 +799,11 @@
          concluida sem concluidaEm               -> 'feita'
          aberta   + effDate < hoje               -> 'vencida'
          senão                                   -> 'aberta'
-       com atividadeId e SEM occ (fora da janela) -> 'aberta' (declarado). */
+       com atividadeId e SEM occ (fora da janela) -> 'sem_janela'
+         (R7·B1.4: era 'aberta' — a decisão antiga voltava ETERNAMENTE nas
+         pendências, travava o encerramento e inflava o placar. Sem dado,
+         o status é INDISPONÍVEL, nunca "em aberto"; o projetos.html ainda
+         tenta resolver pela varredura de antigas — OLD_OCC). */
   K.statusDecisao = function (dec, occ, hoje) {
     if (!dec) { return { chave: 'aberta', rotulo: 'em aberto' }; }
     if (!dec.atividadeId) {
@@ -807,7 +811,7 @@
         ? { chave: 'resolvida', rotulo: 'resolvida na reunião' }
         : { chave: 'aberta', rotulo: 'em aberto' };
     }
-    if (!occ) { return { chave: 'aberta', rotulo: 'em aberto' }; }
+    if (!occ) { return { chave: 'sem_janela', rotulo: 'status indisponível (fora da janela)' }; }
     if (occ.status === 'concluida') {
       var ov = occ.ov || {};
       if (!ov.concluidaEm) { return { chave: 'feita', rotulo: 'feita' }; }
@@ -1334,7 +1338,7 @@
     var lista = Array.isArray(decisoes) ? decisoes : [];
     if (!lista.length) { return null; }
     var p = { total: 0, realizadas: 0, noPrazo: 0, comAtraso: 0,
-      andamento: 0, planejadas: 0, vencidas: 0, venceHoje: 0 };
+      andamento: 0, planejadas: 0, vencidas: 0, venceHoje: 0, indisponiveis: 0 };
     lista.forEach(function (d) {
       p.total++;
       var occ = getOcc ? getOcc(d && d.atividadeId) : null;
@@ -1343,6 +1347,7 @@
       else if (st.chave === 'atraso') { p.realizadas++; p.comAtraso++; }
       else if (st.chave === 'feita' || st.chave === 'resolvida') { p.realizadas++; }
       else if (st.chave === 'vencida') { p.vencidas++; }
+      else if (st.chave === 'sem_janela') { p.indisponiveis++; } /* R7·B1.4: não conta como planejada */
       else if (occ && occ.status === 'em_andamento') { p.andamento++; }
       else { p.planejadas++; }
       if (occ && occ.effDate === hoje && occ.status !== 'concluida') { p.venceHoje++; }
@@ -1449,13 +1454,20 @@
 
 /* ============================================================
    R4 · BLOCO 3 — PLANEJAMENTO DO SETOR (matemática pura)
-   O 5W2H mensal do líder (RESUMO §4). Funções DERIVADAS, nunca
-   gravadas, validadas à mão no harness_r4.js (+ harness_r5.js):
-     planejamentoPrazo  — fase D-5/D-3/D-0 da entrega (dia 25).
+   O plano mensal do líder (RESUMO §4) — O quê · Como · Quem · Quando ·
+   Quanto. NÃO é 5W2H: a tela nunca coletou ONDE nem POR QUÊ, e o nome
+   foi corrigido na R8 (decisão travada: corrigir o rótulo, não
+   acrescentar campos). Funções DERIVADAS, nunca gravadas, validadas à
+   mão no harness_r4.js (+ harness_r5.js):
+     planejamentoPrazo  — fase D-5/D-3/D-0 da entrega (dia 25) e
+                          entregue × entregue com atraso (R8).
      planejamentoItemTravado — alçada R$200 pelo custo PREVISTO (R5).
      planejamentoNota   — nota 50/30/20 do mês (ranking atenção).
      planejamentoStatus — rascunho/submetido/aprovado (R5, derivado).
-     paretoMotivos      — Pareto de motivos de não-realização (R5).
+     paretoMotivos      — contagem de motivos de não-realização, do mais
+                          frequente ao menos (o nome da função ficou por
+                          contrato de API; a TELA não chama mais isto de
+                          "Pareto", porque não há curva acumulada de 80%).
    ============================================================ */
 (function () {
   'use strict';
@@ -1474,17 +1486,37 @@
          hoje >= 25 sem plano -> 'd0'  (flag de não-conformidade)
        NUNCA bloqueia (regra travada): entregar atrasado é sempre
        possível; a fase é só farol/registro.
+     item 2 (27/07) — ENTREGA ATRASADA NÃO PODE PARECER ENTREGA NO PRAZO.
+       Antes, qualquer entregueEm devolvia fase 'entregue' e diasParaPrazo 0:
+       o plano entregue no dia 30 (5 dias depois do vencimento) aparecia em
+       VERDE com "✓ entregue", e o "i" dizia "0 dias para o prazo" — número
+       inventado, porque nenhuma conta havia sido feita. Agora a data de
+       entrega é comparada com o dia 25 de verdade:
+         entregue <= dia 25 -> 'entregue'          (diasParaPrazo >= 0)
+         entregue >  dia 25 -> 'entregueAtrasado'  (diasParaPrazo < 0)
+       diasParaPrazo continua com o MESMO sinal do caminho não-entregue
+       (positivo = folga, negativo = atraso), então a tela lê os dois casos
+       com a mesma régua.
      @param comp 'YYYY-MM' (competência do plano)
      @param hojeISO 'YYYY-MM-DD' (dia civil local — Salvador)
      @param entregueEm timestamp|null
-     @returns { deadline:'YYYY-MM-DD', fase:'entregue'|'ok'|'d5'|'d3'|'d0', diasParaPrazo:number } */
+     @returns { deadline:'YYYY-MM-DD', fase:'entregue'|'entregueAtrasado'|'ok'|'d5'|'d3'|'d0', diasParaPrazo:number } */
   K.planejamentoPrazo = function (comp, hojeISO, entregueEm) {
     var y = parseInt(comp.slice(0, 4), 10);
     var m = parseInt(comp.slice(5, 7), 10);
     var py = m === 1 ? y - 1 : y;
     var pm = m === 1 ? 12 : m - 1;
     var deadline = py + '-' + pad2(pm) + '-25';
-    if (entregueEm) { return { deadline: deadline, fase: 'entregue', diasParaPrazo: 0 }; }
+    if (entregueEm) {
+      /* dia CIVIL local da entrega (o timestamp é instante; o prazo é dia).
+         toISOString() daria UTC e jogaria a entrega das 22h para o dia
+         seguinte — a entrega no dia 25 às 22h viraria atraso de 1 dia. */
+      var de = new Date(entregueEm);
+      var dEnt = Date.UTC(de.getFullYear(), de.getMonth(), de.getDate());
+      var dLim = Date.UTC(py, pm - 1, 25);
+      var dd = Math.round((dLim - dEnt) / 86400000);
+      return { deadline: deadline, fase: dd >= 0 ? 'entregue' : 'entregueAtrasado', diasParaPrazo: dd };
+    }
     /* dias civis: diferença simples via UTC (datas ISO puras) */
     var d1 = Date.UTC(parseInt(hojeISO.slice(0, 4), 10), parseInt(hojeISO.slice(5, 7), 10) - 1, parseInt(hojeISO.slice(8, 10), 10));
     var d2 = Date.UTC(py, pm - 1, 25);
@@ -1503,9 +1535,13 @@
   /* R4-EXT (arbitragem 1): acima da alçada assinam os DOIS níveis ACIMA de quem
      cria — gestor E sócio (RESUMO §4/O4; padrão de mercado: requisitante nunca
      se auto-aprova — four-eyes). aprovLider saiu do modelo; sócio = gestor com
-     socio:true no cadastro. Mesma pessoa acumulando papéis pode dar as duas
-     assinaturas (o objetivo travado é FORÇAR LEITURA, não anti-fraude interna);
-     four-eyes estrito (uids distintos) é calibragem futura de 1 linha. */
+     socio:true no cadastro.
+     R8 — o four-eyes DEIXOU DE SER PROMESSA: o item grava criadoPor e a tela
+     esconde o "aprovar" para o autor (planejamento.html · cabeAprovar). Antes
+     ficava escrito aqui que "mesma pessoa acumulando papéis pode dar as duas
+     assinaturas" — o que, na prática, permitia ao gestor-sócio criar um item de
+     R$ 5.000 e assiná-lo sozinho em 2 cliques. Esta função só mede o VALOR e as
+     duas assinaturas; QUEM pode assinar é decidido em cabeAprovar. */
   /* R5-B2: a alçada trava pelo custo PREVISTO (aprovação antecede a
      execução — padrão baseline do MS Project / planned cost do Wrike).
      valorPrevistoCentavos é o campo novo; valorCentavos é o legado da R4
@@ -1571,7 +1607,7 @@
      persistido (princípio: status calculado no cliente). O trabalho NUNCA
      trava por estado (padrão Workfront: "Pending Approval" é rótulo, o item
      segue editável):
-       rascunho  = ainda sem entregueEm (líder montando o 5W2H).
+       rascunho  = ainda sem entregueEm (líder montando o plano do mês).
        submetido = entregue, aguardando a CIÊNCIA de gestor E sócio no PLANO
                    (assinatura de leitura — não confundir com a alçada por
                    ITEM >R$200, que essa sim trava o item).

@@ -19,7 +19,7 @@
 .ev-app>.ui-side{position:sticky;top:0;height:100vh}
 .ev-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .ev-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
-.ev-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.ev-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin:0}
 .ev-top-r{display:flex;align-items:center;gap:12px}
 .ev-body{padding:18px 32px 32px}
 .ev-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
@@ -46,7 +46,7 @@
 .ev-chip-r{font-style:italic}
 .ev-more{font-size:9.5px;font-weight:800;color:var(--muted2);padding-left:2px}
 /* bottom sheet */
-.ev-sheetback{position:fixed;inset:0;z-index:48;background:rgba(2,6,23,.62);display:none}
+.ev-sheetback{position:fixed;inset:0;z-index:48;background:var(--scrim);display:none}
 .ev-sheetback.on{display:block}
 .ev-sheet{position:fixed;left:0;right:0;bottom:0;z-index:49;background:var(--s1);border:1px solid var(--border);border-bottom:0;border-radius:18px 18px 0 0;padding:16px 18px 22px;max-height:70vh;overflow-y:auto;transform:translateY(105%);transition:transform .22s ease}
 @media (prefers-reduced-motion: reduce){.ev-sheet{transition:none}}
@@ -99,7 +99,7 @@
   <div class="ev-app" id="app">
     <main class="ev-main">
       <div class="ev-top">
-        <div class="ev-h1"><span>Agenda de Eventos</span><span id="ev-info"></span></div>
+        <h1 class="ev-h1"><span>Agenda de Eventos</span><span id="ev-info"></span></h1>
         <div class="ev-top-r" id="ev-actions"></div>
       </div>
       <div class="ev-body" id="ev-body"></div>

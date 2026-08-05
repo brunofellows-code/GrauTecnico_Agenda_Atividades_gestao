@@ -24,61 +24,119 @@
 .ui-app>.ui-side{position:sticky;top:0;height:100vh}
 .pl-main{flex:1;min-width:0;padding:22px 26px 90px}
 .pl-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-.pl-title{font-size:19px;font-weight:800}
+.pl-title{font-size:19px;font-weight:800;margin:0}
 .pl-compnav{display:flex;align-items:center;gap:6px;margin-left:4px}
 .pl-compbtn{appearance:none;border:1px solid var(--border);background:var(--s2);color:var(--text);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
 .pl-comp{font-size:13px;font-weight:800;min-width:86px;text-align:center}
 .pl-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
-.pl-i{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:3px;display:inline-flex;align-items:center}
+.pl-i{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:3px;min-width:24px;min-height:24px;display:inline-flex;align-items:center;justify-content:center}
 .pl-i:hover{color:var(--text)}
-.pl-legenda{font-size:11px;color:var(--muted2);margin:-6px 0 14px}
+.pl-legenda{font-size:11px;color:var(--muted);margin:-6px 0 14px}
 .pl-eixo{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
 @media(max-width:860px){.pl-eixo{grid-template-columns:1fr}.pl-main{padding:16px 14px 110px}}
 .pl-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px}
 .pl-card-h{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .pl-card-t{font-size:13.5px;font-weight:800}
-.pl-count{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border-radius:20px;padding:2px 8px}
+.pl-count{font-size:11px;font-weight:800;color:var(--muted);background:var(--chipBg);border-radius:20px;padding:2px 8px}
 /* R6/design — herói: a tela responde a pergunta no topo (título = conclusão) */
 .pl-hero{display:flex;align-items:center;gap:16px;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:12px}
 .pl-hero-n{font-size:40px;font-weight:900;line-height:1;letter-spacing:-1px;white-space:nowrap}
-.pl-hero-den{font-size:18px;font-weight:800;color:var(--muted2)}
+.pl-hero-den{font-size:18px;font-weight:800;color:var(--muted2Text)}/* item 16: --muted2 como texto dá 3,58:1 no escuro */
 .pl-hero-t{font-size:15px;font-weight:800;line-height:1.3}
-.pl-hero-s{font-size:12px;color:var(--muted2);margin-top:3px}
+.pl-hero-s{font-size:12px;color:var(--muted);margin-top:3px}
 @media (max-width:480px){.pl-hero{flex-direction:column;align-items:flex-start;gap:8px}.pl-hero-n{font-size:32px}}
-.pl-empty{font-size:12px;color:var(--muted2);padding:4px 0}
+.pl-empty{font-size:12px;color:var(--muted);padding:4px 0}
 .pl-linha{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border)}
 .pl-linha:first-of-type{border-top:0}
 .pl-l-dot{width:7px;height:7px;border-radius:50%;flex:none}
 .pl-l-t{flex:1;min-width:0;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pl-l-m{font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap}
+.pl-l-m{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+.pl-l-det{font-size:11px;line-height:1.45;color:var(--muted);padding:0 0 7px 17px}
 .pl-badge{font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 8px;background:var(--chipBg);white-space:nowrap}
 .pl-srow{border-top:1px solid var(--border);padding:12px 2px}
 .pl-srow:first-of-type{border-top:0}
 .pl-shead{display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
 .pl-sname{font-size:13px;font-weight:800}
-.pl-smeta{font-size:11px;font-weight:700;color:var(--muted2)}
+.pl-smeta{font-size:11px;font-weight:700;color:var(--muted)}
+.pl-aceitas>summary{cursor:pointer;min-height:24px;display:flex;align-items:center;gap:4px;list-style:revert}
+.pl-aceitas>summary:focus-visible{outline:2px solid var(--greenText);outline-offset:2px;border-radius:4px}
+.pl-aceitas[open]>summary{margin-bottom:2px}
 .pl-nota{font-size:12px;font-weight:800;margin-left:auto;display:inline-flex;align-items:center;gap:4px}
 .pl-grade{margin-top:10px;overflow:auto}
 .pl-tb{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
-.pl-tb th{font-size:10.5px;font-weight:800;color:var(--muted2);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
+.pl-tb th{font-size:10.5px;font-weight:800;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.04em}
 .pl-tb td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
 .pl-tb tr:last-child td{border-bottom:0}
-.pl-acao{appearance:none;border:0;background:transparent;color:var(--doing);cursor:pointer;font:inherit;font-size:11px;font-weight:800;padding:2px 4px}
+.pl-acao{appearance:none;border:0;background:transparent;color:var(--doing);cursor:pointer;font:inherit;font-size:11px;font-weight:800;padding:4px 8px;min-height:24px}
 .pl-acao.red{color:var(--red)}
 .pl-acao.green{color:var(--green)}
+.pl-acao.muted{color:var(--muted2Text);font-weight:700}/* R6/fix16: ações secundárias sem peso de primária · item 16: --muted2 reprova contraste */
+.pl-acao-del{appearance:none;border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:14px;font-weight:700;padding:4px 8px;min-height:24px;margin-left:10px}
+.pl-acao-del:hover{color:var(--red)}/* destrutivo só acende no hover — não compete com "realizar" */
 .pl-foot{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
 .pl-state{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:34px 20px;text-align:center}
 .pl-state-t{font-size:14px;font-weight:800;margin-bottom:6px}
-.pl-state-s{font-size:12px;color:var(--muted2);margin-bottom:12px}
-.pl-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:10px;z-index:80;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.pl-state-s{font-size:12px;color:var(--muted);margin-bottom:12px}
+.pl-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:10px;z-index:80;box-shadow:var(--cardShadow)}
 .pl-toast.err{color:var(--red)}
-.pl-pop{position:fixed;z-index:70;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;max-width:340px;font-size:12px;display:none;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.pl-pop{position:fixed;z-index:70;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;max-width:340px;max-height:calc(100vh - 24px);overflow:auto;font-size:12px;display:none;box-shadow:var(--cardShadow)}
 .pl-pop.on{display:block}
-.pl-pop-k{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
+.pl-pop:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.pl-aviso{background:var(--s2);border:1px solid var(--amber);border-left-width:4px;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:var(--text);line-height:1.5}
+.pl-pop-fech{margin-top:12px;width:100%;min-height:32px;background:var(--s3);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer}
+.pl-pop-fech:hover{background:var(--s1)}
+.pl-pop-k{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
 .pl-pop-k:first-child{margin-top:0}
 .pl-pop-v{color:var(--text);font-weight:600;line-height:1.45}
 .pl-backdrop{position:fixed;inset:0;z-index:69;display:none}
 .pl-backdrop.on{display:block}
+/* R7·item 22 — sugeridos pelos manuais */
+.pl-sug{margin:2px 0 12px;display:flex;flex-direction:column;gap:6px}
+.pl-sug-h{display:flex;align-items:center;gap:8px}
+.pl-sug-l{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--s2)}
+.pl-sug-l .pl-badge{flex:none;margin-top:2px}
+.pl-sug-m{flex:1;min-width:0;font-size:13px;line-height:1.45}
+.pl-sug-l .pl-acao{flex:none}
+@media (max-width:640px){.pl-sug-l{flex-wrap:wrap}}
+/* R7·item 21 — grupos raiz → subsetores */
+.pl-gsubs{margin-left:16px;border-left:2px solid var(--border);padding-left:8px}
+.pl-ssub .pl-sname{font-weight:600}
+
+/* ============================================================
+   R8 — correções de acessibilidade, contraste e legibilidade
+   (tokens do theme.css; zero hex e zero rgba nesta tela)
+   ============================================================ */
+/* item 16 — .ui-fhint vem do components.css, que é APPEND-ONLY: --muted2 como
+   TEXTO dá 3,58:1 sobre o fundo do diálogo no tema escuro e reprova o 1.4.3.
+   Sobrescrito aqui, na própria tela, pelo token de texto legível. */
+.ui-fhint{color:var(--muted2Text)}
+/* item 20 — utilitário "só para leitor de tela" (padrão .sr-only) */
+.pl-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* item 19 — heading DE VERDADE sem mudar a aparência: o navegador acrescenta
+   margem, tamanho e peso ao h2/h3; aqui zeramos e devolvemos o valor da classe. */
+h2.pl-card-t,h2.pl-hero-t,h3.pl-sname{margin:0;font-size:inherit;font-weight:inherit}
+h2.pl-card-t{font-size:13.5px;font-weight:800}
+h2.pl-hero-t{font-size:15px;font-weight:800;line-height:1.3}
+h3.pl-sname{font-size:13px;font-weight:800}
+/* item 21 — a grade rola na horizontal: sem foco, quem usa só teclado nunca
+   alcança as últimas colunas (WCAG 2.1.1). Focável + contorno visível. */
+.pl-grade:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:8px}
+/* item 27 — célula de texto longo: 2 linhas + "ver tudo". O nowrap de .pl-l-m
+   empurrava 250 caracteres numa linha só e detonava a largura da grade. */
+.pl-cel-long{font-size:11px;font-weight:700;color:var(--muted);line-height:1.35;max-width:260px}
+.pl-cel-long .pl-clamp{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pl-vertudo{appearance:none;border:0;background:transparent;color:var(--doing);cursor:pointer;font:inherit;font-size:10.5px;font-weight:800;padding:2px 0;min-height:24px}
+/* item 14 — estouro de orçamento com TEXTO: cor sozinha reprova WCAG 1.4.1 e
+   o title não abre no toque nem no leitor de tela. */
+.pl-estouro{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:800;color:var(--amber);white-space:nowrap}
+/* item 6 — setor sem plano NENHUM entra no ranking, no topo e marcado */
+.pl-semplano{color:var(--bandaCritica);font-weight:800}
+/* item 28 — risco ACEITO é a decisão mais grave da tela: peso de título de cartão */
+.pl-aceitas>summary.pl-card-t{font-size:13.5px;font-weight:800;color:var(--text)}
+/* item 23 — quem pediu menos movimento não leva rolagem animada */
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto !important}
+}
 </style>
 </head>
 <body>
@@ -86,7 +144,7 @@
     <!-- sidebar via JS -->
     <main class="pl-main">
       <div class="pl-top">
-        <div class="pl-title" id="pl-title">Planejamento do Setor</div>
+        <h1 class="pl-title" id="pl-title">Plano do setor — O quê · Como · Quem · Quando · Quanto</h1>
         <div class="pl-compnav">
           <button class="pl-compbtn" id="pl-prev" type="button" aria-label="Mês anterior">‹</button>
           <div class="pl-comp" id="pl-comp">—</div>
@@ -101,9 +159,11 @@
   </div>
 
   <div class="pl-backdrop" id="pl-backdrop"></div>
-  <div class="pl-pop" id="pl-pop"></div>
+  <!-- item 22: o "i" é um diálogo de verdade — aria-modal + prisão de foco no JS -->
+  <div class="pl-pop" id="pl-pop" role="dialog" aria-modal="true" tabindex="-1"></div>
 
   <script src="ui.js"></script>
+  <script src="riscos-catalogo.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script type="module">
@@ -111,10 +171,14 @@
   'use strict';
 
   /* ============================================================
-     PLANEJAMENTO DO SETOR · Sistema A · Grau Técnico FSA
+     PLANO DO SETOR · Sistema A · Grau Técnico FSA
      R4 · BLOCO 3 — entidade nova (RESUMO §4, desenho travado R3/R4):
-       - 5W2H mensal do líder (O QUE / COMO / QUEM / QUANDO,
-         previsto × realizado) — grade estilo Excel.
+       - Plano mensal do líder — O quê · Como · Quem · Quando · Quanto
+         (4W+1H; previsto × realizado) — grade estilo Excel.
+         NOME CORRIGIDO NA R8: a tela nunca coletou Onde nem Por quê,
+         então chamá-la de "5W2H" era rótulo falso. Decisão travada:
+         NÃO acrescentar campos (o objetivo é reduzir o esforço de
+         preenchimento) — corrigir o NOME.
        - Entrega até o dia 25 do mês anterior (KPI.planejamentoPrazo:
          D-5 líder · D-3 gestão · D-0 flag — NUNCA bloqueia).
        - Visível a TODOS (line-of-sight público). Edição: gestor em
@@ -137,6 +201,53 @@
      dia civil local (R.hojeISO) · soft-remove de item (removido:true).
      ============================================================ */
 
+  /* ============================================================
+     item 13 · REDE DE SEGURANÇA DE DEPENDÊNCIA
+     ------------------------------------------------------------
+     recorrencia.js / kpi.js / ui.js / guard.js EXISTEM em produção. Mas se um
+     deles não chegar (rede caiu no meio do carregamento, cache corrompido,
+     deploy incompleto), a primeira chamada — R.hojeISO() — lança TypeError
+     DENTRO do Guard.onReady, ninguém pega, e a tela fica BRANCA e MUDA: o
+     líder acha que não tem plano, o gestor acha que ninguém entregou.
+     Aqui a falta vira um estado de erro legível que DIZ o que faltou.
+     ============================================================ */
+  var FALTOU = [];
+  if (!window.GrautRecorrencia) { FALTOU.push('recorrencia.js — calendário e dia civil'); }
+  if (!window.KPI) { FALTOU.push('kpi.js — prazo, nota e Pareto'); }
+  if (!window.UI) { FALTOU.push('ui.js — botões, campos e diálogos'); }
+  if (!window.Guard) { FALTOU.push('guard.js — login e perfil'); }
+  if (FALTOU.length) {
+    var alvoErr = document.getElementById('pl-body');
+    if (alvoErr) {
+      alvoErr.innerHTML = '';
+      var caixaErr = document.createElement('div');
+      caixaErr.className = 'pl-state';
+      caixaErr.setAttribute('role', 'alert');
+      var tErr = document.createElement('div');
+      tErr.className = 'pl-state-t';
+      tErr.textContent = 'Esta tela não carregou por inteiro';
+      caixaErr.appendChild(tErr);
+      var sErr = document.createElement('div');
+      sErr.className = 'pl-state-s';
+      sErr.textContent = 'Faltaram arquivos do sistema, então NADA aqui pode ser considerado correto — não use como base de decisão. Recarregue a página (Ctrl+F5). Se continuar, avise a gestão informando o que faltou:';
+      caixaErr.appendChild(sErr);
+      var lErr = document.createElement('ul');
+      lErr.style.textAlign = 'left';
+      lErr.style.margin = '10px auto 0';
+      lErr.style.maxWidth = '420px';
+      FALTOU.forEach(function (nome) {
+        var li = document.createElement('li');
+        li.className = 'pl-state-s';
+        li.style.marginBottom = '4px';
+        li.textContent = nome;
+        lErr.appendChild(li);
+      });
+      caixaErr.appendChild(lErr);
+      alvoErr.appendChild(caixaErr);
+    }
+    return; /* nada mais roda: sem estes arquivos toda conta desta tela seria mentira */
+  }
+
   var R = window.GrautRecorrencia;
   var USER = null;
 
@@ -152,41 +263,55 @@
   }
   function ferr(e) {
     var code = (e && e.code) || '';
-    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão. Confirme seu perfil e que as Regras do Firestore foram publicadas (bloco planejamentos).'), { code: code }); }
+    if (code === 'permission-denied') { return Object.assign(new Error('Você não tem permissão para ver ou alterar este planejamento. Confirme seu perfil com o gestor.'), { code: code }); }
     if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
-    return Object.assign(new Error((e && e.message) || 'Erro ao acessar o planejamento.'), { code: code });
+    return Object.assign(new Error('Não foi possível acessar o planejamento agora. Tente de novo em alguns instantes; se persistir, avise a gestão.'), { code: code });
   }
   function mapDocs(snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); }); return a; }
+
+  /* Teto de leitura: as consultas pedem SEMPRE 1 a mais que o teto. Se o extra vier, é
+     porque a tela está escondendo registro — e isso não pode acontecer em silêncio numa
+     tela de prestação de contas (a nota e o ranking sairiam errados sem ninguém saber). */
+  var AVISOS = [];
+  var TETO = { setores: 200, planejamentos: 100, usuarios: 300 };
+  function cortar(lista, chave, oQue) {
+    var teto = TETO[chave];
+    if (lista.length > teto) {
+      AVISOS.push('Esta tela mostra no máximo ' + teto + ' ' + oQue + ', e existem mais que isso. Os números abaixo estão INCOMPLETOS — avise a gestão antes de usar como base de decisão.');
+      return lista.slice(0, teto);
+    }
+    return lista;
+  }
 
   var Store = {
     listSetores: function () {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'setores'), f.where('ativo', '==', true), f.limit(200));
+        var q = f.query(f.collection(db, 'setores'), f.where('ativo', '==', true), f.limit(TETO.setores + 1));
         return f.getDocs(q).then(function (snap) {
           var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.sigla = o.sigla || d.id; a.push(o); });
           a.sort(function (x, y) { return (x.sigla || '').localeCompare(y.sigla || '', 'pt-BR'); });
-          return a;
+          return cortar(a, 'setores', 'setores');
         });
       }).catch(function (e) { throw ferr(e); });
     },
     listUsuariosAtivos: function () {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(300));
+        var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(TETO.usuarios + 1));
         return f.getDocs(q).then(function (snap) {
           var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)', email: u.email || '', perfil: u.perfil || '', setoresLiderados: Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [] }); });
           a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
-          return a;
+          return cortar(a, 'usuarios', 'pessoas');
         });
       }).catch(function () { return []; }); /* líder pode não listar — degrada p/ campo livre */
     },
     listPlanejamentos: function (comp) {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'planejamentos'), f.where('competencia', '==', comp), f.limit(100));
+        var q = f.query(f.collection(db, 'planejamentos'), f.where('competencia', '==', comp), f.limit(TETO.planejamentos + 1));
         return f.getDocs(q).then(mapDocs).then(function (a) {
-          return a.filter(function (p) { return p.ativo !== false; });
+          return cortar(a, 'planejamentos', 'planos por mês').filter(function (p) { return p.ativo !== false; });
         });
       }).catch(function (e) { throw ferr(e); });
     },
@@ -202,12 +327,37 @@
     },
     atualizarPlanejamento: function (id, patch, acao, antes) {
       return fb().then(function (c) {
-        var db = c.db, f = c.f;
-        var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+        var db = c.db, f = c.f, agora = Date.now();
+        var up = Object.assign({}, patch, { atualizadoEm: agora });
         return f.updateDoc(f.doc(db, 'planejamentos', id), up).then(function () {
           Store.log({ acao: acao || 'planejamento_editado', entidade: 'planejamento', refId: id, antes: antes || null, depois: patch });
+          return agora; /* quem chamou precisa guardar a versão nova (trava otimista) */
         });
       }).catch(function (e) { throw ferr(e); });
+    },
+    /* Trava otimista para as listas que são SOBRESCRITAS inteiras (itens[] e dispensas[]).
+       Sem ela, gestor e líder salvando no mesmo minuto faziam o último apagar o trabalho do
+       outro em silêncio. A transação relê o documento e só grava se ninguém mexeu desde que
+       esta tela carregou; se mexeu, nada é gravado e a pessoa é avisada. */
+    atualizarLista: function (id, campo, novaLista, versaoEsperada, acao, antes) {
+      return fb().then(function (c) {
+        var db = c.db, f = c.f, ref = f.doc(db, 'planejamentos', id), agora = Date.now();
+        return f.runTransaction(db, function (tx) {
+          return tx.get(ref).then(function (snap) {
+            if (!snap.exists()) { throw Object.assign(new Error('Este planejamento não existe mais. Atualize a página.'), { code: 'conflito' }); }
+            var atual = (snap.data() || {}).atualizadoEm;
+            if (versaoEsperada != null && atual != null && atual !== versaoEsperada) {
+              throw Object.assign(new Error('Outra pessoa salvou este plano enquanto você editava. NADA seu foi gravado. Atualize a página para ver a versão nova e refaça sua alteração.'), { code: 'conflito' });
+            }
+            var up = { atualizadoEm: agora }; up[campo] = novaLista;
+            tx.update(ref, up);
+          });
+        }).then(function () {
+          var depois = {}; depois[campo] = novaLista;
+          Store.log({ acao: acao || 'planejamento_editado', entidade: 'planejamento', refId: id, antes: antes || null, depois: depois });
+          return agora;
+        });
+      }).catch(function (e) { if (e && e.code === 'conflito') { throw e; } throw ferr(e); });
     },
     log: function (entry) {
       return fb().then(function (c) {
@@ -219,14 +369,43 @@
 
   /* ===================== helpers ===================== */
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  /* el() usa innerHTML: qualquer dado vindo do banco interpolado ali passa por aqui antes.
+     (Cuidado: a variável local 'esc' que aparece mais abaixo é ESCOPO do líder, não escape.) */
+  function escAttr(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+  /* item 19 — os títulos de cartão eram <div>: a página inteira tinha UMA heading
+     e o leitor de tela não conseguia pular de bloco em bloco. Agora são <h2>
+     (aparência preservada pelo CSS h2.pl-card-t). */
+  function tituloCartao(texto) { return txt('h2', 'pl-card-t', texto); }
+  /* item 29 — "1 realizado(s)" é errado em português. O herói já acertava; o
+     resto da tela escrevia "(s)" em 30+ lugares. Uma função, um padrão. */
+  function plural(n, sing, plur) { return n + ' ' + (Math.abs(Number(n)) === 1 ? sing : plur); }
+  /* item 3 — DIA CIVIL LOCAL. toISOString() é UTC: um item marcado às 22h do dia
+     03 em Salvador (UTC−3) virava 04 — a tela MOSTRAVA e ORDENAVA o dia errado.
+     Este helper devolve o dia como a pessoa viu no relógio dela. */
+  function isoLocal(ms) {
+    var d = new Date(ms), p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  }
   function toast(msg, kind) {
     var t = txt('div', 'pl-toast' + (kind === 'err' ? ' err' : ''), msg);
+    /* o leitor de tela precisa ser avisado: erro interrompe (alert), confirmação não (status) */
+    t.setAttribute('role', kind === 'err' ? 'alert' : 'status');
     document.body.appendChild(t);
-    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
+    /* tempo proporcional ao texto: um aviso de 200 caracteres não se lê em 2,6s */
+    var ms = Math.max(2600, Math.min(14000, String(msg || '').length * 75));
+    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, ms);
   }
-  var POP, BACK;
-  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+  var POP, BACK, POP_ORIGEM = null;
+  /* O popover é o "i" — é onde mora a explicação do número. Ele precisa receber o foco
+     (senão o leitor de tela não lê nada), fechar no ESC/no botão e DEVOLVER o foco ao "i"
+     de origem (senão a pessoa que navega por teclado é jogada para o começo da página). */
+  function closePop() {
+    if (!POP || !POP.classList.contains('on')) { return; }
+    POP.classList.remove('on'); BACK.classList.remove('on');
+    if (POP_ORIGEM && POP_ORIGEM.focus) { POP_ORIGEM.focus(); }
+    POP_ORIGEM = null;
+  }
   function openPop(anchor, title, rows) {
     POP.innerHTML = '';
     POP.appendChild(txt('div', 'pl-pop-k', title));
@@ -234,15 +413,105 @@
       POP.appendChild(txt('div', 'pl-pop-k', r[0]));
       POP.appendChild(txt('div', 'pl-pop-v', r[1]));
     });
+    var fechar = txt('button', 'pl-pop-fech', 'Fechar');
+    fechar.type = 'button';
+    fechar.addEventListener('click', function (e) { e.stopPropagation(); closePop(); });
+    POP.appendChild(fechar);
+    POP_ORIGEM = anchor;
+    POP.setAttribute('aria-label', title);
     var rc = anchor.getBoundingClientRect();
     POP.style.left = Math.max(8, Math.min(window.innerWidth - 356, rc.left)) + 'px';
-    POP.style.top = (rc.bottom + 8) + 'px';
+    POP.style.top = '0px';
     POP.classList.add('on'); BACK.classList.add('on');
+    /* mede DEPOIS de exibir: se não couber abaixo da âncora, abre para cima */
+    var alt = POP.offsetHeight, topo = rc.bottom + 8;
+    if (topo + alt > window.innerHeight - 12) { topo = Math.max(12, rc.top - 8 - alt); }
+    POP.style.top = topo + 'px';
+    POP.focus();
+  }
+  /* item 22 — o "i" é role=dialog + aria-modal: ele PRECISA prender o Tab. Sem a
+     prisão, o Tab escapava para a página atrás (que o aria-modal declara inerte)
+     e o leitor de tela lia o vazio. Ciclo fechado dentro do popover. */
+  function focaveisPop() {
+    var sel = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+    return Array.prototype.slice.call(POP.querySelectorAll(sel));
+  }
+  function prenderFocoPop(e) {
+    if (e.key !== 'Tab' || !POP.classList.contains('on')) { return; }
+    var f = focaveisPop();
+    if (!f.length) { e.preventDefault(); POP.focus(); return; }
+    var primeiro = f[0], ultimo = f[f.length - 1];
+    if (e.shiftKey && (document.activeElement === primeiro || document.activeElement === POP)) {
+      e.preventDefault(); ultimo.focus();
+    } else if (!e.shiftKey && document.activeElement === ultimo) {
+      e.preventDefault(); primeiro.focus();
+    }
   }
   function iBtn(title, rows) {
-    var b = el('<button class="pl-i" type="button" aria-label="Como funciona"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
+    /* aria-label vem do TÍTULO: com ~12 botões "i" na tela, "Como funciona" ×12 é
+       indistinguível na lista de elementos do leitor de tela. */
+    var b = el('<button class="pl-i" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
+    b.setAttribute('aria-label', 'Como funciona: ' + title);
     b.addEventListener('click', function (e) { e.stopPropagation(); openPop(b, title, typeof rows === 'function' ? rows() : rows); });
     return b;
+  }
+  /* ============================================================
+     item 24 · ERRO DE FORMULÁRIO QUE O CAMPO MOSTRA
+     ------------------------------------------------------------
+     Antes o erro vivia só no toast: ele some sozinho, não diz QUAL campo
+     reprovou, não marca nada e o slot .ui-ferr que o UI.field já cria ficava
+     eternamente vazio. Aqui o erro (1) escreve no slot do próprio campo,
+     (2) marca aria-invalid, (3) amarra os dois por aria-describedby,
+     (4) leva o FOCO para o campo e (5) some quando a pessoa corrige.
+     ============================================================ */
+  var ERR_SEQ = 0;
+  function ctrlFocavel(ctrl) {
+    if (!ctrl) { return null; }
+    var tg = ctrl.tagName;
+    if (tg === 'INPUT' || tg === 'SELECT' || tg === 'TEXTAREA') { return ctrl; }
+    return ctrl.querySelector ? ctrl.querySelector('input,select,textarea') : null;
+  }
+  function slotErro(ctrl) {
+    var w = ctrl;
+    while (w && !(w.classList && w.classList.contains('ui-field'))) { w = w.parentNode; }
+    return (w && w.querySelector) ? w.querySelector('.ui-ferr') : null;
+  }
+  function limparErro(ctrl) {
+    var alvo = ctrlFocavel(ctrl), slot = slotErro(ctrl);
+    if (alvo) { alvo.removeAttribute('aria-invalid'); }
+    if (slot) { slot.textContent = ''; slot.classList.remove('on'); }
+  }
+  function erroCampo(ctrl, msg) {
+    var alvo = ctrlFocavel(ctrl), slot = slotErro(ctrl);
+    if (slot) {
+      if (!slot.id) { ERR_SEQ++; slot.id = 'pl-err-' + ERR_SEQ; }
+      slot.textContent = msg;
+      slot.classList.add('on');
+      slot.setAttribute('role', 'alert');
+      if (alvo) { alvo.setAttribute('aria-describedby', slot.id); }
+    } else {
+      toast(msg, 'err'); /* campo fora de UI.field: pelo menos o toast avisa */
+    }
+    if (alvo) {
+      alvo.setAttribute('aria-invalid', 'true');
+      if (alvo.focus) { alvo.focus(); }
+      if (!alvo.getAttribute('data-pl-limpa')) {
+        alvo.setAttribute('data-pl-limpa', '1');
+        alvo.addEventListener('input', function () { limparErro(ctrl); });
+        alvo.addEventListener('change', function () { limparErro(ctrl); });
+      }
+    }
+    return false;
+  }
+  /* item 23 — respeitar prefers-reduced-motion (movimento involuntário dispara
+     enxaqueca/vertigem em quem tem sensibilidade vestibular; WCAG 2.3.3) e levar
+     o FOCO junto do scroll — senão o teclado continua lá em cima. */
+  function levarPara(node) {
+    if (!node) { return; }
+    var reduz = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    node.scrollIntoView({ behavior: reduz ? 'auto' : 'smooth', block: 'start' });
+    if (!node.hasAttribute('tabindex')) { node.setAttribute('tabindex', '-1'); }
+    if (node.focus) { node.focus({ preventScroll: true }); }
   }
   function fmtBR(iso) { if (!iso) { return '—'; } var p = iso.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
   function fmtBRL(cents) {
@@ -267,6 +536,298 @@
   function compSeguinte(hojeISO) { return compShift(hojeISO.slice(0, 7), 1); }
   function novoItemId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
   function itensVivos(pl) { return ((pl && pl.itens) || []).filter(function (i) { return i && !i.removido; }); }
+
+  /* ============================================================
+     R7 · ITEM 22 — ITENS ESTRATÉGICOS SUGERIDOS PELOS MANUAIS
+     ------------------------------------------------------------
+     Fonte: riscos-catalogo.js (os 67 riscos das matrizes P×I dos 6 manuais de
+     setor — fonte ÚNICA, a mesma que riscos.html consome).
+     Benchmark ISO 31000 / LogicManager / Resolver /
+     AuditBoard: risco crítico/alto pede plano de tratamento com dono e
+     prazo; DISPENSAR o tratamento = "risk acceptance" — sempre com
+     assinatura de quem tem alçada (gestor OU sócio; four-eyes).
+     REGRAS: só riscos do setor · banda alta (10-14) e crítica (15-25) ·
+     teto de 5 sugestões abertas por setor/mês · NADA bloqueia a entrega
+     do plano · dispensa nunca some (fica no doc, soft).
+     ⚠ RISCOS_MANUAIS é APPEND-ONLY: a chave gravada em itens/dispensas é
+     a POSIÇÃO no array ('rm'+ix) — nunca reordenar nem remover linhas.  */
+  var RISCO_SETOR_SIGLA = { 'Central Rel.': 'CRA', 'Pedagógico': 'PED', 'Gestor': 'GES', 'ADM/Fin': 'ADM', 'Agência': 'AGE', 'CSA': 'CSA' };
+  /* Os 67 riscos vivem em riscos-catalogo.js — fonte ÚNICA, a mesma que
+     riscos.html consome. O contrato append-only ('rm'+índice é a chave
+     gravada) está lá.
+     item 12 — o catálogo AUSENTE não pode mais falhar em silêncio: numa tela de
+     prestação de contas, "nenhum risco a tratar" e "não consegui ler os riscos"
+     parecem a MESMA coisa e são opostos. Quem não carrega vira aviso (AVISOS). */
+  var RISCOS_MANUAIS = window.RISCOS_CATALOGO || [];
+  var CATALOGO_FALTOU = !Array.isArray(window.RISCOS_CATALOGO) || !window.RISCOS_CATALOGO.length;
+  function riscosDoSetor(sigla) {
+    var out = [];
+    RISCOS_MANUAIS.forEach(function (rk, ix) {
+      if (RISCO_SETOR_SIGLA[rk.s] !== sigla) { return; }
+      var nivel = rk.p * rk.i;
+      if (nivel < 10) { return; }
+      out.push({ key: 'rm' + ix, nivel: nivel, rk: rk });
+    });
+    out.sort(function (a, b) { return b.nivel - a.nivel; });
+    return out;
+  }
+  function dispensasVivas(pl) { return ((pl && pl.dispensas) || []).filter(function (d) { return d && !d.removido; }); }
+  function salvarDispensas(pl, novaLista, acao, antes) {
+    return Store.atualizarLista(pl.id, 'dispensas', novaLista, pl.atualizadoEm == null ? null : pl.atualizadoEm, acao, antes || null)
+      .then(function (ts) { pl.dispensas = novaLista; pl.atualizadoEm = ts; });
+  }
+  /* item 11 — o líder do SETOR-PAI lidera o subsetor (é a mesma regra que o
+     KPI.escopoLider aplica no RBAC e que a cobrança por e-mail/WhatsApp já
+     testava com setorPaiSigla). Sem isso, "Incluir no plano" em QUALQUER
+     subsetor criava item SEM QUEM e disparava o aviso de erro. */
+  function liderDoSetor(sigla) {
+    var s = SETORES.filter(function (x) { return x.sigla === sigla; })[0];
+    var pai = (s && s.setorPaiSigla) ? s.setorPaiSigla : null;
+    return USERS.filter(function (u) {
+      if (u.perfil !== 'lider') { return false; }
+      var ls = u.setoresLiderados || [];
+      return ls.indexOf(sigla) >= 0 || (pai && ls.indexOf(pai) >= 0);
+    })[0] || null;
+  }
+  function ultimoDiaComp(comp) {
+    var y = parseInt(comp.slice(0, 4), 10), mo = parseInt(comp.slice(5, 7), 10);
+    var d = new Date(y, mo, 0).getDate();
+    return comp + '-' + (d < 10 ? '0' : '') + d;
+  }
+  /* item 15 — --red/--orange sobre --chipBg dão 3,14:1 e 4,27:1 no tema claro:
+     reprova o WCAG 1.4.3 justamente no elemento que comunica SEVERIDADE. Os
+     tokens --bandaCritica/--bandaAlta existem no theme.css exatamente para isso. */
+  function corBanda(nivel) { return nivel >= 15 ? 'var(--bandaCritica)' : 'var(--bandaAlta)'; }
+  function incluirSugestao(pl, c) {
+    var lid = liderDoSetor(pl.setorSigla);
+    var novo = {
+      id: novoItemId(),
+      oque: c.rk.m, /* a mitigação do manual vira o O QUE */
+      /* item 27 — o COMO gravado era um parágrafo de ~250 caracteres (sigla, nível,
+         texto do risco e o sinal do manual) renderizado numa célula nowrap de 11px:
+         estourava a largura da grade inteira. Agora carrega SÓ a mitigação do
+         manual — que já é o próprio O QUE — então nasce vazio para o líder
+         descrever a execução. A rastreabilidade do risco continua inteira em
+         origemRisco e no badge "⛨ risco N", que abre o detalhe em diálogo. */
+      como: null,
+      quemUid: lid ? lid.uid : null, quemNome: lid ? lid.nome : null,
+      quandoPrevisto: ultimoDiaComp(pl.competencia || COMP),
+      valorPrevistoCentavos: null, setoresEnvolvidos: [],
+      quandoRealizado: null, valorFinalCentavos: null, aprovGestor: null, aprovSocio: null,
+      naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(),
+      /* item 1 — QUEM CRIOU o item. Sem este campo o four-eyes estava escrito na
+         tela e não existia no código: o mesmo gestor-sócio criava um item de
+         R$ 5.000 e assinava as duas assinaturas sozinho, em 2 cliques. */
+      criadoPor: USER.uid,
+      origemRisco: { key: c.key, risco: c.rk.r, p: c.rk.p, i: c.rk.i, nivel: c.nivel, ind: c.rk.ind || null }
+    };
+    salvarItens(pl, (pl.itens || []).concat([novo]), 'planejamento_item_add_sugerido', { key: c.key, risco: c.rk.r, nivel: c.nivel })
+      .then(function () {
+        /* Sem QUEM o item nasce incompleto — não deixa passar em silêncio. */
+        toast(lid
+          ? 'Incluído no plano — prazo sugerido: fim do mês (ajuste em "editar").'
+          : 'Incluído, mas SEM responsável: não foi possível identificar o líder de ' + pl.setorSigla + '. Abra "editar" e preencha o QUEM.', lid ? '' : 'err');
+        render();
+      })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  /* item 8 — ALÇADA COERENTE (decisão travada na R8): dispensar um risco de banda
+     CRÍTICA (nível ≥ 15) passa a exigir as DUAS assinaturas (gestor E sócio), a
+     mesma exigência de gastar mais de R$ 200. Antes, aceitar um risco crítico
+     custava 1 assinatura e gastar R$ 201 custava 2 — a governança dizia, na
+     prática, que R$ 201 é mais grave que a chance de o risco máximo acontecer.
+     Banda ALTA (10-14) segue com uma assinatura. */
+  function dispensaExigeDuas(dd) { return Number(dd && dd.nivel) >= 15; }
+  function dispensaAceita(dd) {
+    return dispensaExigeDuas(dd) ? !!(dd.aprovGestor && dd.aprovSocio) : !!(dd.aprovGestor || dd.aprovSocio);
+  }
+  function dispensaFaltam(dd) {
+    var falta = [];
+    if (dispensaExigeDuas(dd)) {
+      if (!dd.aprovGestor) { falta.push('gestor'); }
+      if (!dd.aprovSocio) { falta.push('sócio'); }
+      return falta.join(' + ');
+    }
+    return 'gestor ou sócio';
+  }
+  function modalDispensar(pl, c) {
+    var ta = document.createElement('textarea');
+    ta.className = 'ui-input'; ta.rows = 3; ta.style.resize = 'vertical';
+    ta.placeholder = 'Por que este risco NÃO será tratado neste mês?';
+    var duas = c.nivel >= 15;
+    var campoMot = UI.field({ label: 'Motivo (obrigatório)', required: true, control: ta });
+    UI.modal({
+      title: 'Dispensar sugestão — risco nível ' + c.nivel, width: 480,
+      body: [
+        txt('div', 'pl-smeta', '"' + c.rk.r + '"'),
+        txt('div', 'pl-empty', 'Dispensar = ACEITAR o risco sem tratamento neste mês (ISO 31000: risk acceptance). '
+          + (duas
+            ? 'Este risco é de banda CRÍTICA (nível 15 a 25): o aceite exige as DUAS assinaturas — GESTOR e SÓCIO — a mesma exigência de um gasto acima de R$ 200.'
+            : 'Este risco é de banda ALTA (nível 10 a 14): o aceite exige UMA assinatura — gestor OU sócio.')
+          + ' Quem dispensa não avaliza (four-eyes) e nada some do histórico.'),
+        campoMot
+      ],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Dispensar (pede aval)', icon: 'check', onClick: function () {
+            var mot = ta.value.trim();
+            if (mot.length < 5) { erroCampo(ta, 'Escreva o motivo com pelo menos 5 caracteres — é ele que o gestor/sócio avaliza.'); return; }
+            var nova = { key: c.key, risco: c.rk.r, p: c.rk.p, i: c.rk.i, nivel: c.nivel,
+              motivo: mot, porUid: USER.uid, porNome: USER.name || USER.nome || '', em: Date.now(),
+              aprovGestor: null, aprovSocio: null, removido: false };
+            salvarDispensas(pl, ((pl.dispensas || []).concat([nova])), 'planejamento_risco_dispensar', { key: c.key, motivo: mot })
+              .then(function () { close(); toast('Dispensa registrada — aguardando aval de ' + (duas ? 'GESTOR e SÓCIO (banda crítica: duas assinaturas)' : 'gestor ou sócio') + '.'); render(); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+  function avalizarDispensa(pl, dd) {
+    if (dd.porUid === USER.uid) { toast('Four-eyes: quem dispensou não avaliza a própria dispensa.', 'err'); return; }
+    var socio = Guard.isSocio && Guard.isSocio();
+    var papel = socio ? (!dd.aprovSocio ? 'aprovSocio' : 'aprovGestor') : 'aprovGestor';
+    if (dd[papel]) { toast('Esta assinatura já foi dada por ' + (dd[papel].nome || '—') + '.', 'err'); return; }
+    var lista = (pl.dispensas || []).map(function (x) {
+      if (!x || x.key !== dd.key || x.em !== dd.em) { return x; }
+      var novo = Object.assign({}, x);
+      novo[papel] = { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() };
+      return novo;
+    });
+    var previa = Object.assign({}, dd); previa[papel] = true;
+    salvarDispensas(pl, lista, 'planejamento_risco_aceito', { key: dd.key, papel: papel })
+      .then(function () {
+        toast(dispensaAceita(previa)
+          ? 'Risco ACEITO — assinatura registrada (' + (papel === 'aprovSocio' ? 'sócio' : 'gestor') + ').'
+          : 'Assinatura registrada (' + (papel === 'aprovSocio' ? 'sócio' : 'gestor') + '). Banda crítica: ainda falta ' + dispensaFaltam(previa) + ' para o risco ser aceito.');
+        render();
+      })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function blocoSugeridos(pl, podeEd) {
+    var wrap = el('<div class="pl-sug"></div>');
+    var cands = riscosDoSetor(pl.setorSigla);
+    if (!cands.length) { return wrap; } /* setor sem matriz nos manuais: nada a sugerir */
+    /* item 4 — "tratado" era QUALQUER item nascido do risco, inclusive o que o
+       próprio líder declarou "✗ não realizei". Ou seja: o risco crítico sumia da
+       lista de sugestões justamente porque a mitigação dele FALHOU. Item
+       declarado não-feito NÃO trata risco nenhum. */
+    var tratados = {};
+    itensVivos(pl).forEach(function (it) {
+      if (it.origemRisco && it.origemRisco.key && !it.naoFeito) { tratados[it.origemRisco.key] = true; }
+    });
+    var disps = dispensasVivas(pl);
+    var dispMap = {};
+    disps.forEach(function (dd) { dispMap[dd.key] = dd; });
+    var pendentes = disps.filter(function (dd) { return !dispensaAceita(dd); });
+    var aceitas = disps.filter(dispensaAceita);
+    /* item 4 — o contador MENTIA: o .slice(0,5) era aplicado ANTES da contagem,
+       então 9 riscos altos/críticos sem tratativa viravam "(5)" no cabeçalho. O
+       total real é o número da governança; o teto de 5 é só de exibição. */
+    var abertasTodas = cands.filter(function (c) { return !tratados[c.key] && !dispMap[c.key]; });
+    var abertas = abertasTodas.slice(0, 5); /* teto de EXIBIÇÃO: 5 mais graves */
+    if (!abertas.length && !pendentes.length && !aceitas.length) { return wrap; }
+    var hd = el('<div class="pl-sug-h"></div>');
+    var rotuloAbertas = abertasTodas.length
+      ? (plural(abertasTodas.length, 'risco alto/crítico sem tratativa', 'riscos altos/críticos sem tratativa')
+         + (abertasTodas.length > abertas.length ? ' (mostrando os 5 mais graves)' : ''))
+      : 'nenhum risco alto/crítico sem tratativa';
+    hd.appendChild(tituloCartao('Sugeridos pelos manuais — ' + rotuloAbertas));
+    /* item 31 — o rótulo carrega a SIGLA: com dois setores abertos ao mesmo
+       tempo, dois "i" com o mesmo nome viram entradas gêmeas na lista de
+       elementos do leitor de tela. */
+    hd.appendChild(iBtn('Sugeridos pelos manuais — ' + pl.setorSigla, [
+      ['De onde vem', 'Da matriz de risco do manual do setor ' + pl.setorSigla + ' (P×I por risco) — os mesmos 67 riscos da tela Riscos. Entram só os de banda ALTA (10-14) e CRÍTICA (15-25) deste setor.'],
+      ['Números', 'Sem tratativa neste mês: ' + abertasTodas.length + ' (a lista mostra no máximo os 5 mais graves) · ' + plural(pendentes.length, 'dispensa aguardando aval', 'dispensas aguardando aval') + ' · ' + plural(aceitas.length, 'risco aceito', 'riscos aceitos') + '.'],
+      ['Incluir', 'Cria o item do plano já preenchido: O QUE = a mitigação do manual · QUEM = líder do setor (ou do setor-pai) · QUANDO = fim do mês (sugerido — ajuste depois). O item carrega o risco de origem: dá para responder "as mitigações dos riscos críticos estão sendo executadas?".'],
+      ['Sinal de alerta do manual', 'Cada risco vem com um "sinal de alerta" escrito no manual: uma condição observável que costuma aparecer ANTES do problema. Ele DESCREVE o risco — não é KPI de resultado e NÃO é apurado pelo sistema: quem observa é a pessoa, no dia a dia do setor.'],
+      ['Dispensar', 'Dispensar = ACEITAR o risco sem tratamento neste mês (risk acceptance, ISO 31000). Exige motivo. Banda CRÍTICA (nível 15 a 25) só é aceita com as DUAS assinaturas — gestor E sócio, a mesma exigência de um gasto acima de R$ 200. Banda ALTA (10 a 14) aceita com uma. Quem dispensou não avaliza (four-eyes) e nada some do histórico.'],
+      ['Trava?', 'Nada bloqueia a entrega do plano — é ciência e governança, não trava.'],
+      ['Item declarado não-feito', 'Item nascido de um risco e marcado "✗ não realizei" NÃO conta como tratativa: o risco volta a aparecer aqui, aberto.']
+    ]));
+    wrap.appendChild(hd);
+    abertas.forEach(function (c) {
+      var lin = el('<div class="pl-sug-l"></div>');
+      /* A banda vai ESCRITA no selo: distinguir crítico de alto só pela cor
+         falha em daltonismo e no leitor de tela (WCAG 1.4.1). */
+      var banda = c.nivel >= 15 ? 'CRÍTICO' : 'ALTO';
+      var bN = txt('span', 'pl-badge', banda + ' · P' + c.rk.p + '×I' + c.rk.i + ' = ' + c.nivel);
+      bN.style.color = corBanda(c.nivel);
+      bN.title = c.nivel >= 15 ? 'Banda CRÍTICA (nível 15 a 25)' : 'Banda ALTA (nível 10 a 14)';
+      lin.appendChild(bN);
+      var mainS = el('<div class="pl-sug-m"></div>');
+      mainS.appendChild(txt('div', '', c.rk.m));
+      /* item 33 — o rótulo era "Indicador que antecipa", aplicado igual aos 67
+         riscos. Nem todos são leading, e nenhum é apurado pelo sistema: o texto
+         prometia um KPI que não existe. "Sinal de alerta do manual" é descritivo
+         e verdadeiro — descreve o risco, não mede resultado. */
+      mainS.appendChild(txt('div', 'pl-smeta', 'Risco: ' + c.rk.r + (c.rk.ind ? ' · Sinal de alerta do manual: ' + c.rk.ind : '')));
+      lin.appendChild(mainS);
+      if (podeEd) {
+        var bI = txt('button', 'pl-acao green', 'Incluir no plano'); bI.type = 'button';
+        bI.title = '1 clique: vira item do plano com o O QUE do manual.';
+        bI.addEventListener('click', function () { incluirSugestao(pl, c); });
+        lin.appendChild(bI);
+        var bD = txt('button', 'pl-acao', 'Dispensar'); bD.type = 'button';
+        bD.title = 'Aceitar o risco sem tratar neste mês — motivo obrigatório + aval do gestor/sócio.';
+        bD.addEventListener('click', function () { modalDispensar(pl, c); });
+        lin.appendChild(bD);
+      }
+      wrap.appendChild(lin);
+    });
+    pendentes.forEach(function (dd) {
+      var lin = el('<div class="pl-sug-l"></div>');
+      var bP = txt('span', 'pl-badge', '⏳ falta ' + dispensaFaltam(dd));
+      bP.style.color = 'var(--amber)';
+      lin.appendChild(bP);
+      var mainP = el('<div class="pl-sug-m"></div>');
+      mainP.appendChild(txt('div', '', 'Dispensa: ' + dd.risco + ' (nível ' + dd.nivel + (dispensaExigeDuas(dd) ? ' — banda CRÍTICA: exige duas assinaturas' : ' — banda ALTA: uma assinatura') + ')'));
+      var jaAssinou = [];
+      if (dd.aprovGestor) { jaAssinou.push('gestor ' + (dd.aprovGestor.nome || '—')); }
+      if (dd.aprovSocio) { jaAssinou.push('sócio ' + (dd.aprovSocio.nome || '—')); }
+      mainP.appendChild(txt('div', 'pl-smeta', 'Motivo: ' + dd.motivo + ' — por ' + dd.porNome + (jaAssinou.length ? ' · já assinou: ' + jaAssinou.join(', ') : '')));
+      lin.appendChild(mainP);
+      if ((Guard.isGestor && Guard.isGestor()) || (Guard.isSocio && Guard.isSocio())) {
+        if (dd.porUid === USER.uid) {
+          lin.appendChild(txt('div', 'pl-l-det', 'Você pediu esta dispensa — a assinatura tem que ser de outra pessoa (four-eyes).'));
+        } else {
+          var bA = txt('button', 'pl-acao', 'avalizar (aceitar o risco)'); bA.type = 'button';
+          bA.title = 'Assinar o aceite deste risco sem tratamento neste mês. Falta: ' + dispensaFaltam(dd) + '.';
+          bA.addEventListener('click', function () { avalizarDispensa(pl, dd); });
+          lin.appendChild(bA);
+        }
+      }
+      wrap.appendChild(lin);
+    });
+    if (aceitas.length) {
+      // Governanca: a justificativa de um risco ACEITO precisa ser alcancavel no celular.
+      // <details> nativo funciona no toque, no teclado e no leitor de tela (title/hover nao abre em touch).
+      /* item 28 — "aceitamos conviver com este risco" é a decisão MAIS GRAVE desta
+         tela, e estava escondida num <details> fechado, em cinza de 11px. Agora o
+         summary tem peso de título de cartão e, se houver aceite de banda CRÍTICA,
+         o bloco JÁ NASCE ABERTO: decisão grave não se esconde atrás de um clique. */
+      var temCritico = aceitas.some(dispensaExigeDuas);
+      var res = document.createElement('details');
+      res.className = 'pl-aceitas';
+      if (temCritico) { res.open = true; }
+      var sum = document.createElement('summary');
+      sum.className = 'pl-card-t';
+      sum.textContent = '⚠ ' + plural(aceitas.length, 'risco ACEITO sem tratamento neste mês', 'riscos ACEITOS sem tratamento neste mês')
+        + (temCritico ? ' — inclui banda CRÍTICA' : '') + ' — ver justificativas';
+      res.appendChild(sum);
+      aceitas.forEach(function (dd) {
+        var quemAss = [];
+        if (dd.aprovGestor) { quemAss.push('gestor ' + (dd.aprovGestor.nome || '—')); }
+        if (dd.aprovSocio) { quemAss.push('sócio ' + (dd.aprovSocio.nome || '—')); }
+        var li = txt('div', 'pl-smeta', '• [' + (dispensaExigeDuas(dd) ? 'CRÍTICO' : 'ALTO') + ' · nível ' + dd.nivel + '] ' + dd.risco
+          + ' — motivo: ' + dd.motivo + ' · pedido por ' + (dd.porNome || '—') + ' · aval: ' + (quemAss.length ? quemAss.join(' + ') : '—'));
+        li.style.marginTop = '4px';
+        res.appendChild(li);
+      });
+      res.style.marginTop = '4px';
+      wrap.appendChild(res);
+    }
+    return wrap;
+  }
   /* R5-B2: custo PREVISTO efetivo — campo novo com fallback ao valorCentavos
      legado da R4 (nunca destruído; mesma regra do KPI.planejamentoItemTravado). */
   function valorPrev(it) {
@@ -306,45 +867,74 @@
 
   /* ===================== "i" (fórmulas) ===================== */
   var FASES = {
-    entregue: ['✓ entregue', 'var(--green)'],
-    ok: ['no prazo', 'var(--muted2)'],
+    entregue: ['✓ entregue no prazo', 'var(--green)'],
+    /* item 2 — entrega ATRASADA virava badge VERDE "✓ entregue": o setor que
+       entregou 9 dias depois do dia 25 ficava indistinguível de quem entregou
+       antes. Fase própria, cor da banda ALTA (não é verde, não é "não conforme"). */
+    entregueAtrasado: ['✓ entregue com atraso', 'var(--bandaAlta)'],
+    ok: ['no prazo', 'var(--muted2Text)'],/* item 16: --muted2 dá 3,58:1 no escuro */
     d5: ['D-5 · entregar até dia 25', 'var(--amber)'],
-    d3: ['D-3 · gestão avisada', 'var(--orange)'],
-    d0: ['D-0 · não conforme', 'var(--red)']
+    /* item 15 — todo este mapa é pintado como TEXTO num .pl-badge de 10,5px
+       (fase.style.color). --orange e --red foram calibrados para preenchimento:
+       sobre --chipBg do tema claro dão 4,27:1 e 3,14:1 e reprovam o WCAG 1.4.3
+       justo no elemento que comunica gravidade. --bandaAlta/--bandaCritica são
+       os MESMOS tons corrigidos para texto (o theme.css os declara para isto). */
+    d3: ['D-3 · gestão avisada', 'var(--bandaAlta)'],
+    d0: ['D-0 · não conforme', 'var(--bandaCritica)']
   };
+  function textoPrazo(pz) {
+    if (pz.fase === 'entregue') {
+      return pz.diasParaPrazo === 0 ? 'entregue no dia do prazo' : ('entregue ' + plural(pz.diasParaPrazo, 'dia', 'dias') + ' antes do prazo');
+    }
+    if (pz.fase === 'entregueAtrasado') {
+      return 'entregue com ' + plural(Math.abs(pz.diasParaPrazo), 'dia de atraso', 'dias de atraso');
+    }
+    return pz.diasParaPrazo >= 0
+      ? (plural(pz.diasParaPrazo, 'dia', 'dias') + ' para o prazo')
+      : (plural(Math.abs(pz.diasParaPrazo), 'dia de atraso', 'dias de atraso'));
+  }
   function iRowsPrazo(pz) {
     return [
       ['Fórmula', 'Plano da competência vence no dia 25 do mês ANTERIOR (D-0). Farol: até dia 19 ok · dia 20 D-5 (alerta ao líder) · dia 22 D-3 (alerta à gestão) · dia 25 D-0 (flag de não-conformidade). NUNCA bloqueia — entregar atrasado é sempre possível. Marcos calibráveis.'],
-      ['Dados', 'planejamentos.entregueEm + dia civil local (Salvador) · KPI.planejamentoPrazo (kpi.js, harness_r4 20/20).'],
-      ['Números', 'prazo ' + fmtBR(pz.deadline) + ' · ' + (pz.fase === 'entregue' ? 'entregue' : (pz.diasParaPrazo >= 0 ? pz.diasParaPrazo + ' dia(s) para o prazo' : Math.abs(pz.diasParaPrazo) + ' dia(s) de atraso')) + ' · fase ' + pz.fase.toUpperCase()]
+      ['Entregue × entregue com atraso', 'A data da entrega é comparada ao prazo. Entrega no dia 25 ou antes → "✓ entregue no prazo". Entrega depois do dia 25 → "✓ entregue com atraso", com o número de dias escrito. Entregar atrasado continua valendo — mas não é a mesma coisa que entregar no prazo, e a tela não pode dizer que é.'],
+      ['Dados', 'A data em que cada setor ENTREGOU o planejamento, comparada ao prazo do mês (dia contado no fuso de Salvador).'],
+      ['Números', 'prazo ' + fmtBR(pz.deadline) + ' · ' + textoPrazo(pz) + ' · fase ' + pz.fase.toUpperCase()]
     ];
   }
   function iRowsNota(n) {
     return [
-      ['Fórmula', 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − médiaDiasAtraso ÷ 7); teto 7 dias). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes. Item ABERTO aguardando aprovação da alçada fica FORA do denominador (clock-pause — a espera não é do setor); item marcado "não realizado" CONTA e derruba a aderência.'],
-      ['Dados', 'itens do plano desta competência (quandoPrevisto × quandoRealizado × naoFeito × alçada) · KPI.planejamentoNota (kpi.js, harness_r4 27/27).'],
-      ['Números', n ? ('aderência ' + n.aderencia + '% (' + n.realizados + '/' + n.previstos + ') · no prazo ' + n.noPrazoPct + '% (' + n.realizadosNoPrazo + '/' + n.realizados + ') · atraso médio ' + n.mediaDiasAtraso + 'd → componente ' + n.atrasoPct + '% · nota ' + n.nota + (n.pausadosAprovacao ? (' · ' + n.pausadosAprovacao + ' item(ns) em pause de aprovação (fora do cálculo)') : '')) : 'sem itens ranqueáveis — não ranqueia']
+      ['Fórmula', 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − atraso médio ÷ 7); teto 7 dias). O atraso médio é a média APENAS dos itens que atrasaram — os entregues no prazo não entram nessa média (entram no componente "no prazo"). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes. Item ABERTO aguardando aprovação da alçada fica FORA do denominador (clock-pause — a espera não é do setor); item marcado "não realizado" CONTA e derruba a aderência.'],
+      ['Dados', 'Os itens do plano deste mês: o que foi previsto, o que foi realizado, o que foi marcado como não feito e o que dependia de aprovação.'],
+      ['Números', n ? ('aderência ' + n.aderencia + '% (' + n.realizados + '/' + n.previstos + ') · no prazo ' + n.noPrazoPct + '% (' + n.realizadosNoPrazo + '/' + n.realizados + ') · atraso médio dos que atrasaram ' + n.mediaDiasAtraso + 'd → componente ' + n.atrasoPct + '% · nota ' + n.nota + (n.pausadosAprovacao ? (' · ' + plural(n.pausadosAprovacao, 'item', 'itens') + ' em pause de aprovação (fora do cálculo)') : '')) : 'sem itens ranqueáveis — não ranqueia']
     ];
   }
   var I_ALCADA = [
-    ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — GESTOR e SÓCIO (aprovação paralela: qualquer ordem; quem cria o item não assina — four-eyes). Sócio = gestor marcado como sócio no cadastro de usuários. A mesma pessoa que acumula os dois papéis pode dar as duas assinaturas (o objetivo é forçar a leitura). A trava é do ITEM; o plano nunca trava — e o item em espera entra em clock-pause na nota.'],
-    ['Dados', 'item.valorPrevistoCentavos (inteiro, em centavos; fallback ao valorCentavos legado) + item.aprovGestor / item.aprovSocio (uid, nome, data) · usuário.socio · KPI.planejamentoItemTravado (kpi.js, harness_r4 + r5). A alçada trava pelo custo PREVISTO — a aprovação antecede a execução (padrão baseline MS Project).']
+    ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — GESTOR e SÓCIO (aprovação paralela: qualquer ordem). Sócio = gestor marcado como sócio no cadastro de usuários. A trava é do ITEM; o plano nunca trava — e o item em espera entra em clock-pause na nota.'],
+    ['Four-eyes (quem NÃO pode assinar)', 'Quem CRIOU o item não assina o próprio item — nem como gestor, nem como sócio. O sistema grava o autor de cada item e esconde o botão "aprovar" para ele, escrevendo o motivo na linha. Antes isso estava só escrito na tela: um gestor-sócio criava um item de R$ 5.000 e assinava as duas assinaturas sozinho em 2 cliques.'],
+    ['Coerência com o risco', 'Aceitar um risco de banda CRÍTICA (nível 15 a 25) sem tratar exige as MESMAS duas assinaturas de um gasto acima de R$ 200 — gestor E sócio. Banda ALTA (10 a 14) exige uma. Antes, aceitar o risco máximo custava 1 assinatura e gastar R$ 201 custava 2: a régua dizia que R$ 201 era mais grave que o risco máximo.'],
+    ['Dados', 'O custo PREVISTO de cada item, quem criou o item e quem já aprovou (gestor e/ou sócio, com nome e data). A alçada trava pelo custo PREVISTO — a aprovação antecede a execução (padrão baseline MS Project).']
   ];
   /* R5-B2: estado formal do plano (RESUMO §4) — derivado, nunca gravado. */
   var I_STATUS = [
-    ['Estados', 'Rascunho = o líder ainda monta o 5W2H (sem "Entregar plano"). Submetido = entregue, aguardando a CIÊNCIA de gestor E sócio no PLANO (assinatura de leitura — força a gestão a LER; nada trava). Aprovado = entregue + as duas ciências. A ciência do PLANO não é a alçada do ITEM: item >R$200 continua travando sozinho até gestor+sócio assinarem o item.'],
-    ['Fórmula', 'status = sem entregueEm → rascunho · entregue e falta ciência → submetido · entregue + ciência de gestor e de sócio → aprovado (KPI.planejamentoStatus, derivado no cliente — nada persistido).'],
+    ['Estados', 'Rascunho = o líder ainda monta o plano (sem "Entregar plano"). Submetido = entregue, aguardando a CIÊNCIA de gestor E sócio no PLANO (assinatura de leitura — força a gestão a LER; nada trava). Aprovado = entregue + as duas ciências. A ciência do PLANO não é a alçada do ITEM: item >R$200 continua travando sozinho até gestor+sócio assinarem o item.'],
+    ['Dados', 'A data de entrega do plano e as duas ciências (a do gestor e a do sócio).'],
+    ['Fórmula', 'Sem data de entrega → rascunho. Entregue, mas faltando alguma ciência → submetido. Entregue com as duas ciências → aprovado. O estado é calculado na hora em que você abre a tela — nada fica gravado.'],
     ['Calibragem', 'Editar itens depois da ciência NÃO zera a ciência do plano (ela é leitura, não aprovação de valor); só a alçada do ITEM zera assinaturas quando o custo previsto muda acima de R$200.']
   ];
   var I_PARETO = [
-    ['Fórmula', 'Conta os itens declarados "✗ não realizei" por motivo e ordena do maior para o menor (Pareto de causas — Juran/Falconi: poucos motivos explicam a maioria das falhas). Item removido sai; empate desempata por ordem alfabética.'],
-    ['Dados', 'itens da competência com naoFeito:true (motivo obrigatório desde a R4-EXT) · KPI.paretoMotivos (kpi.js, harness_r5).'],
+    ['Fórmula', 'Conta os itens declarados "✗ não realizei" por motivo e ordena do maior para o menor. Item removido sai; empate desempata por ordem alfabética.'],
+    /* item 26 — o cartão se chamava "Pareto" mas NÃO tinha curva acumulada de 80%,
+       que é o que define um diagrama de Pareto. Nome corrigido para o que a coisa
+       realmente é: um ranking de frequência de motivos. */
+    ['Por que não se chama mais "Pareto"', 'Um diagrama de Pareto tem barras E a curva acumulada de 80% — é ela que aponta os "poucos vitais". Este cartão só tem as barras ordenadas por frequência, então o nome virou o que ele de fato mostra. A ideia de fundo (poucos motivos explicam a maioria das falhas — Juran/Falconi) continua valendo na leitura.'],
+    ['Tamanho da barra', 'A barra é proporcional ao motivo campeão: o campeão ocupa 100% do trilho e os demais, a fração correspondente. Não há piso — 1 ocorrência contra 10 desenha uma barra de 10%, não de 6%.'],
+    ['Dados', 'Os itens deste mês marcados como NÃO FEITOS — cada um exige um motivo declarado.'],
     ['Ação', 'O motivo campeão é o alvo do mês: "Dependência de outro setor" no topo → cobrança cruzada; "Falta de tempo/sobrecarga" → redistribuir carga.']
   ];
   var I_EIXO = [
     ['O QUE VEM', 'Itens ABERTOS (nem realizados, nem declarados não-feitos) da competência, em ordem de data prevista. Vermelho = data prevista já passou; âmbar = é hoje; cadeado = aguardando gestor+sócio (alçada R$200; item em pause na nota).'],
-    ['O QUE FOI', 'Desfechos, do mais recente para o mais antigo: realizados (com o desvio de prazo — no prazo · +N dias) e NÃO realizados (vermelho, com o motivo declarado no hover).'],
-    ['Dados', 'planejamentos da competência · derivado na tela, nada gravado.']
+    ['O QUE FOI', 'Desfechos, do mais recente para o mais antigo: realizados (com o desvio de prazo — no prazo · +N dias) e NÃO realizados (vermelho, com o motivo declarado ao lado).'],
+    ['Dados', 'Os planejamentos deste mês. O número é calculado na hora em que você abre a tela — nada fica gravado.']
   ];
 
   /* ===================== ESTADO ===================== */
@@ -353,27 +943,69 @@
   var USERS = [];
   var COMP = null;      /* 'YYYY-MM' selecionada */
   var ABERTOS = {};     /* sigla -> bool (setor expandido) */
+  var GRUPOS_ABERTOS = {}; /* R7·item 21: sigla-raiz -> bool (subsetores visíveis) */
   var HOJE = null;
   var bodyEl, actionsEl, compEl;
+
+  /* ============================================================
+     item 5 · QUEM DEVE ENTREGAR — O DENOMINADOR DO HERÓI
+     ------------------------------------------------------------
+     O denominador era SETORES.length: TODOS os setores ativos, raiz E
+     subsetor — ou seja, "quem PODE criar plano", porque
+     minhasSiglasEscreviveis() deixa o líder do raiz abrir plano em cada
+     subsetor dele. Com 23 setores ativos e um punhado de responsáveis de
+     fato, o número nascia vermelho e NUNCA poderia ficar verde: um KPI
+     que não tem como ser atingido para de cobrar e vira ruído de fundo.
+     DEVE entregar quem tem líder PRÓPRIO no cadastro — a sigla aparece em
+     setoresLiderados de alguém ativo. Subsetor sem líder próprio rola
+     para o plano do raiz (a mesma regra do KPI.escopoLider). Setor ativo
+     sem líder nenhum não é cobrado de ninguém — e isso NÃO some: vira
+     aviso no topo da tela (avisosDerivados).
+     DEGRADAÇÃO DECLARADA: Store.listUsuariosAtivos devolve [] quando o
+     perfil não pode listar usuários. Sem essa lista não há como saber
+     quem lidera o quê; o denominador volta ao piso honesto (todos os
+     setores ativos) e a tela DIZ, por aviso, que voltou.
+     ============================================================ */
+  function obrigadosEntrega() {
+    var mapa = {}, siglas = [], comLider = {};
+    USERS.forEach(function (u) {
+      if (u.perfil !== 'lider') { return; }
+      (u.setoresLiderados || []).forEach(function (sg) { comLider[sg] = true; });
+    });
+    SETORES.forEach(function (s) { if (comLider[s.sigla]) { mapa[s.sigla] = true; siglas.push(s.sigla); } });
+    if (siglas.length) { return { mapa: mapa, siglas: siglas, semBase: false }; }
+    mapa = {}; siglas = [];
+    SETORES.forEach(function (s) { mapa[s.sigla] = true; siglas.push(s.sigla); });
+    return { mapa: mapa, siglas: siglas, semBase: true };
+  }
 
   /* ===================== HERÓI: adesão dos planos (R6/design) =====================
      Título = a conclusão (Minto): a tela responde "quantos setores entregaram?" no topo.
      Cor pelo sinal: ≥80% verde · ≥50% âmbar · <50% vermelho. */
   function renderHero() {
     /* R6/auditoria: ENTREGUE = tem entregueEm E tem ao menos 1 item. Rascunho NÃO conta
-       como entregue (o badge da lista abaixo diria "Rascunho" e o número brigaria com ela).
-       Denominador = setores RAIZ ativos (subsetor não entrega plano próprio). */
-    /* R6/fix2: o denominador é SETORES.length (todos), NÃO só os raiz — a lista
-       "Planos por setor" abaixo itera SETORES inteiro e minhasSiglasEscreviveis()
-       deixa QUALQUER setor criar plano. Com raiz o herói dizia "0 de 7" em cima de
-       uma lista de 23 — a mesma contradição que este herói veio consertar. */
-    var t = SETORES.length;
-    var entregues = PLANOS.filter(function (p) {
-      return p.entregueEm && Array.isArray(p.itens) && p.itens.length > 0;
+       como entregue (o badge da lista abaixo diria "Rascunho" e o número brigaria com ela). */
+    /* item 5 — o NUMERADOR conta APENAS plano de setor OBRIGADO. PLANOS traz
+       qualquer plano da competência, inclusive de setor desativado depois (plano
+       ÓRFÃO) e de setor ativo sem líder (plano VOLUNTÁRIO): sem o filtro,
+       "falta = t − n" podia ficar NEGATIVO e o herói dizia "-2 setores sem plano
+       entregue". Nada some em silêncio — os dois casos viram aviso no topo. */
+    var ob = obrigadosEntrega();
+    var t = ob.siglas.length;
+    var ativa = {};
+    SETORES.forEach(function (s) { ativa[s.sigla] = true; });
+    var planosObrig = PLANOS.filter(function (p) { return !!ob.mapa[p.setorSigla]; });
+    var entregues = planosObrig.filter(function (p) {
+      /* itensVivos ignora os removidos (soft-delete): um plano cujos itens foram todos
+         apagados NÃO pode contar como "entregue com ao menos 1 item", que é o que o "i" promete. */
+      return p.entregueEm && itensVivos(p).length > 0;
     });
     var n = entregues.length;
-    var rascunhos = PLANOS.length - n;
-    var falta = t - n;
+    var rascunhos = planosObrig.filter(function (p) { return !p.entregueEm; }).length;
+    var entreguesVazios = planosObrig.length - n - rascunhos;
+    var orfaos = PLANOS.filter(function (p) { return !ativa[p.setorSigla]; }).length;
+    var voluntarios = PLANOS.filter(function (p) { return !!ativa[p.setorSigla] && !ob.mapa[p.setorSigla]; }).length;
+    var falta = Math.max(0, t - n);
     var pct = t ? n / t : 0;
     var cor = pct >= 0.8 ? 'var(--green)' : (pct >= 0.5 ? 'var(--amber)' : 'var(--red)');
     var titulo, sub;
@@ -382,26 +1014,95 @@
       sub = 'Planejamento completo — acompanhe os desfechos em O QUE FOI.';
     } else {
       titulo = (pct < 0.5 ? 'Só ' : '') + n + ' de ' + t + (n === 1 ? ' setor entregou' : ' setores entregaram') + ' o plano de ' + compLabel(COMP);
-      sub = falta + (falta === 1 ? ' setor sem plano entregue' : ' setores sem plano entregue')
-          + (rascunhos ? ' — sendo ' + rascunhos + ' em rascunho' : '')
+      sub = plural(falta, 'setor sem plano entregue', 'setores sem plano entregue')
+          + (rascunhos ? ' — sendo ' + plural(rascunhos, 'em rascunho', 'em rascunho') : '')
+          + (entreguesVazios ? ' — e ' + plural(entreguesVazios, 'entregue sem nenhum item', 'entregues sem nenhum item') : '')
           + '. Desça até a lista e cobre os líderes.';
+    }
+    /* O denominador é "quem DEVE entregar", não "quem existe": se houver setor
+       ativo fora da conta, o herói DIZ quantos são — senão a diferença entre o
+       número de cima e a lista de baixo pareceria erro de conta. */
+    var foraDaConta = SETORES.length - t;
+    if (foraDaConta > 0) {
+      sub += ' ' + plural(foraDaConta, 'setor ativo está FORA desta conta', 'setores ativos estão FORA desta conta')
+           + ' (sem líder designado — ninguém a cobrar). O aviso no topo nomeia quais.';
     }
     var hero = el('<div class="pl-hero"></div>');
     var num = el('<div class="pl-hero-n">' + n + '<span class="pl-hero-den">/' + t + '</span></div>');
     num.style.color = cor;
+    num.setAttribute('aria-hidden', 'true'); /* o título ao lado já diz "n de t" por extenso */
     hero.appendChild(num);
     var tx = el('<div></div>');
-    var ht = txt('div', 'pl-hero-t', titulo); ht.style.color = cor;
+    var ht = txt('h2', 'pl-hero-t', titulo); ht.style.color = cor;/* item 19: heading de verdade */
     tx.appendChild(ht);
     tx.appendChild(txt('div', 'pl-hero-s', sub));
     hero.appendChild(tx);
-    hero.appendChild(iBtn('Adesão do planejamento', [
-      ['Fórmula', 'Planos ENTREGUES (com data de entrega e ao menos 1 item) ÷ setores raiz ativos. Aqui: ' + n + ' ÷ ' + t + ' = ' + Math.round(pct * 100) + '%.'],
-      ['Dados', 'planejamentos da competência ' + COMP + ' (campo entregueEm + itens[]) × setores ativos sem setor-pai. Rascunho (sem entregueEm) NÃO entra no numerador: ' + rascunhos + ' em rascunho agora.'],
-      ['O que diz', 'Quantos setores já ENTREGARAM o plano do mês. Verde ≥80% · âmbar ≥50% · vermelho <50%.'],
+    hero.appendChild(iBtn('Adesão do plano do mês', [
+      ['Fórmula', 'Planos ENTREGUES (com data de entrega e ao menos 1 item) de setor OBRIGADO ÷ setores OBRIGADOS. Aqui: ' + n + ' ÷ ' + t + ' = ' + Math.round(pct * 100) + '%.'],
+      ['Quem é OBRIGADO a entregar', ob.semBase
+        ? ('Não foi possível montar a lista de quem lidera cada setor (seu perfil não lista usuários, ou nenhum líder tem setor no cadastro). Sem essa base, o denominador cai no piso honesto: TODOS os ' + t + ' setores ativos. O aviso no topo da tela declara isso — trate o número como teto, não como cobrança.')
+        : ('O setor ativo que tem líder PRÓPRIO no cadastro (a sigla dele aparece em "setores liderados" de alguém ativo): ' + plural(t, 'setor', 'setores') + '. Subsetor sem líder próprio NÃO entrega plano separado — o trabalho dele rola para o plano do setor-pai, igual à regra de escopo do RBAC. Antes o denominador era "quem PODE criar plano" (os ' + SETORES.length + ' setores ativos, raiz e subsetor): o número nascia vermelho e não tinha como ficar verde nunca.')],
+      ['Dados', 'Os planos de ' + compLabel(COMP) + ' (entregues, com pelo menos 1 item não apagado) comparados aos ' + plural(t, 'setor obrigado', 'setores obrigados') + '. NÃO contam como entregues: ' + plural(rascunhos, 'plano em rascunho', 'planos em rascunho') + ' e ' + plural(entreguesVazios, 'entregue sem nenhum item', 'entregues sem nenhum item') + '.'],
+      ['Plano órfão', orfaos
+        ? (plural(orfaos, 'plano é de setor que não existe mais', 'planos são de setor que não existe mais') + ' (setor desativado depois da criação). Ele NÃO entra nem no numerador nem no denominador e NÃO aparece na lista abaixo — o aviso no topo da tela nomeia o caso.')
+        : 'Nenhum plano deste mês pertence a setor desativado. Se existisse, ele ficaria FORA da conta e apareceria como aviso no topo da tela.'],
+      ['Plano voluntário', voluntarios
+        ? (plural(voluntarios, 'plano foi criado por setor ATIVO que não é obrigado', 'planos foram criados por setores ATIVOS que não são obrigados') + ' (setor sem líder próprio). Ele aparece normalmente na lista abaixo e vale como trabalho, mas fica FORA do numerador: entrada voluntária não pode inflar uma taxa de cobrança.')
+        : 'Nenhum plano deste mês veio de setor ativo fora da lista de obrigados. Se viesse, apareceria na lista abaixo, mas fora desta conta.'],
+      ['O que diz', 'Quantos setores obrigados já ENTREGARAM o plano do mês. Verde ≥80% · âmbar ≥50% · vermelho <50%.'],
       ['Para que serve', 'Cobrança de prestação de contas: quem está sem plano aparece na lista abaixo com o farol de prazo (D-5/D-3/D-0).']
     ]));
     bodyEl.appendChild(hero);
+  }
+  /* ============================================================
+     item 5 e item 12 · AVISOS DERIVADOS DO DADO
+     ------------------------------------------------------------
+     AVISOS (o array de cima) guarda o aviso de leitura TRUNCADA, que nasce na
+     carga. Estes aqui nascem do cruzamento dos dados e são recalculados a cada
+     render — por isso ficam separados, senão duplicariam a cada desenho de tela.
+     Regra da casa: numa tela de prestação de contas, nada falha em silêncio.
+     ============================================================ */
+  function avisosDerivados() {
+    var out = [];
+    var ativa = {};
+    SETORES.forEach(function (s) { ativa[s.sigla] = true; });
+    var orfaos = PLANOS.filter(function (p) { return !ativa[p.setorSigla]; });
+    if (orfaos.length) {
+      out.push('Existe plano de setor que NÃO está mais ativo no cadastro: '
+        + orfaos.map(function (p) { return p.setorSigla; }).join(', ')
+        + '. Esse plano NÃO entra nos números desta tela (nem no numerador, nem no denominador) e NÃO aparece na lista de setores. Reative o setor no cadastro, ou trate o plano como encerrado.');
+    }
+    /* item 5 — o denominador do herói encolheu de "quem PODE criar plano" para
+       "quem DEVE entregar". Encolher denominador SEM dizer nada seria maquiar a
+       taxa: quem ficou de fora tem de aparecer aqui, com nome. */
+    var ob = obrigadosEntrega();
+    if (ob.semBase) {
+      out.push('Não consegui montar a lista de quem lidera cada setor (o seu perfil não lista usuários, ou nenhum líder tem setor no cadastro). Sem essa base, o número do topo divide por TODOS os ' + SETORES.length + ' setores ativos — inclusive subsetores que talvez não devessem entregar plano próprio. Leia o percentual como PISO, não como cobrança, e peça à gestão para preencher "setores liderados" no cadastro de usuários.');
+    } else {
+      var semLider = SETORES.filter(function (s) { return !ob.mapa[s.sigla]; }).map(function (s) { return s.sigla; });
+      if (semLider.length) {
+        out.push('Estes setores ativos NÃO têm líder designado no cadastro: ' + semLider.join(', ')
+          + '. Como não há a quem cobrar, eles ficam FORA da conta do topo (nem no numerador, nem no denominador) — mas continuam na lista de setores abaixo. Designe o líder no cadastro de usuários, ou desative o setor: setor ativo sem dono não presta contas a ninguém.');
+      }
+      var volunt = PLANOS.filter(function (p) { return !!ativa[p.setorSigla] && !ob.mapa[p.setorSigla]; }).map(function (p) { return p.setorSigla; });
+      if (volunt.length) {
+        out.push('Estes setores criaram plano mesmo sem líder designado: ' + volunt.join(', ')
+          + '. O trabalho vale e aparece na lista abaixo, mas fica FORA da taxa de entrega do topo — entrega voluntária não pode inflar uma taxa de cobrança. Designe o líder para que o setor passe a ser contado.');
+      }
+    }
+    if (CATALOGO_FALTOU) {
+      out.push('O catálogo de riscos dos manuais (riscos-catalogo.js) não carregou. As sugestões de item vindas de risco estão DESLIGADAS nesta tela: "nenhum risco a tratar" aqui significa apenas "não consegui ler os riscos". Recarregue a página; se continuar, avise a gestão.');
+    } else {
+      var semMapa = SETORES.filter(function (s) {
+        if (s.setorPaiSigla) { return false; } /* subsetor herda o mapeamento do raiz */
+        return !Object.keys(RISCO_SETOR_SIGLA).some(function (k) { return RISCO_SETOR_SIGLA[k] === s.sigla; });
+      }).map(function (s) { return s.sigla; });
+      if (semMapa.length) {
+        out.push('Estes setores raiz não têm matriz de risco ligada aos manuais: ' + semMapa.join(', ')
+          + '. Eles nunca receberão sugestão de item vinda de risco — não porque estejam sem risco, mas porque falta o mapeamento. Avise a gestão para incluí-los.');
+      }
+    }
+    return out;
   }
 
   /* ===================== EIXO: O QUE VEM × O QUE FOI ===================== */
@@ -411,7 +1112,12 @@
   }
   function todosItens() {
     var out = [];
+    /* item 5 — plano de setor desativado (órfão) fica FORA de todos os números
+       desta tela; ele é denunciado no aviso do topo, não misturado na conta. */
+    var ativa = {};
+    SETORES.forEach(function (s) { ativa[s.sigla] = true; });
     PLANOS.forEach(function (p) {
+      if (!ativa[p.setorSigla]) { return; }
       itensVivos(p).forEach(function (i) { out.push({ item: i, plano: p }); });
     });
     return out;
@@ -425,9 +1131,12 @@
       .sort(function (a, b) { return (a.item.quandoPrevisto || '9999').localeCompare(b.item.quandoPrevisto || '9999'); });
     var c1 = el('<div class="pl-card"></div>');
     var h1 = el('<div class="pl-card-h"></div>');
-    h1.appendChild(txt('div', 'pl-card-t', 'O QUE VEM'));
-    h1.appendChild(txt('span', 'pl-count', vem.length + ' previsto(s)'));
-    h1.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
+    h1.appendChild(tituloCartao('O QUE VEM'));
+    h1.appendChild(txt('span', 'pl-count', plural(vem.length, 'previsto', 'previstos')));
+    /* item 31 — os dois cartões tinham botões "i" com o MESMO rótulo
+       ("O QUE VEM × O QUE FOI"): na lista de elementos do leitor de tela viravam
+       duas entradas idênticas, impossíveis de distinguir. */
+    h1.appendChild(iBtn('O QUE VEM — o que ainda vai acontecer', I_EIXO));
     c1.appendChild(h1);
     if (!vem.length) { c1.appendChild(txt('div', 'pl-empty', 'Nenhum item previsto para esta competência. Adicione itens no plano do seu setor — ou navegue de mês em ‹ ›.')); }
     vem.slice(0, 12).forEach(function (x) {
@@ -436,6 +1145,7 @@
       var hojeE = x.item.quandoPrevisto === HOJE;
       var dot = el('<div class="pl-l-dot"></div>');
       dot.style.background = vencido ? 'var(--red)' : hojeE ? 'var(--amber)' : 'var(--doing)';
+      dot.setAttribute('aria-hidden', 'true');
       lin.appendChild(dot);
       lin.appendChild(txt('div', 'pl-l-t', '[' + x.plano.setorSigla + '] ' + (x.item.oque || '(sem título)')));
       if (KPI.planejamentoItemTravado(x.item)) {
@@ -444,7 +1154,12 @@
         bd.title = 'Acima de R$ 200 — precisa de GESTOR e SÓCIO para executar (item em pause na nota enquanto espera).';
         lin.appendChild(bd);
       }
-      lin.appendChild(txt('div', 'pl-l-m', fmtBR(x.item.quandoPrevisto)));
+      /* item 18 — "atrasado" existia SÓ na cor da bolinha (WCAG 1.4.1: cor não
+         pode ser o único meio de passar informação). Agora está escrito. */
+      var marcaPrazo = vencido ? ' · atrasado' : (hojeE ? ' · hoje' : '');
+      var dPrev = txt('div', 'pl-l-m', fmtBR(x.item.quandoPrevisto) + marcaPrazo);
+      if (vencido) { dPrev.style.color = 'var(--red)'; } else if (hojeE) { dPrev.style.color = 'var(--amber)'; }
+      lin.appendChild(dPrev);
       lin.appendChild(txt('div', 'pl-l-m', x.item.quemNome || '—'));
       wrapLinha(lin, x.plano.setorSigla);
       c1.appendChild(lin);
@@ -453,14 +1168,17 @@
     wrap.appendChild(c1);
 
     /* --- O QUE FOI --- */
-    function dtDesfecho(x) { return x.item.quandoRealizado || (x.item.naoFeitoEm ? new Date(x.item.naoFeitoEm).toISOString().slice(0, 10) : ''); }
+    /* item 3 — era new Date(...).toISOString().slice(0,10), que é UTC: o item
+       marcado às 22h do dia 03 em Salvador (UTC−3) virava 04 e ORDENAVA errado. */
+    function dtDesfecho(x) { return x.item.quandoRealizado || (x.item.naoFeitoEm ? isoLocal(x.item.naoFeitoEm) : ''); }
     var foi = all.filter(function (x) { return !!x.item.quandoRealizado || !!x.item.naoFeito; })
       .sort(function (a, b) { return dtDesfecho(b).localeCompare(dtDesfecho(a)); });
     var c2 = el('<div class="pl-card"></div>');
     var h2 = el('<div class="pl-card-h"></div>');
-    h2.appendChild(txt('div', 'pl-card-t', 'O QUE FOI'));
-    h2.appendChild(txt('span', 'pl-count', foi.length + ' desfecho(s)'));
-    h2.appendChild(iBtn('O QUE VEM × O QUE FOI', I_EIXO));
+    h2.appendChild(tituloCartao('O QUE FOI'));/* item 19: heading de verdade */
+    h2.appendChild(txt('span', 'pl-count', plural(foi.length, 'desfecho', 'desfechos')));/* item 29 */
+    /* item 31 — rótulo único: era 'O QUE VEM × O QUE FOI' nos DOIS cartões. */
+    h2.appendChild(iBtn('O QUE FOI — o que já teve desfecho', I_EIXO));
     c2.appendChild(h2);
     if (!foi.length) { c2.appendChild(txt('div', 'pl-empty', 'Nenhum desfecho ainda. Ao marcar "✓ realizar" (ou "✗ não realizei") num item, ele aparece aqui.')); }
     foi.slice(0, 12).forEach(function (x) {
@@ -468,17 +1186,21 @@
       var dot = el('<div class="pl-l-dot"></div>');
       lin.appendChild(dot);
       lin.appendChild(txt('div', 'pl-l-t', '[' + x.plano.setorSigla + '] ' + (x.item.oque || '(sem título)')));
+      var detLin = null;
       if (x.item.naoFeito) {
         dot.style.background = 'var(--red)';
-        var bn = txt('span', 'pl-badge', '✗ não realizado');
+        /* O motivo fica VISÍVEL na linha (não só no hover: hover não existe no toque nem no leitor de tela). */
+        var bn = txt('span', 'pl-badge', '✗ não realizado — ' + (x.item.motivo || 'sem motivo declarado'));
         bn.style.color = 'var(--red)';
-        bn.title = 'Motivo: ' + (x.item.motivo || '—') + (x.item.motivoDetalhe ? (' — ' + x.item.motivoDetalhe) : '');
         lin.appendChild(bn);
-        lin.appendChild(txt('div', 'pl-l-m', x.item.naoFeitoEm ? fmtBR(new Date(x.item.naoFeitoEm).toISOString().slice(0, 10)) : '—'));
+        if (x.item.motivoDetalhe) { detLin = txt('div', 'pl-l-det', x.item.motivoDetalhe); }
+        /* item 3 — 2ª ocorrência do bug de UTC: usar a data CIVIL local. */
+        lin.appendChild(txt('div', 'pl-l-m', x.item.naoFeitoEm ? fmtBR(isoLocal(x.item.naoFeitoEm)) : '—'));
       } else {
         var noPrazo = x.item.quandoPrevisto && x.item.quandoRealizado <= x.item.quandoPrevisto;
         dot.style.background = noPrazo ? 'var(--green)' : 'var(--orange)';
-        var desvio = noPrazo ? 'no prazo' : ('+' + diffDias(x.item.quandoPrevisto, x.item.quandoRealizado) + 'd');
+        /* item 18/29 — o atraso não pode viver só na cor: vem por extenso. */
+        var desvio = noPrazo ? 'no prazo' : ('atrasado ' + plural(diffDias(x.item.quandoPrevisto, x.item.quandoRealizado), 'dia', 'dias'));
         var bd = txt('span', 'pl-badge', desvio);
         bd.style.color = noPrazo ? 'var(--green)' : 'var(--orange)';
         lin.appendChild(bd);
@@ -486,6 +1208,7 @@
       }
       wrapLinha(lin, x.plano.setorSigla);
       c2.appendChild(lin);
+      if (detLin) { c2.appendChild(detLin); }
     });
     if (foi.length > 12) { c2.appendChild(txt('div', 'pl-empty', '+ ' + (foi.length - 12) + ' — abra o setor abaixo para ver todos.')); }
     wrap.appendChild(c2);
@@ -498,9 +1221,12 @@
     if (par.length) {
       var pc = el('<div class="pl-card" style="margin-top:14px"></div>');
       var ph = el('<div class="pl-card-h"></div>');
-      ph.appendChild(txt('div', 'pl-card-t', 'Por que não foi feito — Pareto de motivos'));
-      ph.appendChild(txt('span', 'pl-count', par.reduce(function (s, x) { return s + x.n; }, 0) + ' item(ns) não realizado(s)'));
-      ph.appendChild(iBtn('Pareto de motivos', I_PARETO));
+      /* item 26 — o cartão NÃO tem curva acumulada de 80%, então parou de se
+         chamar "Pareto": o nome agora descreve o que a tela de fato desenha. */
+      ph.appendChild(tituloCartao('Motivos de não-realização (do mais frequente ao menos)'));
+      var totalPar = par.reduce(function (s, x) { return s + x.n; }, 0);
+      ph.appendChild(txt('span', 'pl-count', plural(totalPar, 'item não realizado', 'itens não realizados')));
+      ph.appendChild(iBtn('Motivos de não-realização', I_PARETO));
       pc.appendChild(ph);
       var maxN = par[0].n;
       par.forEach(function (px) {
@@ -508,9 +1234,12 @@
         var lbl = txt('div', 'pl-l-m', px.motivo);
         lbl.style.flex = '0 0 220px';
         lin.appendChild(lbl);
-        var trilho = el('<div style="flex:1;height:14px;border-radius:7px;background:var(--s1);overflow:hidden"></div>');
+        /* item 26 — o trilho ganhou min-width: é ELE que garante a legibilidade
+           da barra pequena. O piso de 6% na barra mentia (1 item era desenhado
+           com o tamanho de 6): proporção agora é proporção, sem piso. */
+        var trilho = el('<div style="flex:1;min-width:160px;height:14px;border-radius:7px;background:var(--s1);overflow:hidden"></div>');
         var barra = el('<div style="height:100%;border-radius:7px;background:var(--red)"></div>');
-        barra.style.width = Math.max(6, Math.round(px.n / maxN * 100)) + '%';
+        barra.style.width = (maxN ? (px.n / maxN * 100) : 0) + '%';
         trilho.appendChild(barra);
         lin.appendChild(trilho);
         lin.appendChild(txt('div', 'pl-l-m', px.n + '×'));
@@ -521,8 +1250,32 @@
   }
   function wrapLinha(lin, sigla) {
     lin.style.cursor = 'pointer';
+    /* Drill-down também pelo teclado (WCAG 2.1.1): sem role/tabindex/Enter, quem não usa mouse não sai do painel. */
+    lin.setAttribute('role', 'button');
+    lin.setAttribute('tabindex', '0');
+    /* ============================================================
+       item 17 · O RÓTULO INCLUI O CONTEÚDO — NÃO O SUBSTITUI
+       ------------------------------------------------------------
+       Com role="button" + aria-label, o leitor de tela ANULA os filhos e
+       lê SÓ o rótulo: eram 24 linhas dizendo "Abrir o plano de CRA" e
+       nenhuma dizendo o título do item, a data, o desvio ou o "✗ não
+       realizado". O rótulo agora é o conteúdo da linha + a ação no fim.
+       Chamada obrigatoriamente DEPOIS de montar os filhos.
+       ============================================================ */
+    var partes = [];
+    var i, f, s;
+    for (i = 0; i < lin.childNodes.length; i++) {
+      f = lin.childNodes[i];
+      s = (f.textContent || '').replace(/\s+/g, ' ').replace(/^ | $/g, '');
+      if (s) { partes.push(s); }
+    }
+    var conteudo = partes.join('. ');
+    var rotulo = (conteudo ? conteudo + '. ' : '') + 'Abrir o plano de ' + sigla;
+    lin.setAttribute('aria-label', rotulo);
     lin.title = 'Abrir o plano de ' + sigla;
-    lin.addEventListener('click', function () { ABERTOS[sigla] = true; render(); var n = document.getElementById('pl-s-' + sigla); if (n) { n.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+    function abrir() { ABERTOS[sigla] = true; render(); levarPara(document.getElementById('pl-s-' + sigla)); }
+    lin.addEventListener('click', abrir);
+    lin.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(); } });
   }
   function diffDias(a, b) {
     if (!a || !b) { return 0; }
@@ -533,22 +1286,73 @@
 
   /* ===================== RANKING "quem precisa de atenção" ===================== */
   function renderRanking() {
-    var linhas = PLANOS.map(function (p) {
+    /* ============================================================
+       item 6 · QUEM NÃO ENTREGOU NADA VINHA PRIMEIRO — DE FORA
+       ------------------------------------------------------------
+       O ranking nascia de PLANOS: quem NÃO criou plano não tem linha em
+       PLANOS, logo SUMIA do cartão "quem precisa de atenção" — exatamente
+       quem mais precisa. E quem criou um rascunho com 1 item aparecia com
+       nota 20 no topo, como se fosse o pior caso. O pior caso é o vazio.
+       Setor sem plano (ou com plano sem item ranqueável) entra ANTES de
+       todos, marcado, dizendo o que aconteceu.
+       ============================================================ */
+    var ativa = {};
+    SETORES.forEach(function (s) { ativa[s.sigla] = true; });
+    var comNota = {};
+    var linhas = PLANOS.filter(function (p) { return !!ativa[p.setorSigla]; }).map(function (p) {
       return { sigla: p.setorSigla, nota: KPI.planejamentoNota(itensVivos(p)) };
     }).filter(function (x) { return x.nota !== null; })
       .sort(function (a, b) { return a.nota.nota - b.nota.nota; });
-    if (!linhas.length) { return; }
+    linhas.forEach(function (x) { comNota[x.sigla] = true; });
+    var temPlano = {};
+    PLANOS.forEach(function (p) { temPlano[p.setorSigla] = true; });
+    /* item 5/6 — o cartão se chama "quem precisa de ATENÇÃO": ele cobra pessoa.
+       Só entra na lista quem TEM a quem cobrar (setor obrigado) ou quem já
+       criou plano. Acusar de "não entregou nada" um setor ativo que não tem
+       líder designado seria cobrar do vazio — esse caso é do aviso do topo,
+       que fala com a gestão, não do ranking, que fala com o líder. */
+    var obR = obrigadosEntrega();
+    var semNota = SETORES.filter(function (s) {
+      return !comNota[s.sigla] && (obR.mapa[s.sigla] || temPlano[s.sigla]);
+    }).map(function (s) {
+      return { sigla: s.sigla, semPlano: !temPlano[s.sigla] };
+    });
+    if (!linhas.length && !semNota.length) { return; }
     var card = el('<div class="pl-card"></div>');
     var h = el('<div class="pl-card-h"></div>');
-    h.appendChild(txt('div', 'pl-card-t', 'Quem precisa de atenção'));
+    h.appendChild(tituloCartao('Quem precisa de atenção'));/* item 19: heading de verdade */
     h.appendChild(iBtn('Ranking por nota (menor primeiro)', function () {
-      return iRowsNota(linhas[0].nota).concat([['Ordem', 'Nota crescente — o primeiro da lista é quem mais precisa de apoio AGORA. Setor sem itens não ranqueia.']]);
+      /* item 6 — o "i" citava linhas[0] direto: com o ranking vazio (todos
+         sem plano) isso estourava TypeError e derrubava o cartão inteiro. */
+      var base = linhas.length ? iRowsNota(linhas[0].nota) : [];
+      return base.concat([
+        ['Quem vem primeiro', 'No topo, em vermelho, os setores SEM nota: quem não criou plano ou criou plano sem item ranqueável. Não entregar nada é pior do que entregar pouco — por isso eles vêm ANTES de qualquer nota baixa. Depois vêm os setores com nota, em ordem crescente.'],
+        ['Quem NÃO entra nesta lista', 'Setor ativo SEM líder designado no cadastro e sem plano criado. Este cartão cobra uma pessoa; sem líder não há a quem cobrar, e a linha vermelha só geraria culpa sem dono. Esse caso vira aviso no topo da tela, endereçado à gestão: designe o líder ou desative o setor.'],
+        ['Atenção', linhas.length
+          ? ('Os números acima são do 1º setor COM nota (' + linhas[0].sigla + '), o de MENOR nota — não são o total da rede. Para os números de outro setor, use o "i" ao lado da nota dele, na lista de setores.')
+          : 'Nenhum setor tem nota ainda nesta competência: não há item com data prevista para calcular. Os setores listados estão todos sem entrega.'],
+        ['Ordem', 'Sem plano primeiro; depois nota crescente — quem mais precisa de apoio AGORA está sempre no alto da lista.']
+      ]);
     }));
     card.appendChild(h);
+    semNota.forEach(function (x) {
+      var lin = el('<div class="pl-linha"></div>');
+      var dot = el('<div class="pl-l-dot"></div>');
+      dot.style.background = 'var(--bandaCritica)';
+      dot.setAttribute('aria-hidden', 'true');
+      lin.appendChild(dot);
+      lin.appendChild(txt('div', 'pl-l-t', x.sigla + ' — ' + nomeSetor(x.sigla)));
+      lin.appendChild(txt('div', 'pl-semplano', x.semPlano
+        ? 'sem plano criado — não entregou nada'
+        : 'plano sem item com data prevista — nada a avaliar'));
+      wrapLinha(lin, x.sigla);
+      card.appendChild(lin);
+    });
     linhas.forEach(function (x) {
       var lin = el('<div class="pl-linha"></div>');
       var dot = el('<div class="pl-l-dot"></div>');
       dot.style.background = x.nota.nota >= 80 ? 'var(--green)' : x.nota.nota >= 50 ? 'var(--amber)' : 'var(--red)';
+      dot.setAttribute('aria-hidden', 'true');
       lin.appendChild(dot);
       lin.appendChild(txt('div', 'pl-l-t', x.sigla + ' — ' + nomeSetor(x.sigla)));
       lin.appendChild(txt('div', 'pl-l-m', 'nota ' + x.nota.nota + ' · aderência ' + x.nota.aderencia + '%'));
@@ -562,16 +1366,44 @@
   function renderSetores() {
     var card = el('<div class="pl-card"></div>');
     var h = el('<div class="pl-card-h"></div>');
-    h.appendChild(txt('div', 'pl-card-t', 'Planos por setor — ' + compLabel(COMP)));
-    h.appendChild(txt('span', 'pl-count', PLANOS.length + ' de ' + SETORES.length + ' setor(es) com plano'));
-    h.appendChild(iBtn('Entrega e escalonamento', function () { return iRowsPrazo(KPI.planejamentoPrazo(COMP, HOJE, null)); }));
+    h.appendChild(tituloCartao('Planos por setor — ' + compLabel(COMP)));/* item 19 */
+    /* ============================================================
+       item 30 · O CHIP É UM CHIP, NÃO UM RODAPÉ
+       ------------------------------------------------------------
+       .pl-count é pílula de 11px com border-radius 20: recebia um
+       parágrafo de ~100 caracteres explicando a diferença de critério e
+       deformava o cabeçalho inteiro. O número fica no chip; a ressalva
+       (que é importante e continua escrita) mudou para o "i" ao lado.
+       ============================================================ */
+    var ativaLst = {};
+    SETORES.forEach(function (s) { ativaLst[s.sigla] = true; });
+    var criados = PLANOS.filter(function (p) { return !!ativaLst[p.setorSigla]; }).length;
+    h.appendChild(txt('span', 'pl-count', criados + ' de ' + SETORES.length + ' com plano'));
+    h.appendChild(iBtn('Planos por setor — contagem e escalonamento', function () {
+      return [
+        ['Números', criados + ' de ' + plural(SETORES.length, 'setor ativo tem', 'setores ativos têm') + ' plano CRIADO nesta competência — rascunho conta.'],
+        ['Critério diferente do cartão do topo', 'Este chip conta plano CRIADO (inclusive rascunho e plano sem item) sobre TODOS os setores ativos — é o retrato da lista que vem logo abaixo. O número grande no topo da tela conta plano ENTREGUE com ao menos um item sobre os setores OBRIGADOS (os que têm líder designado). Dois numeradores e dois denominadores diferentes, de propósito: aqui é "quem começou", lá é "quem prestou contas". Os dois critérios estão escritos para que a divergência não pareça erro de conta.']
+      ].concat(iRowsPrazo(KPI.planejamentoPrazo(COMP, HOJE, null)));
+    }));
     card.appendChild(h);
 
-    SETORES.forEach(function (s) {
+    /* R7·item 21: a lista era 23 linhas planas em ordem alfabética —
+       impossível de varrer. Agora agrupa por setor-RAIZ (setorPaiSigla, o
+       mesmo dado da hierarquia do usuarios.html) com subsetores indentados
+       ↳ e roll-up no raiz. A CONTAGEM da tela não muda: são as MESMAS linhas
+       de antes (herói e contador do cabeçalho intactos). */
+    function linhaSetor(s, ehSub) {
       var pl = PLANOS.filter(function (p) { return p.setorSigla === s.sigla; })[0];
-      var row = el('<div class="pl-srow" id="pl-s-' + s.sigla + '"></div>');
+      var row = el('<div class="pl-srow' + (ehSub ? ' pl-ssub' : '') + '" id="pl-s-' + escAttr(s.sigla) + '"></div>');
       var head = el('<div class="pl-shead"></div>');
-      head.appendChild(txt('div', 'pl-sname', s.sigla + ' — ' + (s.nome || s.sigla)));
+      /* O NOME do setor é o botão de abrir/fechar (não o cabeçalho inteiro: ele já contém
+         botões "i" e chips, e botão dentro de botão quebra o leitor de tela). */
+      /* item 19 — o nome do setor é o título da seção dele: vira <h3> dentro
+         do <h2> do cartão. A página inteira tinha UM heading (o <h1>). */
+      var nome = txt('h3', 'pl-sname', (ehSub ? '↳ ' : '') + s.sigla + ' — ' + (s.nome || s.sigla));
+      nome.setAttribute('role', 'button');
+      nome.setAttribute('tabindex', '0');
+      head.appendChild(nome);
 
       var pz = KPI.planejamentoPrazo(COMP, HOJE, pl && pl.entregueEm ? pl.entregueEm : null);
       var f = FASES[pz.fase] || FASES.ok;
@@ -585,13 +1417,13 @@
          (WhatsApp/E-mail com texto pronto) quando D-3/D-0 sem entrega — o
          push automático segue O2 aberto (exige backend). Só o gestor cobra. */
       if ((pz.fase === 'd3' || pz.fase === 'd0') && !(pl && pl.entregueEm) && Guard.isGestor && Guard.isGestor()) {
-        var msgCob = 'Planejamento ' + s.sigla + ' (' + COMP + '): prazo dia ' + fmtBR(pz.deadline) + ' — favor entregar o plano no GERA.';
+        var msgCob = 'Planejamento ' + s.sigla + ' (' + compLabel(COMP) + '): prazo dia ' + fmtBR(pz.deadline) + ' — favor entregar o plano no GERA.';
         var lidsCob = USERS.filter(function (u) {
           return u.perfil === 'lider' && (u.setoresLiderados.indexOf(s.sigla) >= 0 || (s.setorPaiSigla && u.setoresLiderados.indexOf(s.setorPaiSigla) >= 0));
         });
         /* R6/design (regra Chanel): 1 ação visível por linha — o canal escolhe-se depois */
         var bC = txt('button', 'pl-acao', 'cobrar ▾'); bC.type = 'button';
-        bC.title = lidsCob.length ? ('Cobrança pronta por WhatsApp ou e-mail — líder(es): ' + lidsCob.map(function (u) { return u.nome; }).join(', ')) : 'Cobrança pronta por WhatsApp ou e-mail (o cadastro não aponta líder deste setor).';
+        bC.title = lidsCob.length ? ('Cobrança pronta por WhatsApp ou e-mail — ' + (lidsCob.length === 1 ? 'líder' : 'líderes') + ': ' + lidsCob.map(function (u) { return u.nome; }).join(', ')) : 'Cobrança pronta por WhatsApp ou e-mail (o cadastro não aponta líder deste setor).';
         bC.addEventListener('click', function (ev) {
           ev.stopPropagation();
           UI.modal({
@@ -603,11 +1435,13 @@
                 UI.button({ label: 'E-mail ✉', variant: 'ghost', onClick: function () {
                   close();
                   var to = lidsCob.map(function (u) { return u.email; }).filter(Boolean).join(',');
-                  window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent('Planejamento ' + s.sigla + ' — ' + COMP) + '&body=' + encodeURIComponent(msgCob);
+                  window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent('Planejamento ' + s.sigla + ' — ' + compLabel(COMP)) + '&body=' + encodeURIComponent(msgCob);
                 } }),
                 UI.button({ label: 'WhatsApp 📱', onClick: function () {
                   close();
-                  window.open('https://wa.me/?text=' + encodeURIComponent(msgCob), '_blank');
+                  /* item 25 — sem 'noopener', a aba do wa.me herda window.opener e
+                     pode reescrever a URL DESTA aba (reverse tabnabbing). */
+                  window.open('https://wa.me/?text=' + encodeURIComponent(msgCob), '_blank', 'noopener,noreferrer');
                 } })
               ];
             }
@@ -622,11 +1456,16 @@
         var stMeta = STATUS_PLANO[stp] || STATUS_PLANO.rascunho;
         var stB = txt('span', 'pl-badge', stMeta.label);
         stB.style.color = stMeta.cor;
-        stB.title = 'Estado derivado (KPI.planejamentoStatus) — nada trava por estado.';
+        stB.title = 'Estado calculado a partir da entrega e das ciências — nenhum estado trava o trabalho.';
         head.appendChild(stB);
         head.appendChild(iBtn('Estado do plano — ' + s.sigla, I_STATUS));
         var vivos = itensVivos(pl);
-        head.appendChild(txt('span', 'pl-smeta', vivos.length + ' item(ns) · ' + vivos.filter(function (i) { return i.quandoRealizado; }).length + ' realizado(s)' + (vivos.filter(function (i) { return i.naoFeito; }).length ? (' · ' + vivos.filter(function (i) { return i.naoFeito; }).length + ' não realizado(s)') : '')));
+        /* item 29 — pluralização de verdade ("1 item · 1 realizado"). */
+        var qtdReal = vivos.filter(function (i) { return i.quandoRealizado; }).length;
+        var qtdNao = vivos.filter(function (i) { return i.naoFeito; }).length;
+        head.appendChild(txt('span', 'pl-smeta', plural(vivos.length, 'item', 'itens')
+          + ' · ' + plural(qtdReal, 'realizado', 'realizados')
+          + (qtdNao ? (' · ' + plural(qtdNao, 'não realizado', 'não realizados')) : '')));
         var n = KPI.planejamentoNota(vivos);
         var nb = el('<span class="pl-nota"></span>');
         nb.appendChild(txt('span', '', n ? ('Nota ' + n.nota) : 'sem nota'));
@@ -646,63 +1485,212 @@
 
       var box = el('<div style="display:none"></div>');
       row.appendChild(box);
-      head.addEventListener('click', function () {
+      function alternar() {
         ABERTOS[s.sigla] = !ABERTOS[s.sigla];
         box.style.display = ABERTOS[s.sigla] ? 'block' : 'none';
-        if (ABERTOS[s.sigla]) { box.innerHTML = ''; if (pl) { fillPlano(pl, box); } else { box.appendChild(txt('div', 'pl-empty', 'Sem plano — ' + (escreveNoSetor(s.sigla) ? 'clique em "Criar plano" para abrir o 5W2H do mês.' : 'o líder do setor ainda não criou.'))); } }
-      });
+        nome.setAttribute('aria-expanded', ABERTOS[s.sigla] ? 'true' : 'false');
+        if (ABERTOS[s.sigla]) { box.innerHTML = ''; if (pl) { fillPlano(pl, box); } else { box.appendChild(txt('div', 'pl-empty', 'Sem plano — ' + (escreveNoSetor(s.sigla) ? 'clique em "Criar plano" para abrir o plano do mês.' : 'o líder do setor ainda não criou.'))); } }
+      }
+      nome.setAttribute('aria-expanded', ABERTOS[s.sigla] ? 'true' : 'false');
+      head.addEventListener('click', alternar);
+      /* Abrir/fechar o setor é a interação principal da tela — precisa existir no teclado. */
+      nome.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternar(); } });
       if (ABERTOS[s.sigla]) { box.style.display = 'block'; if (pl) { fillPlano(pl, box); } else { box.appendChild(txt('div', 'pl-empty', 'Sem plano nesta competência.')); } }
-      card.appendChild(row);
+      return row;
+    }
+
+    /* laço de grupos: raiz → subsetores indentados (dado: setorPaiSigla) */
+    var vistos = {};
+    var raizes = SETORES.filter(function (s) { return !s.setorPaiSigla; });
+    raizes.forEach(function (rz) {
+      vistos[rz.sigla] = true;
+      var subs = SETORES.filter(function (x) { return x.setorPaiSigla === rz.sigla; });
+      subs.forEach(function (x) { vistos[x.sigla] = true; });
+      var rowRaiz = linhaSetor(rz, false);
+      card.appendChild(rowRaiz);
+      if (!subs.length) { return; }
+      var comPlano = subs.filter(function (x) { return PLANOS.some(function (p) { return p.setorSigla === x.sigla; }); }).length;
+      var temPend = subs.some(function (x) {
+        var pp = PLANOS.filter(function (p) { return p.setorSigla === x.sigla; })[0];
+        return !(pp && pp.entregueEm);
+      });
+      /* "a ação certa é a mais fácil": grupo com pendência já nasce aberto */
+      if (GRUPOS_ABERTOS[rz.sigla] == null) { GRUPOS_ABERTOS[rz.sigla] = temPend; }
+      var subBox = el('<div class="pl-gsubs"></div>');
+      subs.forEach(function (x) { subBox.appendChild(linhaSetor(x, true)); });
+      subBox.style.display = GRUPOS_ABERTOS[rz.sigla] ? '' : 'none';
+      var chip = txt('button', 'pl-acao', '');
+      chip.type = 'button';
+      chip.title = 'Mostrar/ocultar os subsetores de ' + rz.sigla + '. Grupo com subsetor sem plano entregue abre sozinho.';
+      chip.setAttribute('aria-expanded', GRUPOS_ABERTOS[rz.sigla] ? 'true' : 'false');
+      function pintaChip() { chip.textContent = (GRUPOS_ABERTOS[rz.sigla] ? '▾ ' : '▸ ') + comPlano + ' de ' + plural(subs.length, 'subsetor', 'subsetores') + ' com plano'; }
+      pintaChip();
+      chip.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        GRUPOS_ABERTOS[rz.sigla] = !GRUPOS_ABERTOS[rz.sigla];
+        subBox.style.display = GRUPOS_ABERTOS[rz.sigla] ? '' : 'none';
+        chip.setAttribute('aria-expanded', GRUPOS_ABERTOS[rz.sigla] ? 'true' : 'false');
+        pintaChip();
+      });
+      var headRaiz = rowRaiz.querySelector('.pl-shead');
+      if (headRaiz) { headRaiz.appendChild(chip); }
+      card.appendChild(subBox);
+    });
+    /* órfão (setorPaiSigla aponta p/ raiz fora da lista): NUNCA some da tela */
+    SETORES.forEach(function (s) {
+      if (!vistos[s.sigla]) { card.appendChild(linhaSetor(s, !!s.setorPaiSigla)); }
     });
     bodyEl.appendChild(card);
   }
 
-  /* ---------- grade 5W2H de um plano ---------- */
+  /* ---------- grade do plano: O quê · Como · Quem · Quando · Quanto ---------- */
   function fillPlano(pl, box) {
     var podeEd = escreveNoSetor(pl.setorSigla);
+    /* R7·item 22: o ciclo manual → risco (P×I) → mitigação agora CHEGA ao
+       plano do setor — bloco acima da grade, nunca bloqueia a entrega. */
+    var sug = blocoSugeridos(pl, podeEd);
+    if (sug.childNodes.length) { box.appendChild(sug); }
+    /* ============================================================
+       item 21 · REGIÃO QUE ROLA NA HORIZONTAL PRECISA DE TECLADO
+       ------------------------------------------------------------
+       .pl-grade tem overflow-x mas não era focável: quem navega só pelo
+       teclado não conseguia rolar para ver as colunas R$ e ações
+       (WCAG 2.1.1). tabindex=0 + role=region + nome + :focus-visible.
+       ============================================================ */
+    var rotuloGrade = 'Itens do plano de ' + pl.setorSigla + ' — ' + compLabel(pl.competencia || COMP) + ' (tabela rolável na horizontal)';
     var grade = el('<div class="pl-grade"></div>');
+    grade.setAttribute('tabindex', '0');
+    grade.setAttribute('role', 'region');
+    grade.setAttribute('aria-label', rotuloGrade);
     var tb = el('<table class="pl-tb"></table>');
-    var thead = el('<thead><tr><th>O que</th><th>Como</th><th>Quem</th><th>Quando (prev.)</th><th>Realizado</th><th>R$ (prev → final)</th><th></th></tr></thead>');
+    /* item 20 — a tabela era ANÔNIMA (sem caption), os th não diziam a que
+       eixo pertenciam (sem scope) e a coluna de ações não tinha nome. */
+    var cap = document.createElement('caption');
+    cap.className = 'pl-sr';
+    cap.textContent = 'Plano de ' + pl.setorSigla + ' — ' + compLabel(pl.competencia || COMP)
+      + ': o quê, como, quem, quando previsto, realizado, quanto e as ações de cada item.';
+    tb.appendChild(cap);
+    var thead = el('<thead><tr>'
+      + '<th scope="col">O que</th>'
+      + '<th scope="col">Como</th>'
+      + '<th scope="col">Quem</th>'
+      + '<th scope="col">Quando (prev.)</th>'
+      + '<th scope="col">Realizado</th>'
+      + '<th scope="col">R$ (prev → final)</th>'
+      + '<th scope="col">Ações do item</th>'
+      + '</tr></thead>');
     tb.appendChild(thead);
     var tbody = document.createElement('tbody');
     var vivos = itensVivos(pl).slice().sort(function (a, b) { return (a.quandoPrevisto || '9999').localeCompare(b.quandoPrevisto || '9999'); });
     if (!vivos.length) {
       var tr0 = document.createElement('tr');
       var td0 = document.createElement('td');
-      td0.colSpan = 7; td0.appendChild(txt('span', 'pl-empty', 'Nenhum item ainda — o 5W2H do mês nasce vazio.'));
+      td0.colSpan = 7; td0.appendChild(txt('span', 'pl-empty', 'Nenhum item ainda — o plano do mês nasce vazio.'));
       tr0.appendChild(td0); tbody.appendChild(tr0);
     }
     vivos.forEach(function (it) {
       var tr = document.createElement('tr');
       function td(node) { var c = document.createElement('td'); if (node) { c.appendChild(node); } tr.appendChild(c); return c; }
+      function abrirOrigem(texto, titulo) {
+        UI.modal({
+          title: titulo || 'Origem do item', width: 440,
+          body: [txt('div', 'pl-empty', texto)],
+          footer: function (close) { return [UI.button({ label: 'Fechar', variant: 'ghost', onClick: close })]; }
+        });
+      }
       var tdOq = td(txt('span', '', it.oque || '—'));
+      /* R7·item 22: item nascido de sugestão carrega a ORIGEM (qual risco) —
+         rastreabilidade "as mitigações dos críticos estão sendo executadas?" */
+      if (it.origemRisco && it.origemRisco.nivel) {
+        var oR = txt('span', 'pl-badge', '⛨ risco ' + it.origemRisco.nivel);
+        oR.style.marginLeft = '6px';
+        /* item 15 — --red/--orange sobre --chipBg dão 3,14:1 e 4,27:1 no claro
+           (reprovam 1.4.3). Os tokens de banda existem exatamente para isto. */
+        oR.style.color = corBanda(it.origemRisco.nivel);
+        /* item 33 — "Antecipa" prometia indicador antecedente para os 67 riscos;
+           o campo é o sinal descrito no manual, não um KPI de resultado. */
+        var oTxt = 'Origem: matriz de risco do manual — "' + (it.origemRisco.risco || '') + '" (P' + it.origemRisco.p + '×I' + it.origemRisco.i + ')' + (it.origemRisco.ind ? ' · Sinal de alerta do manual: ' + it.origemRisco.ind : '');
+        oR.title = oTxt;
+        // O title nao abre no toque: o badge tambem responde a clique/Enter (a origem e' rastreabilidade, nao enfeite).
+        oR.setAttribute('role', 'button');
+        oR.setAttribute('tabindex', '0');
+        oR.setAttribute('aria-label', oTxt);
+        oR.style.cursor = 'pointer';
+        oR.addEventListener('click', function (ev) { ev.stopPropagation(); abrirOrigem(oTxt); });
+        oR.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); abrirOrigem(oTxt); } });
+        tdOq.appendChild(oR);
+      }
       /* R5-B2: setores parceiros (aceite por chip — quem lidera o setor
          parceiro aceita; padrão convite: aceitar registra ciência). */
       (it.setoresEnvolvidos || []).forEach(function (se) {
         var chip = txt('span', 'pl-badge', se.aceite ? ('✓ ' + se.sigla) : (se.sigla + ' — aceitar?'));
         chip.style.marginLeft = '6px';
         chip.style.color = se.aceite ? 'var(--green)' : 'var(--muted)';
-        chip.title = se.aceite
+        var chipTxt = se.aceite
           ? ('Aceito por ' + (se.aceite.nome || '—') + ' (' + se.sigla + ').')
           : ('Aguardando o aceite de quem lidera ' + se.sigla + '.');
+        chip.title = chipTxt;
+        chip.setAttribute('aria-label', chipTxt);
         if (!se.aceite && escreveNoSetor(se.sigla)) {
+          /* Registrar o aceite é ato de governança: precisa de teclado, não só de clique. */
+          chipTxt = 'Você lidera ' + se.sigla + ' — aceite o envolvimento do seu setor neste item.';
           chip.style.cursor = 'pointer';
           chip.style.color = 'var(--amber)';
-          chip.title = 'Você lidera ' + se.sigla + ' — clique para aceitar o envolvimento do seu setor neste item.';
-          chip.addEventListener('click', function () { aceitarSetorItem(pl, it, se.sigla); });
+          chip.title = chipTxt;
+          chip.setAttribute('role', 'button');
+          chip.setAttribute('tabindex', '0');
+          chip.setAttribute('aria-label', chipTxt);
+          chip.addEventListener('click', function (ev) { ev.stopPropagation(); aceitarSetorItem(pl, it, se.sigla); });
+          chip.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); aceitarSetorItem(pl, it, se.sigla); } });
+        } else if (se.aceite) {
+          /* Quem aceitou é rastreabilidade — no toque o title não abre, então o chip também clica. */
+          chip.style.cursor = 'pointer';
+          chip.setAttribute('role', 'button');
+          chip.setAttribute('tabindex', '0');
+          chip.addEventListener('click', function (ev) { ev.stopPropagation(); abrirOrigem(chipTxt, 'Aceite do setor parceiro'); });
+          chip.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); abrirOrigem(chipTxt, 'Aceite do setor parceiro'); } });
         }
         tdOq.appendChild(chip);
       });
-      td(txt('span', 'pl-l-m', it.como || '—'));
+      /* ============================================================
+         item 27 · CÉLULA DE TEXTO LONGO
+         ------------------------------------------------------------
+         .pl-l-m é nowrap 11px/700: um "como" de 250 caracteres esticava a
+         linha e destruía a grade. Agora a célula quebra em 2 linhas com
+         clamp e o texto inteiro abre no modal por "ver tudo" (o title
+         sozinho não abre no toque nem no leitor de tela).
+         ============================================================ */
+      var tdCm = td(null);
+      var comoTxt = it.como || '';
+      if (!comoTxt) {
+        tdCm.appendChild(txt('span', 'pl-l-m', '—'));
+      } else {
+        var cx = txt('div', 'pl-cel-long', '');
+        var cl = txt('div', 'pl-clamp', comoTxt);
+        cx.appendChild(cl);
+        tdCm.appendChild(cx);
+        if (comoTxt.length > 90) {
+          var bv = txt('button', 'pl-vertudo', 'ver tudo'); bv.type = 'button';
+          bv.setAttribute('aria-label', 'Ver o COMO completo do item ' + (it.oque || 'sem título'));
+          bv.addEventListener('click', function (ev) { ev.stopPropagation(); abrirOrigem(comoTxt, 'Como será feito'); });
+          tdCm.appendChild(bv);
+        }
+      }
       td(txt('span', 'pl-l-m', it.quemNome || '—'));
+      /* item 18 — "atrasado" existia SÓ na cor vermelha (reprova 1.4.1). */
+      var atrasadoIt = !it.quandoRealizado && !it.naoFeito && it.quandoPrevisto && it.quandoPrevisto < HOJE;
       var tdPrev = td(txt('span', '', fmtBR(it.quandoPrevisto)));
-      if (!it.quandoRealizado && it.quandoPrevisto && it.quandoPrevisto < HOJE) { tdPrev.style.color = 'var(--red)'; }
+      if (atrasadoIt) {
+        tdPrev.style.color = 'var(--red)';
+        tdPrev.appendChild(txt('div', 'pl-l-det', 'atrasado há ' + plural(diffDias(it.quandoPrevisto, HOJE), 'dia', 'dias')));
+      }
       var tdReal;
       if (it.naoFeito) {
-        var nf = txt('span', 'pl-badge', '✗ não realizado');
+        /* O motivo fica ESCRITO na célula. Antes vivia só no title — invisível no toque e no leitor de tela. */
+        var nf = txt('span', 'pl-badge', '✗ ' + (it.motivo || 'sem motivo declarado'));
         nf.style.color = 'var(--red)';
-        nf.title = 'Motivo: ' + (it.motivo || '—') + (it.motivoDetalhe ? (' — ' + it.motivoDetalhe) : '');
         tdReal = td(nf);
+        if (it.motivoDetalhe) { tdReal.appendChild(txt('div', 'pl-l-det', it.motivoDetalhe)); }
       } else {
         var real = it.quandoRealizado ? fmtBR(it.quandoRealizado) : '—';
         tdReal = td(txt('span', '', real));
@@ -713,8 +1701,17 @@
       if (it.valorFinalCentavos != null) { vTexto += ' → ' + fmtBRL(it.valorFinalCentavos); }
       var tdV = td(txt('span', 'pl-l-m', vTexto));
       if (it.valorFinalCentavos != null && vPrevIt != null && Number(it.valorFinalCentavos) > Number(vPrevIt)) {
-        tdV.title = 'Estourou o previsto em ' + fmtBRL(Number(it.valorFinalCentavos) - Number(vPrevIt)) + '.';
+        /* ============================================================
+           item 14 · ESTOURO DE ORÇAMENTO POR ESCRITO
+           ------------------------------------------------------------
+           Era cor + title. O title não abre no toque nem é lido pelo
+           leitor de tela, e cor sozinha reprova a 1.4.1 — quem tem
+           daltonismo via só um número. Agora vem etiqueta de texto.
+           ============================================================ */
+        var estouro = Number(it.valorFinalCentavos) - Number(vPrevIt);
+        tdV.title = 'Estourou o previsto em ' + fmtBRL(estouro) + '.';
         tdV.style.color = 'var(--amber)'; /* fix R6: glossário e roteiro dizem "âmbar" — era --orange */
+        tdV.appendChild(txt('span', 'pl-estouro', '▲ estourou ' + fmtBRL(estouro)));
       }
       if (Number(vPrevIt) > 20000) {
         var travado = KPI.planejamentoItemTravado(it);
@@ -725,14 +1722,21 @@
         tdV.appendChild(bd);
       }
       var tdA = td(null);
-      if (podeEd || cabeAprovar(it)) {
+      /* item 1 — quando o botão "aprovar" SOME por four-eyes, a tela explica
+         por quê. Sumiço mudo faz o gestor achar que é bug de permissão. */
+      var barradoFourEyes = KPI.planejamentoItemTravado(it) && autorDoItem(it)
+        && ((Guard.isSocio && Guard.isSocio()) || (Guard.isGestor && Guard.isGestor()));
+      if (podeEd || cabeAprovar(it) || barradoFourEyes) {
         if (!it.quandoRealizado && !it.naoFeito && podeEd) {
           var br = txt('button', 'pl-acao green', '✓ realizar'); br.type = 'button';
-          if (KPI.planejamentoItemTravado(it)) { br.disabled = true; br.style.opacity = '.45'; br.title = 'Aguardando gestor + sócio (alçada R$200). Enquanto espera, o item não conta na nota.'; }
+          var travado = KPI.planejamentoItemTravado(it);
+          if (travado) { br.disabled = true; br.style.opacity = '.45'; }
           br.addEventListener('click', function () { modalRealizar(pl, it); });
           tdA.appendChild(br);
+          /* Botão desabilitado não expõe title no toque nem no teclado: o motivo da trava fica ESCRITO. */
+          if (travado) { tdA.appendChild(txt('div', 'pl-l-det', 'Travado pela alçada: aguarda gestor + sócio (acima de R$ 200,00). Enquanto espera, o item não conta na nota.')); }
           var bn = txt('button', 'pl-acao red', '✗ não realizei'); bn.type = 'button';
-          bn.title = 'Declara o item como não realizado, com motivo obrigatório (alimenta o Pareto de motivos).';
+          bn.title = 'Declara o item como não realizado, com motivo obrigatório (alimenta o cartão de motivos de não-realização).';
           bn.addEventListener('click', function () { modalNaoRealizar(pl, it); });
           tdA.appendChild(bn);
         }
@@ -744,15 +1748,18 @@
         }
         if (cabeAprovar(it)) {
           var ba = txt('button', 'pl-acao', 'aprovar'); ba.type = 'button';
-          ba.title = 'Assinar como ' + ((Guard.isSocio && Guard.isSocio()) ? 'sócio/gestor' : 'gestor') + ' (aprovação paralela; líder não assina — four-eyes).';
+          ba.title = 'Assinar como ' + ((Guard.isSocio && Guard.isSocio()) ? 'sócio/gestor' : 'gestor') + ' (aprovação paralela; quem criou o item não assina — four-eyes).';
           ba.addEventListener('click', function () { aprovarItem(pl, it); });
           tdA.appendChild(ba);
+        } else if (barradoFourEyes) {
+          tdA.appendChild(txt('div', 'pl-l-det', 'Você criou este item — a segunda assinatura tem que ser de outra pessoa (four-eyes).'));
         }
         if (podeEd) {
-          var be = txt('button', 'pl-acao', 'editar'); be.type = 'button';
+          var be = txt('button', 'pl-acao muted', 'editar'); be.type = 'button';
           be.addEventListener('click', function () { modalItem(pl, it); });
           tdA.appendChild(be);
-          var bx = txt('button', 'pl-acao red', 'remover'); bx.type = 'button';
+          var bx = txt('button', 'pl-acao-del', '🗑'); bx.type = 'button';
+          bx.title = 'Remover item (pede confirmação)'; bx.setAttribute('aria-label', 'Remover item');
           bx.addEventListener('click', function () { removerItem(pl, it); });
           tdA.appendChild(bx);
         }
@@ -801,7 +1808,8 @@
         foot.appendChild(bs);
       }
     }
-    foot.appendChild(iBtn('Alçada R$200 (aprovação paralela)', I_ALCADA));
+    /* item 31 — idem: o rótulo é único por setor aberto. */
+    foot.appendChild(iBtn('Alçada R$200 (aprovação paralela) — ' + pl.setorSigla, I_ALCADA));
     box.appendChild(foot);
   }
   function assinaturasTexto(it) {
@@ -810,8 +1818,21 @@
     if (!it.aprovSocio) { falta.push('sócio'); }
     return 'falta ' + falta.join(' + ');
   }
+  /* ============================================================
+     item 1 · FOUR-EYES DE VERDADE (era só texto na tela)
+     ------------------------------------------------------------
+     A tela ANUNCIAVA "líder não assina — four-eyes", mas o código não
+     tinha uma linha que impedisse o autor de assinar: gestor e sócio
+     também criam itens, e criavam-e-assinavam. Segregação de funções
+     (COSO/SOX) exige que a 2ª assinatura seja de OUTRA pessoa.
+     Toda criação de item grava criadoPor; sem criadoPor NÃO há
+     fallback permissivo (ninguém nunca usou este sistema — não existe
+     item legado a proteger).
+     ============================================================ */
+  function autorDoItem(it) { return it && it.criadoPor === USER.uid; }
   function cabeAprovar(it) {
     if (!KPI.planejamentoItemTravado(it)) { return false; }
+    if (autorDoItem(it)) { return false; } /* item 1: quem criou não assina */
     var socio = Guard.isSocio && Guard.isSocio();
     if (socio) { return !it.aprovSocio || !it.aprovGestor; } /* sócio assina o que faltar */
     if (Guard.isGestor && Guard.isGestor()) { return !it.aprovGestor; }
@@ -841,23 +1862,58 @@
     var quem = { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() };
     var patch = {}; patch[papel] = quem;
     Store.atualizarPlanejamento(pl.id, patch, 'planejamento_ciencia_' + (papel === 'aprovSocio' ? 'socio' : 'gestor'), null)
-      .then(function () { pl[papel] = quem; toast('Ciência registrada (' + (papel === 'aprovSocio' ? 'sócio' : 'gestor') + ').'); render(); })
+      .then(function (ts) { pl[papel] = quem; pl.atualizadoEm = ts; toast('Ciência registrada (' + (papel === 'aprovSocio' ? 'sócio' : 'gestor') + ').'); render(); })
       .catch(function (e) { toast(e.message, 'err'); });
   }
   function salvarItens(pl, novaLista, acao, antes) {
-    return Store.atualizarPlanejamento(pl.id, { itens: novaLista }, acao, antes || null)
-      .then(function () { pl.itens = novaLista; });
+    return Store.atualizarLista(pl.id, 'itens', novaLista, pl.atualizadoEm == null ? null : pl.atualizadoEm, acao, antes || null)
+      .then(function (ts) { pl.itens = novaLista; pl.atualizadoEm = ts; });
   }
   function criarPlano(sigla) {
     if (PLANOS.some(function (p) { return p.setorSigla === sigla; })) { toast('O setor ' + sigla + ' já tem plano nesta competência.', 'err'); return; } /* R6: anti duplo-clique/duplicata */
     Store.criarPlanejamento({ setorSigla: sigla, competencia: COMP, itens: [], entregueEm: null })
-      .then(function () { toast('Plano de ' + sigla + ' criado — monte o 5W2H.'); ABERTOS[sigla] = true; return reload(); })
+      .then(function () { toast('Plano de ' + sigla + ' criado — monte o plano do mês.'); ABERTOS[sigla] = true; return reload(); })
       .catch(function (e) { toast(e.message, 'err'); });
+  }
+  /* R6/fix18: copiar o plano do mês anterior (Ninety.io/Perdoo: rocks/KPIs rolam para o
+     próximo ciclo). Copia só os campos DESCRITIVOS e ZERA tudo que é execução/assinatura
+     — item copiado nasce "a fazer", nunca contamina a nota. */
+  function copiarItemPlano(o) {
+    return {
+      id: novoItemId(),
+      oque: o.oque || '', como: o.como || '',
+      quemUid: o.quemUid || null, quemNome: o.quemNome || null,
+      quandoPrevisto: ultimoDiaComp(COMP),
+      valorPrevistoCentavos: (o.valorPrevistoCentavos != null ? o.valorPrevistoCentavos : (o.valorCentavos != null ? o.valorCentavos : null)),
+      setoresEnvolvidos: [],
+      quandoRealizado: null, valorFinalCentavos: null, aprovGestor: null, aprovSocio: null,
+      naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(),
+      /* item 1 — o item COPIADO é um item NOVO: quem copiou é o autor dele e
+         portanto não pode assiná-lo. Não se herda o criadoPor do mês anterior. */
+      criadoPor: USER.uid,
+      origemRisco: o.origemRisco || null
+    };
+  }
+  function criarPlanoCopiando(sigla) {
+    if (PLANOS.some(function (p) { return p.setorSigla === sigla; })) { toast('O setor ' + sigla + ' já tem plano nesta competência.', 'err'); return; }
+    var prev = compShift(COMP, -1);
+    toast('Copiando o plano de ' + compLabel(prev) + '…');
+    Store.listPlanejamentos(prev).then(function (arr) {
+      var ant = (arr || []).filter(function (p) { return p.setorSigla === sigla; })[0];
+      var itensAnt = (ant && Array.isArray(ant.itens)) ? ant.itens.filter(function (o) { return !o.removido; }) : [];
+      var novos = itensAnt.map(copiarItemPlano);
+      return Store.criarPlanejamento({ setorSigla: sigla, competencia: COMP, itens: novos, entregueEm: null })
+        .then(function () {
+          ABERTOS[sigla] = true;
+          toast(novos.length ? (plural(novos.length, 'item copiado', 'itens copiados') + ' de ' + compLabel(prev) + ' — revise as datas e entregue.') : ('O setor ' + sigla + ' não tinha itens em ' + compLabel(prev) + '. Plano criado vazio.'));
+          return reload();
+        });
+    }).catch(function (e) { toast((e && e.message) || 'Não consegui copiar o plano.', 'err'); });
   }
   function entregarPlano(pl) {
     var ts = Date.now();
     Store.atualizarPlanejamento(pl.id, { entregueEm: ts }, 'planejamento_entregue', { entregueEm: null })
-      .then(function () { pl.entregueEm = ts; toast('Plano entregue — prestação de contas aberta a todos.'); render(); })
+      .then(function (v) { pl.entregueEm = ts; pl.atualizadoEm = v; toast('Plano entregue — prestação de contas aberta a todos.'); render(); })
       .catch(function (e) { toast(e.message, 'err'); });
   }
   function aprovarItem(pl, it) {
@@ -889,7 +1945,19 @@
     });
   }
   function modalRealizar(pl, it) {
+    /* ============================================================
+       item 10 · DATA REALIZADA COM TETO E PISO
+       ------------------------------------------------------------
+       O campo aceitava QUALQUER data: dava para gravar "realizado em
+       2031" (ou antes de o item existir) e o desvio de prazo — que vale
+       50% da nota — virava ficção. max = hoje (não se realiza no futuro),
+       min = criação do item. O atributo sozinho não basta: o teclado
+       ainda digita fora do intervalo, então valida também no submit.
+       ============================================================ */
+    var minReal = it.criadoEm ? isoLocal(it.criadoEm) : null;
     var dtInp = UI.input({}); dtInp.type = 'date'; dtInp.value = HOJE;
+    dtInp.max = HOJE;
+    if (minReal && minReal <= HOJE) { dtInp.min = minReal; }
     /* R5-B2: custo FINAL na baixa (par previsto × final — padrão planned vs actual
        cost do MS Project/Wrike).
        R6/auditoria: NÃO pré-preencher com o previsto. Pré-preencher fazia o operador
@@ -912,13 +1980,20 @@
       title: 'Marcar como realizado', width: 420,
       body: [
         txt('div', 'pl-empty', it.oque || ''),
-        UI.field({ label: 'Data realizada', required: true, control: dtInp, hint: 'Previsto: ' + fmtBR(it.quandoPrevisto) + '. O desvio alimenta a nota (30% no prazo · 20% atraso residual).' }),
+        UI.field({ label: 'Data realizada', required: true, control: dtInp, hint: 'Previsto: ' + fmtBR(it.quandoPrevisto) + '. Entre ' + (minReal ? fmtBR(minReal) : 'a criação do item') + ' e hoje (' + fmtBR(HOJE) + ') — não se registra execução no futuro. O desvio alimenta a nota (30% no prazo · 20% atraso residual).' }),
         UI.field({ label: 'Custo final', control: vfWrap, hint: vp != null ? ('Previsto: ' + fmtBRL(vp) + '. Deixe em branco se não souber — o par previsto × final vira o relatório de custo do mês.') : 'Sem custo previsto neste item — informe se houve gasto.' })
       ],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
           UI.button({ label: 'Confirmar', icon: 'check', onClick: function () {
-            if (!R.isISO(dtInp.value)) { toast('Informe a data.', 'err'); return; }
+            /* item 24 — o erro ia SÓ para o toast: o campo não ficava
+               aria-invalid, o foco não ia até ele e o slot .ui-ferr que o
+               ui.js já desenha ficava vazio. erroCampo faz os três. */
+            if (!R.isISO(dtInp.value)) { erroCampo(dtInp, 'Informe a data em que o item foi realizado.'); return; }
+            /* item 10 — a validação no submit é a que vale: o atributo max/min
+               é dica de UI, o teclado passa por cima dele. */
+            if (dtInp.value > HOJE) { erroCampo(dtInp, 'A data realizada não pode ser no futuro — o limite é hoje (' + fmtBR(HOJE) + ').'); return; }
+            if (minReal && dtInp.value < minReal) { erroCampo(dtInp, 'A data realizada não pode ser anterior à criação do item (' + fmtBR(minReal) + ').'); return; }
             var vf = vfInp.value.trim() ? parseBRL(vfInp.value) : null;
             var lista = (pl.itens || []).map(function (x) { return x.id === it.id ? Object.assign({}, x, { quandoRealizado: dtInp.value, valorFinalCentavos: vf }) : x; });
             salvarItens(pl, lista, 'planejamento_item_realizar', { itemId: it.id, quandoRealizado: null })
@@ -942,15 +2017,16 @@
       title: 'Não realizado — por quê?', width: 460,
       body: [
         txt('div', 'pl-empty', it.oque || ''),
-        UI.field({ label: 'Motivo', required: true, control: motSel, hint: 'O item passa a contar CONTRA a aderência do setor; o motivo vira insumo do Pareto de causas.' }),
+        UI.field({ label: 'Motivo', required: true, control: motSel, hint: 'O item passa a contar CONTRA a aderência do setor; o motivo alimenta o cartão de motivos de não-realização.' }),
         UI.field({ label: 'Detalhe', control: detTa })
       ],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
           UI.button({ label: 'Confirmar', icon: 'check', onClick: function () {
             var mot = motSel.value || '';
-            if (!mot) { toast('Escolha o motivo.', 'err'); return; }
-            if (mot === 'Outro' && !detTa.value.trim()) { toast('"Outro" exige o detalhe.', 'err'); return; }
+            /* item 24 — erro no CAMPO (marca, foca e escreve no slot), não só no toast. */
+            if (!mot) { erroCampo(motSel, 'Escolha o motivo da não-realização.'); return; }
+            if (mot === 'Outro' && !detTa.value.trim()) { erroCampo(detTa, 'O motivo "Outro" exige o detalhe escrito.'); return; }
             var lista = (pl.itens || []).map(function (x) {
               return x.id === it.id ? Object.assign({}, x, { naoFeito: true, motivo: mot, motivoDetalhe: detTa.value.trim() || null, naoFeitoEm: Date.now() }) : x;
             });
@@ -976,8 +2052,30 @@
     comoTa.className = 'ui-input'; comoTa.rows = 2; comoTa.style.resize = 'vertical';
     comoTa.value = editing ? (it.como || '') : '';
     var quemOpts = USERS.map(function (u) { return { value: u.uid, label: u.nome }; });
-    var quemSel = UI.select({ value: editing && it.quemUid ? it.quemUid : '', placeholder: '— Quem executa —', options: quemOpts });
-    var qdInp = UI.input({}); qdInp.type = 'date'; qdInp.value = editing && it.quandoPrevisto ? it.quandoPrevisto : '';
+    /* ============================================================
+       item 34 · O FORMULÁRIO JÁ SABE A RESPOSTA — ENTÃO ELE RESPONDE
+       ------------------------------------------------------------
+       O modal de item novo abria com TUDO em branco, inclusive QUEM e
+       QUANDO — que em quase todo caso são "o líder do setor" e "fim do
+       mês". A própria tela já provava saber disso: a inclusão por
+       sugestão de risco preenche os dois sozinha há duas rodadas. Aqui
+       vale a mesma sugestão, EDITÁVEL, e o hint diz que é sugestão —
+       campo pré-preenchido que se apresenta como verdade é pior do que
+       campo vazio. Só vale para item NOVO: editando, manda o gravado.
+       ============================================================ */
+    var lidSug = editing ? null : liderDoSetor(pl.setorSigla);
+    var quemSel = UI.select({
+      value: editing ? (it.quemUid || '') : (lidSug ? lidSug.uid : ''),
+      placeholder: '— Quem executa —', options: quemOpts
+    });
+    /* item 10 — "quando previsto" também não tinha teto: dava para planejar
+       dentro do plano de AGOSTO uma ação para 2029. A competência é o
+       intervalo legítimo; o submit revalida (o teclado ignora min/max). */
+    var qdMin = COMP + '-01';
+    var qdMax = ultimoDiaComp(COMP);
+    var qdInp = UI.input({}); qdInp.type = 'date';
+    qdInp.value = editing ? (it.quandoPrevisto || '') : qdMax; /* item 34: fim do mês, editável */
+    qdInp.min = qdMin; qdInp.max = qdMax;
     var vPrevAtual = editing ? valorPrev(it) : null;
     var vInp = UI.input({ placeholder: 'R$ 0,00 (opcional)', value: vPrevAtual != null && vPrevAtual !== 0 ? fmtBRL(vPrevAtual) : '' });
     vInp.addEventListener('input', function () { vInp.value = vInp.value.trim() ? fmtBRL(parseBRL(vInp.value)) : ''; });
@@ -1000,16 +2098,27 @@
       body: [
         UI.field({ label: 'O que', required: true, control: oqInp }),
         UI.field({ label: 'Como', control: comoTa }),
-        UI.field({ label: 'Quem', control: quemSel, hint: USERS.length ? 'Responsável pela execução.' : 'Sem lista de usuários (perfil sem acesso) — fica em branco.' }),
-        UI.field({ label: 'Quando (previsto)', required: true, control: qdInp }),
-        UI.field({ label: 'Custo previsto', control: vInp, hint: 'Guardado em CENTAVOS (inteiro). Acima de R$ 200,00 o item trava até GESTOR + SÓCIO aprovarem (alçada pelo PREVISTO — o plano nunca trava). O custo final entra na baixa ("✓ realizar").' }),
+        /* item 34 — o hint DIZ que veio sugerido. Campo pré-preenchido que se
+           apresenta como se a pessoa tivesse escolhido vira dado falso. */
+        UI.field({ label: 'Quem', control: quemSel, hint: !USERS.length
+          ? 'Sem lista de usuários (perfil sem acesso) — fica em branco.'
+          : (lidSug ? ('Responsável pela execução. Já veio SUGERIDO ' + lidSug.nome + ', que lidera ' + pl.setorSigla + ' — troque se quem executa for outra pessoa.') : 'Responsável pela execução.') }),
+        UI.field({ label: 'Quando (previsto)', required: true, control: qdInp, hint: (editing ? '' : 'Já veio SUGERIDO o fim do mês (' + fmtBR(qdMax) + ') — ajuste para a data real. ')
+          + 'Dentro de ' + compLabel(COMP) + ': de ' + fmtBR(COMP + '-01') + ' a ' + fmtBR(ultimoDiaComp(COMP)) + '. É o plano DESTE mês — data fora da competência não seria cobrada por ninguém.' }),
+        UI.field({ label: 'Custo previsto', control: vInp, hint: 'Acima de R$ 200,00 o item trava até GESTOR + SÓCIO aprovarem (alçada pelo PREVISTO — o plano nunca trava). O custo final entra na baixa ("✓ realizar").' }),
         UI.field({ label: 'Setores parceiros', control: parcBox, hint: 'Opcional. Quem lidera o setor marcado vê o item e registra o aceite no chip (nada trava sem aceite — é ciência).' })
       ],
       footer: function (close) {
         return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
           UI.button({ label: editing ? 'Salvar' : 'Adicionar', icon: 'check', onClick: function () {
-            if (!oqInp.value.trim()) { toast('Informe "O que".', 'err'); return; }
-            if (!R.isISO(qdInp.value)) { toast('Informe a data prevista.', 'err'); return; }
+            /* item 24 — erro marcado NO campo (aria-invalid + foco + slot). */
+            if (!oqInp.value.trim()) { erroCampo(oqInp, 'Informe "O que" será feito.'); return; }
+            if (!R.isISO(qdInp.value)) { erroCampo(qdInp, 'Informe a data prevista.'); return; }
+            /* item 10 — validação de verdade: o min/max do input é só dica. */
+            if (qdInp.value < qdMin || qdInp.value > qdMax) {
+              erroCampo(qdInp, 'A data prevista tem de cair em ' + compLabel(COMP) + ' — entre ' + fmtBR(qdMin) + ' e ' + fmtBR(qdMax) + '.');
+              return;
+            }
             var quem = USERS.filter(function (u) { return u.uid === quemSel.value; })[0] || null;
             var cents = vInp.value.trim() ? parseBRL(vInp.value) : null;
             var envs = [];
@@ -1035,10 +2144,12 @@
                 return novo;
               });
             } else {
-              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, valorFinalCentavos: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now() }, base)]);
+              /* item 1 — criadoPor é a base do four-eyes: sem ele o autor
+                 assinaria a própria alçada. Campo obrigatório em todo item novo. */
+              lista = (pl.itens || []).concat([Object.assign({ id: novoItemId(), quandoRealizado: null, valorFinalCentavos: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid }, base)]);
             }
             salvarItens(pl, lista, editing ? 'planejamento_item_editar' : 'planejamento_item_add', editing ? { itemId: it.id } : null)
-              .then(function () { close(); toast(editing ? 'Item salvo.' : 'Item adicionado ao 5W2H.'); render(); })
+              .then(function () { close(); toast(editing ? 'Item salvo.' : 'Item adicionado ao plano.'); render(); })
               .catch(function (e) { toast(e.message, 'err'); });
           } })];
       }
@@ -1061,6 +2172,10 @@
     bodyEl.appendChild(s);
   }
   function render() {
+    /* item 22 — render() zera o body: se o popover estivesse aberto, o "i" que
+       o abriu era destruído e o foco ficava órfão no <body> (o leitor de tela
+       perdia o lugar). Fechar ANTES devolve o foco enquanto a origem existe. */
+    closePop();
     compEl.textContent = compLabel(COMP);
     actionsEl.innerHTML = '';
     var livres = minhasSiglasEscreviveis().filter(function (sg) {
@@ -1068,15 +2183,24 @@
     });
     if (livres.length) {
       var nb = UI.button({ label: 'Novo planejamento', icon: 'plus', onClick: function () {
-        if (livres.length === 1) { criarPlano(livres[0]); return; }
-        var sel = UI.select({ placeholder: 'Escolha o setor', options: livres.map(function (sg) { return { value: sg, label: sg + ' — ' + nomeSetor(sg) }; }) });
+        var opts = livres.map(function (sg) { return { value: sg, label: sg + ' — ' + nomeSetor(sg) }; });
+        var sel = UI.select({ placeholder: 'Escolha o setor', options: opts });
+        if (livres.length === 1) { sel.value = livres[0]; }
         UI.modal({
-          title: 'Novo planejamento — ' + compLabel(COMP), width: 440,
-          body: [UI.field({ label: 'Setor', required: true, control: sel, hint: 'Um plano por setor por competência.' })],
+          title: 'Novo planejamento — ' + compLabel(COMP), width: 460,
+          body: [
+            UI.field({ label: 'Setor', required: true, control: sel, hint: 'Um plano por setor por competência.' }),
+            txt('div', 'pl-smeta', 'Comece do zero, ou copie os itens de ' + compLabel(compShift(COMP, -1)) + ' (datas viram o fim deste mês; realizados e assinaturas zeram).')
+          ],
           footer: function (close) {
             return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
-              UI.button({ label: 'Criar', icon: 'check', onClick: function () {
-                if (!sel.value) { toast('Escolha o setor.', 'err'); return; }
+              UI.button({ label: 'Copiar de ' + compLabel(compShift(COMP, -1)), variant: 'ghost', onClick: function () {
+                /* item 24 — o erro marca e foca o próprio campo. */
+                if (!sel.value) { erroCampo(sel, 'Escolha o setor do novo plano.'); return; }
+                close(); criarPlanoCopiando(sel.value);
+              } }),
+              UI.button({ label: 'Criar vazio', icon: 'check', onClick: function () {
+                if (!sel.value) { erroCampo(sel, 'Escolha o setor do novo plano.'); return; }
                 close(); criarPlano(sel.value);
               } })];
           }
@@ -1085,6 +2209,14 @@
       actionsEl.appendChild(nb);
     }
     bodyEl.innerHTML = '';
+    /* itens 5 e 12 — além do aviso de leitura truncada (AVISOS, nasce na carga),
+       entram os avisos DERIVADOS do dado: plano órfão, catálogo de risco que não
+       carregou e setor raiz sem mapeamento de risco. Nada falha em silêncio. */
+    AVISOS.concat(avisosDerivados()).forEach(function (msg) {
+      var a = txt('div', 'pl-aviso', '⚠ ' + msg);
+      a.setAttribute('role', 'alert');
+      bodyEl.appendChild(a);
+    });
     if (!SETORES.length) {
       bodyEl.appendChild(el('<div class="pl-state"><div class="pl-state-t">Sem setores cadastrados</div><div class="pl-state-s">Cadastre os setores primeiro (tela Setores) — o plano nasce por sigla.</div></div>'));
       return;
@@ -1096,6 +2228,7 @@
   }
   function reload() {
     renderLoading();
+    AVISOS = []; /* recomeça a cada carga: aviso de leitura truncada não pode ficar preso da carga anterior */
     return Promise.all([Store.listSetores(), Store.listPlanejamentos(COMP), Store.listUsuariosAtivos()])
       .then(function (r) { SETORES = r[0]; PLANOS = r[1]; USERS = r[2]; render(); })
       .catch(renderError);
@@ -1105,6 +2238,7 @@
     BACK = document.getElementById('pl-backdrop');
     BACK.addEventListener('click', closePop);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    document.addEventListener('keydown', prenderFocoPop); /* item 22: Tab preso no "i" */
     bodyEl = document.getElementById('pl-body');
     actionsEl = document.getElementById('pl-actions');
     compEl = document.getElementById('pl-comp');
@@ -1112,10 +2246,15 @@
     COMP = compSeguinte(HOJE); /* padrão: a competência que se planeja AGORA (vence dia 25 deste mês) */
     document.getElementById('pl-prev').addEventListener('click', function () { COMP = compShift(COMP, -1); reload(); });
     document.getElementById('pl-next').addEventListener('click', function () { COMP = compShift(COMP, 1); reload(); });
-    var ib = iBtn('Planejamento do Setor (5W2H mensal)', [
-      ['O que é', 'O plano mensal obrigatório de cada setor (RESUMO §4): O QUE / COMO / QUEM / QUANDO, previsto × realizado. É a prestação de contas pública do líder — TODOS leem; edita quem lidera o setor (ou o gestor).'],
+    /* item 9 — a tela NÃO é 5W2H: ela coleta O quê · Como · Quem · Quando ·
+       Quanto (4W+1H). Faltam Onde e Por quê, então o rótulo virou o que a
+       tela de fato faz. Decisão travada: NÃO se acrescentam campos. */
+    var ib = iBtn('Plano do setor — O quê · Como · Quem · Quando · Quanto', [
+      ['O que é', 'O plano mensal obrigatório de cada setor (RESUMO §4): O QUÊ / COMO / QUEM / QUANDO / QUANTO, previsto × realizado. É a prestação de contas pública do líder — TODOS leem; edita quem lidera o setor (ou o gestor).'],
+      ['Por que não se chama 5W2H', 'O 5W2H tem sete perguntas (what, why, where, when, who, how, how much). Esta tela coleta cinco — não pede ONDE nem POR QUÊ. Chamar de 5W2H prometia um método que o formulário não entrega; o nome agora descreve exatamente os campos que existem.'],
       ['Entrega', 'Até o dia 25 do mês anterior à competência. Farol D-5 (dia 20, alerta ao líder) · D-3 (dia 22, gestão) · D-0 (dia 25, flag de não-conformidade). NUNCA bloqueia.'],
-      ['Alçada', 'Item até R$ 200: autonomia do líder. Acima: trava o ITEM até GESTOR + SÓCIO assinarem (paralelo; quem cria não assina — four-eyes). A trava é pelo custo PREVISTO. O plano nunca trava.'],
+      ['Alçada', 'Item até R$ 200: autonomia do líder. Acima: trava o ITEM até GESTOR + SÓCIO assinarem (paralelo). Quem CRIOU o item não assina — o botão "aprovar" não aparece para o autor (four-eyes). A trava é pelo custo PREVISTO. O plano nunca trava.'],
+      ['Risco aceito', 'Dispensar risco de banda CRÍTICA (nível 15 a 25) exige DUAS assinaturas — gestor e sócio —, a mesma exigência de gastar acima de R$ 200. Banda ALTA (nível 10 a 14) segue com uma. Aceitar risco é decisão de risco residual (ISO 31000), não formalidade.'],
       ['Nota', '50% aderência + 30% no prazo + 20% atraso residual (teto 7 dias) — ranking "quem precisa de atenção". Calibrável.']
     ]);
     document.getElementById('pl-info').appendChild(ib);
