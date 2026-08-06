@@ -1304,7 +1304,13 @@
     var cols = document.querySelector('.hj-cols'); var kp = document.getElementById('hj-kpis');
     var pgS = document.getElementById('hj-prog');
     if (!msg) { st.style.display = 'none'; cols.style.display = ''; kp.style.display = ''; if (pgS) { pgS.style.display = ''; } return; }
-    st.style.display = ''; cols.style.display = 'none'; kp.style.display = 'none'; if (pgS) { pgS.style.display = 'none'; }
+    /* 'flex', NUNCA ''. A regra base é '.hj-state{display:none}' (linha 152):
+       limpar o estilo inline devolve o elemento ao CSS, ou seja, ao display:none.
+       Era por isso que a tela ficava EM BRANCO em vez de explicar o que houve —
+       inclusive no "Carregando…" e no "Não consegui carregar o seu dia".
+       Os irmãos (.hj-cols e .hj-kpis) podem usar '' porque a regra base deles
+       já é grid; só este elemento nasce escondido. */
+    st.style.display = 'flex'; cols.style.display = 'none'; kp.style.display = 'none'; if (pgS) { pgS.style.display = 'none'; }
     st.innerHTML = '';
     st.appendChild(txt('div', 'hj-state-t', msg));
     if (sub) { st.appendChild(txt('div', 'hj-state-s', sub)); }
@@ -1936,9 +1942,16 @@
     CURRENT_USER = USER;
     var app = document.getElementById('app');
     app.insertBefore(UI.sidebar({ active: 'Hoje', user: USER }), app.firstChild);
-    var cta = UI.button({ label: 'Nova atividade', icon: 'plus' });
-    cta.addEventListener('click', function () { window.location.href = 'atividades.html'; });
-    document.getElementById('hj-cta').appendChild(cta);
+    /* O botão só existe para quem PODE criar. O Visualizador via "+ Nova
+       atividade" no topo, clicava e caía numa tela onde não conseguia criar
+       nada: promessa falsa é pior que ausência de botão. Mesma regra do
+       Firestore (CAN_WRITE = Admin|Editor), para a tela não prometer o que
+       o banco nega. */
+    if (CAN_WRITE()) {
+      var cta = UI.button({ label: 'Nova atividade', icon: 'plus' });
+      cta.addEventListener('click', function () { window.location.href = 'atividades.html'; });
+      document.getElementById('hj-cta').appendChild(cta);
+    }
 
     /* N4-B (D2): botão "Agenda de Eventos" — pulsa se max(atualizadoEm) dos
        eventos > localStorage['graut_evt_lastSeen'] (por aparelho). Custo da
