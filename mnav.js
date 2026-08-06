@@ -33,7 +33,8 @@
   /* mesmos destinos do guard.js (rótulo → arquivo) */
   var LIVE = {
     'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html',
-    'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Importar': 'importacao.html',
+    'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Cockpit': 'cockpit.html',
+    'Importar': 'importacao.html',
     'Inteligência': 'inteligencia.html', 'Performance': 'performance.html',
     'Glossário': 'glossario.html', 'Riscos': 'riscos.html',
     'Setores': 'setores.html', 'Usuários': 'usuarios.html'
@@ -46,7 +47,7 @@
   /* mesmos grupos da sidebar do desktop (ui.js + injeções do guard) */
   var GRUPOS = [
     ['PRINCIPAL', ['Hoje', 'Reuniões', 'Planejamento', 'Atividades', 'Eventos']],
-    ['GESTÃO', ['Importar', 'Inteligência', 'Performance', 'Glossário', 'Riscos']],
+    ['GESTÃO', ['Cockpit', 'Importar', 'Inteligência', 'Performance', 'Glossário', 'Riscos']],
     ['CADASTRO', ['Setores', 'Usuários']]
   ];
   var PERFIL_ROTULO = { gestor: 'Gestor', lider: 'Líder', usuario: 'Usuário' };
@@ -59,6 +60,7 @@
     'Reuniões': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>',
     'Planejamento': '<rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 13l2 2 4-4"></path>',
     'Performance': '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path>',
+    'Cockpit': '<path d="M12 20a8 8 0 1 0-8-8"></path><path d="M12 12l4.5-3"></path><circle cx="12" cy="12" r="1.6"></circle>',
     'Glossário': '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>',
     'Riscos': '<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4M12 17h.01"></path>',
     'Importar': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5M12 15V3"></path>',

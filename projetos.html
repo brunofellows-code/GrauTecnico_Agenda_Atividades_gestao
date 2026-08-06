@@ -58,6 +58,8 @@
 .pj-rrow-h{display:flex;align-items:center;gap:12px;cursor:pointer}
 .pj-rrow-t{flex:1;min-width:0;font-size:13.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pj-rrow-meta{font-size:11px;font-weight:600;color:var(--muted2)}
+/* reunião alcançada por link direto (?r=<id>) — marca onde a pessoa caiu */
+.pj-rrow-alvo{background:var(--haloDoing);border-radius:10px;padding-left:12px;box-shadow:inset 3px 0 0 var(--doing)}
 .pj-dec{display:flex;align-items:flex-start;gap:10px;padding:8px 0 8px 14px;border-left:2px solid var(--border);margin-left:2px}
 .pj-dec-main{flex:1;min-width:0}
 .pj-dec-t{font-size:12.5px;font-weight:600;line-height:1.4}
@@ -68,6 +70,23 @@
 /* eventos do projeto */
 /* pauta */
 .pj-pauta{width:100%;min-height:280px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px}
+/* BLOCOS DA PAUTA — padrão Level 10 (Ninety/EOS, Bloom Growth, Spinach):
+   bloco fixo + tempo orçado + SAÍDA esperada. O que muda a cada reunião é o
+   conteúdo, nunca a estrutura — é isso que faz a reunião caber no tempo. */
+.pj-blk{border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-top:8px;background:var(--s2)}
+.pj-blk.ok{opacity:.7}
+.pj-blk-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pj-blk-n{flex:none;width:22px;height:22px;border-radius:7px;background:var(--chipBg);border:1px solid var(--border);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.pj-blk-t{flex:1;min-width:0;font-size:12.5px;font-weight:800}
+.pj-blk-min{flex:none;font-size:10px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border);color:var(--muted)}
+.pj-blk-p{font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.45;margin:6px 0 0 30px}
+.pj-blk-s{font-size:11px;font-weight:700;color:var(--greenText);margin:5px 0 0 30px}
+.pj-blk-body{margin:8px 0 0 30px}
+.pj-blk-nota{width:100%;min-height:54px;resize:vertical;font-size:12px;line-height:1.5;background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:8px}
+.pj-prep{margin-bottom:10px;padding:10px 12px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border)}
+.pj-prep.falta{border-color:var(--amber)}
+.pj-prep-i{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:5px}
+.pj-orc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;font-weight:800;color:var(--muted);margin-top:6px}
 @media (max-width:760px){
   .pj-top{padding:14px 16px}
   .pj-body{padding:14px 16px 28px}
@@ -99,6 +118,7 @@
 
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
+  <script src="pautas-modelo.js"></script>
   <script src="kpi.js"></script>
   <script type="module">
   (function () {
@@ -153,7 +173,14 @@
     criarReuniao: function (data) {
       return fb().then(function (c) {
         var db = c.db, f = c.f, now = Date.now();
-        var doc = Object.assign({}, data, { ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now });
+        /* criadoPorNome junto do uid: quando a reunião vence sem ata, o Hoje
+           precisa dizer POR QUEM se está esperando. Só com o uid a tela teria
+           de mostrar um código — jargão de banco na cara do usuário. */
+        var doc = Object.assign({}, data, {
+          ativo: true, criadoPorUid: USER.uid,
+          criadoPorNome: USER.name || USER.nome || USER.email || '',
+          criadoEm: now, atualizadoEm: now
+        });
         return f.addDoc(f.collection(db, 'reunioes'), doc).then(function (ref) {
           Store.log({ acao: 'reuniao_criada', entidade: 'reuniao', refId: ref.id, antes: null, depois: { titulo: doc.titulo, data: doc.data, tipo: doc.tipo || null } });
           return ref.id;
@@ -416,8 +443,26 @@
     ['instrutor', 'Reunião com Instrutor'],
     ['lideres_turma', 'Reunião c/ Líderes de Turmas'],
     ['departamento', 'Reunião de Departamento'],
-    ['resultado_mensal', 'Resultado Mensal'] /* F1-G · D1=(a): convoca líderes + gestores (kpi.js convocadosPorTipo) */
+    ['resultado_mensal', 'Resultado Mensal'], /* F1-G · D1=(a): convoca líderes + gestores (kpi.js convocadosPorTipo) */
+    /* Rotina Sócios × Gestor — os 3 tipos que já existem na prática e vivem
+       em pautas-modelo.js (transcritos de Pautas_Reuniao_Socios_Gestor.docx).
+       Nascem com os blocos, o tempo de cada um e a saída esperada. */
+    ['socio_fin', 'Bruno × Gestor (semanal · fin/adm)'],
+    ['socio_com', 'Tiago × Gestor (semanal · comercial)'],
+    ['mensal_estrategica', 'Sócios + Gestor (mensal estratégica)']
   ];
+  /* pautas-modelo.js não é obrigatório para a tela abrir (tipo sem rotina
+     escrita nasce sem blocos, e isso é correto). Mas se o arquivo NÃO
+     carregar, a reunião de sócios nasceria muda e ninguém saberia por quê.
+     Então: fallback que não derruba a tela + aviso na hora de criar. */
+  var FALHA_MODELO = !window.PautaModelo;
+  var PautaModelo = window.PautaModelo || {
+    lista: [],
+    de: function () { return null; },
+    blocosNovos: function () { return []; },
+    preparoNovo: function () { return []; },
+    somaMin: function () { return 0; }
+  };
   var SUGS = [];           /* F1-F · sugestões de pauta PENDENTES (cascata) */
   /* R5-B1 · lista O3 do RESUMO (falta em reunião) — mesma lista do "Não vou"
      do Hoje; 'Outro' exige detalhe. */
@@ -720,6 +765,21 @@
     });
   }
 
+  /* Link direto para UMA reunião: projetos.html?r=<id>.
+     Sem isto, o "Abrir em Reuniões" do Hoje despejava a pessoa na LISTA e ela
+     tinha de caçar de novo a reunião que acabara de ver na tela anterior.
+     Link que obriga a procurar está quebrado (Nielsen: reconhecer > lembrar).
+     Se o id não existir nesta visão, nada acontece — a lista abre normal.
+     DEPENDÊNCIA: só funciona no modo LISTA (o Kanban não usa renderReuniaoRow).
+     Hoje isso é seguro porque MODO_REUN nasce 'lista' a cada carregamento e o
+     chip VIEW_TIPO nasce 'todas'. Se um dia esses estados forem PERSISTIDOS,
+     este link passa a falhar em silêncio — force 'lista'/'todas' quando ALVO_R. */
+  var ALVO_R = (function () {
+    var m = String(window.location.search || '').match(/[?&]r=([^&]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }());
+  var ALVO_R_FEITO = false;
+
   function renderReuniaoRow(r, container) {
     var row = el('<div class="pj-rrow"></div>');
     var head = el('<div class="pj-rrow-h"></div>');
@@ -745,6 +805,18 @@
     });
     row.appendChild(box);
     container.appendChild(row);
+
+    if (ALVO_R && r.id === ALVO_R && !ALVO_R_FEITO) {
+      ALVO_R_FEITO = true;               /* só a primeira ocorrência abre */
+      open = true;
+      box.style.display = 'block';
+      fillReuniao(r, box, atualizaMeta);
+      row.classList.add('pj-rrow-alvo');
+      /* espera o corpo entrar no fluxo antes de rolar, senão centraliza errado */
+      setTimeout(function () {
+        try { row.scrollIntoView({ block: 'center' }); } catch (e) { row.scrollIntoView(); }
+      }, 60);
+    }
   }
 
   /* ===================== F1-E · helpers de reunião ===================== */
@@ -803,6 +875,26 @@
     var L = [];
     L.push('PAUTA — ' + (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + (r.titulo || '') + ' · ' + fmtBR(r.data) + (r.horaPrevista ? ' às ' + r.horaPrevista : ''));
     L.push('');
+    /* Roteiro primeiro: quem recebe a pauta no WhatsApp precisa ver o
+       tempo de cada bloco e o que tem de sair dele — é isso que faz a
+       pessoa chegar preparada. */
+    var blk = r.pautaBlocos || [];
+    if (blk.length) {
+      L.push('ROTEIRO (' + PautaModelo.somaMin(blk) + ' min):');
+      blk.forEach(function (b) {
+        L.push(b.n + ') ' + (b.titulo || '') + ' — ' + (b.min || 0) + ' min');
+        if (b.pauta) { L.push('   ' + b.pauta); }
+        if (b.saida) { L.push('   Saída esperada: ' + b.saida); }
+      });
+      L.push('');
+    }
+    var prep = r.preparo || [];
+    if (prep.length) {
+      var mdlP = PautaModelo.de(r.tipo);
+      L.push('TRAZER PRONTO' + (mdlP ? ' (' + mdlP.preparoPrazo + ')' : '') + ':');
+      prep.forEach(function (p) { L.push('   ' + (p.pronto ? '[x] ' : '[ ] ') + p.texto); });
+      L.push('');
+    }
     if (r.pautaTexto) { L.push(r.pautaTexto); L.push(''); }
     var itens = r.pautaItens || [];
     if (itens.length) {
@@ -820,6 +912,18 @@
     if (atrMin != null && atrMin > 0) { L.push('Início com ' + atrMin + ' min de atraso (' + r.horaPrevista + ' → ' + r.horaInicioReal + ').'); }
     L.push('');
     L.push(r.resumoTexto || '(sem resumo)');
+    /* O que saiu de cada bloco — sem isto a ata perde a rastreabilidade
+       entre o que a reunião prometeu produzir e o que produziu. */
+    var blkA = (r.pautaBlocos || []).filter(function (b) { return b.notas || b.feito; });
+    if (blkA.length) {
+      L.push('');
+      L.push('POR BLOCO:');
+      blkA.forEach(function (b) {
+        L.push((b.feito ? '[x] ' : '[ ] ') + b.n + ') ' + (b.titulo || ''));
+        if (b.saida) { L.push('   Esperado: ' + b.saida); }
+        if (b.notas) { L.push('   Saiu: ' + b.notas); }
+      });
+    }
     var decs = r.decisoes || [];
     if (decs.length) {
       L.push('');
@@ -1191,6 +1295,132 @@
     attP();
     pcard.appendChild(resumoP);
     box.appendChild(pcard);
+
+    /* ---------- 2-B) PREPARO: dados que chegam PRONTOS antes ----------
+       Benchmark (EOS/Ninety): "popule todos os itens ANTES da reunião
+       começar". Reunião que abre para coletar dado vira reunião de
+       coleta de dado. O que falta fica exposto — não some da tela. */
+    var PREP = r.preparo || [];
+    if (PREP.length) {
+      var faltam = 0;
+      for (var ip = 0; ip < PREP.length; ip++) { if (!PREP[ip].pronto) { faltam++; } }
+      var mdl = PautaModelo.de(r.tipo);
+      var prepCard = el('<div class="pj-prep"></div>');
+      if (faltam && !r.encerradaEm) { prepCard.className = 'pj-prep falta'; }
+      var prepH = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+      prepH.appendChild(txt('div', 'pj-card-t', 'Antes de começar — dados prontos ' +
+        (mdl ? '(' + mdl.preparoPrazo + ')' : '')));
+      var selPrep = txt('span', 'pj-badge', (PREP.length - faltam) + '/' + PREP.length);
+      selPrep.style.color = faltam ? 'var(--amber)' : 'var(--greenText)';
+      prepH.appendChild(selPrep);
+      prepH.appendChild(iBtn('Preparo da reunião', [
+        ['Regra', 'São os dados que o gestor precisa entregar ANTES da reunião. O checklist não bloqueia o encerramento — ele expõe. Reunião que começa sem os números vira reunião de coletar número, e o bloco de abertura não tem o que abrir.'],
+        ['Origem', 'pautas-modelo.js — transcrito de Pautas_Reuniao_Socios_Gestor.docx. Só existe para os tipos que têm rotina escrita.'],
+        ['Números', (PREP.length - faltam) + ' de ' + PREP.length + ' prontos' + (faltam ? ' · ' + faltam + ' faltando' : '')]
+      ]));
+      prepCard.appendChild(prepH);
+      PREP.forEach(function (pit, ixp) {
+        var lin = el('<label class="pj-prep-i"></label>');
+        var ck = document.createElement('input');
+        ck.type = 'checkbox'; ck.checked = !!pit.pronto; ck.disabled = !podeEditar();
+        ck.addEventListener('change', function () {
+          PREP[ixp].pronto = ck.checked;
+          Store.atualizarReuniao(r.id, { preparo: PREP }, 'preparo_atualizado')
+            .then(function () { r.preparo = PREP; redesenhar(); })
+            .catch(function (e) { PREP[ixp].pronto = !ck.checked; toast(e.message, 'err'); });
+        });
+        lin.appendChild(ck);
+        lin.appendChild(txt('span', '', pit.texto));
+        prepCard.appendChild(lin);
+      });
+      box.appendChild(prepCard);
+    }
+
+    /* ---------- 2-C) ROTEIRO: blocos com tempo orçado e SAÍDA esperada ----------
+       Benchmark: Level 10 Meeting (Ninety/EOS), Bloom Growth, Spinach e
+       Hypercontext usam pauta de blocos FIXOS com tempo por bloco. O que
+       muda a cada reunião é o conteúdo, nunca a estrutura — é isso que faz
+       a reunião caber no tempo. E todo bloco tem entregável verificável:
+       bloco sem saída não é bloco, é assunto. */
+    var BLK = r.pautaBlocos || [];
+    if (BLK.length) {
+      var mdl2 = PautaModelo.de(r.tipo);
+      var orcado = PautaModelo.somaMin(BLK);
+      var feitos = 0;
+      for (var ib = 0; ib < BLK.length; ib++) { if (BLK[ib].feito) { feitos++; } }
+
+      var bkCard = el('<div style="margin-bottom:10px"></div>');
+      var bkH = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>');
+      bkH.appendChild(txt('div', 'pj-card-t', 'Roteiro da reunião'));
+      var selBk = txt('span', 'pj-badge', feitos + '/' + BLK.length + ' blocos');
+      selBk.style.color = feitos === BLK.length ? 'var(--greenText)' : 'var(--muted)';
+      bkH.appendChild(selBk);
+      bkH.appendChild(iBtn('Roteiro por blocos', [
+        ['Por que blocos', 'Padrão do segmento (Level 10 Meeting do EOS/Ninety, Bloom Growth, Spinach): pauta de blocos fixos com tempo orçado por bloco. A estrutura não muda de reunião para reunião; só o conteúdo. É o que impede a reunião de estourar e de terminar sem produzir nada.'],
+        ['Saída esperada', 'Cada bloco declara o que precisa sair dele. Se um bloco não tem saída verificável, ele não é bloco — é assunto, e assunto vai para "Itens sugeridos".'],
+        ['Dados', 'reunioes.pautaBlocos[] — nasce de pautas-modelo.js (transcrição de Pautas_Reuniao_Socios_Gestor.docx) e é editável na tela.'],
+        ['Números', BLK.length + ' blocos · ' + orcado + ' min orçados' +
+          (mdl2 ? ' · duração declarada ' + mdl2.duracaoMin + ' min' : '') +
+          ' · ' + feitos + ' tratado(s)']
+      ]));
+      bkCard.appendChild(bkH);
+
+      if (mdl2 && orcado !== mdl2.duracaoMin) {
+        var alerta = txt('div', 'pj-orc', 'Atenção: os blocos somam ' + orcado +
+          ' min, mas a reunião é declarada com ' + mdl2.duracaoMin + ' min.');
+        alerta.style.color = 'var(--amber)';
+        bkCard.appendChild(alerta);
+      }
+
+      /* Expressão, não declaração: declarar função dentro de bloco é
+         proibido no ES5 estrito que este projeto usa. */
+      var salvarBlocos = function (acao) {
+        return Store.atualizarReuniao(r.id, { pautaBlocos: BLK }, acao)
+          .then(function () { r.pautaBlocos = BLK; })
+          .catch(function (e) { toast(e.message, 'err'); });
+      };
+
+      BLK.forEach(function (b, ixb) {
+        var cd = el('<div class="pj-blk"></div>');
+        if (b.feito) { cd.className = 'pj-blk ok'; }
+        var h = el('<div class="pj-blk-h"></div>');
+        h.appendChild(txt('div', 'pj-blk-n', String(b.n)));
+        h.appendChild(txt('div', 'pj-blk-t', b.titulo || ('Bloco ' + b.n)));
+        h.appendChild(txt('div', 'pj-blk-min', (b.min || 0) + ' min'));
+        if (podeEditar()) {
+          var ckb = document.createElement('input');
+          ckb.type = 'checkbox'; ckb.checked = !!b.feito;
+          ckb.title = 'Bloco tratado';
+          ckb.addEventListener('change', function () {
+            BLK[ixb].feito = ckb.checked;
+            salvarBlocos(ckb.checked ? 'bloco_tratado' : 'bloco_reaberto')
+              .then(function () { redesenhar(); });
+          });
+          h.appendChild(ckb);
+        }
+        cd.appendChild(h);
+        if (b.pauta) { cd.appendChild(txt('div', 'pj-blk-p', b.pauta)); }
+        if (b.saida) { cd.appendChild(txt('div', 'pj-blk-s', 'Saída esperada: ' + b.saida)); }
+
+        var bd = el('<div class="pj-blk-body"></div>');
+        var tn = document.createElement('textarea');
+        tn.className = 'pj-blk-nota';
+        tn.placeholder = 'O que saiu deste bloco…';
+        tn.value = b.notas || '';
+        tn.disabled = !podeEditar();
+        /* Grava no blur: o roteiro inteiro é um array só, então salvar a
+           cada tecla reescreveria o documento a cada letra. */
+        tn.addEventListener('blur', function () {
+          if (tn.value === (BLK[ixb].notas || '')) { return; }
+          BLK[ixb].notas = tn.value;
+          salvarBlocos('bloco_anotado');
+        });
+        bd.appendChild(tn);
+        cd.appendChild(bd);
+        bkCard.appendChild(cd);
+      });
+      box.appendChild(bkCard);
+    }
 
     /* ---------- 3) pauta (R7·B1.1: autosave — sem botão "Salvar pauta") ---------- */
     var pauCard = el('<div style="margin-bottom:10px"></div>');
@@ -1774,9 +2004,19 @@
               convidadosExternos: externos.map(function (n) { return { nome: n }; }),
               presentes: [],
               pautaTexto: null, pautaGeradaEm: null, pautaItens: [],
+              /* Blocos e preparo vêm do modelo do tipo (pautas-modelo.js).
+                 Tipo sem modelo escrito nasce com [] — a tela monta na mão.
+                 Preencher com texto genérico seria mentir sobre a rotina. */
+              pautaBlocos: PautaModelo.blocosNovos(tipoSel.value),
+              preparo: PautaModelo.preparoNovo(tipoSel.value),
+              notaReuniao: null,
               resumoTexto: '',
               participantesUids: [], decisoes: []
             };
+            if (FALHA_MODELO && PautaModelo.lista.length === 0 &&
+                'socio_fin socio_com mensal_estrategica'.indexOf(tipoSel.value) >= 0) {
+              toast('pautas-modelo.js não carregou — esta reunião vai nascer SEM o roteiro. Avise o suporte antes de usar.', 'err');
+            }
             Store.criarReuniao(doc)
               .then(function () { close(); toast('Reunião criada — convocados veem a chamada no Hoje.'); return reload(); })
               .catch(function (e) { toast(e.message, 'err'); });

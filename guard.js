@@ -38,7 +38,7 @@
 
   /* destinos LIVE (telas que já existem no repo do Grau).
      Qualquer item da sidebar fora desta lista mostra "em breve". */
-  var LIVE = { 'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
+  var LIVE = { 'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Cockpit': 'cockpit.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
 
   /* Fase 1 RBAC — nav visível por PERFIL (papel novo). Rótulos = data-nav (iguais
      ao LIVE). 'gestor' NÃO entra no mapa => vê tudo. Recorte é por EXIBIÇÃO
@@ -49,6 +49,10 @@
      o planejamento já sugere ao líder os riscos do setor dele, então o líder já lê esse
      conteúdo — só não conseguia chegar à matriz pelo menu. 'usuario' segue fora: não é
      dono de risco (a tela é leitura da matriz do manual; a borda real fica nas Regras). */
+  /* 'Cockpit' fica FORA dos dois mapas de propósito: é o lançamento diário
+     dos indicadores de negócio (inadimplência, vendas, evasão), rotina
+     pessoal do gestor às 17h30. Como o gestor não entra no mapa, ele vê;
+     líder e usuário não. A borda real de escrita está nas Regras. */
   var NAV_BY_PERFIL = {
     lider:   { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Riscos': 1, 'Glossário': 1 },
     usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Eventos': 1, 'Glossário': 1 }
@@ -199,6 +203,10 @@
       var ref = document.querySelector('.ui-nav[data-nav="Performance"]');
       if (!ref || !ref.parentNode) { return; }
       var defs = [
+        /* Cockpit logo depois de Performance: os dois leem resultado —
+           Performance mostra o que o sistema calcula, Cockpit recebe o que
+           só existe fora dele. Ficam vizinhos por isso. */
+        ['Cockpit', '<path d="M12 20a8 8 0 1 0-8-8"></path><path d="M12 12l4.5-3"></path><circle cx="12" cy="12" r="1.6"></circle>'],
         ['Glossário', '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>'],
         ['Riscos', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path>']
       ];

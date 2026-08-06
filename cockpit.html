@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+<script src="mnav.js"></script>
+
+<style>
+/* casca padrão — namespace ck- */
+.ck-app{display:flex;min-height:100vh;background:var(--bg)}
+.ck-app>.ui-side{position:sticky;top:0;height:100vh}
+.ck-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.ck-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.ck-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin:0}
+.ck-top-r{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ck-body{padding:18px 32px 40px}
+.ck-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.ck-i:hover{color:var(--greenText)}
+
+/* popover do "i" */
+.ck-backdrop{position:fixed;inset:0;z-index:40;display:none}
+.ck-backdrop.on{display:block}
+.ck-pop{position:fixed;z-index:41;display:none;width:320px;max-width:calc(100vw - 32px);background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow)}
+.ck-pop.on{display:block}
+.ck-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
+.ck-pop-row{margin-bottom:8px}
+.ck-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.ck-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.4}
+
+/* abas de ciclo */
+.ck-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.ck-tab{appearance:none;border:1px solid var(--border);background:var(--s1);color:var(--muted);font-family:inherit;font-size:12px;font-weight:800;padding:7px 14px;border-radius:18px;cursor:pointer;white-space:nowrap}
+.ck-tab.on{background:var(--activeBg);border-color:var(--brand);color:var(--greenText)}
+
+/* navegação de período */
+.ck-per{display:flex;align-items:center;gap:8px}
+.ck-per button{appearance:none;border:1px solid var(--border);background:var(--s1);color:var(--text);font-family:inherit;font-size:14px;font-weight:800;width:32px;height:32px;border-radius:9px;cursor:pointer}
+.ck-per button:disabled{opacity:.4;cursor:not-allowed}
+.ck-per-l{font-size:13px;font-weight:800;min-width:112px;text-align:center}
+
+/* barra de estado do lançamento */
+.ck-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:13px 16px;margin-bottom:14px}
+.ck-bar-t{font-size:13px;font-weight:800;flex:1;min-width:180px}
+.ck-bar-s{font-size:11.5px;font-weight:600;color:var(--muted)}
+.ck-chip{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:11px;border:1px solid var(--border);color:var(--muted)}
+.ck-chip.verde{border-color:var(--green);color:var(--greenText)}
+.ck-chip.ambar{border-color:var(--amber);color:var(--amber)}
+.ck-chip.vermelho{border-color:var(--red);color:var(--red)}
+
+/* grade de KPIs */
+.ck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:12px}
+.ck-card{background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:13px;padding:13px 14px;display:flex;flex-direction:column;gap:7px}
+.ck-card.verde{border-left-color:var(--green)}
+.ck-card.ambar{border-left-color:var(--amber)}
+.ck-card.vermelho{border-left-color:var(--red)}
+.ck-card.nd{border-left-color:var(--muted2)}
+.ck-card-h{display:flex;align-items:center;gap:7px}
+.ck-card-l{flex:1;min-width:0;font-size:12px;font-weight:800;line-height:1.25}
+.ck-card-in{display:flex;align-items:baseline;gap:6px}
+.ck-in{width:100%;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:9px 11px;font-family:inherit;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.ck-in:focus{outline:none;border-color:var(--brand)}
+.ck-in.ro{opacity:.65}
+.ck-sn{display:flex;gap:6px}
+.ck-snb{flex:1;appearance:none;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:800;padding:9px 0;border-radius:9px;cursor:pointer}
+.ck-snb.on-sim{background:var(--activeBg);border-color:var(--green);color:var(--greenText)}
+.ck-snb.on-nao{background:var(--activeBg);border-color:var(--red);color:var(--red)}
+.ck-snb.on-nd{background:var(--chipBg);border-color:var(--muted2);color:var(--muted)}
+.ck-card-f{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ck-meta{font-size:10.5px;font-weight:800;color:var(--muted2)}
+.ck-sem{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border);color:var(--muted2)}
+.ck-sem.verde{border-color:var(--green);color:var(--greenText)}
+.ck-sem.ambar{border-color:var(--amber);color:var(--amber)}
+.ck-sem.vermelho{border-color:var(--red);color:var(--red)}
+.ck-hist{display:flex;align-items:center;gap:4px;margin-top:1px}
+.ck-hdot{width:9px;height:9px;border-radius:50%;background:var(--s2);border:1px solid var(--border);flex:none}
+.ck-hdot.verde{background:var(--green);border-color:var(--green)}
+.ck-hdot.ambar{background:var(--s2);border:2px solid var(--amber)}
+.ck-hdot.vermelho{background:var(--red);border-color:var(--red)}
+.ck-hl{font-size:9.5px;font-weight:700;color:var(--muted2);margin-right:2px}
+
+/* rodapé: mensagem do grupo */
+.ck-foot{margin-top:16px;background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:15px 16px}
+.ck-foot-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.ck-foot-t{font-size:13px;font-weight:800;flex:1;min-width:160px}
+.ck-msg{width:100%;min-height:210px;resize:vertical;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55}
+.ck-state{background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:34px 24px;text-align:center}
+.ck-state-t{font-size:14px;font-weight:800}
+.ck-state-s{font-size:12px;font-weight:600;color:var(--muted);margin-top:5px;line-height:1.45}
+
+@media (max-width:760px){
+  .ck-app>.ui-side{display:none}
+  .ck-top{padding:16px 16px}
+  .ck-body{padding:14px 16px 90px}
+  .ck-grid{grid-template-columns:1fr 1fr;gap:9px}
+  .ck-in{font-size:17px}
+}
+@media (max-width:430px){ .ck-grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <div class="ck-app" id="app">
+    <main class="ck-main">
+      <div class="ck-top">
+        <h1 class="ck-h1"><span>Cockpit</span><span id="ck-info"></span></h1>
+        <div class="ck-top-r">
+          <div class="ck-tabs" id="ck-tabs"></div>
+          <div class="ck-per" id="ck-per"></div>
+        </div>
+      </div>
+      <div class="ck-body" id="ck-body"></div>
+    </main>
+  </div>
+
+  <div class="ck-backdrop" id="ck-backdrop"></div>
+  <div class="ck-pop" id="ck-pop" role="dialog" aria-label="Como funciona"></div>
+
+  <script src="ui.js"></script>
+  <script src="recorrencia.js"></script>
+  <script src="cockpit-modelo.js"></script>
+  <script type="module">
+  (function () {
+  'use strict';
+
+  /* ============================================================
+     COCKPIT — lançamento dos indicadores de negócio
+     ------------------------------------------------------------
+     POR QUE ESTA TELA EXISTE
+     O sistema sabia cobrar ATIVIDADE (o que foi feito) e não sabia
+     ler RESULTADO (o que aconteceu com o negócio). Os 12 KPIs
+     diários, 5 semanais e 8 mensais viviam em
+     Cockpit_Diario_Gestor.xlsx, preenchidos à mão às 17h30 e
+     colados no WhatsApp dos sócios. Esta tela substitui a
+     planilha — mesmos indicadores, mesmas metas, mesma mensagem.
+
+     BENCHMARK (por que este desenho e não outro)
+     Scorecard semanal do EOS/Ninety.io e do Databox: uma LINHA por
+     indicador, meta sempre visível ao lado do número, semáforo
+     automático e histórico curto do lado. Não é dashboard de
+     análise — é tela de LANÇAMENTO com leitura imediata. Por isso:
+       · entrada e leitura no MESMO card (não há "modo edição");
+       · meta impressa junto do valor, nunca escondida em legenda;
+       · fecha com a mensagem pronta para copiar — o ritual de
+         encerramento que a planilha já tinha na coluna N.
+
+     O QUE ESTA TELA NÃO FAZ (e é proposital)
+     Não calcula os KPIs. Nenhum desses números existe no banco:
+     são apurados nos sistemas da escola e digitados aqui. Fingir
+     cálculo automático seria inventar dado.
+
+     GRAVAÇÃO
+     Coleção `cockpit`, id = o próprio período (d_AAAA-MM-DD,
+     s_AAAA-Snn, m_AAAA-MM). Id igual ao período torna o
+     lançamento idempotente: salvar de novo sobrescreve, nunca
+     duplica. Autosave ao sair do campo (padrão de planilha —
+     ninguém procura botão "salvar" numa grade de números).
+     ============================================================ */
+
+  var R = window.GrautRecorrencia;
+  var M = window.CockpitModelo;
+  var USER = null;
+
+  /* só o gestor lança. O menu já esconde a tela dos demais, mas
+     esconder não é proteger: a borda real está nas Regras, e aqui
+     o formulário nasce somente-leitura para quem não é gestor. */
+  function CAN_WRITE() { return !!USER && USER.perfil === 'gestor'; }
+
+  var _fb = null;
+  function fb() {
+    if (!_fb) {
+      _fb = Promise.all([
+        import('./firebase.js'),
+        import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
+      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+    }
+    return _fb;
+  }
+  function ferr(e) {
+    var code = (e && e.code) || '';
+    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão para lançar no Cockpit. Só o gestor lança — e as Regras do Firestore precisam estar publicadas com o bloco cockpit.'), { code: code }); }
+    if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
+    return Object.assign(new Error((e && e.message) || 'Erro ao acessar o Cockpit.'), { code: code });
+  }
+
+  var Store = {
+    ler: function (id) {
+      return fb().then(function (c) {
+        return c.f.getDoc(c.f.doc(c.db, 'cockpit', id)).then(function (d) {
+          return d.exists() ? d.data() : null;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    /* histórico curto: os N lançamentos anteriores do mesmo ciclo.
+       Só para desenhar os pontinhos de tendência do card. */
+    listar: function (ciclo, limite) {
+      return fb().then(function (c) {
+        var q = c.f.query(c.f.collection(c.db, 'cockpit'),
+          c.f.where('ciclo', '==', ciclo), c.f.limit(limite || 40));
+        return c.f.getDocs(q).then(function (snap) {
+          var a = [];
+          snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); });
+          a.sort(function (x, y) { return String(x.periodo).localeCompare(String(y.periodo)); });
+          return a;
+        });
+      }).catch(function () { return []; });
+    },
+    salvar: function (id, ciclo, periodo, valores) {
+      return fb().then(function (c) {
+        var doc = {
+          ciclo: ciclo, periodo: periodo, valores: valores, ativo: true,
+          atualizadoEm: Date.now(), atualizadoPorUid: USER.uid, atualizadoPorNome: USER.name || ''
+        };
+        return c.f.setDoc(c.f.doc(c.db, 'cockpit', id), doc, { merge: true }).then(function () {
+          return Store.log({ acao: 'lancar_cockpit', entidade: 'cockpit', refId: id, antes: null, depois: { ciclo: ciclo, periodo: periodo } });
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    log: function (entry) {
+      return fb().then(function (c) {
+        var row = Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry);
+        return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), row);
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[cockpit] log falhou', e); } });
+    }
+  };
+
+  /* ===================== util ===================== */
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+  function toast(msg, kind) {
+    var t = txt('div', '', msg);
+    t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;max-width:calc(100vw - 32px);text-align:center;background:var(--s2);border:1px solid var(--border);color:' + (kind === 'err' ? 'var(--red)' : 'var(--text)') + ';font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:11px;box-shadow:var(--cardShadow)';
+    document.body.appendChild(t);
+    setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 3000);
+  }
+  var POP, BACK;
+  function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
+  function openPop(anchor, title, rows) {
+    POP.innerHTML = '';
+    POP.appendChild(txt('div', 'ck-pop-t', title));
+    rows.forEach(function (r) {
+      var d = txt('div', 'ck-pop-row', '');
+      d.appendChild(txt('div', 'ck-pop-k', r[0]));
+      d.appendChild(txt('div', 'ck-pop-v', r[1]));
+      POP.appendChild(d);
+    });
+    POP.classList.add('on'); BACK.classList.add('on');
+    var r = anchor.getBoundingClientRect();
+    var top = r.bottom + 8, left = Math.min(r.left, window.innerWidth - 336);
+    if (top + POP.offsetHeight > window.innerHeight - 12) { top = Math.max(12, r.top - POP.offsetHeight - 8); }
+    POP.style.top = top + 'px'; POP.style.left = Math.max(12, left) + 'px';
+  }
+  function iBtn(title, rows) {
+    var b = el('<button class="ck-i" type="button" aria-label="Entenda este indicador"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg></button>');
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); openPop(b, title, rows); });
+    return b;
+  }
+
+  /* ===================== estado ===================== */
+  var HOJE = R.hojeISO();
+  var CICLO = 'diario';
+  var DATA = HOJE;            /* data DENTRO do período visível */
+  var DOC = null;             /* documento carregado do banco */
+  var VALORES = {};           /* estado em edição (espelho de DOC.valores) */
+  var HIST = [];              /* lançamentos anteriores do ciclo */
+  var bodyEl, tabsEl, perEl;
+
+  function kpis() { return M.ciclos[CICLO].kpis; }
+  function idAtual() { return M.idPeriodo(CICLO, DATA); }
+  function rotuloAtual() { return M.rotuloPeriodo(CICLO, DATA); }
+
+  /* passo de navegação: 1 dia · 7 dias · 1 mês */
+  function passo(dir) {
+    var p = DATA.split('-');
+    var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    if (CICLO === 'diario') { d.setDate(d.getDate() + dir); }
+    else if (CICLO === 'semanal') { d.setDate(d.getDate() + dir * 7); }
+    else { d.setMonth(d.getMonth() + dir); }
+    var mm = d.getMonth() + 1, dd = d.getDate();
+    DATA = d.getFullYear() + '-' + (mm < 10 ? '0' + mm : mm) + '-' + (dd < 10 ? '0' + dd : dd);
+  }
+  /* não deixa navegar para o futuro: lançar KPI de amanhã é ficção */
+  function noFuturo() { return M.idPeriodo(CICLO, DATA) >= M.idPeriodo(CICLO, HOJE); }
+
+  /* ===================== carga ===================== */
+  function carregar() {
+    bodyEl.innerHTML = '';
+    var ld = el('<div class="ck-state"></div>');
+    ld.appendChild(txt('div', 'ck-state-t', 'Carregando o lançamento…'));
+    bodyEl.appendChild(ld);
+    Promise.all([Store.ler(idAtual()), Store.listar(CICLO, 40)])
+      .then(function (r) {
+        DOC = r[0];
+        VALORES = (DOC && DOC.valores) ? Object.assign({}, DOC.valores) : {};
+        HIST = r[1] || [];
+        pintar();
+      })
+      .catch(function (e) {
+        bodyEl.innerHTML = '';
+        var st = el('<div class="ck-state"></div>');
+        st.appendChild(txt('div', 'ck-state-t', 'Não consegui abrir o Cockpit.'));
+        st.appendChild(txt('div', 'ck-state-s', e.message));
+        bodyEl.appendChild(st);
+      });
+  }
+
+  /* grava o estado INTEIRO do período (o documento é o período).
+     Se o gestor pular de campo em campo rápido, uma gravação pega a
+     outra em voo. Descartar a segunda perderia o número digitado —
+     então em vez de descartar, marcamos que ficou pendente e
+     regravamos ao final. Como sempre gravamos VALORES completo, a
+     última gravação já contém tudo. */
+  var salvando = false, pendente = false;
+  function salvar() {
+    if (!CAN_WRITE()) { return Promise.resolve(); }
+    if (salvando) { pendente = true; return Promise.resolve(); }
+    salvando = true;
+    return Store.salvar(idAtual(), CICLO, DATA, VALORES)
+      .then(function () {
+        salvando = false;
+        if (pendente) { pendente = false; return salvar(); }
+        return null;
+      })
+      .catch(function (e) { salvando = false; pendente = false; toast(e.message, 'err'); });
+  }
+
+  /* ===================== pintura =====================
+     REGRA DE REPINTURA (aprendida na marra): NÃO repintar a tela
+     inteira quando um campo muda. Repintar destrói o <input> que o
+     gestor acabou de deixar e mata o TAB para o campo seguinte —
+     numa grade de 12 números isso inviabiliza o lançamento.
+     Então: pintar() monta a tela uma vez e guarda as referências
+     do que é DERIVADO (semáforo do card, barra de placar,
+     mensagem do grupo). Ao salvar, só esses pedaços são
+     reescritos, via refrescar(). Os inputs nunca são recriados. */
+  var CARDS = [];    /* [{kpi, card, sem}] — o que o semáforo pinta */
+  var barEl = null, msgEl = null;
+
+  function pintar() {
+    bodyEl.innerHTML = '';
+    CARDS = []; barEl = null; msgEl = null;
+    pintarPeriodo();
+
+    /* --- barra de estado --- */
+    barEl = el('<div class="ck-bar"></div>');
+    pintarBarra();
+    bodyEl.appendChild(barEl);
+
+    if (!CAN_WRITE()) {
+      var av = el('<div class="ck-bar"></div>');
+      av.appendChild(txt('div', 'ck-bar-t', 'Você está vendo, não lançando.'));
+      av.appendChild(txt('div', 'ck-bar-s', 'O Cockpit é lançado pelo gestor. Os campos estão bloqueados aqui e também nas Regras do banco.'));
+      bodyEl.appendChild(av);
+    }
+
+    /* --- grade de KPIs --- */
+    var grid = el('<div class="ck-grid"></div>');
+    kpis().forEach(function (kpi) { grid.appendChild(cardKpi(kpi)); });
+    bodyEl.appendChild(grid);
+
+    /* --- mensagem para o grupo --- */
+    bodyEl.appendChild(rodape());
+  }
+
+  /* redesenha só o que é derivado dos valores. Não toca em input. */
+  function refrescar() {
+    pintarBarra();
+    CARDS.forEach(function (c) {
+      var s = M.semaforo(c.kpi, VALORES[c.kpi.k]);
+      c.card.className = 'ck-card' + (s === 'vazio' ? '' : ' ' + s);
+      c.sem.className = 'ck-sem' + (s === 'vazio' ? '' : ' ' + s);
+      c.sem.textContent = rotuloSem(s);
+    });
+    if (msgEl) { msgEl.value = M.mensagem(CICLO, VALORES, rotuloAtual()); }
+  }
+
+  function rotuloSem(s) {
+    if (s === 'verde') { return 'na meta'; }
+    if (s === 'ambar') { return 'perto'; }
+    if (s === 'vermelho') { return 'fora'; }
+    if (s === 'nd') { return 'sem dado'; }
+    return 'em branco';
+  }
+
+  function pintarBarra() {
+    if (!barEl) { return; }
+    barEl.innerHTML = '';
+    var c = M.ciclos[CICLO];
+    var p = M.placar(CICLO, VALORES);
+    var bt = el('<div class="ck-bar-t"></div>');
+    bt.appendChild(txt('div', '', 'Lançamento ' + c.label.toLowerCase() + ' · ' + rotuloAtual()));
+    bt.appendChild(txt('div', 'ck-bar-s', p.preenchidos + ' de ' + p.total + ' preenchidos · fecha ' + c.quando + ' · vai para ' + c.destino));
+    barEl.appendChild(bt);
+    if (p.verde) { barEl.appendChild(txt('span', 'ck-chip verde', p.verde + ' no verde')); }
+    if (p.ambar) { barEl.appendChild(txt('span', 'ck-chip ambar', p.ambar + ' no amarelo')); }
+    if (p.vermelho) { barEl.appendChild(txt('span', 'ck-chip vermelho', p.vermelho + ' no vermelho')); }
+    if (p.nd) { barEl.appendChild(txt('span', 'ck-chip', p.nd + ' sem dado')); }
+    if (DOC && DOC.atualizadoEm) {
+      barEl.appendChild(txt('span', 'ck-bar-s', 'salvo ' + hhmm(DOC.atualizadoEm) + (DOC.atualizadoPorNome ? ' por ' + DOC.atualizadoPorNome : '')));
+    }
+  }
+
+  /* marca o documento como salvo agora e redesenha os derivados */
+  function tocado() {
+    DOC = DOC || {};
+    DOC.atualizadoEm = Date.now();
+    DOC.atualizadoPorNome = USER.name || '';
+    refrescar();
+  }
+
+  function hhmm(ts) {
+    var d = new Date(ts);
+    var h = d.getHours(), m = d.getMinutes();
+    return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+  }
+
+  function cardKpi(kpi) {
+    var v = VALORES[kpi.k];
+    var s = M.semaforo(kpi, v);
+    var card = el('<div class="ck-card"></div>');
+    if (s !== 'vazio') { card.classList.add(s); }
+
+    var hd = el('<div class="ck-card-h"></div>');
+    hd.appendChild(txt('div', 'ck-card-l', kpi.label));
+    hd.appendChild(iBtn(kpi.label, [
+      ['O que diz', kpi.oQueDiz],
+      ['Para que serve', kpi.paraQue],
+      ['Meta', M.fmtMeta(kpi) + ' — vinda da linha META da sua planilha, não inventada aqui.'],
+      ['Como o semáforo é calculado', M.explicaSemaforo(kpi)],
+      ['Sem o dado', 'Escreva ND. ND não é zero: não pinta semáforo e aparece na mensagem do grupo como "sem dado", para ninguém confundir "deu zero" com "não apurei".']
+    ]));
+    card.appendChild(hd);
+
+    if (kpi.tipo === 'sn') {
+      card.appendChild(botoesSN(kpi));
+    } else {
+      card.appendChild(campoNum(kpi));
+    }
+
+    var ft = el('<div class="ck-card-f"></div>');
+    ft.appendChild(txt('span', 'ck-meta', 'meta ' + M.fmtMeta(kpi)));
+    var sem = txt('span', 'ck-sem' + (s === 'vazio' ? '' : ' ' + s), rotuloSem(s));
+    ft.appendChild(sem);
+    card.appendChild(ft);
+
+    var h = historico(kpi);
+    if (h) { card.appendChild(h); }
+    CARDS.push({ kpi: kpi, card: card, sem: sem });
+    return card;
+  }
+
+  function campoNum(kpi) {
+    var wrap = el('<div class="ck-card-in"></div>');
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'ck-in' + (CAN_WRITE() ? '' : ' ro');
+    inp.inputMode = 'decimal';
+    inp.setAttribute('aria-label', kpi.label);
+    inp.placeholder = kpi.tipo === 'pct' ? '0,0' : '0';
+    inp.value = VALORES[kpi.k] == null ? '' : String(VALORES[kpi.k]).replace('.', ',');
+    inp.disabled = !CAN_WRITE();
+    /* salva ao SAIR do campo, não a cada tecla: o documento é o
+       período inteiro, uma gravação por dígito seria absurda. */
+    inp.addEventListener('blur', function () {
+      var bruto = String(inp.value).trim();
+      var antes = VALORES[kpi.k];
+      if (bruto === '') { delete VALORES[kpi.k]; }
+      else if (M.ehND(bruto)) { VALORES[kpi.k] = M.ND; }
+      else {
+        var n = Number(bruto.replace(',', '.'));
+        if (isNaN(n)) {
+          toast('"' + bruto + '" não é número. Escreva o número ou ND se o dado não existe.', 'err');
+          inp.value = antes == null ? '' : String(antes).replace('.', ',');
+          return;
+        }
+        VALORES[kpi.k] = n;
+      }
+      if (String(antes) === String(VALORES[kpi.k])) { return; }
+      /* normaliza o que ficou no campo (9.5 digitado vira 9,5) */
+      inp.value = VALORES[kpi.k] == null ? '' : String(VALORES[kpi.k]).replace('.', ',');
+      salvar().then(tocado);
+    });
+    wrap.appendChild(inp);
+    return wrap;
+  }
+
+  function botoesSN(kpi) {
+    var box = el('<div class="ck-sn"></div>');
+    var botoes = [];
+    /* rótulo com acento na tela, valor sem acento no banco — evita que
+       um dia 'NÃO' e 'NAO' virem dois valores diferentes no histórico. */
+    var OPS = [['SIM', 'SIM', 'on-sim'], ['NÃO', 'NAO', 'on-nao'], ['ND', 'ND', 'on-nd']];
+    var marcar = function () {
+      var atual = VALORES[kpi.k] == null ? '' : String(VALORES[kpi.k]).toUpperCase();
+      botoes.forEach(function (bb) {
+        bb.el.className = 'ck-snb' + (atual === bb.valor ? ' ' + bb.cls : '');
+      });
+    };
+    OPS.forEach(function (op) {
+      var b = txt('button', 'ck-snb', op[0]);
+      b.type = 'button';
+      b.disabled = !CAN_WRITE();
+      b.setAttribute('aria-label', kpi.label + ': ' + op[0]);
+      botoes.push({ el: b, valor: op[1], cls: op[2] });
+      b.addEventListener('click', function () {
+        /* clicar de novo no mesmo botão limpa — sempre reversível */
+        if (VALORES[kpi.k] === op[1]) { delete VALORES[kpi.k]; } else { VALORES[kpi.k] = op[1]; }
+        marcar();
+        salvar().then(tocado);
+      });
+      box.appendChild(b);
+    });
+    marcar();
+    return box;
+  }
+
+  /* pontinhos dos últimos períodos ANTERIORES ao visível.
+     Verde = bateu · âmbar vazado = perto · vermelho = furou.
+     Só aparece quando existe passado — card novo não mente
+     mostrando bolinha cinza como se fosse histórico. */
+  function historico(kpi) {
+    var ants = HIST.filter(function (d) { return String(d.periodo) < String(DATA); }).slice(-7);
+    if (!ants.length) { return null; }
+    var box = el('<div class="ck-hist"></div>');
+    box.appendChild(txt('span', 'ck-hl', 'antes'));
+    ants.forEach(function (d) {
+      var s = M.semaforo(kpi, (d.valores || {})[kpi.k]);
+      var dot = el('<span class="ck-hdot"></span>');
+      if (s === 'verde' || s === 'ambar' || s === 'vermelho') { dot.classList.add(s); }
+      dot.title = M.rotuloPeriodo(CICLO, d.periodo) + ': ' + M.fmtValor(kpi, (d.valores || {})[kpi.k]);
+      box.appendChild(dot);
+    });
+    return box;
+  }
+
+  function rodape() {
+    var c = M.ciclos[CICLO];
+    var box = el('<div class="ck-foot"></div>');
+    var hd = el('<div class="ck-foot-h"></div>');
+    hd.appendChild(txt('div', 'ck-foot-t', 'Mensagem para ' + c.destino));
+    hd.appendChild(iBtn('Mensagem do grupo', [
+      ['De onde vem', 'É a coluna N da sua planilha ("Mensagem WhatsApp"), montada sozinha a partir dos números acima.'],
+      ['O que ganhou', 'Na planilha dava para copiar a célula da linha errada e mandar o dia errado no grupo. Aqui a mensagem só pode ser a do período aberto na tela.'],
+      ['Não preenchido vs ND', 'Quadrado branco = você ainda não preencheu. Bolinha branca = você declarou ND (não consegui apurar). A mensagem mostra os dois separados de propósito.']
+    ]));
+    var bcopy = UI.button({ label: 'Copiar mensagem', icon: 'check' });
+    bcopy.addEventListener('click', function () {
+      var t = ta.value;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t)
+          .then(function () { toast('Mensagem copiada. Cole no grupo.'); })
+          .catch(function () { selecionar(); });
+      } else { selecionar(); }
+    });
+    hd.appendChild(bcopy);
+    box.appendChild(hd);
+    var ta = document.createElement('textarea');
+    ta.className = 'ck-msg';
+    ta.readOnly = true;
+    ta.setAttribute('aria-label', 'Mensagem pronta para o grupo');
+    ta.value = M.mensagem(CICLO, VALORES, rotuloAtual());
+    var selecionar = function () { ta.focus(); ta.select(); toast('Selecionei o texto — use Ctrl+C (ou ⌘C) para copiar.'); };
+    box.appendChild(ta);
+    msgEl = ta; /* refrescar() reescreve a mensagem a cada número salvo */
+    return box;
+  }
+
+  /* ===================== cabeçalho: abas e período ===================== */
+  function pintarTabs() {
+    tabsEl.innerHTML = '';
+    ['diario', 'semanal', 'mensal'].forEach(function (k) {
+      var b = txt('button', 'ck-tab' + (k === CICLO ? ' on' : ''), M.ciclos[k].label);
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        if (CICLO === k) { return; }
+        CICLO = k; DATA = HOJE;
+        pintarTabs(); carregar();
+      });
+      tabsEl.appendChild(b);
+    });
+  }
+  function pintarPeriodo() {
+    perEl.innerHTML = '';
+    var bp = txt('button', '', '‹'); bp.type = 'button'; bp.setAttribute('aria-label', 'Período anterior');
+    bp.addEventListener('click', function () { passo(-1); carregar(); });
+    var lb = txt('div', 'ck-per-l', rotuloAtual());
+    var bn = txt('button', '', '›'); bn.type = 'button'; bn.setAttribute('aria-label', 'Próximo período');
+    bn.disabled = noFuturo();
+    bn.title = bn.disabled ? 'Não dá para lançar um período que ainda não aconteceu.' : '';
+    bn.addEventListener('click', function () { if (noFuturo()) { return; } passo(1); carregar(); });
+    perEl.appendChild(bp); perEl.appendChild(lb); perEl.appendChild(bn);
+  }
+
+  /* ===================== boot ===================== */
+  function boot() {
+    POP = document.getElementById('ck-pop');
+    BACK = document.getElementById('ck-backdrop');
+    BACK.addEventListener('click', closePop);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    bodyEl = document.getElementById('ck-body');
+    tabsEl = document.getElementById('ck-tabs');
+    perEl = document.getElementById('ck-per');
+
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Cockpit', user: USER }), app.firstChild);
+
+    document.getElementById('ck-info').appendChild(iBtn('Cockpit', [
+      ['O que é', 'A planilha Cockpit_Diario_Gestor.xlsx virou tela. Mesmos 12 indicadores diários, 5 semanais e 8 mensais, com as mesmas metas.'],
+      ['O que ele NÃO faz', 'Não calcula nada. Estes números são apurados nos sistemas da escola e digitados aqui. O sistema não tem como inventá-los.'],
+      ['Rotina', 'Diário 17h30 → mensagem no grupo dos sócios. Semanal sexta 17h → reunião com sócios. Mensal até o dia 5 → reunião estratégica.'],
+      ['Salvamento', 'Salva sozinho quando você sai do campo. Um lançamento por período: salvar de novo corrige, nunca duplica.'],
+      ['Quem lança', 'Só o gestor. Os demais perfis nem veem esta tela no menu.']
+    ]));
+
+    /* pautas-modelo do cockpit: se o arquivo de indicadores não
+       carregar, a tela nasceria vazia e ninguém saberia por quê. */
+    if (!M) {
+      bodyEl = document.getElementById('ck-body');
+      bodyEl.innerHTML = '';
+      var st = el('<div class="ck-state"></div>');
+      st.appendChild(txt('div', 'ck-state-t', 'cockpit-modelo.js não carregou.'));
+      st.appendChild(txt('div', 'ck-state-s', 'Sem esse arquivo o Cockpit não sabe quais são os indicadores nem as metas. Avise o suporte antes de lançar qualquer número.'));
+      bodyEl.appendChild(st);
+      return;
+    }
+
+    pintarTabs();
+    carregar();
+  }
+
+  Guard.onReady(function (u) { USER = u; boot(); });
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

@@ -168,6 +168,11 @@
 .hj-xtit{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hj-xmeta{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap}
 .hj-xlink{font-size:11.5px;font-weight:800;color:var(--brand);text-decoration:none;margin-top:6px;display:inline-block}
+/* ---- R9-C: Pareto das travas. Barra proporcional em DIV, não em lib de
+   gráfico: são no máximo 3 categorias e o número já está escrito ao lado —
+   biblioteca aqui seria peso sem informação nova. ---- */
+.hj-tvbar{flex:1 1 90px;height:6px;border-radius:20px;background:var(--s2);overflow:hidden;min-width:60px}
+.hj-tvfill{height:100%;border-radius:20px;background:var(--orange);transition:width .35s ease}
 /* ---- N4-B: botão "Agenda de Eventos" pulsante (D2) — tokens, sem hex ---- */
 .hj-evbtn{position:relative}
 .hj-evbtn.pulse{animation:hjEvPulse 1.6s ease-in-out infinite}
@@ -275,6 +280,33 @@
      Atividade antiga sem o campo: sem etiqueta; no filtro conta como 'operacional' (mesmo default do import). */
   var CAMADA_LABEL = { socio: 'Sócio', gestor: 'Gestor', operacional: 'Operacional' };
   var CAMADA_COR = { socio: 'brand', gestor: 'orange', operacional: 'muted2' };
+  /* R9-B · "TRAVEI NESTA" — o impedimento é uma BANDEIRA, não um status.
+     Hoje quem não consegue fazer só tem duas saídas: mentir (dá check) ou
+     calar (deixa atrasar). Nos dois casos o líder recebe um número e nenhuma
+     causa — e a pessoa recebe cobrança por algo que não dependia dela.
+     Benchmark: "Flag / Impediment" do Jira e "blocked by" do Asana — a tarefa
+     fica SINALIZADA e continua no mesmo status, contando no atraso. Sinalizar
+     nunca esconde o trabalho (o oposto de "pular", que apaga da conta).
+     Por que lista fechada e não texto livre: o líder precisa SOMAR causas
+     (Pareto) e ninguém soma frase digitada. O texto livre fica no detalhe. */
+  var TRAVA_MOTIVOS = [
+    { value: 'dependencia', label: 'Dependo de outra pessoa ou setor' },
+    { value: 'informacao', label: 'Faltou informação para conseguir fazer' },
+    { value: 'prioridade', label: 'Outra prioridade entrou na frente' },
+    { value: 'tempo', label: 'Não sobrou tempo no dia' },
+    { value: 'ferramenta', label: 'Sistema ou ferramenta fora do ar' },
+    { value: 'outro', label: 'Outro motivo' }
+  ];
+  function travaLabel(v) {
+    for (var i = 0; i < TRAVA_MOTIVOS.length; i++) {
+      if (TRAVA_MOTIVOS[i].value === v) { return TRAVA_MOTIVOS[i].label; }
+    }
+    return '';
+  }
+  /* o.ov é o documento CRU da ocorrência (kpi.js:183) — o campo chega aqui
+     sem nenhuma mudança em kpi.js. Vazio ('') = destravado, nunca null:
+     null em rules obriga tratamento à parte e some do 'in [...]'. */
+  function estaTravada(o) { return !!(o && o.ov && o.ov.travadoMotivo); }
   var FCAMADA = 'todas';          /* 'todas' | 'socio' | 'gestor' | 'operacional' */
   var HJ_ABERTO = {};             /* F1-D(i): colapso por setor (memória da sessão; false = fechado) */
   var CONVOC = [];                /* F1-E · 3.1: reuniões abertas em que fui convocado */
@@ -283,7 +315,9 @@
   var CELEB80 = '';               /* F1-N: marco dos 80% — 1 toast por dia */             /* F1-I: 1 celebração por dia por sessão (Kahneman: nudge único, nunca modal) */
   var LAST_NUM = {};              /* F1-I: números da última pintura p/ os "i" estáticos */
   var HJ_I_ATRAS = false;         /* F1-I: "i" das Atrasadas injetado 1x */
-  var TIPO_LABEL_R = { lideres: 'Reunião de Líderes', integrada: 'Reunião Integrada', instrutor: 'Reunião com Instrutor', lideres_turma: 'Reunião c/ Líderes de Turmas', departamento: 'Reunião de Departamento' };
+  /* Espelha TIPOS_REUNIAO de projetos.html. Se divergir, a convocação
+     aparece aqui como "Reunião" genérica — por isso os dois andam juntos. */
+  var TIPO_LABEL_R = { lideres: 'Reunião de Líderes', integrada: 'Reunião Integrada', instrutor: 'Reunião com Instrutor', lideres_turma: 'Reunião c/ Líderes de Turmas', departamento: 'Reunião de Departamento', resultado_mensal: 'Resultado Mensal', socio_fin: 'Bruno × Gestor (semanal · fin/adm)', socio_com: 'Tiago × Gestor (semanal · comercial)', mensal_estrategica: 'Sócios + Gestor (mensal estratégica)' };
   /* R5-B1 · lista O3 do RESUMO (falta em reunião) — mesma lista usada no
      "justificar falta" da tela Reuniões; 'Outro' exige detalhe. */
   var MOTIVOS_FALTA = ['Conflito de agenda', 'Atendimento urgente', 'Ausência justificada', 'Esquecimento/não vi', 'Outro'];
@@ -457,9 +491,78 @@
       .then(function () { toast(msg); refresh(); return true; })
       .catch(function (e) { toast(e.message, 'err'); return false; });
   }
-  function concluir(o) { return mutar(o, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia', 'Concluída. ✔'); }
+  function concluir(o) {
+    var patch = { status: 'concluida', concluidaEm: Date.now() };
+    /* concluída não pode continuar travada: a bandeira morre junto com o
+       impedimento. Sem isto o Pareto do líder somaria trava de coisa já
+       feita — número certo somando causa que não existe mais.
+       Só manda os 3 campos quando havia trava: patch enxuto passa por
+       menos condição na regra e não polui o histórico. */
+    if (estaTravada(o)) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
+    return mutar(o, patch, 'concluir_ocorrencia', 'Concluída. ✔');
+  }
   function reabrir(o) { return mutar(o, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia', 'Reaberta.'); }
   function iniciar(o) { return mutar(o, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia', 'Em andamento.'); }
+  /* R9-B: travar NÃO mexe em status de propósito. Se mexesse, viraria jeito
+     de sumir com a tarefa da cobrança — e aí todo mundo trava tudo. */
+  function destravar(o) {
+    return mutar(o, { travadoMotivo: '', travadoDetalhe: '', travadoEm: null }, 'destravar_ocorrencia', 'Destravada.');
+  }
+  function modalTravei(o) {
+    var jaTravada = estaTravada(o);
+    var sel = UI.select({
+      value: (o.ov && o.ov.travadoMotivo) || '',
+      placeholder: 'Escolha o que está no caminho',
+      options: TRAVA_MOTIVOS
+    });
+    var ta = el('<textarea class="ui-input" rows="2"></textarea>');
+    ta.value = (o.ov && o.ov.travadoDetalhe) || '';
+    ta.placeholder = 'Quem, o quê, desde quando (ex.: aguardo a lista do Financeiro desde 3ª)';
+    var aviso = txt('div', 'hj-prog-s',
+      'A tarefa CONTINUA pendente e continua contando no atraso. Travar não é adiar nem pular — é dizer, em 1 toque, o que está no caminho. Se o problema é a DATA, use "Adiar".');
+    UI.modal({
+      title: 'Travei nesta — ' + (o.act.titulo || ''), width: 460,
+      body: [aviso,
+        UI.field({ label: 'O que está travando', required: true, control: sel,
+          hint: 'Motivo de lista porque o líder soma as causas do mês. Frase digitada não vira estatística.' }),
+        UI.field({ label: 'Detalhe', control: ta,
+          hint: 'Opcional — obrigatório só em "Outro motivo". Até 280 caracteres.' })],
+      footer: function (close) {
+        var acoes = [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close })];
+        if (jaTravada) {
+          acoes.push(UI.button({ label: 'Destravar', variant: 'ghost', onClick: function () {
+            destravar(o).then(function (ok) { if (ok) { close(); } });
+          } }));
+        }
+        acoes.push(UI.button({ label: jaTravada ? 'Atualizar' : 'Registrar trava', icon: 'check', onClick: function () {
+          var mot = sel.value;
+          var det = ta.value.trim().slice(0, 280);
+          if (!travaLabel(mot)) { toast('Escolha o motivo.', 'err'); return; }
+          if (mot === 'outro' && det.length < 3) { toast('Em "Outro motivo" escreva o detalhe — sem ele a trava não diz nada a ninguém.', 'err'); return; }
+          mutar(o, { travadoMotivo: mot, travadoDetalhe: det, travadoEm: Date.now() },
+            'travar_ocorrencia', jaTravada ? 'Trava atualizada.' : 'Trava registrada. Seu líder vê o motivo.')
+            .then(function (ok) { if (ok) { close(); } });
+        } }));
+        return acoes;
+      }
+    });
+  }
+  /* chip lido por QUALQUER um que enxerga a linha (não só quem pode agir):
+     a trava só serve se o líder e o supervisor virem. */
+  function chipTrava(o) {
+    if (!estaTravada(o)) { return null; }
+    var ov = o.ov || {};
+    var c = txt('span', 'hj-freq', '⛔ ' + travaLabel(ov.travadoMotivo));
+    c.style.color = 'var(--orange)';
+    c.style.borderColor = 'var(--orange)';
+    c.title = 'Travado: ' + travaLabel(ov.travadoMotivo)
+      + (ov.travadoDetalhe ? ' — ' + ov.travadoDetalhe : '')
+      + '\nA tarefa segue pendente e contando no atraso.';
+    return c;
+  }
+  function btnTrava(o) {
+    return miniBtn(estaTravada(o) ? 'Trava' : 'Travei nesta', function () { modalTravei(o); }, 'warn');
+  }
   /* R7·B2.6 — ADIAR (a tela MEDE "Reprogramação 20%" e não tinha COMO
      reprogramar). Líder/gestor aplica direto (mesma trava F1-J: reprogramar
      é deles); o responsável comum manda PEDIDO ao dono (solicitacoes). */
@@ -569,6 +672,7 @@
     meta.appendChild(txt('span', 'hj-evsec', RECOR_LABEL[o.act.recorrencia] || ''));
     var camTl = chipCamada(o.act); if (camTl) { meta.appendChild(camTl); }
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-evsec', 'em andamento'); em.style.color = 'var(--doing)'; meta.appendChild(em); }
+    var trTl = chipTrava(o); if (trTl) { meta.appendChild(trTl); }
     card.appendChild(meta);
     card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), o.titulo));
     if (PODE_AGIR(o)) {
@@ -577,6 +681,7 @@
       else {
         acts.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok'));
         if (state !== 'now') { acts.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
+        acts.appendChild(btnTrava(o));   /* R9-B: terceira saída além de mentir e calar */
       }
       card.appendChild(acts);
     }
@@ -598,6 +703,8 @@
     }));
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-freq', 'Em andamento'); em.style.color = 'var(--doing)'; row.appendChild(em); }
     else if (!done && PODE_AGIR(o)) { row.appendChild(miniBtn('Iniciar', function () { iniciar(o); })); }
+    var trDia = chipTrava(o); if (trDia) { row.appendChild(trDia); }
+    if (!done && PODE_AGIR(o)) { row.appendChild(btnTrava(o)); }
     var camDia = chipCamada(o.act); if (camDia) { row.appendChild(camDia); }
     if (origemReuniao(o.act)) {
       var chR = txt('span', 'hj-freq', 'Reunião'); chR.style.color = 'var(--doing)';
@@ -629,10 +736,14 @@
       chL.title = 'Nasceu na reunião' + (ogL.reuniaoTitulo ? ' "' + ogL.reuniaoTitulo + '"' : '') + (ogL.reuniaoData ? ' de ' + ogL.reuniaoData : '');
       row.appendChild(chL);
     }
+    var trLt = chipTrava(o); if (trLt) { row.appendChild(trLt); }
     if (PODE_AGIR(o)) {
       row.appendChild(miniBtn('Concluir', function () { concluir(o); }, 'ok'));
       /* R7·B2.6: a tela mede "Reprogramação 20%" mas não tinha COMO adiar. */
       row.appendChild(miniBtn('Adiar', function () { modalAdiar(o); }));
+      /* R9-B: é AQUI que a trava mais importa — atraso sem causa é a linha
+         que gera cobrança injusta. "Adiar" muda a data; "Travei" diz o porquê. */
+      row.appendChild(btnTrava(o));
     }
     row.appendChild(UI.statusPill(sev.l, { tone: sev.t }));
     return row;
@@ -702,6 +813,13 @@
       var mt = el('<span class="hj-xmeta"></span>');
       var dd = o.atrasada ? R.diasEntre(o.effDate, hoje) : 0;
       mt.textContent = (o.act.responsavelNome || 'sem responsável') + (dd ? ' · ' + dd + 'd de atraso' : ' · hoje');
+      /* R9-B: o supervisor é o primeiro que precisa ver a causa — atraso COM
+         motivo declarado muda a conversa de cobrança para desbloqueio. */
+      if (estaTravada(o)) {
+        mt.textContent += ' · ⛔ ' + travaLabel(o.ov.travadoMotivo);
+        mt.title = (o.ov.travadoDetalhe || travaLabel(o.ov.travadoMotivo));
+        mt.style.color = 'var(--orange)';
+      }
       row.appendChild(mt);
       card.appendChild(row);
     });
@@ -977,8 +1095,211 @@
     return card;
   }
 
-  /* ---------- estados ---------- */
-  function setState(msg, sub) {
+  /* ---------- R9-D · MEU MÊS (o executor finalmente vê o próprio resultado) ----
+     Hoje o usuário comum só enxerga o DIA: rola a lista, marca, e no fim do mês
+     não sabe se foi bem. Quem só recebe cobrança e nunca recebe resultado para
+     de entrar na tela — e "Performance" não está no menu dele (guard.js:58),
+     abrir a tela inteira seria decisão de RBAC, não de UX.
+     Então o mês dele vem até aqui: os MESMOS números, recortados só ao que é
+     dele. Zero query nova — a band (-45/+30 dias) contém o mês corrente
+     inteiro em qualquer dia (kpi.js:52-53).
+     Regra de "no prazo" copiada de KPI.statusDecisao (kpi.js:815-822): dia da
+     conclusão <= data efetiva. Não invento critério paralelo — dois critérios
+     para a mesma palavra é como um sistema perde a confiança. */
+  function mesCorrente(hoje) {
+    var y = parseInt(hoje.slice(0, 4), 10), mes = parseInt(hoje.slice(5, 7), 10);
+    return { ini: hoje.slice(0, 7) + '-01', fim: hoje.slice(0, 7) + '-' + pad2(R.ultimoDiaMes(y, mes)) };
+  }
+  function cardMeuMes(m, hoje) {
+    var uid = CURRENT_USER.uid;
+    if (!uid) { return null; }
+    var jan = mesCorrente(hoje);
+    var meus = m.board.filter(function (o) {
+      return o.act && o.act.responsavelUid === uid
+        && o.effDate && R.compareISO(o.effDate, jan.ini) >= 0 && R.compareISO(o.effDate, jan.fim) <= 0;
+    });
+    if (!meus.length) { return null; }
+
+    var feitas = meus.filter(function (o) { return o.status === 'concluida'; });
+    var noPrazo = feitas.filter(function (o) {
+      var ov = o.ov || {};
+      if (!ov.concluidaEm) { return false; }   /* sem carimbo não afirmo prazo */
+      return R.compareISO(R.toISO(new Date(Number(ov.concluidaEm))), o.effDate) <= 0;
+    }).length;
+    var semCarimbo = feitas.filter(function (o) { return !(o.ov && o.ov.concluidaEm); }).length;
+    var abertas = meus.filter(function (o) { return o.status !== 'concluida' && o.status !== 'pulada'; });
+    var atrasadas = abertas.filter(function (o) { return o.atrasada; }).length;
+    /* denominador = o que JÁ VENCEU ou vence hoje. Cobrar pelo mês inteiro no
+       dia 5 daria um número falso e desanimador. */
+    var jaVenceu = meus.filter(function (o) { return R.compareISO(o.effDate, hoje) <= 0; });
+    var pct = jaVenceu.length ? Math.round(feitas.length / jaVenceu.length * 100) : 0;
+    var pctPrazo = feitas.length ? Math.round(noPrazo / feitas.length * 100) : 0;
+
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Meu mês'));
+    hd.appendChild(infoHj('Meu mês', {
+      formula: 'entregues ÷ o que já venceu (ou vence hoje) no mês, só das tarefas em que VOCÊ é o responsável. "No prazo" = dia da conclusão menor ou igual à data da tarefa — o mesmo critério da Inteligência e da Performance, não um cálculo paralelo. O mês inteiro NÃO entra no denominador: cobrar no dia 5 pelo dia 30 seria número falso.',
+      dados: 'as suas ocorrências do mês corrente, no mesmo board que já alimenta esta tela. Conclusão sem carimbo de data (registro antigo) não é contada como no prazo nem como atrasada — não afirmo o que não sei.',
+      numeros: feitas.length + ' entregue(s) de ' + jaVenceu.length + ' vencida(s) = ' + pct + '%'
+        + ' · no prazo ' + noPrazo + '/' + feitas.length + ' = ' + pctPrazo + '%'
+        + (semCarimbo ? ' · ' + semCarimbo + ' sem carimbo de conclusão' : '')
+        + ' · ' + abertas.length + ' aberta(s), ' + atrasadas + ' atrasada(s)'
+        + ' · janela ' + jan.ini.split('-').reverse().join('/') + ' a ' + jan.fim.split('-').reverse().join('/')
+    }));
+    var ct = el('<span class="hj-xcount"></span>');
+    ct.textContent = pct + '%';
+    ct.style.color = pct >= 80 ? 'var(--greenText)' : pct >= 50 ? 'var(--amber)' : 'var(--orange)';
+    hd.appendChild(ct);
+    card.appendChild(hd);
+
+    function linha(rotulo, valor, largura, cor, dica) {
+      var row = el('<div class="hj-xrow"></div>');
+      if (dica) { row.title = dica; }
+      var t = el('<span class="hj-xtit"></span>'); t.textContent = rotulo; row.appendChild(t);
+      var bar = el('<div class="hj-tvbar"></div>');
+      var fill = el('<div class="hj-tvfill"></div>');
+      fill.style.width = Math.max(0, Math.min(100, largura)) + '%';
+      fill.style.background = 'var(--' + cor + ')';
+      bar.appendChild(fill); row.appendChild(bar);
+      var mt = el('<span class="hj-xmeta"></span>'); mt.textContent = valor; row.appendChild(mt);
+      card.appendChild(row);
+    }
+    linha('Entregues', feitas.length + ' de ' + jaVenceu.length, pct,
+      pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'orange',
+      'Só conta o que já venceu ou vence hoje — o resto do mês ainda é seu.');
+    if (feitas.length) {
+      linha('No prazo', noPrazo + ' de ' + feitas.length, pctPrazo,
+        pctPrazo >= 80 ? 'green' : pctPrazo >= 50 ? 'amber' : 'orange',
+        'Conclusão no dia da tarefa ou antes.');
+    }
+    if (abertas.length) {
+      linha('Ainda abertas', abertas.length + (atrasadas ? ' · ' + atrasadas + ' atrasada(s)' : ''),
+        Math.round(abertas.length / meus.length * 100), atrasadas ? 'red' : 'muted2',
+        'Do mês inteiro, incluindo o que ainda nem venceu.');
+    }
+    /* R9-D: a tela tinha 4 expressões de cobrança para cada 1 de reconhecimento
+       (contado no texto de hoje.html em 06/08). O rodapé não é enfeite — é o
+       único lugar onde o executor lê algo sobre ELE que não é dívida. */
+    var pe = txt('div', 'hj-prog-s',
+      !jaVenceu.length ? 'O mês está começando para você — nada venceu ainda.'
+        : pct >= 90 ? 'Mês redondo até aqui. ' + feitas.length + ' entregue(s) e ' + pctPrazo + '% no prazo.'
+        : pct >= 70 ? 'Mês em dia. Fechar ' + Math.max(0, Math.ceil(jaVenceu.length * 0.9) - feitas.length) + ' a mais leva você a 90%.'
+        : atrasadas ? 'Comece pela mais velha das ' + atrasadas + ' atrasadas — é a que mais pesa no seu mês.'
+        : 'Ainda dá para virar o mês: faltam ' + (jaVenceu.length - feitas.length) + ' vencida(s) em aberto.');
+    pe.style.marginTop = '8px';
+    card.appendChild(pe);
+    return card;
+  }
+
+  /* ---------- R9-C · O que mais trava o time (Pareto das travas) ----------
+     A trava só serve se alguém SOMAR. Sem este card, "Travei nesta" viraria
+     desabafo individual: o líder veria 12 bandeiras soltas e nenhuma causa.
+     Aqui as travas ABERTAS do escopo dele viram 3 causas ordenadas — é o
+     Pareto do Falconi aplicado ao dia: atacar a causa nº 1 desbloqueia mais
+     gente do que cobrar 12 pessoas uma a uma.
+     Escopo: o MESMO KPI.visivelPara do resto da tela (gestor tudo, líder os
+     setores dele). Derivado do board já carregado — zero query nova. */
+  function travasNoEscopo(m, hoje) {
+    return m.board.filter(function (o) {
+      if (!estaTravada(o)) { return false; }
+      if (!KPI.visivelPara(o.act, CURRENT_USER, m.setores)) { return false; }
+      /* concluída/pulada não entra: causa de trabalho que já saiu da mesa
+         não é problema do time — seria Pareto inflado. */
+      var aberta = o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada';
+      return aberta && o.effDate && R.compareISO(o.effDate, hoje) <= 0;
+    });
+  }
+  function modalTravasDoMotivo(motivo, itens, hoje) {
+    var linhas = [];
+    itens.sort(function (a, b) { return (a.effDate < b.effDate) ? -1 : 1; }).forEach(function (o) {
+      var ov = o.ov || {};
+      var li = el('<div class="hj-xrow"></div>');
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = o.act.titulo || '(sem título)';
+      t.title = ov.travadoDetalhe || 'Sem detalhe escrito.';
+      li.appendChild(t);
+      var mt = el('<span class="hj-xmeta"></span>');
+      var dias = R.compareISO(o.effDate, hoje) < 0 ? R.diasEntre(o.effDate, hoje) : 0;
+      mt.textContent = (o.act.responsavelNome || 'sem responsável') + (dias ? ' · ' + dias + 'd' : ' · hoje');
+      li.appendChild(mt);
+      linhas.push(li);
+      if (ov.travadoDetalhe) {
+        var det = txt('div', 'hj-prog-s', '↳ ' + ov.travadoDetalhe);
+        det.style.marginBottom = '4px';
+        linhas.push(det);
+      }
+    });
+    UI.modal({
+      title: travaLabel(motivo) + ' — ' + itens.length + ' travada(s)', width: 520,
+      body: linhas,
+      footer: function (close) { return [UI.button({ label: 'Fechar', onClick: close })]; }
+    });
+  }
+  function cardTravas(m, hoje) {
+    if (Guard.isUsuario && Guard.isUsuario()) { return null; }
+    var travas = travasNoEscopo(m, hoje);
+    if (!travas.length) { return null; }
+    var porMotivo = {};
+    travas.forEach(function (o) {
+      var k = o.ov.travadoMotivo;
+      (porMotivo[k] = porMotivo[k] || []).push(o);
+    });
+    var ordem = Object.keys(porMotivo).sort(function (a, b) {
+      return porMotivo[b].length - porMotivo[a].length
+          || travaLabel(a).localeCompare(travaLabel(b), 'pt-BR');
+    }).slice(0, 3);
+    var maior = porMotivo[ordem[0]].length;
+
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'O que mais trava seu time'));
+    hd.appendChild(infoHj('O que mais trava seu time', {
+      formula: 'as até 3 causas mais frequentes entre as tarefas ABERTAS do seu escopo que a própria pessoa marcou como travadas ("Travei nesta"). A barra é a fatia de cada causa sobre o total de travas. Não é ranking de gente — é fila de causa a atacar.',
+      dados: 'campo travadoMotivo da ocorrência, gravado por quem executa, no mesmo board que já alimenta esta tela. Só entram ocorrências vencidas ou de hoje, ainda em aberto.',
+      numeros: travas.length + ' trava(s) aberta(s) · '
+        + ordem.map(function (k) { return travaLabel(k) + ' ' + porMotivo[k].length; }).join(' · ')
+    }));
+    var ct = el('<span class="hj-xcount"></span>');
+    ct.textContent = travas.length + ' trava(s)';
+    ct.style.color = 'var(--orange)';
+    hd.appendChild(ct);
+    card.appendChild(hd);
+
+    ordem.forEach(function (k) {
+      var itens = porMotivo[k];
+      var pct = Math.round(itens.length / travas.length * 100);
+      var row = el('<div class="hj-xrow"></div>');
+      row.style.cursor = 'pointer';
+      row.title = 'Ver as ' + itens.length + ' tarefa(s) travadas por este motivo';
+      row.addEventListener('click', function () { modalTravasDoMotivo(k, itens, hoje); });
+      row.appendChild(el('<span class="hj-xdot" style="background:var(--orange)"></span>'));
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = travaLabel(k);
+      row.appendChild(t);
+      var bar = el('<div class="hj-tvbar"></div>');
+      /* largura RELATIVA à maior causa: com 3 barras, comparar entre si é o
+         que o olho faz primeiro. O % absoluto vai escrito ao lado. */
+      var fill = el('<div class="hj-tvfill"></div>');
+      fill.style.width = Math.round(itens.length / maior * 100) + '%';
+      bar.appendChild(fill);
+      row.appendChild(bar);
+      var mt = el('<span class="hj-xmeta"></span>');
+      mt.textContent = itens.length + ' · ' + pct + '% · ver →';
+      row.appendChild(mt);
+      card.appendChild(row);
+    });
+    return card;
+  }
+
+  /* ---------- estados ----------
+     R9-E: o 3º parâmetro (acao) nasceu porque TODO estado vazio aqui era beco
+     sem saída: a tela dizia o que faltava e não dava a porta. "Crie a primeira
+     em Atividades" obrigava a pessoa a achar o menu sozinha — e quem chega ao
+     estado vazio é justamente quem ainda não sabe onde as coisas ficam.
+     Padrão de mercado (Linear, Notion, Asana): estado vazio = frase + BOTÃO.
+     acao = { label, href } ou null. Opcional: nenhuma chamada existente quebra. */
+  function setState(msg, sub, acao) {
     var st = document.getElementById('hj-state');
     var cols = document.querySelector('.hj-cols'); var kp = document.getElementById('hj-kpis');
     var pgS = document.getElementById('hj-prog');
@@ -987,6 +1308,13 @@
     st.innerHTML = '';
     st.appendChild(txt('div', 'hj-state-t', msg));
     if (sub) { st.appendChild(txt('div', 'hj-state-s', sub)); }
+    if (acao && acao.label && acao.href) {
+      var a = el('<a class="hj-xlink"></a>');
+      a.textContent = acao.label + ' →';
+      a.href = acao.href;
+      a.style.marginTop = '10px';
+      st.appendChild(a);
+    }
   }
 
   /* ---------- pintura ---------- */
@@ -1013,22 +1341,33 @@
     var d = derivar(board, hoje);
 
     /* F1-B: nada no escopo do papel (líder sem setores com atividade / usuário sem atribuições) */
+    /* R9-E: cada vazio agora aponta uma porta que a pessoa PODE abrir.
+       O usuário comum não ganha botão aqui de propósito: a saída dele é o
+       gestor definir a responsabilidade, e mandá-lo a uma tela onde ele não
+       resolve nada seria pior que não oferecer nada. */
     if (!escopo.length && m.board.length) {
+      var ehLider = Guard.isLider && Guard.isLider();
       setState('Nada no seu escopo.',
-        (Guard.isLider && Guard.isLider())
-          ? 'Você vê apenas as atividades dos setores que lidera.'
-          : 'Você vê apenas as atividades atribuídas a você. Peça ao gestor para te definir como responsável.');
+        ehLider
+          ? 'Você vê apenas as atividades dos setores que lidera. Nenhuma delas tem atividade nesta janela.'
+          : 'Você vê apenas as atividades atribuídas a você. Peça ao gestor para te definir como responsável.',
+        ehLider ? { label: 'Criar a primeira atividade do seu setor', href: 'atividades.html' } : null);
       return;
     }
     /* escopo vazio didático (dentro do escopo, nada é SEU) */
     if (MODO === 'minhas' && !board.length && escopo.length) {
       setState('Nada atribuído a você nesta janela.',
-        'Use o seletor acima para ver o restante do seu escopo.');
+        'Está tudo com o restante da equipe. Use o seletor acima ("' + ((Guard.isGestor && Guard.isGestor()) ? 'Toda a escola' : 'Meus setores') + '") para ver o escopo inteiro.',
+        CAN_WRITE() ? { label: 'Ver todas as atividades', href: 'atividades.html' } : null);
       var kp0 = document.getElementById('hj-kpis'); kp0.style.display = 'none';
       return;
     }
     if (!m.board.length) {
-      setState('Ainda não há atividades cadastradas.', 'Crie a primeira em Atividades — os indicadores nascem daí.');
+      setState('Ainda não há atividades cadastradas.',
+        CAN_WRITE()
+          ? 'Os indicadores nascem das atividades — sem a primeira, todo número desta tela seria zero inventado.'
+          : 'Assim que o seu gestor cadastrar as atividades e atribuir as suas, elas aparecem aqui.',
+        CAN_WRITE() ? { label: 'Criar a primeira atividade', href: 'atividades.html' } : null);
       return;
     }
     setState(null);
@@ -1150,6 +1489,11 @@
       pbox0.appendChild(pt0);
       pg.appendChild(pbox0);
     }
+    /* R9-D: "Meu mês" vem ANTES de qualquer card de cobrança — inclusive para
+       líder e gestor, que também executam. Quem abre a tela lê primeiro o
+       próprio resultado e só depois o que deve. A ordem inversa é o que
+       transforma a ferramenta em cobrador. */
+    var mm9 = cardMeuMes(m, hoje); if (mm9) { mm9.setAttribute('data-lente', 'eufaco'); pg.appendChild(mm9); }
     /* F1-I: Cobranças do PEF (escalonamento D-5/D-3/D-0 dos planos de ação) */
     /* R3 · lentes: cada card já existente ganha a etiqueta da sua pergunta */
     var cb = cardCobrancas(m, hoje); if (cb) { cb.setAttribute('data-lente', 'eucobro'); pg.appendChild(cb); }
@@ -1164,6 +1508,10 @@
     var g3 = cardRadarGestor(m, hoje); if (g3) { g3.setAttribute('data-lente', 'numeros'); pg.appendChild(g3); }
     /* F1-N · G2: Quem precisa de ajuda hoje (cobrança vira conversa 1:1) */
     var g2 = cardAjuda(m, hoje); if (g2) { g2.setAttribute('data-lente', 'eucobro'); pg.appendChild(g2); }
+    /* R9-C: as travas do time viram 3 causas. Vem LOGO DEPOIS de "quem precisa
+       de ajuda" de propósito: ali o líder vê QUEM, aqui vê POR QUÊ — a ordem
+       inversa faria ele abrir a conversa 1:1 sem saber o que perguntar. */
+    var tv = cardTravas(m, hoje); if (tv) { tv.setAttribute('data-lente', 'eucobro'); pg.appendChild(tv); }
 
     /* KPIs do topo — R7·B3.10: cada card tem "i" REAL (onInfo) e drill
        (onClick leva à lista/tela que compõe o número). R7·B4.20: dia sem
@@ -1415,14 +1763,26 @@
     var velho = document.getElementById('hj-reun');
     if (velho && velho.parentNode) { velho.parentNode.removeChild(velho); }
     var comps = compromissosDeReuniao(hoje);
-    if (!CONVOC.length && !comps.length) { return; }
+    /* F1-N · correção 2026-08-05: CONVOC vinha do banco filtrado só por
+       "não encerrada" — nunca pela data. Resultado: reunião de julho ficava
+       na tela de agosto pedindo "Confirmar presença", RSVP que não muda
+       mais nada. Separamos em duas verdades diferentes:
+         futuras   → convocação viva, RSVP faz sentido (padrão Google Calendar);
+         atrasadas → a data passou e ninguém encerrou. Isso NÃO é convocação,
+                     é pendência de quem convocou. Some o botão (era mentira),
+                     fica o fato (é real). Não escondemos — mudamos o nome. */
+    var futuras = [], atrasadas = [];
+    CONVOC.forEach(function (r) {
+      if ((r.data || '') >= hoje) { futuras.push(r); } else { atrasadas.push(r); }
+    });
+    if (!futuras.length && !atrasadas.length && !comps.length) { return; }
     var box = el('<div id="hj-reun" style="margin-bottom:16px"></div>');
     box.setAttribute('data-lente', 'eufaco'); /* R3 · lente */
 
-    if (CONVOC.length) {
+    if (futuras.length) {
       var c1 = el('<div class="hj-card" style="padding:14px 16px;margin-bottom:10px"></div>');
-      c1.appendChild(txt('div', 'hj-late-t', 'Convocações de reunião (' + CONVOC.length + ')'));
-      CONVOC.forEach(function (r) {
+      c1.appendChild(txt('div', 'hj-late-t', 'Convocações de reunião (' + futuras.length + ')'));
+      futuras.forEach(function (r) {
         var lin = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
         lin.appendChild(txt('span', '', 'Convocado: ' + (TIPO_LABEL_R[r.tipo] || 'Reunião') + ' · ' + fmtBRhj(r.data) + (r.horaPrevista ? ' ' + r.horaPrevista : '') + ' — ' + (r.titulo || '')));
         var vencidos = comps.filter(function (c) { return c.vencida; }).length;
@@ -1467,6 +1827,51 @@
         c1.appendChild(lin);
       });
       box.appendChild(c1);
+    }
+
+    /* Reuniões que já passaram e ninguém encerrou. Sem RSVP (confirmar
+       presença em reunião de ontem não significa nada) e sem "Concluir"
+       daqui — encerrar reunião é ato de quem convocou, em Projetos. Aqui
+       fica só o aviso honesto de que ficou aberta. */
+    if (atrasadas.length) {
+      var c0 = el('<div class="hj-card" style="padding:14px 16px;margin-bottom:10px"></div>');
+      var t0 = txt('div', 'hj-late-t', 'Reuniões que passaram e não foram encerradas (' + atrasadas.length + ')');
+      c0.appendChild(t0);
+      var sub0 = txt('div', 'hj-freq', 'A data já passou e a ata não foi fechada. Enquanto não encerrar, as decisões dessa reunião não viram compromisso de ninguém.');
+      sub0.style.color = 'var(--orange)';
+      sub0.style.marginTop = '4px';
+      c0.appendChild(sub0);
+      atrasadas.forEach(function (r) {
+        var lin0 = el('<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px"></div>');
+        lin0.appendChild(txt('span', '', (TIPO_LABEL_R[r.tipo] || 'Reunião') + ' · ' + fmtBRhj(r.data) + (r.horaPrevista ? ' ' + r.horaPrevista : '') + ' — ' + (r.titulo || '')));
+        var dias = Math.round((new Date(hoje + 'T00:00:00') - new Date((r.data || hoje) + 'T00:00:00')) / 86400000);
+        var at0 = txt('span', 'hj-freq', dias === 1 ? 'aberta há 1 dia' : 'aberta há ' + dias + ' dias');
+        at0.style.color = 'var(--red)';
+        lin0.appendChild(at0);
+        /* Correção do botão que EU pus aqui em 05/08 — tinha 3 defeitos:
+           dizia "Projetos" (nome do ARQUIVO; no menu a tela chama "Reuniões"),
+           largava a pessoa na LISTA em vez da reunião, e aparecia igual para
+           quem NÃO pode encerrar. Encerrar ata é ato de quem convocou: para o
+           executor comum aquilo era uma porta fechada — e pior, levava a uma
+           tela que nem está no menu dele.
+           Agora: quem pode, age; quem não pode, sabe de quem depende. */
+        if (CAN_WRITE()) {
+          var vp0 = txt('button', 'hj-freq', 'Encerrar esta reunião'); vp0.type = 'button';
+          vp0.style.cursor = 'pointer'; vp0.style.color = 'var(--doing)';
+          vp0.addEventListener('click', (function (rr) {
+            return function () { window.location.href = 'projetos.html?r=' + encodeURIComponent(rr.id); };
+          }(r)));
+          lin0.appendChild(vp0);
+        } else {
+          var quem = (r.criadoPorNome || '').trim();
+          var esp = txt('span', 'hj-freq', quem ? 'aguardando ' + quem + ' encerrar a ata'
+                                                : 'aguardando quem convocou encerrar a ata');
+          esp.style.color = 'var(--muted)';
+          lin0.appendChild(esp);
+        }
+        c0.appendChild(lin0);
+      });
+      box.appendChild(c0);
     }
 
     if (comps.length) {
