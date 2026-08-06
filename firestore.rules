@@ -51,6 +51,49 @@ service cloud.firestore {
       return isActive() && (perfil() == 'lider' || perfil() == 'Editor');
     }
 
+    // R8 - ALCADA DO PLANEJAMENTO NAS REGRAS (nao so no navegador).
+    // socio = gestor com o marcador socio:true no cadastro (mesma definicao do
+    // guard.js: perfil 'gestor' + data.socio === true). E ele - e so ele - que
+    // assina a ciencia de SOCIO do plano.
+    function souSocio() {
+      return isActive() && perfil() == 'gestor' && me().get('socio', false) == true;
+    }
+
+    // Siglas que o lider lidera (lista do proprio cadastro). get(...,[]) evita
+    // erro de campo ausente, que em rules significa NEGAR tudo em silencio.
+    function meusSetores() {
+      return me().get('setoresLiderados', []);
+    }
+
+    // Raiz do setor: lider de setor RAIZ cobre os subsetores dele - a mesma
+    // regra que o KPI.escopoLider aplica no cliente. String vazia quando o
+    // setor nao existe ou nao tem pai.
+    function setorPaiDe(sig) {
+      return exists(/databases/$(database)/documents/setores/$(sig))
+             ? get(/databases/$(database)/documents/setores/$(sig)).data.get('setorPaiSigla', '')
+             : '';
+    }
+
+    function noEscopoDoLider(sig) {
+      return (sig in meusSetores())
+          || (setorPaiDe(sig) != '' && setorPaiDe(sig) in meusSetores());
+    }
+
+    // R9-B (06/08) - TRAVA ("Travei nesta"). O impedimento e uma BANDEIRA, nao
+    // um status: a tarefa continua no status que estava e continua contando no
+    // atraso (padrao Jira Impediment). Por isso a validacao mora FORA do
+    // 'status in [...]' - travar nao pode ser jeito de sumir com a cobranca.
+    // Motivo e LISTA FECHADA: e ele que vira estatistica para o lider. Valor
+    // livre no banco = Pareto sujo. '' = destravado (null sumiria do 'in').
+    function travaValida() {
+      return (!('travadoMotivo' in request.resource.data)
+              || request.resource.data.travadoMotivo in
+                 ['', 'dependencia', 'informacao', 'prioridade', 'tempo', 'ferramenta', 'outro'])
+          && (!('travadoDetalhe' in request.resource.data)
+              || (request.resource.data.travadoDetalhe is string
+                  && request.resource.data.travadoDetalhe.size() <= 280));
+    }
+
     function donoAtividade(aid) {
       return signedIn()
           && exists(/databases/$(database)/documents/atividades/$(aid))
@@ -81,17 +124,66 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ---------- planejamentos (R4-B3: 5W2H mensal do lider) ----------
+    // ---------- planejamentos (R4-B3: plano mensal do setor) ----------
+    // Plano mensal do lider - O que / Como / Quem / Quando / Quanto
+    // (NAO e 5W2H: a tela nunca coletou Onde nem Por que - nome corrigido na R8).
     // 1 doc por setor+competencia. Leitura ABERTA a todo ativo
-    // (prestacao de contas publica — RESUMO §4). Escrita = canWrite;
-    // a alcada R$200 (item >R$200 exige aprovLider E aprovGestor) e a
-    // autoria da assinatura sao aplicadas no cliente e auditadas no
-    // atividade_log — granularidade por item de array nao e modelavel
-    // nas rules sem explodir o doc (registrado no HANDOFF R4).
+    // (prestacao de contas publica - RESUMO §4).
+    //
+    // R8 - AS REGRAS PASSAM A IMPOR A ALCADA (antes: 'allow update: if canWrite()').
+    // O modelo antigo descrito aqui ("item >R$200 exige aprovLider E aprovGestor")
+    // ja estava MORTO desde a R4-EXT: aprovLider saiu do modelo e quem assina e
+    // GESTOR + SOCIO. Pior: sem restricao de campo nem de setor, QUALQUER lider
+    // ativo gravava aprovGestor, aprovSocio, entregueEm e dispensas de QUALQUER
+    // setor - toda a governanca era convencao de navegador, derrubavel com o
+    // console aberto. Agora:
+    //   - conteudo do plano (itens, dispensas, entregueEm): gestor em qualquer
+    //     setor; lider SOMENTE no setor que ele lidera (raiz cobre subsetor).
+    //   - ciencia do PLANO: aprovGestor so por gestor; aprovSocio SO por socio.
+    //     Nenhum lider toca nesses dois campos, em setor nenhum.
+    //   - setorSigla, competencia, criadoPor, criadoEm: imutaveis (ficam fora
+    //     do hasOnly, entao qualquer tentativa de mexer neles nega o update).
+    // LIMITE HONESTO E DECLARADO: rules nao enxergam DENTRO de array, entao a
+    // alcada por ITEM (o >R$200 e o four-eyes de quem criou o item) continua
+    // aplicada no cliente e auditada no atividade_log. O que subiu para o
+    // servidor foi o que da para modelar sem explodir o doc: quem escreve, em
+    // qual setor e em quais campos.
+    function planoMudou() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    function planoSoConteudo() {
+      return planoMudou().hasOnly(['itens', 'dispensas', 'entregueEm', 'atualizadoEm']);
+    }
+    function planoSoCienciaGestor() {
+      return planoMudou().hasOnly(['aprovGestor', 'atualizadoEm']);
+    }
+    function planoSoCienciaSocio() {
+      return planoMudou().hasOnly(['aprovSocio', 'atualizadoEm']);
+    }
+    // O update trancou os dois campos de ciencia - mas o CREATE nao tinha
+    // restricao de campo nenhuma, e create tambem grava. Um lider podia
+    // addDoc() um planejamento JA NASCENDO com aprovGestor/aprovSocio
+    // preenchidos e o plano aparecia "Aprovado" sem gestor nem socio terem
+    // aberto a tela: a trava do update viraria enfeite, contornavel criando
+    // o doc do jeito certo na primeira gravacao. O plano nasce SEM ciencia.
+    function planoNasceSemCiencia() {
+      return !request.resource.data.keys().hasAny(['aprovGestor', 'aprovSocio']);
+    }
     match /planejamentos/{id} {
       allow read: if isActive();
-      allow create: if canWrite();
-      allow update: if canWrite();
+      // criadoPor e a base do four-eyes do plano: tem de ser o autor autenticado.
+      // setorSigla/competencia sao a identidade do doc (1 plano por setor+mes):
+      // exigidos no nascimento, e imutaveis depois (ficam fora dos hasOnly).
+      allow create: if (isAdmin() || (isLider() && noEscopoDoLider(request.resource.data.setorSigla)))
+                    && request.resource.data.criadoPor == request.auth.uid
+                    && request.resource.data.setorSigla is string
+                    && request.resource.data.competencia is string
+                    && request.resource.data.competencia.size() == 7
+                    && planoNasceSemCiencia();
+      allow update: if (planoSoConteudo()
+                        && (isAdmin() || (isLider() && noEscopoDoLider(resource.data.setorSigla))))
+                    || (planoSoCienciaGestor() && isAdmin())
+                    || (planoSoCienciaSocio() && souSocio());
       allow delete: if false; // soft-delete sempre (ativo:false)
     }
 
@@ -120,29 +212,46 @@ service cloud.firestore {
       // comment-only no resto). Só status de EXECUÇÃO — reprogramar e
       // pular continuam exigindo líder/gestor. O vínculo é verificado na
       // ATIVIDADE-mãe (1 get), não no que o cliente declara.
+      // R9-B: o "|| !('status' in ...)" nasceu com a TRAVA. Uma ocorrencia sem
+      // doc nenhum e 'pendente' por DERIVACAO (recorrencia.js:261) - travar a
+      // primeira vez cria o doc so com a bandeira, sem status. Doc sem status
+      // = status derivado, exatamente o que ja era. Nao ha o que fraudar.
       allow create: if canWrite()
         || (isActive()
             && get(/databases/$(database)/documents/atividades/$(request.resource.data.atividadeId)).data.responsavelUid == request.auth.uid
-            && request.resource.data.status in ['concluida', 'pendente', 'em_andamento']);
+            && travaValida()
+            && (request.resource.data.status in ['concluida', 'pendente', 'em_andamento']
+                || !('status' in request.resource.data)));
       allow update: if canWrite()
         || (isActive()
             && get(/databases/$(database)/documents/atividades/$(request.resource.data.atividadeId)).data.responsavelUid == request.auth.uid
-            && request.resource.data.status in ['concluida', 'pendente', 'em_andamento']
+            && travaValida()
+            // R9-B: a trava NAO muda status - entao quando 'status' nao esta
+            // entre as chaves afetadas, nao ha status para julgar. Sem este
+            // ramo, travar uma ocorrencia 'reprogramada' seria negado: o
+            // status dela (inalterado) nao esta na lista de execucao.
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+                || request.resource.data.status in ['concluida', 'pendente', 'em_andamento'])
             // edge da reatribuição: a base denormalizada (responsavelUid/
             // setorSigla) pode ressincronizar com a atividade-mãe — mas SÓ
             // para os valores atuais dela (nunca valores livres). data/
             // prazoOriginal/atividadeId ficam FORA: são amarrados ao id do
             // doc e mudar 'data' moveria o effDate (fraude de prazo).
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidaEm', 'iniciadaEm', 'responsavelUid', 'setorSigla'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'concluidaEm', 'iniciadaEm', 'responsavelUid', 'setorSigla', 'travadoMotivo', 'travadoDetalhe', 'travadoEm'])
             && request.resource.data.responsavelUid == request.auth.uid
             && request.resource.data.setorSigla == get(/databases/$(database)/documents/atividades/$(request.resource.data.atividadeId)).data.setorSigla);
       allow delete: if false;
     }
 
     // ---------- solicitacoes ----------
+    // R7·B2.6 (27/07): create aberto a QUALQUER usuario ativo (era canWrite).
+    // Motivo: o responsavel comum agora tem "Adiar" no Hoje — ele nao pode
+    // reprogramar (F1-J), entao cria um PEDIDO para o dono aprovar. Mesmo
+    // anti-spoof de sempre: solicitanteUid TEM de ser o autor autenticado e
+    // o doc nasce 'pendente'. Aprovar/negar continua com admin/dono.
     match /solicitacoes/{id} {
       allow read: if isActive();
-      allow create: if canWrite()
+      allow create: if isActive()
                     && request.resource.data.solicitanteUid == request.auth.uid
                     && request.resource.data.status == 'pendente';
       allow update: if isAdmin() || donoAtividade(resource.data.atividadeId);
@@ -218,6 +327,30 @@ service cloud.firestore {
     match /eventos/{id} {
       allow read: if isActive();
       allow create, update: if canWrite();
+      allow delete: if false;
+    }
+
+    // ---------- cockpit (lancamento dos indicadores de negocio) ----------
+    // Substitui Cockpit_Diario_Gestor.xlsx. 1 doc POR PERIODO, e o id E o
+    // periodo (d_AAAA-MM-DD | s_AAAA-Snn | m_AAAA-MM). Id = periodo torna o
+    // lancamento idempotente: salvar de novo corrige, nunca duplica.
+    //
+    // ESCRITA SO DO GESTOR — e nao de canWrite(). Motivo: inadimplencia,
+    // vendas, evasao e NPS sao os numeros que vao para o grupo dos socios e
+    // para a reuniao estrategica. Quem lanca responde por eles. Lider tem
+    // canWrite() no resto do sistema e mesmo assim NAO lanca aqui.
+    //
+    // Leitura aberta a qualquer ativo: o numero que vai ao grupo dos socios
+    // nao e segredo dos socios; esconder resultado de quem executa e o
+    // oposito do que a rotina pretende.
+    //
+    // Anti-forja: quem grava tem de assinar com o proprio uid (mesma
+    // doutrina do atividade_log). Sem delete — historico de KPI nao se apaga;
+    // corrigir e sobrescrever, e o atividade_log guarda quem mexeu e quando.
+    match /cockpit/{periodo} {
+      allow read: if isActive();
+      allow create, update: if isAdmin()
+                            && request.resource.data.atualizadoPorUid == request.auth.uid;
       allow delete: if false;
     }
 
