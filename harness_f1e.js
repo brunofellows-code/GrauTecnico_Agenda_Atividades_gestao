@@ -76,7 +76,7 @@ var HOJE = '2026-07-16';
 function ms(y, m, d) { return new Date(y, m - 1, d, 12, 0, 0).getTime(); }
 t('decisão sem atividade aberta', K.statusDecisao({ aberta: true }, null, HOJE).chave, 'aberta');
 t('decisão resolvida na reunião', K.statusDecisao({ aberta: false }, null, HOJE).chave, 'resolvida');
-t('convertida sem occ na janela = em aberto', K.statusDecisao({ atividadeId: 'a1', aberta: false }, null, HOJE).chave, 'aberta');
+t('convertida sem occ na janela = indisponível (R7·B1.4: nunca "em aberto")', K.statusDecisao({ atividadeId: 'a1', aberta: false }, null, HOJE).chave, 'sem_janela');
 t('feita no prazo (dia da conclusão <= prazo)', K.statusDecisao({ atividadeId: 'a1' }, { status: 'concluida', effDate: '2026-07-10', ov: { concluidaEm: ms(2026, 7, 10) } }, HOJE).chave, 'no_prazo');
 t('feita com atraso (dia > prazo)', K.statusDecisao({ atividadeId: 'a1' }, { status: 'concluida', effDate: '2026-07-10', ov: { concluidaEm: ms(2026, 7, 12) } }, HOJE).chave, 'atraso');
 t('feita sem hora registrada = feita (neutro)', K.statusDecisao({ atividadeId: 'a1' }, { status: 'concluida', effDate: '2026-07-10', ov: {} }, HOJE).chave, 'feita');
