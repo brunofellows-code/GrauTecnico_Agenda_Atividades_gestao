@@ -159,3 +159,128 @@
    ordem em cascata. :focus-visible não aparece no clique de mouse, só no
    teclado — nenhum efeito colateral visual para quem usa o mouse. */
 .ui-input:focus-visible,.ui-select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ============================================================
+   ████ COMPONENTS v3 (append · 11/08/2026 · PROMPT_FABLE §5) ████
+   Regras abaixo vencem as anteriores pela ORDEM da cascata
+   (mesma especificidade). Nenhuma linha acima foi alterada.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   v3·1 — RECLASSIFICAÇÃO SEMÂNTICA verde→azul nos primitivos
+   Auditoria dos usos de --greenText em ui-*:
+   · .ui-bs        subtítulo da marca      → MARCA  → --accentText
+   · .ui-nav.active navegação ativa        → MARCA  → --accentText
+   · .ui-up        papel do usuário logado → MARCA  → --accentText
+   · .ui-check .box.on  checkbox marcado   → SUCESSO → vira --green
+     (feito = sucesso; sai do --brand, que agora é azul)
+   Todos os var(--brand) restantes (logo, avatar, anéis de foco,
+   borda de input em foco, spinner) são MARCA e ficam azuis
+   automaticamente pela troca de token no theme.css.
+   ------------------------------------------------------------ */
+.ui-bs{color:var(--accentText)}
+.ui-nav.active{color:var(--accentText)}
+.ui-up{color:var(--accentText)}
+.ui-check .box.on{background:var(--green);border-color:var(--green);color:var(--onGreen)}
+
+/* ------------------------------------------------------------
+   v3·2 — 5 ESTADOS COMPLETOS NOS PRIMITIVOS (ref: Radix/shadcn)
+   hover · focus-visible · active · disabled · loading
+   focus-visible = anel 2px var(--brand); NUNCA outline:none seco.
+   ------------------------------------------------------------ */
+.ui-btn:hover{filter:brightness(1.06)}
+.ui-btn.ghost:hover{background:var(--s3);filter:none}
+.ui-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.ui-btn:active{transform:scale(.97)}
+.ui-btn:disabled,.ui-btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.ui-btn.loading{position:relative;color:transparent;pointer-events:none}
+.ui-btn.loading::after{content:"";position:absolute;left:50%;top:50%;width:15px;height:15px;
+  margin:-8px 0 0 -8px;border-radius:50%;border:2px solid var(--ctaText);
+  border-top-color:transparent;animation:graut-spin .7s linear infinite}
+.ui-btn.ghost.loading::after{border-color:var(--text);border-top-color:transparent}
+
+.ui-pill:focus-visible,.ui-check:focus-visible,
+.ui-avatar[tabindex]:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.ui-input:disabled,.ui-select:disabled{opacity:.45}
+.ui-mclose:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ------------------------------------------------------------
+   v3·3 — MICROINTERAÇÕES PADRÃO (ref: Framer Motion → CSS puro)
+   Catálogo do PROMPT_FABLE §5.2. Classes utilitárias; as telas
+   só as aplicam — nenhum keyframe inline nas telas.
+   ------------------------------------------------------------ */
+.press{transition:transform var(--dur-fast) var(--easeOut)}
+.press:active{transform:scale(.97)}
+
+.lift{transition:transform var(--dur-base) var(--easeOut),
+             box-shadow var(--dur-base) var(--easeOut)}
+.lift:hover{transform:translateY(-2px);box-shadow:var(--elev-2)}
+
+@keyframes v3-toast-in{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}}
+@keyframes v3-toast-out{to{opacity:0}}
+.toast-in{animation:v3-toast-in var(--dur-slow) var(--easeSpring) both}
+.toast-out{animation:v3-toast-out var(--dur-fast) linear both}
+
+/* skeleton: carregando NUNCA é tela branca */
+@keyframes v3-shimmer{to{background-position:-200% 0}}
+.shimmer{position:relative;color:transparent!important;border-radius:8px;
+  background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);
+  background-size:200% 100%;animation:v3-shimmer 1.2s linear infinite;
+  pointer-events:none;user-select:none}
+.shimmer *{visibility:hidden}
+
+/* .count: número de KPI "conta" ao mudar — o motor é JS
+   (requestAnimationFrame, 400ms, em keys.js/ui.js); a classe
+   marca o alvo e dá o snap visual final */
+.count{transition:opacity var(--dur-fast) linear}
+
+/* linha pisca 1x ao salvar (confirmação visual) */
+@keyframes v3-flash{0%,100%{background:transparent}30%{background:var(--activeBg)}}
+.flash-ok{animation:v3-flash .9s var(--easeOut) 1}
+
+/* ------------------------------------------------------------
+   v3·4 — ACESSIBILIDADE DE MOVIMENTO (obrigatório)
+   prefers-reduced-motion → TODAS as animações instantâneas.
+   ------------------------------------------------------------ */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+    scroll-behavior:auto!important}
+}
+
+/* ------------------------------------------------------------
+   v3·5 — DENSIDADE COMPACT (ref: Carbon dashboards + Linear)
+   <html data-density="compact"> · toggle na topbar (por tela) +
+   persistência em localStorage (keys.js). Gestor vê ~2x linhas.
+   TRADE-OFF declarado: para valer em TODAS as tabelas do sistema
+   sem tocar cada tela agora, o seletor é genérico (td/th) com
+   !important. Ao refatorar cada tela (Lotes 3-6) a regra local
+   passa a usar tokens e este !important deixa de ser necessário.
+   ------------------------------------------------------------ */
+[data-density="compact"] table td,
+[data-density="compact"] table th{
+  padding-top:var(--sp-1)!important;padding-bottom:var(--sp-1)!important;
+  padding-left:var(--sp-2)!important;padding-right:var(--sp-2)!important;
+  font-size:var(--fs-sm)!important}
+[data-density="compact"] .ui-kpi{padding:9px 11px}
+[data-density="compact"] .ui-kpi .val{font-size:21px}
+
+/* ------------------------------------------------------------
+   v3·6 — CHEATSHEET DE ATALHOS (overlay do keys.js, tecla "?")
+   ------------------------------------------------------------ */
+.v3-keys-overlay{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;
+  justify-content:center;padding:20px;background:var(--scrim)}
+.v3-keys-card{width:360px;max-width:100%;background:var(--s1);border:1px solid var(--border);
+  border-radius:16px;box-shadow:var(--elev-3);padding:var(--sp-5)}
+.v3-keys-card h2{margin:0 0 var(--sp-4);font-size:var(--fs-lg);font-weight:800;
+  letter-spacing:-.01em;color:var(--text)}
+.v3-keys-row{display:flex;align-items:center;justify-content:space-between;
+  gap:var(--sp-3);padding:var(--sp-2) 0;border-bottom:1px solid var(--border);
+  font-size:var(--fs-base);color:var(--muted)}
+.v3-keys-row:last-child{border-bottom:0}
+.v3-keys-row kbd{font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:var(--text);
+  background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 8px}

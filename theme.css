@@ -225,3 +225,129 @@ body {
 :root,
 [data-theme="dark"]  { --bandaAlta:#F97316; --bandaCritica:#EF4444; --muted2Text:#8C9AAE; }
 [data-theme="light"] { --bandaAlta:#9A3412; --bandaCritica:#B91C1C; --muted2Text:#5A6678; }
+
+/* ============================================================
+   ████ THEME v3 — PALETA B · COBALTO (append · 11/08/2026) ████
+   ------------------------------------------------------------
+   Decisão fechada pelo Bruno em 11/08 (PROMPT_FABLE_TURBO §5).
+   Azul substitui o verde como MARCA/CTA/NAVEGAÇÃO/ACENTO.
+   Verde (--green/--greenText) passa a ser EXCLUSIVAMENTE
+   status de sucesso/feito/no-ritmo (semáforo intocado).
+   Mecânica: este bloco vem DEPOIS dos temas v2 com a MESMA
+   especificidade — vence pela ordem da cascata. Nenhuma linha
+   acima foi alterada (append-only).
+   Token NOVO: --accentText = azul calibrado para TEXTO
+   (links, nav ativa, subtítulo de marca). --brand continua
+   sendo o azul de PREENCHIMENTO (logo, avatar, barras, anéis).
+   Contrastes medidos à mão (WCAG 1.4.3, limiar 4,5:1):
+     dark  · #93A2BE/#0F1420 = 7,15:1 · #7BAAFF/#0F1420 = 7,92:1
+           · #FFF/#2563EB(cta) = 5,17:1 · #0B1220/#4D8DFF = 5,90:1
+     light · #1D4FD7/#FFF = 6,66:1 · #48566E/#FFF = 7,41:1
+           · #FFF/#2563EB(brand fill) = 5,17:1
+   ============================================================ */
+:root,
+[data-theme="dark"] {
+  /* superfícies (azuladas de propósito — casam com o cobalto) */
+  --bg:        #090C14;
+  --sideBg:    #0B0F1A;
+  --s1:        #0F1420;
+  --s2:        #151B2B;
+  --s3:        #1C2436;
+  --chipBg:    #151B2B;   /* derivado: acompanha --s2, como no v2 */
+
+  /* linhas */
+  --border:    #243049;
+  --track:     #243049;   /* derivado: acompanha --border, como no v2 */
+
+  /* texto */
+  --text:      #E8EDF8;
+  --muted:     #93A2BE;
+  --muted2:    #61708E;
+
+  /* marca / CTA — AZUL */
+  --brand:      #4D8DFF;               /* preenchimento/acento */
+  --accentText: #7BAAFF;               /* azul para TEXTO */
+  --cta:        #2563EB;               /* botão primário */
+  --ctaText:    #FFFFFF;
+  --onBrand:    #0B1220;               /* texto sobre --brand (5,90:1) */
+  --activeBg:   rgba(77,141,255,.14);
+
+  /* em andamento (ciano — fora do semáforo) */
+  --doing:     #22D3EE;
+  --haloDoing: rgba(34,211,238,.15);
+}
+[data-theme="light"] {
+  /* superfícies */
+  --bg:        #F5F7FB;
+  --sideBg:    #FFFFFF;
+  --s1:        #FFFFFF;
+  --s2:        #EDF1F8;
+  --s3:        #E2E8F2;
+  --chipBg:    #EDF1F8;
+
+  /* linhas */
+  --border:    #D6DEEC;
+  --track:     #E2E8F2;
+
+  /* texto */
+  --text:      #0E1626;
+  --muted:     #48566E;
+  --muted2:    #64748B;   /* mantido do v2 (não especificado no v3) */
+
+  /* marca / CTA — AZUL */
+  --brand:      #2563EB;
+  --accentText: #1D4FD7;
+  --cta:        #1D4FD7;
+  --ctaText:    #FFFFFF;
+  --onBrand:    #FFFFFF;               /* branco sobre #2563EB = 5,17:1 */
+  --activeBg:   rgba(37,99,235,.09);
+
+  /* em andamento */
+  --doing:     #0284C7;
+  --haloDoing: rgba(2,132,199,.13);
+}
+/* NOTA DE MIGRAÇÃO: --green/--greenText/--onGreen NÃO mudam.
+   Telas que usavam --greenText como MARCA (nav ativa, subtítulo)
+   migram para --accentText via patch por tela (Lotes 3-6) e via
+   overrides no fim de components.css (primitivos ui-*). Uso de
+   --greenText como SUCESSO permanece intocado. */
+
+/* ============================================================
+   v3·A — TIPOGRAFIA (ref: escala IBM Carbon · append)
+   Fim dos font-size mágicos: telas novas/refatoradas SÓ usam
+   estes tokens. Telas antigas migram no patch de cada tela.
+   ============================================================ */
+:root{
+  --fs-xs:10.5px; --fs-sm:11.5px; --fs-base:13px; --fs-md:14.5px;
+  --fs-lg:17px; --fs-xl:21px; --fs-display:26px;
+  --lh-tight:1.15; --lh-base:1.45;
+}
+
+/* ============================================================
+   v3·B — ESPAÇAMENTO (ref: Carbon spacing · múltiplos de 4)
+   ============================================================ */
+:root{ --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px;
+       --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px; }
+
+/* ============================================================
+   v3·C — MOTION (ref: durações Material 3 + easings Framer,
+   em CSS puro). --easeSwift do v2 permanece válido.
+   ============================================================ */
+:root{ --dur-fast:120ms; --dur-base:200ms; --dur-slow:320ms;
+  --easeOut:cubic-bezier(.16,1,.3,1);
+  --easeSpring:cubic-bezier(.34,1.56,.64,1); }
+
+/* ============================================================
+   v3·D — ELEVAÇÃO EM CAMADAS (ref: Fluent 2)
+   1=card · 2=dropdown/popover · 3=modal. --cardShadow do v2
+   continua funcionando onde já é usado.
+   ============================================================ */
+:root,
+[data-theme="dark"]{
+  --elev-1:0 1px 3px rgba(0,0,0,.28);
+  --elev-2:0 6px 20px rgba(0,0,0,.36);
+  --elev-3:0 20px 60px rgba(0,0,0,.5); }
+[data-theme="light"]{
+  --elev-1:0 1px 3px rgba(2,6,23,.10);
+  --elev-2:0 6px 20px rgba(2,6,23,.14);
+  --elev-3:0 20px 60px rgba(2,6,23,.22); }
