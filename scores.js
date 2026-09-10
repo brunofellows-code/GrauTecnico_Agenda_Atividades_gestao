@@ -204,6 +204,32 @@
     };
   }
 
+  /* DIAS ÚTEIS ENTRE duas datas (Lote 3 · 03/09/2026)
+     Desconta finais de semana E feriados. Feriados é array de datas ISO.
+     Retorna dias úteis entre isoA e isoB (B - A), inclusivo na base.
+     Uso: diasUteisentre('2026-09-04', '2026-09-11', ['2026-09-07'])
+          → 5 dias úteis (seg, ter, qua, qui, sex — desconta dom e feriado) */
+  function diasUteisentre(isoA, isoB, feriados) {
+    var feriSet = {}, i;
+    feriados = feriados || [];
+    for (i = 0; i < feriados.length; i++) {
+      feriSet[feriados[i]] = true;
+    }
+    var a = new Date(isoA + 'T00:00:00');
+    var b = new Date(isoB + 'T00:00:00');
+    var util = 0, corrente = new Date(a.getTime());
+    while (corrente <= b) {
+      var iso = corrente.getFullYear() + '-' +
+                (corrente.getMonth() + 1 < 10 ? '0' : '') + (corrente.getMonth() + 1) + '-' +
+                (corrente.getDate() < 10 ? '0' : '') + corrente.getDate();
+      var ehFimDeSemana = corrente.getDay() === 0 || corrente.getDay() === 6;
+      var ehFeriado = feriSet[iso];
+      if (!ehFimDeSemana && !ehFeriado) { util++; }
+      corrente.setDate(corrente.getDate() + 1);
+    }
+    return util;
+  }
+
   /* ---------- API pública ---------- */
   window.SCORES = {
     derivarStatus: derivarStatus,
@@ -215,6 +241,7 @@
     variance: variance,
     rollup: rollup,
     cockpit: cockpit,
-    _diasEntre: diasEntre                          /* exposto p/ teste */
+    _diasEntre: diasEntre,                         /* exposto p/ teste */
+    diasUteisentre: diasUteisentre                 /* novo em L3 */
   };
 })();
