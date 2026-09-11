@@ -284,3 +284,9 @@
 .v3-keys-row:last-child{border-bottom:0}
 .v3-keys-row kbd{font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:var(--text);
   background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:2px 8px}
+
+/* ===== L3.5 (11/09/2026) · APPEND · UI.toast (ui.js) ===== */
+.ui-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--s1);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;box-shadow:var(--shadowSoft);z-index:9999;max-width:min(92vw,520px);animation:v3-toast-in var(--dur-slow) var(--easeSpring) both}
+.ui-toast.err{border-color:var(--red);color:var(--red)}
+.ui-toast.ok{border-color:var(--green)}
+@media(prefers-reduced-motion:reduce){.ui-toast{animation:none}}

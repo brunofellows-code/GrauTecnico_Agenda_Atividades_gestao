@@ -156,7 +156,7 @@
   }
   function ferr(e) {
     var code = (e && e.code) || '';
-    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão. Confirme seu perfil e que as Regras do Firestore foram publicadas.'), { code: code }); }
+    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'), { code: code }); }
     if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
     return Object.assign(new Error((e && e.message) || 'Erro ao acessar os dados.'), { code: code });
   }

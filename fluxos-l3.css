@@ -105,7 +105,8 @@
 }
 
 .qa-submit:hover {
-  background: #1e40af;
+  background: var(--cta); /* L3.5: número mágico #1e40af → token */
+  filter: brightness(0.92);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
@@ -167,7 +168,8 @@
 }
 
 .undo-btn:hover {
-  background: #1e40af;
+  background: var(--cta); /* L3.5: número mágico #1e40af → token */
+  filter: brightness(0.92);
 }
 
 .undo-btn:active {

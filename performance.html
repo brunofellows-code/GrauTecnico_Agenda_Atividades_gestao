@@ -290,7 +290,7 @@
       tNP += p.noPrazo; tPar += p.pares; tCarga += p.carga; tRe += p.reprogramadas; tTot += p.total;
     });
     return {
-      score: { title: 'Score da pessoa (0–100)', formula: 'score = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − aging×12,5). Pesos declarados: aderência 50 · atrasadas 30 · aging 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho. Sem previstas na janela → sem score (—).', dados: 'ocorrências da pessoa na janela (mesmo motor da Inteligência)', numeros: lista.length + ' pessoa(s) no recorte; ordenado do pior para o melhor (onde agir primeiro)' },
+      score: { title: 'Nota da pessoa (0–100)', formula: 'nota = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − atraso médio×12,5). Pesos declarados: aderência 50 · atrasadas 30 · atraso 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho. Sem previstas na janela → sem nota (—).', dados: 'ocorrências da pessoa na janela (mesmo motor da Inteligência)', numeros: lista.length + ' pessoa(s) no recorte; ordenado do pior para o melhor (onde agir primeiro)' },
       ader: { title: 'Aderência à rotina', formula: 'concluídas até hoje ÷ previstas até hoje × 100 (previstas exclui puladas)', dados: 'ocorrências da pessoa com data efetiva ≤ hoje', numeros: 'recorte: ' + tConcl + ' ÷ ' + tPrev + ' previstas' },
       prazo: { title: 'Conclusão no prazo', formula: 'concluídas com DIA CIVIL LOCAL (Salvador) da conclusão ≤ data efetiva ÷ concluídas × 100', dados: 'ocorrências concluídas: concluidaEm (carimbo real) × data efetiva', numeros: 'recorte: ' + tNP + ' no prazo de ' + tCT + ' concluída(s)' },
       ciclo: { title: 'Tempo de ciclo', formula: 'média(concluidaEm − iniciadaEm) em dias — SÓ quando os dois carimbos existem; sem o par → "—" (nunca inventa)', dados: 'ocorrências com iniciadaEm E concluidaEm', numeros: 'recorte: ' + tPar + ' par(es) medido(s)' },
@@ -405,7 +405,7 @@
           ciclo:         { r: 'Concluídas com par medido',  f: function (o) { return o.status === 'concluida' && o.ov && o.ov.iniciadaEm && o.ov.concluidaEm; } },
           reprogramadas: { r: 'Reprogramadas',              f: function (o) { return o.status === 'reprogramada'; } },
           atrasadas:     { r: 'Atrasadas',                  f: function (o) { return o.atrasada; } },
-          todas:         { r: 'Todas as ocorrências (base do Score)', f: function () { return true; } }
+          todas:         { r: 'Todas as ocorrências (base da Nota)', f: function () { return true; } }
         };
         var atual = null;
         function aplicar(chave, cardEl) {
@@ -428,14 +428,14 @@
           }
           return d;
         }
-        grid.appendChild(pm('Score', p.score == null ? (p.coletando ? '— coletando' : '—') : p.score, p.score == null ? (p.coletando ? 'nada venceu ainda — a medição começa quando a primeira rotina vence' : 'sem previstas na janela') : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC, p.score == null ? null : 'todas'));/* R6/fix11: Score agora clica -> lista a base do cálculo (era a única métrica sem drill) */
+        grid.appendChild(pm('Nota', p.score == null ? (p.coletando ? '— coletando' : '—') : p.score, p.score == null ? (p.coletando ? 'nada venceu ainda — a medição começa quando a primeira rotina vence' : 'sem previstas na janela') : '0,5×' + p.comp.compA + ' + 0,3×' + p.comp.compB + ' + 0,2×' + p.comp.compC, p.score == null ? null : 'todas'));/* R6/fix11: Score agora clica -> lista a base do cálculo (era a única métrica sem drill) */
         grid.appendChild(pm('Aderência', fmtPct(p.ader), p.concluidasAteHoje + ' ÷ ' + p.previstas + ' previstas até hoje', 'previstas'));
         grid.appendChild(pm('No prazo', fmtPct(p.pctNoPrazo), p.noPrazo + ' de ' + p.concluidasTotal + ' concluída(s), por dia civil local', 'concluidas'));
         grid.appendChild(pm('Ciclo', fmtDias(p.cicloDias), p.pares ? p.pares + ' par(es) iniciada→concluída' : 'sem par iniciada/concluída — não inventa', 'ciclo'));
         grid.appendChild(pm('Carga (WIP)', String(p.carga), 'abertas atribuídas na janela', 'abertas'));
         grid.appendChild(pm('Reprogramação', p.reprogPct + '%', p.reprogramadas + ' ÷ ' + p.total + ' ocorrências', 'reprogramadas'));
-        grid.appendChild(pm('Atrasadas', String(p.atrasadas), p.atrasadas ? 'aging médio ' + fmtNum(p.agingMedio) + ' d' : 'nenhuma agora', 'atrasadas'));
-        grid.appendChild(pm('Throughput', fmtNum(p.thr4) + '/sem', p.thr4n + ' concluída(s) nos últimos 28 dias ÷ 4', 'concluidas'));
+        grid.appendChild(pm('Atrasadas', String(p.atrasadas), p.atrasadas ? 'atraso médio ' + fmtNum(p.agingMedio) + ' d' : 'nenhuma agora', 'atrasadas'));
+        grid.appendChild(pm('Ritmo (feitas/semana)', fmtNum(p.thr4) + '/sem', p.thr4n + ' concluída(s) nos últimos 28 dias ÷ 4', 'concluidas'));
         box.appendChild(grid);
         box.appendChild(el('<div class="pf-acoes-t">Ocorrências da pessoa — clique numa métrica acima para trocar o recorte</div>'));
         box.appendChild(ddWrap);
@@ -479,8 +479,8 @@
     var nums = calc.map(function (x) { return x.sigla + ': ' + x.sc.score; }).join(' · ');
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
-    h.appendChild(el('<div class="pf-card-t">Score por setor (0–100)</div>'));
-    h.appendChild(infoBtn({ title: 'Score composto por setor', formula: 'score = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − aging×12,5). Pesos: aderência 50 · atrasadas 30 · aging 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.', dados: 'mesmos números da Inteligência (ocorrências por setor até hoje + abertas por setor)', numeros: nums }));
+    h.appendChild(el('<div class="pf-card-t">Nota por setor (0–100)</div>'));
+    h.appendChild(infoBtn({ title: 'Nota composta por setor', formula: 'nota = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − atraso médio×12,5). Pesos: aderência 50 · atrasadas 30 · atraso 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.', dados: 'mesmos números da Inteligência (ocorrências por setor até hoje + abertas por setor)', numeros: nums }));
     card.appendChild(h);
     calc.forEach(function (x) {
       var tok = tomToken(x.sc.tom);
@@ -557,9 +557,9 @@
       pctNoPrazoG == null ? 'Sem concluídas no recorte ainda.' : gNP + ' de ' + gCT + ' concluída(s) dentro do prazo.'));
     var nAtr = T.atrasadas || 0;
     var tR = nAtr ? 'red' : 'green';
-    heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela', numeros: nAtr + ' atrasada(s) · aging médio ' + (MODELO ? (Math.round((MODELO.agingMedio || 0) * 10) / 10) : 0) + ' dia(s)' },
+    heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela', numeros: nAtr + ' atrasada(s) · atraso médio ' + (MODELO ? (Math.round((MODELO.agingMedio || 0) * 10) / 10) : 0) + ' dia(s)' },
       '<span class="pf-hdot" style="background:var(--' + tR + ')"></span><span style="color:var(--' + tR + ')">' + nAtr + '</span>',
-      nAtr ? ('Aging médio: ' + (Math.round((MODELO.agingMedio || 0) * 10) / 10) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
+      nAtr ? ('Atraso médio: ' + (Math.round((MODELO.agingMedio || 0) * 10) / 10) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
     heroes.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     body.appendChild(heroes);
 
@@ -607,7 +607,7 @@
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
     h.appendChild(el('<div class="pf-card-t">Pessoas por severidade — clique para o detalhe individual</div>'));
-    h.appendChild(infoBtn({ title: 'Pessoas por severidade', formula: 'grupo = semáforo do score (≥80 verde · 60–79 âmbar · <60 vermelho · sem dado = coletando). ' + (infos.score.formula), dados: infos.score.dados, numeros: lista.length + ' pessoa(s) no recorte' }));
+    h.appendChild(infoBtn({ title: 'Pessoas por severidade', formula: 'grupo = semáforo da nota (≥80 verde · 60–79 âmbar · <60 vermelho · sem dado = coletando). ' + (infos.score.formula), dados: infos.score.dados, numeros: lista.length + ' pessoa(s) no recorte' }));
     card.appendChild(h);
     card.setAttribute('data-lente', 'eucobro'); /* R3 · lente */
 
@@ -634,7 +634,7 @@
       var tok = tomToken(p.tom);
       var sc = el('<span class="sc"></span>');
       sc.appendChild(el('<span class="d" style="background:var(--' + tok + ')"></span>'));
-      sc.appendChild(document.createTextNode(p.score == null ? (p.coletando ? 'coletando' : '—') : 'score ' + p.score));
+      sc.appendChild(document.createTextNode(p.score == null ? (p.coletando ? 'coletando' : '—') : 'nota ' + p.score));
       m.appendChild(sc);
       m.appendChild(document.createTextNode('ader. ' + fmtPct(p.ader)));
       if (p.atrasadas) { var lt = el('<span class="lt"></span>'); lt.textContent = '● ' + p.atrasadas; lt.title = p.atrasadas + ' atrasada(s)'; m.appendChild(lt); }
@@ -698,10 +698,10 @@
   function rankingCard() {
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
-    h.appendChild(el('<div class="pf-card-t">Ranking de desempenho — score 50/30/20</div>'));
+    h.appendChild(el('<div class="pf-card-t">Ranking de desempenho — nota 50/30/20</div>'));
     h.appendChild(infoBtn({
-      title: 'Score 50/30/20',
-      formula: 'score = 50% × aderência + 30% × conclusão no prazo + 20% × (100 − atraso residual). Atraso residual = atrasadas ÷ previstas VENCIDAS × 100 (do que já venceu, quanto segue aberto). Componente sem dado sai do cálculo e os pesos são renormalizados sobre os presentes — nunca inventa 0 nem 100. Sem previstas → sem score. Nada venceu ainda → “coletando” (partida fria, não pune). Pesos calibráveis: KPI.PESOS_SCORE.',
+      title: 'Nota 50/30/20',
+      formula: 'nota = 50% × aderência + 30% × conclusão no prazo + 20% × (100 − atraso residual). Atraso residual = atrasadas ÷ previstas VENCIDAS × 100 (do que já venceu, quanto segue aberto). Componente sem dado sai do cálculo e os pesos são renormalizados sobre os presentes — nunca inventa 0 nem 100. Sem previstas → sem nota. Nada venceu ainda → “coletando” (partida fria, não pune). Pesos calibráveis pelo gestor.',
       dados: 'mesmas ocorrências reais da janela (board), agregadas por setor (atividade multi-setor conta em CADA setor), por líder (ocorrência conta se o setor está no escopo raiz→filhos do líder) e por responsável (responsavelUid)',
       numeros: rkNums()
     }));
@@ -732,7 +732,7 @@
     function exportarCSV() {
       var lst = (RANK && RANK[LENTE]) || [];
       if (!lst.length) { return; }
-      var linhas = ['posicao;nome;score;aderencia_pct;no_prazo_pct;atraso_residual_pct;previstas;prev_vencidas;concluidas_ate_hoje;concluidas_total;no_prazo;atrasadas'];
+      var linhas = ['posicao;nome;nota;aderencia_pct;no_prazo_pct;atraso_residual_pct;previstas;prev_vencidas;concluidas_ate_hoje;concluidas_total;no_prazo;atrasadas'];
       lst.forEach(function (b, ix) {
         linhas.push([ix + 1, b.nome, b.score == null ? '' : b.score,
           b.ader == null ? '' : b.ader, b.pctNoPrazo == null ? '' : b.pctNoPrazo,
@@ -764,7 +764,7 @@
       }
       var wrap2 = el('<div class="pf-tblwrap"></div>');
       var tbl2 = el('<table class="pf-tbl"></table>');
-      tbl2.appendChild(el('<thead><tr><th>#</th><th>Nome</th><th>Score</th><th>Aderência (50%)</th><th>No prazo (30%)</th><th>Atraso residual (20%)</th></tr></thead>'));
+      tbl2.appendChild(el('<thead><tr><th>#</th><th>Nome</th><th>Nota</th><th>Aderência (50%)</th><th>No prazo (30%)</th><th>Atraso residual (20%)</th></tr></thead>'));
       var tb2 = document.createElement('tbody');
       lst.forEach(function (b, ix) {
         var tr = document.createElement('tr');
@@ -778,10 +778,10 @@
         sc.appendChild(el('<span class="pf-scoredot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok === 'muted2' ? 'green' : tok) + ')"></span>'));
         sc.appendChild(el('<span style="color:var(--' + tok + ')">' + (b.score == null ? (b.previstas ? '—' : '—') : b.score) + (b.coletando ? ' · coletando' : '') + '</span>'));
         var ib = infoBtn({
-          title: 'Score de ' + b.nome,
+          title: 'Nota de ' + b.nome,
           formula: 'componentes usados: ' + (b.usados.length ? b.usados.join(' + ') : 'nenhum (sem previstas)') + ' — pesos renormalizados sobre eles',
           dados: 'previstas até hoje: ' + b.previstas + ' · vencidas: ' + b.prevVencidas + ' · concluídas até hoje: ' + b.concluidasAteHoje + ' · concluídas (total): ' + b.concluidasTotal + ' · no prazo: ' + b.noPrazo + ' · atrasadas: ' + b.atrasadas,
-          numeros: 'aderência ' + fmtPct(b.ader) + ' · no prazo ' + fmtPct(b.pctNoPrazo) + ' · residual ' + fmtPct(b.residual) + ' → score ' + (b.score == null ? '—' : b.score)
+          numeros: 'aderência ' + fmtPct(b.ader) + ' · no prazo ' + fmtPct(b.pctNoPrazo) + ' · residual ' + fmtPct(b.residual) + ' → nota ' + (b.score == null ? '—' : b.score)
         });
         sc.appendChild(ib);
         td2.appendChild(sc); tr.appendChild(td2);

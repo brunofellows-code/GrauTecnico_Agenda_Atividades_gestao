@@ -213,7 +213,7 @@ h3.pl-sname{font-size:13px;font-weight:800}
      ============================================================ */
   var FALTOU = [];
   if (!window.GrautRecorrencia) { FALTOU.push('recorrencia.js — calendário e dia civil'); }
-  if (!window.KPI) { FALTOU.push('kpi.js — prazo, nota e Pareto'); }
+  if (!window.KPI) { FALTOU.push('cálculo de prazo, nota e Pareto'); }
   if (!window.UI) { FALTOU.push('ui.js — botões, campos e diálogos'); }
   if (!window.Guard) { FALTOU.push('guard.js — login e perfil'); }
   if (FALTOU.length) {
@@ -739,7 +739,7 @@ h3.pl-sname{font-size:13px;font-weight:800}
       ['De onde vem', 'Da matriz de risco do manual do setor ' + pl.setorSigla + ' (P×I por risco) — os mesmos 67 riscos da tela Riscos. Entram só os de banda ALTA (10-14) e CRÍTICA (15-25) deste setor.'],
       ['Números', 'Sem tratativa neste mês: ' + abertasTodas.length + ' (a lista mostra no máximo os 5 mais graves) · ' + plural(pendentes.length, 'dispensa aguardando aval', 'dispensas aguardando aval') + ' · ' + plural(aceitas.length, 'risco aceito', 'riscos aceitos') + '.'],
       ['Incluir', 'Cria o item do plano já preenchido: O QUE = a mitigação do manual · QUEM = líder do setor (ou do setor-pai) · QUANDO = fim do mês (sugerido — ajuste depois). O item carrega o risco de origem: dá para responder "as mitigações dos riscos críticos estão sendo executadas?".'],
-      ['Sinal de alerta do manual', 'Cada risco vem com um "sinal de alerta" escrito no manual: uma condição observável que costuma aparecer ANTES do problema. Ele DESCREVE o risco — não é KPI de resultado e NÃO é apurado pelo sistema: quem observa é a pessoa, no dia a dia do setor.'],
+      ['Sinal de alerta do manual', 'Cada risco vem com um "sinal de alerta" escrito no manual: uma condição observável que costuma aparecer ANTES do problema. Ele DESCREVE o risco — não é indicador de resultado e NÃO é apurado pelo sistema: quem observa é a pessoa, no dia a dia do setor.'],
       ['Dispensar', 'Dispensar = ACEITAR o risco sem tratamento neste mês (risk acceptance, ISO 31000). Exige motivo. Banda CRÍTICA (nível 15 a 25) só é aceita com as DUAS assinaturas — gestor E sócio, a mesma exigência de um gasto acima de R$ 200. Banda ALTA (10 a 14) aceita com uma. Quem dispensou não avaliza (four-eyes) e nada some do histórico.'],
       ['Trava?', 'Nada bloqueia a entrega do plano — é ciência e governança, não trava.'],
       ['Item declarado não-feito', 'Item nascido de um risco e marcado "✗ não realizei" NÃO conta como tratativa: o risco volta a aparecer aqui, aberto.']
@@ -912,7 +912,7 @@ h3.pl-sname{font-size:13px;font-weight:800}
     ['Regra', 'Item até R$ 200,00: autonomia total do líder (a gestão só lê). Item ACIMA de R$ 200,00: trava até ter as DUAS assinaturas — GESTOR e SÓCIO (aprovação paralela: qualquer ordem). Sócio = gestor marcado como sócio no cadastro de usuários. A trava é do ITEM; o plano nunca trava — e o item em espera entra em clock-pause na nota.'],
     ['Four-eyes (quem NÃO pode assinar)', 'Quem CRIOU o item não assina o próprio item — nem como gestor, nem como sócio. O sistema grava o autor de cada item e esconde o botão "aprovar" para ele, escrevendo o motivo na linha. Antes isso estava só escrito na tela: um gestor-sócio criava um item de R$ 5.000 e assinava as duas assinaturas sozinho em 2 cliques.'],
     ['Coerência com o risco', 'Aceitar um risco de banda CRÍTICA (nível 15 a 25) sem tratar exige as MESMAS duas assinaturas de um gasto acima de R$ 200 — gestor E sócio. Banda ALTA (10 a 14) exige uma. Antes, aceitar o risco máximo custava 1 assinatura e gastar R$ 201 custava 2: a régua dizia que R$ 201 era mais grave que o risco máximo.'],
-    ['Dados', 'O custo PREVISTO de cada item, quem criou o item e quem já aprovou (gestor e/ou sócio, com nome e data). A alçada trava pelo custo PREVISTO — a aprovação antecede a execução (padrão baseline MS Project).']
+    ['Dados', 'O custo PREVISTO de cada item, quem criou o item e quem já aprovou (gestor e/ou sócio, com nome e data). A alçada trava pelo custo PREVISTO — a aprovação antecede a execução (padrão do MS Project).']
   ];
   /* R5-B2: estado formal do plano (RESUMO §4) — derivado, nunca gravado. */
   var I_STATUS = [

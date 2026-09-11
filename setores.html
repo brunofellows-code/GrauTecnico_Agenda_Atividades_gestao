@@ -236,7 +236,7 @@
       function ferr(e) {
         var code = (e && e.code) || '';
         if (code === 'permission-denied') {
-          return Object.assign(new Error('Sem permissão para esta operação. Confirme que seu perfil é Admin e que as Regras do Firestore foram publicadas.'), { field: 'geral' });
+          return Object.assign(new Error('Sem permissão para esta ação. Só o gestor altera setores.'), { field: 'geral' });
         }
         if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
           return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });

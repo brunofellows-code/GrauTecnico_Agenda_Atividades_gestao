@@ -11,22 +11,21 @@
 (function () {
   'use strict';
 
-  window.APP_VERSION = '3.0.0-l3-beta';       /* Formato semântico: major.minor.patch-lote */
+  window.APP_VERSION = '3.5.0-l35';       /* Formato semântico: major.minor.patch-lote */
 
   window.APP_INFO = {
     version: window.APP_VERSION,
-    buildDate: '2026-09-04T00:00:00Z',
+    buildDate: '2026-09-11T00:00:00Z',
     environment: 'production',
     /* 'novidades' — mostrado no 1º login de uma versão nova */
+    /* L3.5: linguagem simples (coordenador novo entende sem treinamento) */
     whatsNew: [
-      '✓ Cockpit por hierarquia (Gestor/Líder/Usuário)',
-      '✓ Cache instantâneo com IndexedDB',
-      '✓ Quick-add com parsing PT-BR',
-      '✓ Undo em vez de confirmação',
-      '✓ UI.num com drill e tendência',
-      '✓ Formatação única (fmt.js)',
-      '✓ Dias úteis respeitando feriados',
-      '⚙️ Preparado para Lotes 4–6'
+      'Painel do dia na tela Hoje: o que atacar agora, onde está travando e o ranking (Top 3 + sua posição).',
+      'Ctrl+N cria uma atividade rápida escrevendo em uma linha (o que + setor + quando).',
+      'O sistema avisa se já existe uma atividade parecida antes de criar outra.',
+      'Toda criação rápida dá 7 segundos para desfazer — sem janela de confirmação.',
+      'Números com o "i" ao lado: fórmula e base de cálculo a um clique.',
+      'Prazos em dias úteis respeitam os feriados.'
     ]
   };
 

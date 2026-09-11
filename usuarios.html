@@ -201,7 +201,7 @@
       function ferr(e) {
         var code = (e && e.code) || '';
         if (code === 'permission-denied') {
-          return Object.assign(new Error('Sem permissão. Apenas o perfil Gestor gerencia usuários, e as Regras do Firestore precisam estar publicadas.'), { field: 'geral' });
+          return Object.assign(new Error('Sem permissão. Só o gestor gerencia usuários.'), { field: 'geral' });
         }
         if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
           return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });

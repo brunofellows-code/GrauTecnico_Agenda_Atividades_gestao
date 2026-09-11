@@ -555,9 +555,9 @@
       { label: 'Previstas até hoje', value: String(t.previstasAteHoje), tone: 'muted2',
         drill: function () { return DD.previstas(); },
         info: { title: 'Previstas até hoje', formula: 'ocorrências da janela com data ≤ hoje, menos as puladas', dados: 'ocorrências da janela', numeros: t.previstasAteHoje + ' previstas' } },
-      { label: 'Aging médio', value: t.atrasadas ? fmtDias(m.agingMedio) : '—', tone: t.atrasadas ? 'amber' : 'green',
+      { label: 'Atraso médio', value: t.atrasadas ? fmtDias(m.agingMedio) : '—', tone: t.atrasadas ? 'amber' : 'green',
         drill: function () { return DD.atrasadas(); }, drillTitle: 'Atrasadas por idade — mais antigas primeiro',
-        info: { title: 'Aging médio das atrasadas', formula: 'média de (hoje − data efetiva) das atrasadas', dados: 'atrasadas: data efetiva', numeros: t.atrasadas ? ('soma de dias ÷ ' + t.atrasadas + ' = ' + fmtDias(m.agingMedio)) : 'sem atrasadas' } },
+        info: { title: 'Atraso médio das atrasadas', formula: 'média de (hoje − data efetiva) das atrasadas', dados: 'atrasadas: data efetiva', numeros: t.atrasadas ? ('soma de dias ÷ ' + t.atrasadas + ' = ' + fmtDias(m.agingMedio)) : 'sem atrasadas' } },
       { label: 'Reprogramação', value: m.reprogPct + '%', tone: m.reprogPct > 20 ? 'orange' : 'green',
         drill: function () { return DD.reprogramadas(); },
         info: { title: 'Adiamento de prazo (reprogramação)', formula: 'De tudo que estava previsto, quanto foi adiado. reprogramadas ÷ total de ocorrências × 100', dados: 'ocorrências: status reprogramada', numeros: t.reprogramadas + ' ÷ ' + t.ocorrencias + ' = ' + m.reprogPct + '%' } },
@@ -594,21 +594,21 @@
       { l: '8–15d', v: f.f815, c: 'var(--orange)' }, { l: '15+d', v: f.f15, c: 'var(--red)' }
     ];
     var max = Math.max(1, f.f03, f.f47, f.f815, f.f15);
-    return chartCard('Envelhecimento (aging)',
+    return chartCard('Dias de atraso das vencidas',
       { title: 'Envelhecimento das atrasadas', formula: 'atrasadas agrupadas por faixa de dias de atraso', dados: 'atrasadas: hoje − data efetiva', numeros: '0–3d: ' + f.f03 + ' · 4–7d: ' + f.f47 + ' · 8–15d: ' + f.f815 + ' · 15+d: ' + f.f15 },
       barsV(itens, { max: max }), 'pf-aging');
   }
   function chartThroughput(m) {
     var t = m.throughput.slice(-8);
     if (!t.length) {
-      return chartCard('Throughput semanal',
-        { title: 'Throughput semanal', formula: 'concluídas por semana (segunda a domingo)', dados: 'concluídas: data efetiva ≤ hoje', numeros: 'sem conclusões na janela' },
+      return chartCard('Ritmo semanal (feitas por semana)',
+        { title: 'Ritmo semanal (feitas por semana)', formula: 'concluídas por semana (segunda a domingo)', dados: 'concluídas: data efetiva ≤ hoje', numeros: 'sem conclusões na janela' },
         el('<div class="pf-empty2">Sem conclusões na janela.</div>'), 'pf-throughput');
     }
     var max = Math.max.apply(null, t.map(function (x) { return x.n; }).concat([1]));
     var itens = t.map(function (x, i, a) { return { l: rotuloSemana(x.semana), v: x.n, c: (i === a.length - 1) ? 'var(--brand)' : 'var(--muted2)' }; });
-    return chartCard('Throughput semanal',
-      { title: 'Throughput semanal', formula: 'nº de concluídas por semana', dados: 'concluídas agrupadas pela segunda-feira da semana', numeros: 'últimas ' + t.length + ' semana(s); a última é destacada' },
+    return chartCard('Ritmo semanal (feitas por semana)',
+      { title: 'Ritmo semanal (feitas por semana)', formula: 'nº de concluídas por semana', dados: 'concluídas agrupadas pela segunda-feira da semana', numeros: 'últimas ' + t.length + ' semana(s); a última é destacada' },
       barsV(itens, { max: max }), 'pf-throughput');
   }
   function chartCarga(m) {
@@ -671,11 +671,11 @@
     var nums = calc.map(function (x) { return x.sigla + ': A' + x.sc.compA + ' B' + x.sc.compB + ' C' + x.sc.compC + ' → ' + x.sc.score; }).join(' · ');
     var card = el('<div class="pf-card" style="margin-bottom:13px"></div>');
     var h = el('<div class="pf-card-h"></div>');
-    h.appendChild(el('<div class="pf-card-t">Score por setor (0–100)</div>'));
+    h.appendChild(el('<div class="pf-card-t">Nota por setor (0–100)</div>'));
     h.appendChild(infoBtn({
-      title: 'Score composto por setor',
-      formula: 'score = 0,5×A + 0,3×B + 0,2×C. A = aderência% (peso 50) · B = 100 − %atrasadas (atrasadas ÷ abertas do setor; peso 30) · C = 100 − aging×12,5 (0d=100 · 4d=50 · 8d+=0; peso 20). Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.',
-      dados: 'ocorrências por setor até hoje (aderência, atrasadas, aging) + abertas por setor (carga). Multi-setor conta em cada área.',
+      title: 'Nota composta por setor',
+      formula: 'nota = 0,5×A + 0,3×B + 0,2×C. A = aderência% (peso 50) · B = 100 − %atrasadas (atrasadas ÷ abertas do setor; peso 30) · C = 100 − atraso médio (dias)×12,5 (0d=100 · 4d=50 · 8d+=0; peso 20). Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.',
+      dados: 'ocorrências por setor até hoje (aderência, atrasadas, atraso médio) + abertas por setor (carga). Multi-setor conta em cada área.',
       numeros: nums
     }));
     card.appendChild(h);
@@ -749,7 +749,7 @@
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
     h.appendChild(el('<div class="pf-card-t">Plano de ação — o que atacar primeiro</div>'));
-    h.appendChild(infoBtn({ title: 'Plano de ação', formula: 'priorização por impacto: gargalos do detector (aderência < 80% OU atrasadas + aging ≥ 4d + carga > 1,5×mediana), setores com mais atrasadas, pessoas sobrecarregadas e itens sem dono', dados: 'derivado dos indicadores acima', numeros: 'gargalos primeiro, depois pelo nº de atrasadas' }));
+    h.appendChild(infoBtn({ title: 'Plano de ação', formula: 'priorização por impacto: gargalos do detector (aderência < 80% OU atrasadas + atraso médio ≥ 4d + carga > 1,5×mediana), setores com mais atrasadas, pessoas sobrecarregadas e itens sem dono', dados: 'derivado dos indicadores acima', numeros: 'gargalos primeiro, depois pelo nº de atrasadas' }));
     card.appendChild(h);
     var list = el('<div class="pf-plano"></div>');
     var itens = [];
@@ -913,9 +913,9 @@
     }
     h.appendChild(infoBtn({
       title: 'Risco dinâmico por atividade',
-      formula: 'score = pesoPrioridade × fatorAging × fatorReprog. Peso: P1=5 · P2=4 · P3=3 · P4=2 · P5=1 (sem prioridade = 3). fatorAging (maior atraso da atividade na janela): 0d=1,0 · 1–3d=1,2 · 4–7d=1,5 · 8–15d=2,0 · 15+d=3,0. fatorReprog = 1 + 0,5 × reprogramadas (teto 3,0). Faixas: ≥15 Crítico · ≥7,5 Em risco · <7,5 Observação.',
+      formula: 'nível = peso da prioridade × fator de atraso × fator de reprogramação. Peso: P1=5 · P2=4 · P3=3 · P4=2 · P5=1 (sem prioridade = 3). fatorAging (maior atraso da atividade na janela): 0d=1,0 · 1–3d=1,2 · 4–7d=1,5 · 8–15d=2,0 · 15+d=3,0. fatorReprog = 1 + 0,5 × reprogramadas (teto 3,0). Faixas: ≥15 Crítico · ≥7,5 Em risco · <7,5 Observação.',
       dados: 'prioridade e mitigação importadas do PEF (planilha-modelo) + ocorrências da janela (atrasadas e reprogramadas). Só entram atividades com sinal dinâmico: atraso > 0 OU reprogramação > 0.',
-      numeros: riscos.length + ' atividade(s) com sinal · exibindo até ' + TETO_LINHAS + ' · maior score: ' + riscos[0].score
+      numeros: riscos.length + ' atividade(s) com sinal · exibindo até ' + TETO_LINHAS + ' · maior nível: ' + riscos[0].score
     }));
     card.appendChild(h);
     var list = el('<div class="pf-plano"></div>');
@@ -937,8 +937,8 @@
       t1.textContent = (r.act.titulo || '(sem título)') + (r.act.setorSigla ? ' · ' + r.act.setorSigla : '');
       cc.appendChild(t1);
       var t2 = el('<div class="pf-plano-act"></div>');
-      t2.textContent = rot + ' · score ' + String(r.score).replace('.', ',') +
-        ' = ' + (r.prio || 'P?') + '(' + r.peso + ') × aging ' + String(r.fatorAging).replace('.', ',') +
+      t2.textContent = rot + ' · nível ' + String(r.score).replace('.', ',') +
+        ' = ' + (r.prio || 'P?') + '(' + r.peso + ') × atraso ' + String(r.fatorAging).replace('.', ',') +
         (r.maxAtraso ? ' (' + r.maxAtraso + 'd)' : '') +
         ' × reprog ' + String(r.fatorReprog).replace('.', ',') + (r.reprog ? ' (' + r.reprog + '×)' : '');
       cc.appendChild(t2);
@@ -1028,7 +1028,7 @@
       formula: 'lista de pauta_sugestoes com candidatoIndicador = true (marcado no formulário de pauta ou ao encaminhar uma decisão)',
       dados: 'coleção pauta_sugestoes · where ativo == true · limit 100 · filtro candidatoIndicador no navegador',
       numeros: 'cada item mostra o texto, a reunião de origem e a data de registro, do mais novo p/ o mais velho',
-      nota: 'Fila de entrada do catálogo: virar indicador exige fórmula + dado + decisão que dispara (próxima fase) — nada vira KPI sozinho.'
+      nota: 'Fila de entrada do catálogo: virar indicador exige fórmula + dado + decisão que dispara (próxima fase) — nada vira indicador sozinho.'
     }));
     card.appendChild(h);
     var list = el('<div class="pf-plano"></div>');
@@ -1258,7 +1258,11 @@
         row.appendChild(UI.button({ label: 'Arquivar', variant: 'ghost', onClick: function () {
           UI.modal({
             title: 'Arquivar plano?', width: 420,
-            body: [el('<div class="pf-plano-act">“' + p.titulo + '” sai da lista (soft-delete: ativo = false; nada é apagado, as atividades continuam).</div>')],
+            body: [(function () { /* L3.5 · P2: título vem do banco → textContent, nunca innerHTML */
+              var d = el('<div class="pf-plano-act"></div>');
+              d.textContent = '“' + (p.titulo || '') + '” sai da lista (nada é apagado; as atividades continuam).';
+              return d;
+            })()],
             footer: function (close) {
               return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
                 UI.button({ label: 'Arquivar', icon: 'check', onClick: function () {

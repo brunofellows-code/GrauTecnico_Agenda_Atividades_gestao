@@ -396,7 +396,7 @@
       function ferr(e) {
         var code = (e && e.code) || '';
         if (code === 'permission-denied') {
-          return Object.assign(new Error('Sem permissão para esta operação. Confirme seu perfil e que as Regras do Firestore foram publicadas.'), { field: 'geral', code: code });
+          return Object.assign(new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'), { field: 'geral', code: code });
         }
         if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
           return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral', code: code });
@@ -1058,16 +1058,16 @@
       head.appendChild(el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)">Números da janela (' + PERIODO_LABEL[periodo] + ')</div>'));
       head.appendChild(infoAt('Números da janela — como cada um é calculado', function () {
         return {
-          formula: 'Aderência = concluídas ÷ previstas até hoje × 100 (meta 90%). Atrasadas = abertas com data efetiva vencida; aging = média de dias de atraso. Em andamento = status "em andamento". Reprogramação = reprogramadas ÷ total × 100 (limite 20%). Sem responsável = abertas sem dono (não medem).',
+          formula: 'Aderência = concluídas ÷ previstas até hoje × 100 (meta 90%). Atrasadas = abertas com data efetiva vencida; atraso médio = média de dias de atraso. Em andamento = status "em andamento". Reprogramação = reprogramadas ÷ total × 100 (limite 20%). Sem responsável = abertas sem dono (não medem).',
           dados: 'as MESMAS ocorrências desta tela (seu escopo + contexto de setor + busca + período acima); dia civil de Salvador.',
-          numeros: 'ocorrências ' + mm.totais.ocorrencias + ' · aderência ' + (mm.aderencia == null ? '—' : mm.aderencia + '%') + ' · atrasadas ' + mm.totais.atrasadas + ' (aging ' + (Math.round(mm.agingMedio * 10) / 10) + 'd) · andamento ' + mm.totais.andamento + ' · reprog ' + mm.reprogPct + '% · sem resp. ' + mm.totais.semResp
+          numeros: 'ocorrências ' + mm.totais.ocorrencias + ' · aderência ' + (mm.aderencia == null ? '—' : mm.aderencia + '%') + ' · atrasadas ' + mm.totais.atrasadas + ' (atraso médio ' + (Math.round(mm.agingMedio * 10) / 10) + 'd) · andamento ' + mm.totais.andamento + ' · reprog ' + mm.reprogPct + '% · sem resp. ' + mm.totais.semResp
         };
       }));
       wrap.appendChild(head);
       var grid = el('<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px"></div>');
       [
         { label: 'Aderência à rotina', value: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? '—' : mm.aderencia + '%', sub: mm.totais.previstasVencidas === 0 ? 'coletando' : 'meta 90%', tone: (mm.aderencia == null || mm.totais.previstasVencidas === 0) ? 'amber' : (mm.aderencia >= 90 ? 'green' : mm.aderencia >= 80 ? 'amber' : 'red') },
-        { label: 'Atrasadas agora', value: String(mm.totais.atrasadas), sub: mm.totais.atrasadas ? 'aging médio ' + (Math.round(mm.agingMedio * 10) / 10) + 'd' : 'nada vencido', tone: mm.totais.atrasadas ? 'red' : 'green' },
+        { label: 'Atrasadas agora', value: String(mm.totais.atrasadas), sub: mm.totais.atrasadas ? 'atraso médio ' + (Math.round(mm.agingMedio * 10) / 10) + 'd' : 'nada vencido', tone: mm.totais.atrasadas ? 'red' : 'green' },
         { label: 'Em andamento', value: String(mm.totais.andamento), sub: 'já iniciadas', tone: mm.totais.andamento ? 'amber' : 'green' },
         { label: 'Concluídas na janela', value: String(mm.totais.concluidas), sub: 'de ' + mm.totais.ocorrencias + ' ocorrência(s)', tone: 'green' },
         { label: 'Reprogramação', value: mm.reprogPct + '%', sub: 'limite 20%', tone: mm.reprogPct > 20 ? 'red' : 'green' },

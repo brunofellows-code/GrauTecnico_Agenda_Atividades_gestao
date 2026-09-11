@@ -370,7 +370,7 @@
       if (ader < 80) {
         out.push({ sigla: s.sigla, motivo: 'aderência ' + ader + '% < 80%' });
       } else if (atr > 0 && ag >= 4 && cg > teto) {
-        out.push({ sigla: s.sigla, motivo: atr + ' atrasada(s) · aging ' +
+        out.push({ sigla: s.sigla, motivo: atr + ' atrasada(s) · atraso médio ' +
           String(ag).replace('.', ',') + 'd ≥ 4d · carga ' + cg + ' > 1,5×mediana (' +
           String(teto).replace('.', ',') + ')' });
       }
@@ -1671,7 +1671,7 @@
       if (ader < 80) {
         out.push({ sigla: s.sigla, motivo: 'aderência ' + ader + '% < 80%' });
       } else if (atr > 0 && ag >= 4 && cg > teto) {
-        out.push({ sigla: s.sigla, motivo: atr + ' atrasada(s) · aging ' +
+        out.push({ sigla: s.sigla, motivo: atr + ' atrasada(s) · atraso médio ' +
           String(ag).replace('.', ',') + 'd ≥ 4d · carga ' + cg + ' > 1,5×mediana (' +
           String(teto).replace('.', ',') + ')' });
       }

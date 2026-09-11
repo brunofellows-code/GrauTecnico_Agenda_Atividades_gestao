@@ -263,6 +263,7 @@
     <div class="hj-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a8 8 0 0 1 16 0"></path><path d="M4 11v3a8 8 0 0 0 16 0v-3"></path></svg><span>Perfil</span></div>
   </div>
 
+  <script src="flags.js"></script><!-- L3.5: kill-switches ANTES de qualquer módulo do Lote 3 (Defeito 2) -->
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
@@ -352,7 +353,7 @@
   }
   function ferr(e) {
     var code = (e && e.code) || '';
-    if (code === 'permission-denied') { return new Error('Sem permissão para gravar. Confirme seu perfil e as Regras publicadas.'); }
+    if (code === 'permission-denied') { return new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'); }
     return new Error((e && e.message) || 'Erro ao falar com o banco.');
   }
 
@@ -614,7 +615,7 @@
             Store.createSolicitacao({
               atividadeId: o.act.id, ocorrenciaData: o.origData, escopo: 'esta',
               dataAtual: o.effDate, dataProposta: nova, motivo: motivo,
-              solicitanteUid: CURRENT_USER.uid, solicitanteNome: USER.name || USER.nome || '',
+              solicitanteUid: CURRENT_USER.uid, solicitanteNome: CURRENT_USER.name || CURRENT_USER.nome || '',
               tituloAtividade: o.act.titulo, donoUid: o.act.criadoPor || null
             }).then(function () { close(); toast('Pedido de adiamento enviado ao dono.'); })
               .catch(function (e) { toast(e.message, 'err'); });
@@ -891,7 +892,7 @@
      dispara ação). Só perfil líder; derivado do MESMO board.          */
   function escopoDoLider() {
     if (!(Guard.isLider && Guard.isLider())) { return null; }
-    var lids = USER.setoresLiderados || [];
+    var lids = (CURRENT_USER && CURRENT_USER.setoresLiderados) || [];
     if (!lids.length) { return null; }
     return KPI.escopoLider ? KPI.escopoLider(lids, m0Setores()) : null;
   }
@@ -909,7 +910,7 @@
      com estados (carregando/erro) — não trava o paint do resto.        */
   function cardPlanejamentoLider(hoje) {
     if (!(Guard.isLider && Guard.isLider())) { return null; }
-    var lids = (USER && USER.setoresLiderados) || [];
+    var lids = (CURRENT_USER && CURRENT_USER.setoresLiderados) || [];
     if (!lids.length) { return null; }
     var comp = compSeguinteHj(hoje);
     var card = el('<div class="hj-xcard" role="button" tabindex="0" style="cursor:pointer"></div>');
@@ -917,7 +918,7 @@
     hd.appendChild(txt('div', 'hj-xtitle', 'Meu planejamento — ' + comp.slice(5, 7) + '/' + comp.slice(0, 4)));
     hd.appendChild(infoHj('Meu planejamento (5W2H do setor)', {
       formula: 'Plano da competência ' + comp + ' vence no dia 25 deste mês (D-0). Farol: até dia 19 ok · dia 20 D-5 (alerta a você) · dia 22 D-3 (alerta à gestão) · dia 25 D-0 (flag de não-conformidade). Nunca bloqueia — entregar atrasado é sempre possível.',
-      dados: 'coleção planejamentos · competencia == ' + comp + ' · seus setores liderados (' + lids.join(', ') + ') · KPI.planejamentoPrazo (kpi.js, harness_r4).',
+      dados: 'coleção planejamentos · competencia == ' + comp + ' · seus setores liderados (' + lids.join(', ') + ') · cálculo do prazo do planejamento.',
       numeros: 'um farol por setor liderado; ✓ = entregue.'
     }));
     card.appendChild(hd);
@@ -1401,7 +1402,7 @@
     /* F1-N · U1+U3: PRÓXIMA AÇÃO — saudação contextual + 1 sugestão
        determinística (Krug). Some quando não há nada aberto. */
     (function () {
-      var fn0 = String(USER.name || '').trim().split(/\s+/)[0] || 'você';
+      var fn0 = String((CURRENT_USER && CURRENT_USER.name) || '').trim().split(/\s+/)[0] || 'você';
       var px = KPI.proximaAcao ? KPI.proximaAcao(m.board, CURRENT_USER.uid, hoje) : null;
       if (!px) { return; }
       var card = el('<div class="hj-xcard" style="border-left:3px solid var(--brand)"></div>');
@@ -1816,13 +1817,13 @@
               .then(function () {
                 if ((rr.confirmadosUids || []).indexOf(CURRENT_USER.uid) === -1) { rr.confirmadosUids = (rr.confirmadosUids || []).concat([CURRENT_USER.uid]); }
                 if (rr.recusas && rr.recusas[CURRENT_USER.uid]) { delete rr.recusas[CURRENT_USER.uid]; }
-                toast('Presença confirmada — quem convocou já vê.'); paint();
+                toast('Resposta registrada: você vai. Quem convocou já vê.'); paint();
               })
               .catch(function (e) { toast(e.message || 'Não deu para confirmar.', 'err'); });
           };
         })(r);
         if (confs.indexOf(CURRENT_USER.uid) !== -1) {
-          var okc = txt('span', 'hj-freq', '✓ Presença confirmada');
+          var okc = txt('span', 'hj-freq', '✓ Você disse que vai');
           okc.style.color = 'var(--green)';
           lin.appendChild(okc);
           lin.appendChild(miniBtn('Não vou', (function (rr) { return function () { modalRecusaConvocacao(rr); }; })(r), 'warn'));
@@ -1833,7 +1834,7 @@
           lin.appendChild(rk);
           lin.appendChild(miniBtn('Vou sim', confirmarFn, 'ok'));
         } else {
-          lin.appendChild(miniBtn('Confirmar presença', confirmarFn, 'ok'));
+          lin.appendChild(miniBtn('Vou', confirmarFn, 'ok'));
           lin.appendChild(miniBtn('Não vou', (function (rr) { return function () { modalRecusaConvocacao(rr); }; })(r), 'warn'));
         }
         if (vencidos) {
@@ -1945,9 +1946,124 @@
       KPI.carregar('band'),
       Store.listPlanosVivos ? ((Guard.isUsuario && Guard.isUsuario()) ? Promise.resolve([]) : Store.listPlanosVivos()) : Promise.resolve([]),
       uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve([])
-    ]).then(function (r) { MODELO = r[0]; PLANOS = r[1] || []; CONVOC = r[2] || []; paint(); })
+    ]).then(function (r) { MODELO = r[0]; PLANOS = r[1] || []; CONVOC = r[2] || []; paint(); emitirModelo(); })
       .catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
   }
+
+  /* ============================================================
+     L3.5 (11/09/2026) · APPEND · ponte dos módulos do Lote 3
+     ------------------------------------------------------------
+     (a) emitirModelo(): depois de cada paint(), publica o MESMO
+         MODELO (board/ativ/setores) num CustomEvent 'hoje:modelo'.
+         hoje-cockpit-l3.js escuta e monta o painel do L3 com a
+         MESMA base — régua única, zero leitura extra do banco.
+     (b) Store.criarAtividade: contrato IDÊNTICO ao de atividades.html
+         (duplicação mínima declarada: páginas sem módulo de escrita
+         compartilhado; contrato único = este comentário + grep).
+     (c) Ponte Ctrl+N: quick-add.js parseia e dispara 'quickadd:submit';
+         ninguém escutava (Lote 3 publicado sem gravação). Aqui:
+         resolve setor real → R.validar → ANTI_DUP (85% avisa, 95%
+         barra) → UNDO 7 s → Store.criarAtividade → refresh().
+         Só gestor/líder (CAN_WRITE); usuário comum não cria (P6).
+     ============================================================ */
+  function emitirModelo() {
+    if (!MODELO || typeof CustomEvent !== 'function') { return; }
+    try {
+      document.dispatchEvent(new CustomEvent('hoje:modelo', { detail: { modelo: MODELO, user: CURRENT_USER, planos: PLANOS, convoc: CONVOC } }));
+    } catch (e) { if (window.console && console.warn) { console.warn('[hoje] hoje:modelo não emitido', e); } }
+  }
+
+  Store.criarAtividade = function (data, uid) {
+    return fb().then(function (c) {
+      var now = Date.now();
+      var doc = Object.assign({}, data, { ativo: true, criadoPor: uid, criadoEm: now, atualizadoEm: now });
+      return c.f.addDoc(c.f.collection(c.db, 'atividades'), doc).then(function (ref) {
+        Store.log({ acao: 'criar_atividade', entidade: 'atividade', refId: ref.id, antes: null, depois: doc });
+        return ref.id;
+      });
+    }).catch(function (e) { throw ferr(e); });
+  };
+
+  function semAcento(t) { return String(t || '').toLowerCase().replace(/[áàâã]/g, 'a').replace(/[éê]/g, 'e').replace(/í/g, 'i').replace(/[óôõ]/g, 'o').replace(/ú/g, 'u').replace(/ç/g, 'c'); }
+  /* setor digitado no Ctrl+N → sigla REAL da coleção setores (já em MODELO) */
+  function resolverSetorQA(txtSetor) {
+    var sets = (MODELO && MODELO.setores) || [];
+    var q = semAcento(txtSetor).trim();
+    var i;
+    if (q) {
+      for (i = 0; i < sets.length; i++) { if (semAcento(sets[i].sigla) === q) { return sets[i].sigla; } }
+      for (i = 0; i < sets.length; i++) { if (semAcento(sets[i].nome).indexOf(q) === 0) { return sets[i].sigla; } }
+      for (i = 0; i < sets.length; i++) { if (semAcento(sets[i].sigla).indexOf(q) === 0) { return sets[i].sigla; } }
+    }
+    if (CURRENT_USER && CURRENT_USER.setor) { return CURRENT_USER.setor; }
+    var lids = (CURRENT_USER && CURRENT_USER.setoresLiderados) || [];
+    return lids.length ? lids[0] : null;
+  }
+  function nomeSetorQA(sigla) {
+    var sets = (MODELO && MODELO.setores) || [];
+    for (var i = 0; i < sets.length; i++) { if (sets[i].sigla === sigla) { return sets[i].nome || sigla; } }
+    return sigla;
+  }
+  function normHora(h) {
+    if (!h) { return null; }
+    var m = /^(\d{1,2})(?::(\d{2}))?$/.exec(String(h).trim());
+    if (!m) { return null; }
+    var hh = parseInt(m[1], 10); if (hh > 23) { return null; }
+    return (hh < 10 ? '0' : '') + hh + ':' + (m[2] || '00');
+  }
+
+  document.addEventListener('quickadd:submit', function (ev) {
+    var parsed = (ev && ev.detail) || {};
+    if (!CURRENT_USER || !CAN_WRITE()) { toast('Seu perfil não cria atividades. Peça ao líder do setor.', 'err'); return; }
+    if (!MODELO) { toast('Ainda carregando o seu dia — tente de novo em instantes.', 'err'); return; }
+    var titulo = String(parsed.titulo || '').trim();
+    if (!titulo) { toast('Escreva o que precisa ser feito.', 'err'); return; }
+    var sigla = resolverSetorQA(parsed.setor);
+    if (!sigla) { toast('Informe o setor (ex.: "… CRA amanhã 14h").', 'err'); return; }
+    if (Guard.isLider && Guard.isLider() && !(Guard.isGestor && Guard.isGestor())) {
+      var esc = KPI.escopoLider ? KPI.escopoLider(CURRENT_USER.setoresLiderados || [], MODELO.setores) : {};
+      if (!esc[sigla]) { toast('Você não lidera o setor ' + sigla + '. Crie pelo formulário completo em Atividades.', 'err'); return; }
+    }
+    var dataISO = parsed.dtPrevista ? String(parsed.dtPrevista).slice(0, 10) : R.hojeISO();
+    if (!R.isISO(dataISO)) { dataISO = R.hojeISO(); }
+    var horario = normHora(parsed.dtPrevista && String(parsed.dtPrevista).length > 10 ? String(parsed.dtPrevista).slice(11) : parsed.horaStr);
+    var payload = {
+      titulo: titulo, descricao: '', observacoes: '',
+      setorSigla: sigla, setorSiglas: [sigla], todosSetores: false, subsetorSigla: null,
+      responsavelUid: CURRENT_USER.uid, responsavelNome: CURRENT_USER.name || CURRENT_USER.nome || '',
+      camada: 'operacional', supervisorUid: null, supervisorNome: null,
+      recorrencia: 'unico', horario: horario, diasSemana: null, diaMes: null,
+      data: dataISO, deslizante: false, dataInicio: null, dataFim: null, catalogoId: null
+    };
+    var verr = R.validar(payload);
+    if (verr.length) { toast('Revise: ' + verr[0], 'err'); return; }
+
+    function gravar(prefixoMsg) {
+      var executar = function () {
+        Store.criarAtividade(payload, CURRENT_USER.uid)
+          .then(function () { toast('Atividade criada em ' + nomeSetorQA(sigla) + ' para ' + dataISO.split('-').reverse().join('/') + '.'); refresh(); })
+          .catch(function (e) { toast(e.message || 'Não consegui criar a atividade.', 'err'); });
+      };
+      if (window.FLAGS && window.FLAGS.undoToast && window.UNDO && typeof window.UNDO.iniciar === 'function') {
+        window.UNDO.iniciar('qa-' + Date.now(), payload, (prefixoMsg || '') + 'Criando "' + titulo + '" em ' + sigla + ' · ' + dataISO.split('-').reverse().join('/'),
+          { onUndo: function () { toast('Cancelado. Nada foi gravado.'); }, onCommit: executar });
+      } else {
+        executar();
+      }
+    }
+
+    var base = ((MODELO && MODELO.ativ) || []).map(function (a) {
+      return { id: a.id, titulo: a.titulo, status: a.ativo === false ? 'concluida' : 'pendente', dtCriacao: a.criadoEm ? new Date(Number(a.criadoEm)).toISOString() : null };
+    });
+    if (window.FLAGS && window.FLAGS.quickAdd && window.ANTI_DUP && typeof window.ANTI_DUP.verificarAntesDeAdicionar === 'function') {
+      window.ANTI_DUP.verificarAntesDeAdicionar(titulo, base, function (r) {
+        if (!r.ok && r.bloqueado) { toast('Já existe uma atividade quase igual: "' + ((r.similares && r.similares[0] && r.similares[0].titulo) || '') + '". Não criei outra.', 'err'); return; }
+        gravar(r.aviso ? 'Parecida com "' + ((r.similares && r.similares[0] && r.similares[0].titulo) || '') + '" — ' : '');
+      });
+    } else {
+      gravar('');
+    }
+  });
 
   Guard.onReady(function (USER) {
     CURRENT_USER = USER;

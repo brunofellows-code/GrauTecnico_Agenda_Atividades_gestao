@@ -146,7 +146,7 @@
   }
   function ferr(e) {
     var code = (e && e.code) || '';
-    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão. Confirme seu perfil e que as Regras do Firestore foram publicadas (bloco eventos).'), { code: code }); }
+    if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'), { code: code }); }
     if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
     return Object.assign(new Error((e && e.message) || 'Erro ao acessar os eventos.'), { code: code });
   }
@@ -448,7 +448,7 @@
         var ihR = el('<div class="ev-it-h"></div>');
         ihR.appendChild(txt('div', 'ev-it-t', '📋 ' + (e.titulo || 'Reunião')));
         if (e.siglaSetor) { var tgR = txt('span', 'ev-tag', e.siglaSetor); tgR.style.background = 'var(--' + corSetor(e.siglaSetor) + 'Bg)'; ihR.appendChild(tgR); }
-        var bdR = txt('span', 'ev-badge', e.encerrada ? 'Encerrada' : (e.souConvocado ? (e.confirmei ? 'Presença confirmada' : 'Confirme presença') : 'Reunião'));
+        var bdR = txt('span', 'ev-badge', e.encerrada ? 'Encerrada' : (e.souConvocado ? (e.confirmei ? 'Você disse que vai' : 'Responda: vai?') /* L3.5 · P4: RSVP ≠ presença */ : 'Reunião'));
         bdR.style.color = e.encerrada ? 'var(--muted2)' : (e.souConvocado && !e.confirmei ? 'var(--amber)' : 'var(--green)');
         ihR.appendChild(bdR);
         itR.appendChild(ihR);

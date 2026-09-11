@@ -130,15 +130,19 @@
         d.setDate(d.getDate() - parseInt(str.slice(1), 10));
       }
 
-      return d.toISOString();
+      return PARSER.isoLocal(d);
+    },
+
+    /* L3.5: data LOCAL yyyy-mm-dd (toISOString era UTC: depois das 21h em
+       Salvador virava o dia seguinte). padStart é ES2017 — trocado por ES5. */
+    isoLocal: function (d) {
+      var ano = d.getFullYear();
+      var m = d.getMonth() + 1, dd = d.getDate();
+      return ano + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd;
     },
 
     hoje: function () {
-      var d = new Date();
-      var ano = d.getFullYear();
-      var mes = String(d.getMonth() + 1).padStart(2, '0');
-      var dia = String(d.getDate()).padStart(2, '0');
-      return ano + '-' + mes + '-' + dia;
+      return PARSER.isoLocal(new Date());
     }
   };
 
@@ -153,7 +157,7 @@
         '<div class="qa-dialog">' +
         '<h3>Adicionar atividade rápida</h3>' +
         '<input type="text" class="qa-input" placeholder="ex: reunião CRA amanhã 14h — pautar Q3" autocomplete="off">' +
-        '<div class="qa-hint">Formatos: [título] [setor] [data] [hora] — [nota]</div>' +
+        '<div class="qa-hint">Escreva o que fazer + setor + quando. Ex.: "ligar para inadimplentes CRA amanhã 14h"</div>' +
         '<div class="qa-actions">' +
         '<button class="qa-cancel">Cancelar</button>' +
         '<button class="qa-submit">Adicionar</button>' +
@@ -191,11 +195,11 @@
 
       var parsed = PARSER.parse(val);
       if (!parsed || !parsed.titulo) {
-        window.UI.toast('Título obrigatório', 'err');
+        if (window.UI && window.UI.toast) { window.UI.toast('Escreva o que precisa ser feito.', 'err'); }
         return;
       }
 
-      /* Disparar evento para que hoje-cockpit-l3.js adicione a atividade */
+      /* Disparar evento — a ponte em hoje.html (L3.5) valida, checa duplicata, dá 7 s de desfazer e grava */
       var evt = new CustomEvent('quickadd:submit', { detail: parsed });
       document.dispatchEvent(evt);
 
@@ -224,8 +228,13 @@
   };
 
   /* Hotkey: Ctrl+N (ou Cmd+N) abre quick-add */
+  function podeCriar() {
+    var u = window.GRAUT_USER || null;
+    return !!(u && (u.perfil === 'gestor' || u.perfil === 'lider' || u.profile === 'Admin' || u.profile === 'Editor'));
+  }
   document.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'n' || e.key === 'N')) {
+      if (!podeCriar()) { return; } /* P6: usuário comum não cria — atalho nem abre a promessa */
       e.preventDefault();
       window.QUICK_ADD.open();
     }

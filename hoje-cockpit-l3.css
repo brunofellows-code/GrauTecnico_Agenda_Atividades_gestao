@@ -399,3 +399,20 @@
     transition: none;
   }
 }
+
+/* ===== L3.5 (11/09/2026) · APPEND · container próprio + 4 estados + novos elementos ===== */
+.ck-root{margin:0 0 16px}
+.ck-state{background:var(--s1);border:1px dashed var(--border);border-radius:13px;padding:16px;margin-bottom:14px}
+.ck-state-t{font-size:14px;font-weight:800;color:var(--text)}
+.ck-state-s{font-size:12.5px;color:var(--muted);margin-top:4px}
+.ck-state-erro{border-color:var(--red)}
+.ck-state-erro .ck-state-t{color:var(--red)}
+.ck-state-sem-permissao{border-color:var(--amber)}
+.ck-card-meta{font-size:12px;color:var(--muted);margin:2px 0 4px}
+.ck-title small,.ck-gargalos-section li small{color:var(--muted2);font-weight:700;margin-left:4px}
+.ck-link-btn{margin-top:8px;padding:7px 12px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--accentText);font-weight:700;font-size:12.5px;cursor:pointer}
+.ck-link-btn:hover{background:var(--activeBg)}
+.ck-link-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.ck-ranking-card.me{outline:2px solid var(--brand)}
+.ck-sino-btn{cursor:pointer}
+@media(prefers-reduced-motion:reduce){.ck-link-btn{transition:none}}

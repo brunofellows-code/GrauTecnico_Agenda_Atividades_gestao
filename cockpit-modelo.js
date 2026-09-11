@@ -59,7 +59,7 @@
       paraQue: 'Mesmo raciocínio da GT, com meta própria — a carteira e o ticket são outros.' },
     { k: 'primeiraParcela', label: '1ª parcela paga', curto: '1ª Parc.', meta: 75, dir: 'maior', tipo: 'pct',
       oQueDiz: 'Percentual de matrículas novas que pagaram a 1ª parcela.',
-      paraQue: 'Matrícula que não paga a primeira não é matrícula, é cadastro. Este KPI separa venda de número.' },
+      paraQue: 'Matrícula que não paga a primeira não é matrícula, é cadastro. Este indicador separa venda de número.' },
     { k: 'metaVendas', label: '% da meta de vendas', curto: '% Meta', meta: 100, dir: 'maior', tipo: 'pct',
       oQueDiz: 'Quanto do previsto de vendas já foi atingido.',
       paraQue: 'É o placar acumulado. Diz se dá para recuperar no mês ou se já é hora de mudar a tática.' },
@@ -71,14 +71,14 @@
       paraQue: 'É evasão em tempo real. Meta zero: cada linha aqui é um aluno perdido com nome e sobrenome.' },
     { k: 'reversoes', label: 'Reversões tratadas', curto: 'Revers.', meta: 'SIM', dir: 'sim', tipo: 'sn',
       oQueDiz: 'Os cancelamentos do dia tiveram tentativa de reversão? SIM ou NÃO.',
-      paraQue: 'Cancelamento é fato; reversão é ação. Este KPI cobra a ação, não o fato.' }
+      paraQue: 'Cancelamento é fato; reversão é ação. Este indicador cobra a ação, não o fato.' }
   ];
 
   /* ---------- 2) SEMANAL — 5 KPIs, fecha sexta 17h ---------- */
   var SEMANAL = [
     { k: 'nps', label: 'NPS da semana', curto: 'NPS', meta: 75, dir: 'maior', tipo: 'num',
       oQueDiz: 'Nota de recomendação apurada na semana.',
-      paraQue: 'É o único KPI que fala pelo aluno. Cai antes da evasão aparecer no financeiro.' },
+      paraQue: 'É o único indicador que fala pelo aluno. Cai antes da evasão aparecer no financeiro.' },
     { k: 'raNovas', label: 'RA novas', curto: 'RA', meta: 0, dir: 'menor', tipo: 'num',
       oQueDiz: 'Quantas reclamações novas entraram no Reclame Aqui.',
       paraQue: 'Meta zero. Uma RA nova é uma falha que já passou por todos os filtros internos e chegou na rua.' },
@@ -90,7 +90,7 @@
       paraQue: 'Separa problema de volume de problema de qualidade: pouco lead ou lead ruim são remédios diferentes.' },
     { k: 'aderenciaPEF', label: 'Aderência ao PEF', curto: 'PEF', meta: 95, dir: 'maior', tipo: 'pct',
       oQueDiz: 'Percentual de aderência ao Plano de Execução da Franquia.',
-      paraQue: 'É o KPI que abre a reunião semanal com os sócios. Mede se a rotina combinada foi cumprida.' }
+      paraQue: 'É o indicador que abre a reunião semanal com os sócios. Mede se a rotina combinada foi cumprida.' }
   ];
 
   /* ---------- 3) MENSAL — 8 indicadores, fecha até dia 5 ---------- */

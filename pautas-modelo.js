@@ -47,18 +47,18 @@
       modo: 'Remoto (Meet) — exceto semanas presenciais de Bruno',
       preparoPrazo: 'até 1h antes',
       preparo: [
-        'Planilha KPI da semana (.xlsx) — inadimplência, baixa, faladas, vendas, NC',
+        'Planilha de indicadores da semana (.xlsx) — inadimplência, baixa, faladas, vendas, NC',
         'Aderência PEF acumulada do mês + lista de NCs em aberto',
         'Status financeiro: caixa, contas a pagar 7 dias, adimplência franqueadora',
         'Reclame Aqui/Google novas avaliações + resposta sugerida'
       ],
       blocos: [
         { n: 1, titulo: 'Abertura — PEF da semana', min: 5,
-          pauta: 'Aderência PEF da semana + ranking Diamante/Ouro. Validar nº atual e gap para 95%.',
+          pauta: 'Aderência PEF da semana + ranking Diamante/Ouro. Validar nº atual e o que falta para 95%.',
           saida: '% aderência registrada na planilha' },
         { n: 2, titulo: 'CRA', min: 10,
           pauta: 'Inadimplência GT/GP, baixa bancária do dia, recuperação inativos (LFI/CAU), evasão CRA.',
-          saida: 'Plano CRA da semana c/ 1 ação corretiva por gap' },
+          saida: 'Plano CRA da semana c/ 1 ação corretiva por diferença da meta' },
         { n: 3, titulo: 'Secretaria / Financeiro', min: 10,
           pauta: 'Folha (5º DU), NF, provisionamento, contas a pagar, adimplência c/ franqueadora (royalties/FP/apostilas).',
           saida: 'Status: OK / pendência identificada' },
@@ -98,7 +98,7 @@
       blocos: [
         { n: 1, titulo: 'Abertura — meta de vendas', min: 5,
           pauta: '% meta de vendas GT/GP da semana + acumulado do mês + ranking do grupo G1.',
-          saida: 'Gap em R$ e em matrículas' },
+          saida: 'Diferença da meta em R$ e em matrículas' },
         { n: 2, titulo: 'Funil', min: 15,
           pauta: 'Cadastros, faladas (25/dia/vendedor), agendamentos, atendimentos, fechamento. Conversão por vendedor.',
           saida: 'Top 1 vendedor + bottom 1 + plano para o bottom' },
@@ -116,7 +116,7 @@
           saida: '# novas parcerias + status Feira (1ª/2ª)' },
         { n: 7, titulo: 'Pós-venda comercial', min: 5,
           pauta: '1ª parcela ≥ 75%, evasão CAC/NC/LFI, ações do Líder Comercial pós-matrícula.',
-          saida: '% 1ª parc. e plano para o gap' },
+          saida: '% 1ª parc. e plano para o que falta' },
         { n: 8, titulo: 'Encerramento', min: 5, encerramento: true,
           pauta: '3 decisões e 3 ações da semana, com prazo e responsável.',
           saida: 'Ata no SULTS + envio WhatsApp' }
@@ -164,7 +164,7 @@
           pauta: '1 decisão grande do mês (investimento, contratação, virada de processo).',
           saida: 'Decisão tomada + plano de execução' },
         { n: 10, titulo: 'Encerramento', min: 10, encerramento: true,
-          pauta: 'Ata, prazos, próximas reuniões agendadas, KPI mãe que vai liderar o mês.',
+          pauta: 'Ata, prazos, próximas reuniões agendadas, indicador principal que vai liderar o mês.',
           saida: 'Ata no SULTS + envio aos 3' }
       ]
     }

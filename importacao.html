@@ -115,7 +115,7 @@
   }
   function ferr(e) {
     var code = (e && e.code) || '';
-    if (code === 'permission-denied') { return new Error('Sem permissão para gravar. Confirme seu perfil e as Regras publicadas.'); }
+    if (code === 'permission-denied') { return new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'); }
     return new Error((e && e.message) || 'Erro ao falar com o banco.');
   }
 
@@ -920,7 +920,7 @@
       POP.innerHTML = '';
       POP.appendChild(txt('div', 'im-pop-t', 'Regras da importação'));
       [['Chave', 'Coluna "codigo" (estável): código existente ATUALIZA; novo CRIA. Duplicado no arquivo → linha rejeitada.'],
-       ['Delta', 'Só grava o que MUDOU. Célula vazia PRESERVA o valor atual. Linha idêntica é pulada. Nunca sobrescreve tudo.'],
+       ['Só o que mudou', 'Só grava o que MUDOU. Célula vazia PRESERVA o valor atual. Linha idêntica é pulada. Nunca sobrescreve tudo.'],
        ['Responsável', 'Coluna "responsavel" = NOME de usuário ativo (com login). Vazia: camada GESTOR/SÓCIO recebe o líder/gestor do setor; OPERACIONAL fica em branco pro líder direcionar.'],
        ['Apelido', 'Coluna "apelido" = etiqueta VISUAL sem login (ex.: "Assis. PED 1"). Aparece no card pro líder ver a divisão planejada, mas NÃO loga e conta como "sem responsável" nos indicadores até virar pessoa real. Responsável real sempre ganha do apelido.'],
        ['Auditoria', 'Conferência do cabeçalho: sem "codigo"/"titulo" BLOQUEIA · coluna faltando/extra ALERTA e pede confirmação. Cada gravação fica registrada no histórico com o rótulo de importação + 1 resumo.'],

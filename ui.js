@@ -427,3 +427,41 @@
 
   window.UI = UI;
 })();
+
+/* ============================================================
+   L3.5 (11/09/2026) · APPEND · fundação dos módulos do Lote 3
+   ------------------------------------------------------------
+   1) window.escapeHtml — chamado por hoje-cockpit-l3.js,
+      ui-extended.js e undo-toast.js e NUNCA definido (Defeito 1
+      do Lote 3). ES5, sem dependência de DOM.
+   2) UI.toast — chamado por quick-add.js e undo-toast.js e
+      inexistente em ui.js. Mesmo padrão do toast local de
+      hoje.html (2,6 s, classe .ui-toast em components.css).
+   Guardas `if (!…)` para nunca sobrescrever algo já definido.
+   ============================================================ */
+(function () {
+  'use strict';
+  if (typeof window.escapeHtml !== 'function') {
+    window.escapeHtml = function (s) {
+      if (s == null) { return ''; }
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+  }
+  if (window.UI && typeof window.UI.toast !== 'function') {
+    window.UI.toast = function (msg, kind) {
+      if (!document.body) { return null; }
+      var t = document.createElement('div');
+      t.className = 'ui-toast' + (kind === 'err' ? ' err' : (kind === 'ok' ? ' ok' : ''));
+      t.setAttribute('role', 'status');
+      t.textContent = msg == null ? '' : String(msg);
+      document.body.appendChild(t);
+      setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 2600);
+      return t;
+    };
+  }
+})();
