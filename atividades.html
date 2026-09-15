@@ -342,6 +342,7 @@
 
       <div class="at-content">
         <div id="at-toolbar"></div>
+        <div id="at-setornav"></div><div id="at-setorpanel"></div><div id="at-aviso"></div><!-- Item 1 -->
         <div id="at-stage"></div>
       </div>
 
@@ -357,6 +358,7 @@
   <script src="ctx.js"></script>
   <script src="catalogo.js"></script>
   <script src="lentes.js"></script>
+  <script src="conclusao.js"></script><!-- Item 1 (15/09): relato mínimo ao concluir -->
   <script>
   (function () {
     'use strict';
@@ -431,7 +433,7 @@
               /* F1-H: setor + setoresLiderados de volta no shape — o recorte do
                  líder (KPI.usuariosNoEscopo, contrato F1-D) e a sugestão de
                  supervisor (KPI.sugerirSupervisor) dependem deles. */
-              var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)', perfil: u.perfil || '', setor: u.setor || null, setoresLiderados: Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [] }); });
+              var a = []; snap.forEach(function (d) { var u = d.data() || {}; a.push({ uid: d.id, nome: u.nome || '(sem nome)', perfil: u.perfil || '', setor: u.setor || null, setoresLiderados: Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [], socio: u.socio === true /* Item 1: painel SOC */ }); });
               a.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
               return a;
             });
@@ -681,13 +683,14 @@
     var OCC_BY_ATIV = {};  /* atividadeId -> [override docs] */
     var PEND = [];         /* solicitacoes pendentes */
     var BOARD = [];        /* ocorrências enriquecidas (após filtro/busca) */
+    var BOARD_FULL = [];   /* Item 1: mesma lista ANTES do corte de 300 (contagem real do quadro por etapa) */
     var byKey = {};        /* key -> ocorrência (para drag & drop e ações) */
     var dragKey = null;    /* ocorrência em arraste */
     var capped = false;    /* houve corte pelo teto? */
 
     var selSetor = '';     /* '' = todos os setores */
     var periodo = 'band';
-    var view = 'recor';    /* REGRA GLOBAL: única visão = colunas por recorrência com drill.
+    var view = 'etapas'; /* Item 1 (15/09): padrão Quadro por etapa; era 'recor' */    /* REGRA GLOBAL: única visão = colunas por recorrência com drill.
                               Renders antigos ('setor'|'lista'|'serie'|'kanban'|'quadro')
                               preservados no código mas sem botão — reativáveis se preciso. */
     var openSeries = {};   /* séries expandidas na visão colapsada */
@@ -745,7 +748,7 @@
     function loadBoardData() {
       var w = windowFor(periodo);
       return Promise.all([
-        Store.listOcorrencias(w.jIni, w.jFim),
+        Store.listOcorrencias(R.compareISO(w.jIni, R.addDias(R.hojeISO(), -45)) > 0 ? R.addDias(R.hojeISO(), -45) : w.jIni, w.jFim), /* Item 1: FEITAS dos últimos 7 dias em qualquer período */
         CAN_WRITE ? Store.listPendentes() : Promise.resolve([])
       ]).then(function (r) { OCC_DOCS = r[0]; PEND = r[1]; indexOcc(); });
     }
@@ -891,7 +894,7 @@
       count.innerHTML = '<b>' + BOARD.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo];
       left.appendChild(count);
       /* F1-D(j): contexto global de setor — 1 escolha vale em Hoje/Atividades/Inteligência */
-      if (window.GrautCtx) {
+      if (window.GrautCtx && !document.getElementById('at-setornav')) { /* Item 1: a navegação de setores substitui o select */
         GrautCtx.mount(left, { setores: SETORES, user: CURRENT_USER,
           rotuloTudo: (Guard.isLider && Guard.isLider()) ? 'Meu escopo' : 'Toda a escola',
           onChange: function () { renderBoard(); updateCount(); } });
@@ -913,6 +916,14 @@
         seg.appendChild(b);
       });
       right.appendChild(seg);
+      /* Item 1: alternância Quadro | Por recorrência (padrão Quadro) */
+      var vseg = el('<div class="at-seg" role="group" aria-label="Visão"></div>');
+      [['etapas', 'Quadro'], ['recor', 'Por recorrência']].forEach(function (p) {
+        var b = el('<button type="button"' + (view === p[0] ? ' class="on"' : '') + '></button>'); b.textContent = p[1];
+        b.addEventListener('click', function () { if (view === p[0]) { return; } view = p[0]; Array.prototype.forEach.call(vseg.children, function (x) { x.classList.toggle('on', x === b); }); renderBoard(); });
+        vseg.appendChild(b);
+      });
+      right.insertBefore(vseg, seg);
 
       /* busca */
       var sbox = el('<div class="at-search"></div>'); sbox.appendChild(ico(PATH.user ? '<circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4-4"></path>' : '', 15));
@@ -979,7 +990,8 @@
         /* R3 · lente ativa como predicado: EU FAÇO = responsável sou eu ·
            EU COBRO = da equipe (inclui sem responsável, que é cobrança de
            higiene) · OS NÚMEROS = escopo completo (sem corte). */
-        if (window.GrautLentes) {
+        if (view === 'etapas') { if (ET_SO_MINHAS && act.responsavelUid !== CURRENT_USER.uid) { return; } } /* Item 1: quadro = setor inteiro; lente não corta */
+        else if (window.GrautLentes) {
           var _lt = GrautLentes.ativa();
           if (_lt === 'eufaco' && act.responsavelUid !== CURRENT_USER.uid) { return; }
           if (_lt === 'eucobro' && act.responsavelUid === CURRENT_USER.uid) { return; }
@@ -1019,6 +1031,7 @@
         return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR');
       });
 
+      BOARD_FULL = out; /* Item 1: antes do corte */
       capped = out.length > CAP;
       if (capped) { out = out.slice(0, CAP); }
 
@@ -1081,8 +1094,10 @@
     function renderBoard() {
       BOARD = buildOccurrences();
       stage.innerHTML = '';
+      renderSetorNav(); renderPainelSetor(); if (typeof etLentesVisivel === 'function') { etLentesVisivel(); } /* Item 1 */
+      var _av = document.getElementById('at-aviso'); if (_av) { _av.innerHTML = ''; }
       /* R3 · lente OS NÚMEROS troca o palco pelos indicadores da janela */
-      if (window.GrautLentes && GrautLentes.ativa() === 'numeros') { renderNumeros(); updateCount(); return; }
+      if (view !== 'etapas' && window.GrautLentes && GrautLentes.ativa() === 'numeros') { renderNumeros(); updateCount(); return; }
       if (!BOARD.length) {
         var box = el('<div class="at-msg"></div>');
         var icw = el('<div class="at-msg-ic"></div>'); icw.appendChild(ico(PATH.calendar, 22)); box.appendChild(icw);
@@ -1100,13 +1115,14 @@
         stage.appendChild(box);
         return;
       }
-      if (view === 'recor') { renderColunasRecorrencia(); }
+      if (view === 'etapas') { renderEtapas(); } /* Item 1 */
+      else if (view === 'recor') { renderColunasRecorrencia(); }
       else if (view === 'kanban') { renderKanban(); }
       else if (view === 'setor') { renderPorSetor(); }
       else if (view === 'quadro') { renderQuadroSetor(); }
       else if (view === 'serie') { renderColapsadoSerie(); }
       else { renderList(); }
-      if (capped) { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
+      if (capped && view !== 'etapas') { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
       updateCount(); /* F1-E · 0.3: BOARD acabou de ser reconstruído — o contador do topo acompanha */
       if (window.GrautLentes) { GrautLentes.aplicar(); } /* R3 · lentes */
     }
@@ -1181,7 +1197,7 @@
       /* check (concluir/reabrir) — só quem escreve */
       var chkHolder = el('<span class="at-check"></span>');
       if (CAN_WRITE && !skip) {
-        chkHolder.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { concluir(o); } } }));
+        chkHolder.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { return concluir(o); } } }));
       } else {
         var ph = el('<span class="ui-check"><span class="box' + (done ? ' on' : '') + '"></span></span>');
         if (done) { ph.querySelector('.box').appendChild(UI.icon('check', 12)); }
@@ -1267,7 +1283,7 @@
       var chk = el('<span class="at-kcheck"></span>');
       var done = o.status === 'concluida';
       if (CAN_WRITE) {
-        chk.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { concluir(o); } } }));
+        chk.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { return concluir(o); } } }));
       } else {
         var ph = el('<span class="ui-check"><span class="box' + (done ? ' on' : '') + '"></span></span>'); if (done) { ph.querySelector('.box').appendChild(UI.icon('check', 12)); } chk.appendChild(ph);
       }
@@ -1430,7 +1446,7 @@
       var skip = o.status === 'pulada';
       var row = el('<div class="at-orow' + (done ? ' done' : '') + (skip ? ' skip' : '') + '"></div>');
       if (CAN_WRITE && !skip) {
-        row.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { concluir(o); } } }));
+        row.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { return concluir(o); } } }));
       }
       var p = (o.effDate || '').split('-');
       row.appendChild(txt('span', 'at-odate', p.length === 3 ? (p[2] + '/' + p[1]) : o.effDate));
@@ -1517,12 +1533,642 @@
       stage.appendChild(grid);
     }
 
-    /* ===================== mutações de ocorrência ===================== */
-    function concluir(o) {
+    /* =========================================================
+       ITEM 1 (15/09/2026) · NAVEGAÇÃO DE SETORES + PAINEL DO SETOR +
+       DAR DONO EM LOTE + QUADRO POR ETAPA (renderEtapas).
+       - Navegação escreve no contexto global GrautCtx (vale em Hoje,
+         Atividades e Inteligência). 1º botão: "Toda a escola" (gestor)
+         ou "Meu escopo" (líder). Usuário comum não tem navegação.
+       - "Esperam dono" NÃO depende da lente (é pendência do setor).
+       - Quadro lê BOARD_FULL (antes do corte de 300): contagem é real;
+         a tela desenha 40 cartões por coluna e oferece "mostrar mais".
+       - renderKanban antigo fica intacto (sem botão).
+       ========================================================= */
+    var ET_LOTE = 40;             /* cartões desenhados por vez em cada coluna */
+    var ET_LIM = { fazendo: 8, atrasada: 5 };
+    var etDrag = null;            /* item em arraste no quadro por etapa */
+
+    function ctxAtual() { return window.GrautCtx ? GrautCtx.sanear(GrautCtx.get(), SETORES, CURRENT_USER) : ''; }
+    function setorPrincipal(act) {
+      if (!act) { return ''; }
+      if (act.setorSigla) { return act.setorSigla; }
+      return (Array.isArray(act.setorSiglas) && act.setorSiglas.length) ? act.setorSiglas[0] : '';
+    }
+    function ehLiderDe(sig) {
+      var lid = (CURRENT_USER && Array.isArray(CURRENT_USER.setoresLiderados)) ? CURRENT_USER.setoresLiderados : [];
+      return CURRENT_USER && CURRENT_USER.perfil === 'lider' && lid.indexOf(sig) !== -1;
+    }
+    /* TRAVA de tela (a de servidor vem no lote de regras D4) */
+    function podeDarDono(sig) {
+      if (!CAN_WRITE || !sig) { return false; }
+      return (CURRENT_USER && CURRENT_USER.perfil === 'gestor') || ehLiderDe(sig);
+    }
+    function semDonoDoSetor(sig) {
+      return ATIV.filter(function (a) {
+        return visivelPara(a, CURRENT_USER) && !a.responsavelUid && setorPrincipal(a) === sig;
+      }).sort(function (x, y) { return (x.titulo || '').localeCompare(y.titulo || '', 'pt-BR'); });
+    }
+    /* quem responde pelo setor: GES = gestor · SOC = gestor com socio:true · demais = líder */
+    function quemResponde(sig) {
+      if (!USERS_ALL.length) { return { lido: false, nomes: [], papel: '' }; }
+      var ns;
+      if (sig === 'GES') {
+        ns = USERS_ALL.filter(function (u) { return u.perfil === 'gestor' && !u.socio; });
+        if (!ns.length) { ns = USERS_ALL.filter(function (u) { return u.perfil === 'gestor'; }); }
+        return { lido: true, nomes: ns.map(function (u) { return u.nome; }), papel: 'gestor' };
+      }
+      if (sig === 'SOC') {
+        ns = USERS_ALL.filter(function (u) { return u.perfil === 'gestor' && u.socio; });
+        return { lido: true, nomes: ns.map(function (u) { return u.nome; }), papel: 'socios' };
+      }
+      ns = USERS_ALL.filter(function (u) { return u.perfil === 'lider' && (u.setoresLiderados || []).indexOf(sig) !== -1; });
+      return { lido: true, nomes: ns.map(function (u) { return u.nome; }), papel: 'lider' };
+    }
+    var PAPEL_LABEL = { lider: 'líder', gestor: 'gestor', socios: 'sócios' };
+
+    /* ---------- navegação de setores ---------- */
+    function renderSetorNav() {
+      var host = document.getElementById('at-setornav');
+      if (!host) { return; }
+      host.innerHTML = '';
+      if (!window.GrautCtx) { return; }
+      var ops = GrautCtx.opcoes(SETORES, CURRENT_USER);
+      if (!ops.length) { return; }
+      var atual = ctxAtual();
+      var vis = ATIV.filter(function (a) { return visivelPara(a, CURRENT_USER); });
+      var nav = el('<div class="et-nav" role="group" aria-label="Setores"></div>');
+      function botao(sig, rotulo, n, cor) {
+        var b = el('<button type="button"></button>');
+        if (sig === atual) { b.className = 'sel'; }
+        b.setAttribute('aria-pressed', sig === atual ? 'true' : 'false');
+        if (cor) { var d = el('<span class="d"></span>'); d.style.setProperty('--sc', 'var(--' + cor + ')'); b.appendChild(d); }
+        b.appendChild(document.createTextNode(rotulo + ' '));
+        b.appendChild(txt('span', 'n', String(n)));
+        b.addEventListener('click', function () {
+          if (sig === ctxAtual()) { return; }
+          GrautCtx.set(sig); renderBoard(); updateCount();
+        });
+        return b;
+      }
+      var rotTudo = (CURRENT_USER.perfil === 'lider') ? 'Meu escopo' : 'Toda a escola';
+      nav.appendChild(botao('', rotTudo, vis.length, null));
+      ops.forEach(function (s) {
+        var n = vis.filter(function (a) { return GrautCtx.aplicaAtividade(a, s.sigla); }).length;
+        nav.appendChild(botao(s.sigla, s.nome || s.sigla, n, corSetor(s.sigla)));
+      });
+      nav.appendChild(infoAt('Números da navegação de setores', function () {
+        return { formula: 'Contagem de atividades ativas que você pode ver em cada setor. "Toda a escola"/"Meu escopo" = todas as visíveis, sem repetir.',
+          dados: 'atividades (ativo = verdadeiro) · escopo do seu papel · atividade marcada para todos os setores entra em todos',
+          numeros: 'Visíveis: ' + vis.length + ' · setores na lista: ' + ops.length + '. Não depende da lente nem da busca.' };
+      }));
+      host.appendChild(nav);
+    }
+
+    /* ---------- painel do setor ---------- */
+    function renderPainelSetor() {
+      var host = document.getElementById('at-setorpanel');
+      if (!host) { return; }
+      host.innerHTML = '';
+      if (!CURRENT_USER || CURRENT_USER.perfil === 'usuario' || !window.GrautCtx) { return; }
+      var ops = GrautCtx.opcoes(SETORES, CURRENT_USER);
+      if (!ops.length) { return; }
+      var sig = ctxAtual();
+      var panel = el('<div class="et-panel"></div>');
+      var head = el('<div class="et-phead"></div>');
+
+      if (!sig) {
+        var tot = 0, linhas = [];
+        ops.forEach(function (s) { var p = semDonoDoSetor(s.sigla); tot += p.length; if (p.length) { linhas.push({ s: s, n: p.length }); } });
+        head.appendChild(txt('span', 'nm', CURRENT_USER.perfil === 'lider' ? 'Meu escopo' : 'Toda a escola'));
+        head.appendChild(el('<span class="sp"></span>'));
+        head.appendChild(txt('span', 'et-pcount' + (tot ? '' : ' zero'), tot ? (tot + ' esperam dono') : 'tudo com dono'));
+        head.appendChild(infoAt('Esperam dono', function () {
+          return { formula: 'Atividades ativas visíveis para você, sem responsável com login (responsavelUid vazio), contadas pelo setor principal.',
+            dados: 'atividades · responsavelUid · setorSigla. Apelido de cargo ("Assis. PED 2") conta como sem dono. Não depende da lente.',
+            numeros: 'Total: ' + tot + ' em ' + linhas.length + ' setor(es).' };
+        }));
+        panel.appendChild(head);
+        if (!linhas.length) { panel.appendChild(el('<div class="et-pempty"><span class="ck">✓</span>Nenhuma atividade sem dono no seu escopo.</div>')); }
+        else {
+          var list = el('<div class="et-plist"></div>');
+          linhas.forEach(function (l) {
+            var r = el('<button type="button" class="et-prow"></button>');
+            var d = el('<span class="d"></span>'); d.style.setProperty('--sc', 'var(--' + corSetor(l.s.sigla) + ')'); r.appendChild(d);
+            r.appendChild(txt('span', 't', l.s.nome || l.s.sigla));
+            r.appendChild(txt('span', 'et-ptag', l.n + ' sem dono'));
+            r.addEventListener('click', function () { GrautCtx.set(l.s.sigla); renderBoard(); updateCount(); });
+            list.appendChild(r);
+          });
+          panel.appendChild(list);
+        }
+        host.appendChild(panel);
+        return;
+      }
+
+      var pend = semDonoDoSetor(sig);
+      var qr = quemResponde(sig);
+      var dh = el('<span class="d"></span>'); dh.style.setProperty('--sc', 'var(--' + corSetor(sig) + ')'); head.appendChild(dh);
+      head.appendChild(txt('span', 'nm', nomeSetor(sig)));
+      var resp = el('<span class="et-resp"></span>');
+      if (!qr.lido) {
+        resp.appendChild(document.createTextNode('não consegui ler quem responde (sem permissão para listar usuários)'));
+      } else if (!qr.nomes.length) {
+        resp.appendChild(document.createTextNode(sig === 'SOC' ? 'nenhum sócio marcado · ' : 'sem líder cadastrado · '));
+        if (CURRENT_USER.perfil === 'gestor') { var lk = txt('a', 'et-plink', 'definir em Usuários'); lk.href = 'usuarios.html'; resp.appendChild(lk); }
+        else { resp.appendChild(document.createTextNode('peça ao gestor')); }
+      } else {
+        resp.appendChild(txt('span', 'av', initialsOf(qr.nomes[0])));
+        resp.appendChild(document.createTextNode('responde: '));
+        resp.appendChild(txt('b', null, qr.nomes.join(', ')));
+        resp.appendChild(txt('span', 'et-role ' + qr.papel, PAPEL_LABEL[qr.papel] || ''));
+      }
+      head.appendChild(resp);
+      head.appendChild(el('<span class="sp"></span>'));
+      head.appendChild(txt('span', 'et-pcount' + (pend.length ? '' : ' zero'), pend.length ? (pend.length + ' esperam dono') : 'tudo com dono'));
+      head.appendChild(infoAt('Esperam dono · ' + sig, function () {
+        return { formula: 'Atividades ativas deste setor (setor principal) sem responsável com login.',
+          dados: 'atividades · responsavelUid vazio · setorSigla = ' + sig + '. Não depende da lente nem da busca.',
+          numeros: pend.length + ' atividade(s) esperando dono.' };
+      }));
+      if (pend.length && podeDarDono(sig)) {
+        var bd = el('<button type="button" class="et-pbtn">Dar dono</button>');
+        bd.addEventListener('click', function () { abrirDarDono(sig); });
+        head.appendChild(bd);
+      }
+      panel.appendChild(head);
+      if (!pend.length) {
+        panel.appendChild(el('<div class="et-pempty"><span class="ck">✓</span>Nenhuma atividade sem dono neste setor.</div>'));
+      } else {
+        var lst = el('<div class="et-plist"></div>');
+        pend.slice(0, 3).forEach(function (a) {
+          var r = el('<div class="et-prow"></div>');
+          r.appendChild(el('<span class="rd"></span>'));
+          r.appendChild(txt('span', 't', a.titulo || '(sem título)'));
+          if (a.responsavelNome) { r.appendChild(txt('span', 'et-rec', a.responsavelNome)); }
+          r.appendChild(txt('span', 'et-ptag', 'sem dono'));
+          lst.appendChild(r);
+        });
+        panel.appendChild(lst);
+        if (pend.length > 3 && podeDarDono(sig)) {
+          var more = el('<button type="button" class="et-pmore"></button>');
+          more.textContent = 'ver todas as ' + pend.length + ' →';
+          more.addEventListener('click', function () { abrirDarDono(sig); });
+          panel.appendChild(more);
+        }
+      }
+      host.appendChild(panel);
+    }
+
+    /* ---------- Dar dono em lote ---------- */
+    function candidatosDono() {
+      var lista = USERS.slice();
+      if (CURRENT_USER && CURRENT_USER.uid && !lista.some(function (u) { return u.uid === CURRENT_USER.uid; })) {
+        var eu = USERS_ALL.filter(function (u) { return u.uid === CURRENT_USER.uid; })[0];
+        if (eu) { lista.push(eu); }
+      }
+      return lista.sort(function (x, y) { return (x.nome || '').localeCompare(y.nome || '', 'pt-BR'); });
+    }
+
+    /* grava em sequência; trava por item; devolve {ok:[], falhas:[{titulo,msg}]} */
+    function darDonoEmLote(sig, atividades, alvo, onTick) {
+      var res = { ok: [], falhas: [] };
+      if (!podeDarDono(sig)) { return Promise.reject(new Error('Só o gestor ou o líder deste setor dá dono.')); }
+      var seq = Promise.resolve();
+      atividades.forEach(function (a, i) {
+        seq = seq.then(function () {
+          if (setorPrincipal(a) !== sig || a.responsavelUid) { res.falhas.push({ titulo: a.titulo, msg: 'fora do setor ou já tem dono' }); if (onTick) { onTick(i + 1); } return null; }
+          var antes = { responsavelUid: a.responsavelUid || null, responsavelNome: a.responsavelNome || null, apelidoPlaceholder: a.apelidoPlaceholder === true };
+          var patch = { responsavelUid: alvo.uid, responsavelNome: alvo.nome, apelidoPlaceholder: false };
+          return Store.atualizarAtividade(a.id, patch, antes)
+            .then(function () { res.ok.push(a.id); })
+            .catch(function (e) { res.falhas.push({ titulo: a.titulo, msg: (e && e.message) || 'falha' }); })
+            .then(function () { if (onTick) { onTick(i + 1); } });
+        });
+      });
+      return seq.then(function () { return res; });
+    }
+
+    function abrirDarDono(sig) {
+      if (!podeDarDono(sig)) { toast('Só o gestor ou o líder deste setor dá dono.', 'err'); return; }
+      var pend = semDonoDoSetor(sig);
+      var cands = candidatosDono();
+      var marcadas = {};
+      var rodando = false;
+      var selAlvo, btnOk, prog, lista, contador;
+      function nMarcadas() { return Object.keys(marcadas).filter(function (k) { return marcadas[k]; }).length; }
+      function sync() { contador.textContent = String(nMarcadas()); btnOk.disabled = rodando || !nMarcadas() || !selAlvo.value; }
+
+      UI.modal({ title: 'Dar dono · ' + nomeSetor(sig), width: 600,
+        onClose: function () { if (!rodando) { renderPainelSetor(); } },
+        body: function () {
+          var w = el('<div class="dd-wrap"></div>');
+          var f1 = el('<div class="ui-field"></div>');
+          f1.appendChild(el('<div class="ui-flabel">Atribuir a <span class="req">*</span></div>'));
+          selAlvo = UI.select({ placeholder: cands.length ? 'Escolha a pessoa…' : 'Nenhuma pessoa disponível no seu escopo',
+            options: cands.map(function (u) { return { value: u.uid, label: u.nome }; }), onChange: function () { sync(); } });
+          f1.appendChild(selAlvo);
+          f1.appendChild(txt('div', 'ui-fhint', 'Sem dono conta contra quem responde pelo setor, não contra a pessoa. Um dono por atividade.'));
+          w.appendChild(f1);
+
+          var f2 = el('<div class="ui-field"></div>');
+          var lb = el('<div class="ui-flabel"></div>'); lb.textContent = 'Esperam dono (' + pend.length + ') — marque para atribuir em lote';
+          f2.appendChild(lb);
+          var todas = el('<label class="dd-row dd-all"><input type="checkbox"><span>Marcar todas</span></label>');
+          lista = el('<div class="dd-list"></div>');
+          pend.forEach(function (a) {
+            var r = el('<label class="dd-row"><input type="checkbox"><span class="t"></span></label>');
+            r.querySelector('.t').textContent = (a.codigo ? a.codigo + ' · ' : '') + (a.titulo || '(sem título)') + (a.responsavelNome ? ' — hoje: ' + a.responsavelNome : '');
+            var cb = r.querySelector('input');
+            cb.addEventListener('change', function () { marcadas[a.id] = cb.checked; sync(); });
+            lista.appendChild(r);
+          });
+          todas.querySelector('input').addEventListener('change', function (ev) {
+            var on = ev.target.checked;
+            Array.prototype.forEach.call(lista.querySelectorAll('input'), function (cb) { cb.checked = on; });
+            pend.forEach(function (a) { marcadas[a.id] = on; });
+            sync();
+          });
+          f2.appendChild(todas);
+          f2.appendChild(lista);
+          w.appendChild(f2);
+          prog = el('<div class="dd-prog" aria-live="polite"></div>');
+          w.appendChild(prog);
+          return w;
+        },
+        footer: function (close) {
+          var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: function () { if (!rodando) { close(); } } });
+          btnOk = el('<button type="button" class="ui-btn">Atribuir (<span>0</span>)</button>');
+          contador = btnOk.querySelector('span');
+          btnOk.addEventListener('click', function () {
+            var alvo = cands.filter(function (u) { return u.uid === selAlvo.value; })[0];
+            var alvos = pend.filter(function (a) { return marcadas[a.id]; });
+            if (!alvo || !alvos.length || rodando) { return; }
+            rodando = true; sync();
+            prog.className = 'dd-prog';
+            prog.textContent = 'Gravando 0/' + alvos.length + '…';
+            darDonoEmLote(sig, alvos, alvo, function (n) { prog.textContent = 'Gravando ' + n + '/' + alvos.length + '…'; })
+              .then(function (r) {
+                rodando = false;
+                if (!r.falhas.length) {
+                  toast(r.ok.length + ' atividade(s) com dono: ' + alvo.nome + '.');
+                  close(); refresh(); return;
+                }
+                prog.className = 'dd-prog err';
+                prog.textContent = r.ok.length + ' gravada(s) · ' + r.falhas.length + ' falharam: ' +
+                  r.falhas.map(function (f) { return (f.titulo || '?') + ' (' + f.msg + ')'; }).join('; ');
+                cancel.querySelector('span').textContent = 'Fechar';
+                btnOk.disabled = true;
+                refresh();
+              }, function (e) { rodando = false; prog.className = 'dd-prog err'; prog.textContent = (e && e.message) || 'Falha.'; sync(); });
+          });
+          return [cancel, btnOk];
+        }
+      });
+      sync();
+    }
+
+    /* ---------- quadro por etapa (v2 · decisões 15/09 noite) ----------
+       Padrão Todoist/Asana/Jira: 1 cartão por ATIVIDADE nas colunas; contagens
+       e limites contam atividades. Prioridade de coluna aberta:
+       ATRASADAS > FAZENDO > A FAZER (a mesma atividade não aparece em A FAZER
+       se já está atrasada ou em andamento).
+       A FAZER  = próxima ocorrência aberta de hoje em diante, SEM limite de período
+                  (padrão Asana: toda atividade aberta aparece com a data futura);
+                  "+N no período" conta as do período. O período vale para ATRASADAS.
+       FAZENDO  = ocorrência em andamento no prazo (cartão por ocorrência).
+       ATRASADAS= aberta com data efetiva vencida, agrupada; ✓ conclui a mais antiga (D6).
+       FEITAS   = concluídas nos últimos 7 dias (concluidaEm), agrupadas por atividade.
+       Quadro = setor inteiro para gestor/líder; "Só as minhas" é filtro opcional. */
+    var ET_SO_MINHAS = false;
+    var ET_FEITAS_DIAS = 7;
+
+    function etapaDe(o) {
+      if (o.status === 'concluida') { return 'feita'; }
+      if (o.status === 'pulada') { return 'pulada'; }
+      if (o.atrasada) { return 'atrasada'; }
+      if (o.status === 'em_andamento') { return 'fazendo'; }
+      return 'afazer'; /* pendente | reprogramada no prazo */
+    }
+    var ET_COLS = [
+      { k: 'afazer', t: 'A FAZER', vazio: 'Nada a fazer.' },
+      { k: 'fazendo', t: 'FAZENDO', vazio: 'Nada em andamento.' },
+      { k: 'atrasada', t: 'ATRASADAS', vazio: 'Nenhuma atividade atrasada.' },
+      { k: 'feita', t: 'FEITAS', vazio: 'Nada concluído nos últimos 7 dias.' }
+    ];
+
+    function etLentesVisivel() {
+      var w = document.querySelector('.glen-wrap');
+      if (w) { w.style.display = (view === 'etapas') ? 'none' : ''; }
+    }
+
+    /* mesmo recorte do quadro (papel + setor + "só as minhas" + busca) para docs soltos */
+    function etPassa(act) {
+      if (!act || !visivelPara(act, CURRENT_USER)) { return false; }
+      if (window.GrautCtx && !GrautCtx.aplicaAtividade(act, ctxAtual())) { return false; }
+      if (ET_SO_MINHAS && act.responsavelUid !== CURRENT_USER.uid) { return false; }
+      var term = search.trim().toLowerCase();
+      if (term) {
+        var hay = (act.titulo || '') + ' ' + (act.responsavelNome || '') + ' ' + (act.supervisorNome || '') + ' ' + setoresDe(act).join(' ') + ' ' + (act.subsetorSigla || '') + (act.todosSetores ? ' todos' : '');
+        if (hay.toLowerCase().indexOf(term) === -1) { return false; }
+      }
+      return true;
+    }
+
+    function agrupar(lista) {
+      var m = {}, out = [];
+      lista.forEach(function (o) {
+        var k = o.act.id;
+        if (!m[k]) { m[k] = { act: o.act, itens: [] }; out.push(m[k]); }
+        m[k].itens.push(o);
+      });
+      return out;
+    }
+    function porData(a, b) { return a.effDate < b.effDate ? -1 : (a.effDate > b.effDate ? 1 : 0); }
+
+    /* FEITAS: lê os docs de ocorrência carregados (carga desde hoje−45) */
+    function feitasRecentes() {
+      var ini = R.fromISO(R.addDias(R.hojeISO(), -(ET_FEITAS_DIAS - 1))).getTime();
+      var byId = {}; ATIV.forEach(function (a) { byId[a.id] = a; });
+      var lista = [];
+      OCC_DOCS.forEach(function (d) {
+        if (!d || d.status !== 'concluida' || !d.atividadeId) { return; }
+        var quando = (typeof d.concluidaEm === 'number') ? d.concluidaEm : null;
+        if (quando == null || quando < ini) { return; }
+        var act = byId[d.atividadeId];
+        if (!etPassa(act)) { return; }
+        lista.push({ key: act.id + '|' + d.data, act: act, origData: d.data, effDate: d.dataOverride || d.data, status: 'concluida',
+          ov: d, titulo: d.tituloOverride || act.titulo, horario: d.horarioOverride || act.horario || '', atrasada: false, quando: quando });
+      });
+      var grupos = agrupar(lista);
+      grupos.forEach(function (g) { g.itens.sort(function (a, b) { return b.quando - a.quando; }); });
+      grupos.sort(function (a, b) { return b.itens[0].quando - a.itens[0].quando; });
+      return grupos;
+    }
+
+    function renderEtapas() {
+      etLentesVisivel();
+      var base = BOARD_FULL.length ? BOARD_FULL : BOARD;
+      var sig = ctxAtual();
+      var g = { afazer: [], fazendo: [], atrasada: [], pulada: [] };
+      base.forEach(function (o) { var e = etapaDe(o); if (e !== 'feita') { g[e].push(o); } });
+
+      var atr = agrupar(g.atrasada);
+      atr.forEach(function (x) { x.itens.sort(porData); });
+      atr.sort(function (a, b) { return b.itens.length - a.itens.length || porData(a.itens[0], b.itens[0]); });
+      var ocupada = {};
+      atr.forEach(function (x) { ocupada[x.act.id] = 1; });
+      var faz = g.fazendo.slice().sort(porData);
+      faz.forEach(function (o) { ocupada[o.act.id] = 1; });
+      var afz = agrupar(g.afazer.filter(function (o) { return !ocupada[o.act.id]; }));
+      afz.forEach(function (x) { x.itens.sort(porData); });
+      /* 15/09 (5): atividade sem ocorrência aberta no período ainda aparece com a próxima data */
+      var temCartao = {}; afz.forEach(function (x) { temCartao[x.act.id] = 1; });
+      var wAf = windowFor(periodo), hojeAf = R.hojeISO();
+      var desde = R.compareISO(wAf.jFim, hojeAf) >= 0 ? R.addDias(wAf.jFim, 1) : hojeAf;
+      ATIV.forEach(function (act) {
+        if (temCartao[act.id] || ocupada[act.id] || !etPassa(act)) { return; }
+        var prox = R.proximas(act, desde, 1);
+        if (!prox.length) { return; }
+        afz.push({ act: act, itens: [{ key: act.id + '|' + prox[0], act: act, origData: prox[0], effDate: prox[0], status: 'pendente', ov: null,
+          titulo: act.titulo, horario: act.horario || '', atrasada: false, foraPeriodo: true }] });
+      });
+      afz.sort(function (a, b) { return porData(a.itens[0], b.itens[0]) || (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
+      var feitas = feitasRecentes();
+      var fazAtiv = {}; faz.forEach(function (o) { fazAtiv[o.act.id] = 1; });
+
+      var COL = {
+        afazer: { itens: afz, n: afz.length },
+        fazendo: { itens: faz, n: Object.keys(fazAtiv).length },
+        atrasada: { itens: atr, n: atr.length },
+        feita: { itens: feitas, n: feitas.length }
+      };
+
+      renderAvisoSobrecarga(base);
+
+      /* filtro rápido opcional (desligado por padrão) */
+      var fbar = el('<div class="et-fbar"></div>');
+      var chip = el('<button type="button" class="et-chip' + (ET_SO_MINHAS ? ' on' : '') + '"></button>');
+      chip.textContent = 'Só as minhas';
+      chip.setAttribute('aria-pressed', ET_SO_MINHAS ? 'true' : 'false');
+      chip.addEventListener('click', function () { ET_SO_MINHAS = !ET_SO_MINHAS; renderBoard(); updateCount(); });
+      fbar.appendChild(chip);
+      fbar.appendChild(txt('span', 'et-fhint', ET_SO_MINHAS ? 'Mostrando só as atividades em que você é o dono.' : 'Mostrando o setor inteiro.'));
+      stage.appendChild(fbar);
+
+      var board = el('<div class="et-board"></div>');
+      ET_COLS.forEach(function (c) {
+        var col = COL[c.k];
+        var lim = sig ? (ET_LIM[c.k] || 0) : 0;
+        var colEl = el('<div class="et-col c-' + c.k + (lim && col.n > lim ? ' over' : '') + '" data-etapa="' + c.k + '"></div>');
+        var hd = el('<div class="et-colh"></div>');
+        hd.appendChild(txt('span', 't', c.t));
+        var cnt = el('<span class="et-cnt"></span>');
+        cnt.appendChild(txt('span', 'n', String(col.n)));
+        if (lim) { cnt.appendChild(txt('span', 'wip', '/ ' + lim)); }
+        cnt.appendChild(infoAt('Contagem · ' + c.t, contagemInfo(c.k, COL, g, lim, sig)));
+        hd.appendChild(cnt);
+        colEl.appendChild(hd);
+        if (lim) {
+          var bar = el('<div class="et-wipbar"><span></span></div>');
+          bar.firstChild.style.width = Math.min(100, Math.round(100 * col.n / lim)) + '%';
+          colEl.appendChild(bar);
+        }
+        var body = el('<div class="et-body"></div>');
+        colEl.appendChild(body);
+        if (!col.itens.length) { body.appendChild(txt('div', 'et-empty', c.vazio)); }
+        else { desenharLote(body, col.itens, c.k, 0); }
+        ligarDrop(colEl, c.k);
+        board.appendChild(colEl);
+      });
+      stage.appendChild(board);
+
+      if (g.pulada.length) {
+        var ft = el('<div class="et-foot"></div>');
+        ft.appendChild(txt('span', null, g.pulada.length + ' ocorrência(s) pulada(s) no período — ficam fora do quadro.'));
+        ft.appendChild(infoAt('Puladas', { formula: 'Ocorrências com status pulada dentro do período.', dados: 'ocorrencias · status = pulada', numeros: String(g.pulada.length) }));
+        stage.appendChild(ft);
+      }
+      if (!CAN_WRITE) { stage.appendChild(txt('div', 'et-foot', 'Somente leitura: seu perfil não conclui nem move cartões nesta tela.')); }
+    }
+
+    function contagemInfo(k, COL, g, lim, sig) {
+      return function () {
+        var janela = windowFor(periodo);
+        var dados = 'período ' + fmtBR(janela.jIni) + ' a ' + fmtBR(janela.jFim) + ' · escopo do papel + setor + busca' + (ET_SO_MINHAS ? ' + só as minhas' : '');
+        var limTxt = lim ? ' Limite com 1 setor (' + sig + '): ' + lim + ' atividades.' : ' O limite só aparece com 1 setor selecionado.';
+        if (k === 'atrasada') {
+          var occ = 0; COL.atrasada.itens.forEach(function (x) { occ += x.itens.length; });
+          return { formula: 'Atividades com ao menos 1 ocorrência aberta (pendente, em andamento ou reprogramada) com data efetiva já vencida. 1 cartão por atividade.', dados: dados, numeros: COL.atrasada.n + ' atividade(s) · ' + occ + ' ocorrência(s) atrasada(s).' + limTxt };
+        }
+        if (k === 'fazendo') {
+          return { formula: 'Ocorrências em andamento com data efetiva de hoje em diante. A contagem é de atividades distintas.', dados: dados, numeros: COL.fazendo.n + ' atividade(s) · ' + COL.fazendo.itens.length + ' ocorrência(s).' + limTxt };
+        }
+        if (k === 'afazer') {
+          var tot = 0, fora = 0; COL.afazer.itens.forEach(function (x) { if (x.itens[0].foraPeriodo) { fora++; } else { tot += x.itens.length; } });
+          return { formula: 'Todas as atividades com próxima ocorrência aberta (pendente ou reprogramada) de hoje em diante, sem limite de período, ordenadas pela data. Não conta quem já está em ATRASADAS ou FAZENDO. Atividade com regra incompleta (sem data ou sem dia) não tem próxima data e não aparece.', dados: dados + ' · próxima data calculada pela regra da atividade', numeros: COL.afazer.n + ' atividade(s) · ' + (COL.afazer.n - fora) + ' com ocorrência no período (' + tot + ' ocorrências) · ' + fora + ' só depois do período.' };
+        }
+        var fo = 0; COL.feita.itens.forEach(function (x) { fo += x.itens.length; });
+        return { formula: 'Atividades com ocorrência concluída nos últimos ' + ET_FEITAS_DIAS + ' dias (pela hora da conclusão), 1 cartão por atividade.', dados: 'ocorrencias · status concluida · concluidaEm · escopo do papel + setor + busca', numeros: COL.feita.n + ' atividade(s) · ' + fo + ' conclusão(ões).' };
+      };
+    }
+
+    function desenharLote(body, itens, k, ini) {
+      var fim = Math.min(itens.length, ini + ET_LOTE);
+      var velho = body.querySelector('.et-more'); if (velho) { velho.parentNode.removeChild(velho); }
+      for (var i = ini; i < fim; i++) {
+        body.appendChild(k === 'fazendo' ? cartaoFazendo(itens[i]) : (k === 'feita' ? cartaoFeita(itens[i]) : (k === 'atrasada' ? cartaoAtrasado(itens[i]) : cartaoAFazer(itens[i]))));
+      }
+      if (fim < itens.length) {
+        var m = el('<button type="button" class="et-more"></button>');
+        m.textContent = 'mostrar mais ' + Math.min(ET_LOTE, itens.length - fim) + ' (' + (itens.length - fim) + ' restantes)';
+        m.addEventListener('click', function () { desenharLote(body, itens, k, fim); });
+        body.appendChild(m);
+      }
+    }
+
+    function rodapeDono(act, into) {
+      if (act.responsavelUid) {
+        var who = el('<span class="et-who"></span>');
+        who.appendChild(txt('span', 'av', initialsOf(act.responsavelNome || '?')));
+        who.appendChild(txt('span', 'nm', act.responsavelNome || '(sem nome)'));
+        into.appendChild(who);
+      } else {
+        var qr = quemResponde(setorPrincipal(act));
+        into.appendChild(txt('span', 'et-nodono', 'sem dono → ' + (qr.nomes.length ? qr.nomes[0] : 'quem responde pelo setor')));
+      }
+    }
+
+    function botaoAcao(titulo, path, fn) {
+      var b = el('<button type="button"></button>');
+      b.title = titulo; b.setAttribute('aria-label', titulo);
+      b.appendChild(ico(path, 14));
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); fn(); });
+      return b;
+    }
+
+    function arrastavel(card, payload) {
       if (!CAN_WRITE) { return; }
-      Store.setOcorrencia(o.act, o.origData, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia')
-        .then(function () { toast('Ocorrência concluída.'); refresh(); })
-        .catch(function (e) { toast(e.message, 'err'); });
+      card.setAttribute('draggable', 'true');
+      card.addEventListener('dragstart', function (e) { etDrag = payload; card.classList.add('drag'); try { e.dataTransfer.setData('text/plain', 'et'); e.dataTransfer.effectAllowed = 'move'; } catch (er) {} });
+      card.addEventListener('dragend', function () { card.classList.remove('drag'); etDrag = null; });
+    }
+
+    function montarCartao(titulo, linha, linhaCls, act, recTxt, acoes) {
+      var card = el('<div class="et-card" tabindex="0"></div>');
+      if (CAN_WRITE && acoes.length) {
+        var acts = el('<div class="et-acts"></div>');
+        acoes.forEach(function (a) { acts.appendChild(botaoAcao(a[0], a[1], a[2])); });
+        card.appendChild(acts);
+      }
+      card.appendChild(txt('div', 'et-ctitle', titulo));
+      if (linha) { card.appendChild(txt('div', linhaCls, linha)); }
+      var foot = el('<div class="et-cfoot"></div>');
+      rodapeDono(act, foot);
+      foot.appendChild(txt('span', 'et-rec', recTxt));
+      card.appendChild(foot);
+      return card;
+    }
+
+    function cartaoAFazer(gr) {
+      var o = gr.itens[0], n = o.foraPeriodo ? 0 : gr.itens.length;
+      var card = montarCartao(o.titulo, 'próxima: ' + dayLabel(o.effDate) + (o.foraPeriodo ? ' · fora do período' : (n > 1 ? ' · +' + (n - 1) + ' no período' : '')), 'et-next', gr.act,
+        RECOR_LABEL[gr.act.recorrencia] || 'Única',
+        [['Concluir a próxima', PATH.check, function () { concluir(o); }], ['Iniciar a próxima', PATH.play, function () { iniciar(o); }], ['Mais ações', PATH.dots, function () { actionsMenu(o); }]]);
+      arrastavel(card, { tipo: 'grupo', o: o, n: n, de: 'afazer' });
+      return card;
+    }
+
+    function cartaoFazendo(o) {
+      var card = montarCartao(o.titulo, 'em andamento · ' + dayLabel(o.effDate), 'et-next', o.act, RECOR_LABEL[o.act.recorrencia] || 'Única',
+        [['Concluir', PATH.check, function () { concluir(o); }], ['Mais ações', PATH.dots, function () { actionsMenu(o); }]]);
+      arrastavel(card, { tipo: 'occ', o: o, de: 'fazendo' });
+      return card;
+    }
+
+    function subAntiga(o, n) { return 'Conclui a ocorrência de ' + fmtBR(o.effDate) + ' (a mais antiga).' + (n > 1 ? ' Continuam atrasadas: ' + (n - 1) + '.' : ''); }
+
+    function cartaoAtrasado(gr) {
+      var o = gr.itens[0], n = gr.itens.length;
+      var card = montarCartao(o.titulo, (n === 1 ? 'atrasou 1× · ' : 'atrasou ' + n + '× desde ') + fmtBR(o.effDate), 'et-late', gr.act,
+        RECOR_LABEL[gr.act.recorrencia] || 'Única',
+        [['Concluir a mais antiga', PATH.check, function () { concluir(o, subAntiga(o, n)); }], ['Mais ações (mais antiga)', PATH.dots, function () { actionsMenu(o); }]]);
+      arrastavel(card, { tipo: 'grupo', o: o, n: n, de: 'atrasada' });
+      return card;
+    }
+
+    function cartaoFeita(gr) {
+      var o = gr.itens[0], n = gr.itens.length;
+      var d = new Date(o.quando);
+      var dd = pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
+      var card = montarCartao(o.titulo, 'feita ' + n + '× em ' + ET_FEITAS_DIAS + ' dias · última ' + dd, 'et-done', gr.act,
+        RECOR_LABEL[gr.act.recorrencia] || 'Única',
+        [['Desfazer a mais recente', PATH.undo, function () { reabrir(o); }], ['Mais ações', PATH.dots, function () { actionsMenu(o); }]]);
+      if (o.ov && o.ov.relato) { card.appendChild(txt('div', 'et-relato', o.ov.relato)); }
+      arrastavel(card, { tipo: 'feita', o: o, n: n, de: 'feita' });
+      return card;
+    }
+
+    function ligarDrop(col, k) {
+      if (!CAN_WRITE) { return; }
+      col.addEventListener('dragover', function (e) {
+        if (!etDrag || k === 'atrasada') { return; }   /* sem preventDefault = soltar proibido */
+        e.preventDefault(); col.classList.add('dragover');
+      });
+      col.addEventListener('dragleave', function () { col.classList.remove('dragover'); });
+      col.addEventListener('drop', function (e) {
+        col.classList.remove('dragover');
+        var p = etDrag; etDrag = null;
+        if (!p) { return; }
+        e.preventDefault();
+        if (k === 'atrasada') { toast('ATRASADAS é calculada pela data — conclua ou reprograme.', 'err'); return; }
+        if (p.de === k) { return; }
+        var o = p.o;
+        if (k === 'feita') { concluir(o, p.de === 'atrasada' ? subAntiga(o, p.n) : null); return; }
+        if (p.de === 'feita') { if (k === 'afazer') { reabrir(o); } else { toast('Desfaça a conclusão primeiro (arraste para A FAZER).', 'err'); } return; }
+        if (o.atrasada) { toast('Atrasada continua em ATRASADAS até ser concluída ou reprogramada.', 'err'); return; }
+        if (k === 'fazendo') { iniciar(o); return; }
+        if (k === 'afazer' && o.status === 'em_andamento') { retomar(o); }
+      });
+    }
+
+    /* aviso de sobrecarga: UMA faixa, nunca repetido em cartão */
+    function renderAvisoSobrecarga(base) {
+      var host = document.getElementById('at-aviso');
+      if (!host) { return; }
+      host.innerHTML = '';
+      var porPessoa = {}, nomes = {};
+      base.forEach(function (o) {
+        if (o.status === 'concluida' || o.status === 'pulada' || !o.act.responsavelUid) { return; }
+        var u = o.act.responsavelUid;
+        porPessoa[u] = porPessoa[u] || {}; porPessoa[u][o.act.id] = 1; nomes[u] = o.act.responsavelNome || '(sem nome)';
+      });
+      var sobre = Object.keys(porPessoa).map(function (u) { return { nome: nomes[u], n: Object.keys(porPessoa[u]).length }; })
+        .filter(function (x) { return x.n >= 8; }).sort(function (a, b) { return b.n - a.n; });
+      if (!sobre.length) { return; }
+      var w = el('<div class="et-warn"><span class="ic">!</span></div>');
+      var s = el('<span></span>');
+      s.appendChild(txt('b', null, 'Sobrecarga: '));
+      s.appendChild(document.createTextNode(sobre.map(function (x) { return x.nome + ' (' + x.n + ' atividades)'; }).join(', ') + ' — 8 ou mais na mesma pessoa. Redistribua parte em Dar dono.'));
+      w.appendChild(s);
+      w.appendChild(infoAt('Sobrecarga', { formula: 'Por pessoa: atividades distintas com ocorrência aberta (não concluída, não pulada) na janela. Aviso a partir de 8.',
+        dados: 'ocorrências da janela no escopo atual · responsavelUid', numeros: sobre.map(function (x) { return x.nome + ': ' + x.n; }).join(' · ') }));
+      host.appendChild(w);
+    }
+
+    /* ===================== mutações de ocorrência ===================== */
+    /* Item 1 (D2): concluir exige relato >= 60 (conclusao.js). Devolve Promise<boolean>:
+       false = cancelou/falhou -> o check otimista do UI.checkbox reverte. */
+    function concluir(o, sub) {
+      if (!CAN_WRITE) { return Promise.resolve(false); }
+      if (!window.GrautConclusao) { toast('Não carreguei o módulo de conclusão. Recarregue a página.', 'err'); return Promise.resolve(false); }
+      return GrautConclusao.pedir({ titulo: 'Concluir · ' + (o.titulo || ''), subtitulo: sub || ('Ocorrência de ' + fmtBR(o.effDate) + '.') })
+        .then(function (relato) {
+          if (relato == null) { return false; }
+          var agora = Date.now();
+          return Store.setOcorrencia(o.act, o.origData, { status: 'concluida', concluidaEm: agora, relato: relato, relatoEm: agora }, 'concluir_ocorrencia')
+            .then(function () { toast('Ocorrência concluída.'); refresh(); return true; })
+            .catch(function (e) { toast(e.message, 'err'); return false; });
+        });
     }
     function reabrir(o) {
       if (!CAN_WRITE) { return; }
@@ -1949,6 +2595,7 @@
       grpRecDates.appendChild(rowDates);
 
       var selDias = (editing && Array.isArray(act.diasSemana)) ? act.diasSemana.slice() : [];
+      if (editing && act.recorrencia === 'diario' && !selDias.length) { selDias = [1, 2, 3, 4, 5]; } /* 15/09: diária sem dias = segunda a sexta */
       var grpSemanal = el('<div class="at-grp"></div>');
       grpSemanal.appendChild(txt('div', 'at-note', 'Dias da semana:'));
       var wdays = el('<div class="at-wdays"></div>');
@@ -1958,6 +2605,8 @@
         wdays.appendChild(b);
       });
       grpSemanal.appendChild(wdays);
+      /* 15/09: ao escolher Diária sem dias marcados, pré-marca segunda a sexta */
+      function marcarDiasUteis() { selDias = [1, 2, 3, 4, 5]; Array.prototype.forEach.call(wdays.children, function (bt, ix) { bt.classList.toggle('on', selDias.indexOf(ix) !== -1); }); }
 
       var dmOpts = []; for (var dd = 1; dd <= 31; dd++) { dmOpts.push({ value: String(dd), label: 'Dia ' + dd }); }
       var dmSelect = UI.select({ value: editing && act.diaMes ? String(act.diaMes) : '', placeholder: '— Escolha o dia —', options: dmOpts });
@@ -1987,7 +2636,7 @@
       function show(node, on) { node.style.display = on ? '' : 'none'; }
       function setRecVis(t) {
         show(grpRecDates, t && t !== 'unico');
-        show(grpSemanal, t === 'semanal');
+        show(grpSemanal, t === 'semanal' || t === 'diario');
         show(grpMensal, t === 'mensal' || t === 'bimestral' || t === 'trimestral');
         show(grpQuinz, t === 'quinzenal');
         show(grpUnico, t === 'unico');
@@ -1996,7 +2645,7 @@
       var recSelect = UI.select({
         value: editing ? act.recorrencia : '', placeholder: '— Selecione —',
         options: [{ value: 'diario', label: 'Diária' }, { value: 'semanal', label: 'Semanal' }, { value: 'quinzenal', label: 'Quinzenal (dias 1 e 15)' }, { value: 'mensal', label: 'Mensal' }, { value: 'bimestral', label: 'Bimestral (a cada 2 meses)' }, { value: 'trimestral', label: 'Trimestral (a cada 3 meses)' }, { value: 'unico', label: 'Data única' }],
-        onChange: function (v) { setRecVis(v); }
+        onChange: function (v) { if (v === 'diario' && !selDias.length) { marcarDiasUteis(); } setRecVis(v); }
       });
       var recField = UI.field({ label: 'Recorrência', required: true, control: recSelect });
       setRecVis(editing ? act.recorrencia : '');
@@ -2028,7 +2677,7 @@
         if (!titulo) { errs.push('Informe o título.'); }
         if (!setor) { errs.push('Escolha o setor.'); }
         if (!tipo) { errs.push('Escolha a recorrência.'); }
-        if (tipo === 'semanal' && !selDias.length) { errs.push('Marque ao menos um dia da semana.'); }
+        if ((tipo === 'semanal' || tipo === 'diario') && !selDias.length) { errs.push('Marque ao menos um dia da semana.'); }
         if ((tipo === 'mensal' || tipo === 'bimestral' || tipo === 'trimestral') && !dmSelect.value) { errs.push('Escolha o dia do mês.'); }
         if (tipo === 'unico' && !R.isISO(unInp.value)) { errs.push('Escolha a data única.'); }
         if (tipo && tipo !== 'unico' && !R.isISO(diInp.value)) { errs.push('Escolha a data de início.'); }
@@ -2050,7 +2699,7 @@
           supervisorNome: supSelect.value ? (((supSelect.options[supSelect.selectedIndex] || {}).text) || '') : null,
           recorrencia: tipo,
           horario: hrInp.value || null,
-          diasSemana: tipo === 'semanal' ? selDias.slice().sort(function (a, b) { return a - b; }) : null,
+          diasSemana: (tipo === 'semanal' || tipo === 'diario') ? selDias.slice().sort(function (a, b) { return a - b; }) : null,
           diaMes: (tipo === 'mensal' || tipo === 'bimestral' || tipo === 'trimestral') ? parseInt(dmSelect.value, 10) : null,
           data: tipo === 'unico' ? unInp.value : null,
           deslizante: tipo === 'unico' ? !!deslizState : null,

@@ -601,6 +601,7 @@
     card.appendChild(row);
     bodyEl.appendChild(card);
     renderManutencao(); /* F1-D(d): zona de manutenção (gestor) abaixo do passo 1 */
+    renderDelta(); /* Item 1 (15/09): aplicador de correção JSON por id (gestor) */
   }
 
   /* ============================================================
@@ -882,6 +883,263 @@
     }
     card.appendChild(row);
     bodyEl.appendChild(card);
+  }
+
+  /* ============================================================
+     ITEM 1 (15/09/2026) · APLICADOR DE DELTA JSON POR ID (Gestor)
+     ------------------------------------------------------------
+     Formato: { colecao:'atividades', operacoes:[{ id, patch, backup }] }
+     (mesmo de 2026-09-11_DELTA_DESATIVAR.json e
+      2026-09-15_DELTA_MARCO_ZERO.json).
+     · Prévia campo a campo: backup do arquivo × valor atual no banco.
+       Divergência (ou doc inexistente, ou backup sem o campo) BLOQUEIA
+       a operação. Banco já igual ao patch = "já aplicada" (pula).
+     · Grava SÓ as chaves do patch (+ atualizadoEm). Relê o doc
+       imediatamente antes de gravar (se mudou entre a prévia e a
+       gravação, bloqueia).
+     · Cada op gravada → 1 linha no atividade_log (acao aplicar_delta)
+       + 1 resumo (acao delta_resumo).
+     · Gera arquivo de REVERSÃO (patch ↔ backup) das ops gravadas.
+     · Quota: teto 20.000 escritas/dia contado NESTE aparelho e NESTA
+       tela (localStorage). Não enxerga escritas de outras telas —
+       por isso cada rodada também tem teto próprio.
+     ============================================================ */
+  var DL_TETO_DIA = 20000;
+  var DL_CAMPOS_PROIBIDOS = ['id', '_id', 'criadoPor', 'criadoEm', 'atualizadoEm'];
+  var DL_COLECOES = ['atividades'];
+
+  function dlNorm(v) { return (v === undefined) ? null : v; }
+  function dlIgual(a, b) {
+    a = dlNorm(a); b = dlNorm(b);
+    if (a === b) { return true; }
+    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') { return false; }
+    try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
+  }
+  function dlMostra(v) {
+    v = dlNorm(v);
+    if (v === null) { return '(vazio)'; }
+    if (typeof v === 'object') { try { return JSON.stringify(v); } catch (e) { return '[objeto]'; } }
+    return String(v);
+  }
+  function dlChaveDia() { return 'gera_delta_writes_' + R.hojeISO(); }
+  function dlUsadasHoje() { try { return parseInt(localStorage.getItem(dlChaveDia()) || '0', 10) || 0; } catch (e) { return 0; } }
+  function dlSomarHoje(n) { try { localStorage.setItem(dlChaveDia(), String(dlUsadasHoje() + n)); } catch (e) { } }
+  function dlBaixar(nome, obj) {
+    var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = nome;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 800);
+  }
+
+  /* Validação ESTRUTURAL do arquivo (pura). Devolve { critico:[], ops:[{op, erros:[]}] } */
+  function dlValidarArquivo(obj) {
+    var out = { critico: [], ops: [] };
+    if (!obj || typeof obj !== 'object') { out.critico.push('Arquivo não é um JSON de objeto.'); return out; }
+    if (DL_COLECOES.indexOf(obj.colecao) === -1) { out.critico.push('Coleção "' + dlMostra(obj.colecao) + '" não é aceita. Aceita: ' + DL_COLECOES.join(', ') + '.'); }
+    if (!Array.isArray(obj.operacoes) || !obj.operacoes.length) { out.critico.push('Campo "operacoes" ausente ou vazio.'); return out; }
+    var vistos = {};
+    obj.operacoes.forEach(function (op, i) {
+      var erros = [];
+      if (!op || typeof op.id !== 'string' || !op.id) { erros.push('sem id'); }
+      if (!op || !op.patch || typeof op.patch !== 'object' || !Object.keys(op.patch).length) { erros.push('patch vazio'); }
+      if (!op || !op.backup || typeof op.backup !== 'object') { erros.push('sem backup'); }
+      if (op && op.patch && op.backup) {
+        Object.keys(op.patch).forEach(function (k) {
+          if (DL_CAMPOS_PROIBIDOS.indexOf(k) !== -1) { erros.push('campo proibido: ' + k); }
+          if (!Object.prototype.hasOwnProperty.call(op.backup, k)) { erros.push('backup sem o campo ' + k); }
+        });
+      }
+      if (op && op.id) { if (vistos[op.id]) { erros.push('id repetido no arquivo'); } vistos[op.id] = true; }
+      out.ops.push({ idx: i, op: op || {}, erros: erros });
+    });
+    return out;
+  }
+
+  function dlLerDoc(id) {
+    return fb().then(function (c) {
+      return c.f.getDoc(c.f.doc(c.db, 'atividades', id)).then(function (snap) { return snap.exists() ? snap.data() : null; });
+    }).catch(function (e) { throw ferr(e); });
+  }
+
+  /* Classifica 1 op contra o doc atual: ok | ja_aplicada | bloqueada */
+  function dlClassificar(item, atual) {
+    var op = item.op, campos = [];
+    if (item.erros.length) { return { estado: 'bloqueada', motivo: item.erros.join('; '), campos: campos }; }
+    if (atual === null) { return { estado: 'bloqueada', motivo: 'documento não existe no banco', campos: campos }; }
+    var diverge = false, todasJa = true;
+    Object.keys(op.patch).forEach(function (k) {
+      var bk = op.backup[k], at = atual[k], nv = op.patch[k];
+      var ja = dlIgual(at, nv);
+      var okB = dlIgual(at, bk);
+      if (!ja) { todasJa = false; }
+      if (!ja && !okB) { diverge = true; }
+      campos.push({ campo: k, backup: bk, atual: at, novo: nv, estado: ja ? 'ja' : (okB ? 'ok' : 'diverge') });
+    });
+    if (todasJa) { return { estado: 'ja_aplicada', motivo: 'banco já tem o valor novo', campos: campos }; }
+    if (diverge) { return { estado: 'bloqueada', motivo: 'valor atual ≠ backup do arquivo', campos: campos }; }
+    return { estado: 'ok', motivo: '', campos: campos };
+  }
+
+  function renderDelta() {
+    if (!ehGestor()) { return; }
+    var card = el('<div class="im-card" style="margin-top:16px"></div>');
+    card.appendChild(txt('div', 'im-step', 'Aplicar correção em lote · Gestor'));
+    card.appendChild(txt('div', 'im-card-t', 'Aplicar arquivo de correção (JSON por id)'));
+    card.appendChild(txt('div', 'im-hint', 'Para os arquivos de saneamento (ex.: DELTA_DESATIVAR, DELTA_MARCO_ZERO). Cada linha do arquivo traz o valor de antes (backup) e o novo (patch). Só grava se o banco ainda estiver igual ao backup; se não estiver, a linha é bloqueada. Ao final baixa um arquivo de reversão.'));
+    var row = el('<div class="im-row" style="align-items:center;flex-wrap:wrap"></div>');
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.className = 'dl-file';
+    row.appendChild(inp);
+    var st = txt('span', 'im-hint', 'Escritas desta tela hoje neste aparelho: ' + dlUsadasHoje() + ' / ' + DL_TETO_DIA);
+    row.appendChild(st);
+    card.appendChild(row);
+    var area = el('<div class="dl-area"></div>');
+    card.appendChild(area);
+    inp.addEventListener('change', function () {
+      var f = inp.files && inp.files[0];
+      area.innerHTML = '';
+      if (!f) { return; }
+      var rd = new FileReader();
+      rd.onerror = function () { area.appendChild(txt('div', 'dl-msg err', 'Não consegui ler o arquivo.')); };
+      rd.onload = function () {
+        var obj;
+        try { obj = JSON.parse(String(rd.result || '').replace(/^\ufeff/, '')); }
+        catch (e) { area.appendChild(txt('div', 'dl-msg err', 'JSON inválido: ' + e.message)); return; }
+        dlPrevia(area, f.name, obj);
+      };
+      rd.readAsText(f, 'utf-8');
+    });
+    bodyEl.appendChild(card);
+  }
+
+  function dlPrevia(area, nome, obj) {
+    var v = dlValidarArquivo(obj);
+    if (v.critico.length) {
+      area.appendChild(txt('div', 'dl-msg err', 'BLOQUEADO: ' + v.critico.join(' ')));
+      return;
+    }
+    var prog = txt('div', 'dl-msg', 'Lendo ' + v.ops.length + ' documento(s) no banco para comparar…');
+    area.appendChild(prog);
+    var res = [];
+    var seq = Promise.resolve();
+    v.ops.forEach(function (item, i) {
+      seq = seq.then(function () {
+        var p = (item.op && typeof item.op.id === 'string' && item.op.id) ? dlLerDoc(item.op.id) : Promise.resolve(null);
+        return p.then(function (atual) { res.push({ item: item, atual: atual, cl: dlClassificar(item, atual) }); },
+          function (e) { res.push({ item: item, atual: null, cl: { estado: 'bloqueada', motivo: 'erro de leitura: ' + e.message, campos: [] } }); })
+          .then(function () { if (i % 10 === 9) { prog.textContent = 'Lendo ' + (i + 1) + '/' + v.ops.length + '…'; } });
+      });
+    });
+    seq.then(function () { area.innerHTML = ''; dlRenderPrevia(area, nome, obj, res); });
+  }
+
+  function dlRenderPrevia(area, nome, obj, res) {
+    var ok = res.filter(function (r) { return r.cl.estado === 'ok'; });
+    var ja = res.filter(function (r) { return r.cl.estado === 'ja_aplicada'; });
+    var bl = res.filter(function (r) { return r.cl.estado === 'bloqueada'; });
+    var escritas = ok.length * 2 + 1;
+    var usadas = dlUsadasHoje();
+    var estoura = (usadas + escritas) > DL_TETO_DIA;
+
+    var resumo = el('<div class="dl-sum"></div>');
+    [['Arquivo', nome], ['Operações', String(res.length)], ['Prontas para gravar', String(ok.length)], ['Já aplicadas (pula)', String(ja.length)], ['Bloqueadas', String(bl.length)],
+     ['Escritas previstas', escritas + ' (1 gravação + 1 histórico por op + 1 resumo)']].forEach(function (p) {
+      var d = el('<div class="dl-kv"></div>'); d.appendChild(txt('span', 'k', p[0])); d.appendChild(txt('span', 'v', p[1])); resumo.appendChild(d);
+    });
+    area.appendChild(resumo);
+    if (bl.length) { area.appendChild(txt('div', 'dl-msg err', bl.length + ' operação(ões) bloqueada(s) — não serão gravadas. Veja o motivo na tabela.')); }
+    if (estoura) { area.appendChild(txt('div', 'dl-msg err', 'Teto diário estouraria (' + usadas + ' + ' + escritas + ' > ' + DL_TETO_DIA + '). Divida o arquivo ou rode amanhã.')); }
+
+    var wrap = el('<div class="dl-tablewrap"></div>');
+    var tb = el('<table class="dl-table"><thead><tr><th>Estado</th><th>Código · título</th><th>Campo</th><th>Backup do arquivo</th><th>Valor no banco</th><th>Novo valor</th></tr></thead><tbody></tbody></table>');
+    var body = tb.querySelector('tbody');
+    var ordem = bl.concat(ok, ja);
+    var ROT = { ok: 'Pronta', ja_aplicada: 'Já aplicada', bloqueada: 'Bloqueada' };
+    ordem.forEach(function (r) {
+      var op = r.item.op;
+      var nomeOp = (op.codigo && op.codigo !== '(sem)' ? op.codigo + ' · ' : '') + (op.titulo || (r.atual && r.atual.titulo) || op.id || '?');
+      var campos = r.cl.campos.length ? r.cl.campos : [{ campo: '—', backup: null, atual: null, novo: null, estado: 'diverge' }];
+      campos.forEach(function (c, j) {
+        var tr = document.createElement('tr');
+        tr.className = 'dl-' + r.cl.estado + (c.estado === 'diverge' ? ' dl-div' : '');
+        var td0 = document.createElement('td');
+        if (j === 0) { td0.textContent = ROT[r.cl.estado] + (r.cl.motivo ? ' — ' + r.cl.motivo : ''); }
+        tr.appendChild(td0);
+        [j === 0 ? nomeOp : '', c.campo, dlMostra(c.backup), dlMostra(c.atual), dlMostra(c.novo)].forEach(function (x) { tr.appendChild(txt('td', null, x)); });
+        body.appendChild(tr);
+      });
+    });
+    wrap.appendChild(tb);
+    area.appendChild(wrap);
+
+    var rowb = el('<div class="im-row"></div>');
+    var cancelar = UI.button({ label: 'Descartar', variant: 'ghost', onClick: function () { area.innerHTML = ''; } });
+    rowb.appendChild(cancelar);
+    if (ok.length && !estoura) {
+      var ir = UI.button({ label: 'Aplicar ' + ok.length + ' operação(ões)', icon: 'check' });
+      ir.addEventListener('click', function () {
+        UI.modal({ title: 'Confirmar gravação', width: 480,
+          body: txt('div', 'im-hint', 'Gravar ' + ok.length + ' operação(ões) de "' + nome + '" na coleção atividades? ' + bl.length + ' bloqueada(s) e ' + ja.length + ' já aplicada(s) ficam de fora. Ao final baixa o arquivo de reversão.'),
+          footer: function (close) {
+            return [UI.button({ label: 'Voltar', variant: 'ghost', onClick: close }),
+              UI.button({ label: 'Gravar agora', icon: 'check', onClick: function () { close(); dlExecutar(area, nome, obj, ok); } })];
+          } });
+      });
+      rowb.appendChild(ir);
+    }
+    area.appendChild(rowb);
+  }
+
+  function dlExecutar(area, nome, obj, ok) {
+    area.innerHTML = '';
+    var prog = txt('div', 'dl-msg', 'Gravando 0/' + ok.length + '…');
+    area.appendChild(prog);
+    var feitas = [], falhas = [], escritas = 0;
+    var seq = Promise.resolve();
+    ok.forEach(function (r, i) {
+      seq = seq.then(function () {
+        var op = r.item.op;
+        return dlLerDoc(op.id).then(function (atual) {
+          var cl = dlClassificar(r.item, atual);
+          if (cl.estado !== 'ok') { falhas.push({ id: op.id, codigo: op.codigo || '', msg: 'mudou desde a prévia: ' + cl.motivo }); return null; }
+          var up = {}; Object.keys(op.patch).forEach(function (k) { up[k] = op.patch[k]; });
+          up.atualizadoEm = Date.now();
+          return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'atividades', op.id), up); })
+            .then(function () {
+              escritas++;
+              feitas.push(op);
+              return Store.log({ acao: 'aplicar_delta', entidade: 'atividade', refId: op.id, antes: op.backup, depois: op.patch, arquivo: nome })
+                .then(function () { escritas++; });
+            }, function (e) { falhas.push({ id: op.id, codigo: op.codigo || '', msg: ferr(e).message }); });
+        }, function (e) { falhas.push({ id: op.id, codigo: op.codigo || '', msg: 'erro de leitura: ' + e.message }); })
+          .then(function () { prog.textContent = 'Gravando ' + (i + 1) + '/' + ok.length + '…'; });
+      });
+    });
+    seq.then(function () {
+      return Store.log({ acao: 'delta_resumo', entidade: 'importacao', refId: null, antes: null,
+        depois: { arquivo: nome, gravadas: feitas.length, falhas: falhas.length, previstas: ok.length } }).then(function () { escritas++; });
+    }).then(function () {
+      dlSomarHoje(escritas);
+      area.innerHTML = '';
+      var base = String(nome || 'delta').replace(/\.json$/i, '');
+      var rev = { geradoEm: R.hojeISO(), origem: 'reversao de ' + nome, colecao: obj.colecao,
+        observacao: 'Aplicar no mesmo aplicador para desfazer. patch = valor de antes; backup = valor gravado.',
+        operacoes: feitas.map(function (op) { return { id: op.id, codigo: op.codigo || null, titulo: op.titulo || null, patch: op.backup, backup: op.patch }; }) };
+      if (feitas.length) { dlBaixar(R.hojeISO() + '_REVERSAO_' + base + '.json', rev); }
+      area.appendChild(txt('div', 'dl-msg' + (falhas.length ? ' err' : ' ok'),
+        feitas.length + ' gravada(s) · ' + falhas.length + ' falha(s) · ' + escritas + ' escrita(s).' + (feitas.length ? ' Arquivo de reversão baixado.' : '')));
+      if (falhas.length) {
+        var ul = el('<div class="dl-fail"></div>');
+        falhas.forEach(function (f) { ul.appendChild(txt('div', null, (f.codigo || f.id) + ': ' + f.msg)); });
+        area.appendChild(ul);
+      }
+      if (feitas.length) {
+        var again = UI.button({ label: 'Baixar reversão de novo', variant: 'ghost', icon: 'upload', onClick: function () { dlBaixar(R.hojeISO() + '_REVERSAO_' + base + '.json', rev); } });
+        area.appendChild(again);
+      }
+      toast(falhas.length ? (falhas.length + ' operação(ões) falharam.') : ('Correção aplicada: ' + feitas.length + ' operação(ões).'), falhas.length ? 'err' : undefined);
+    });
   }
 
   /* ===================== estados / boot ===================== */

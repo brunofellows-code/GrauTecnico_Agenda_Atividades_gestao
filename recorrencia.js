@@ -9,7 +9,8 @@
      - Ocorrência nunca tocada NÃO tem doc → ausência = pendente.
 
    7 tipos (decisões travadas):
-     diario     — todo dia, de dataInicio até dataFim (ou aberto)
+     diario     — dias úteis: se diasSemana preenchido, só os dias marcados;
+                  vazio/ausente = segunda a sexta (decisão 15/09/2026)
      semanal    — dias da semana em `diasSemana` (0=Dom … 6=Sáb)
      quinzenal  — dias FIXOS 1 e 15 de cada mês
      mensal     — dia `diaMes`; 29–31 CLAMPA p/ o último dia do mês
@@ -197,9 +198,12 @@
 
     var d, guard;
     if (tipo === RECORRENCIAS.DIARIO) {
+      /* 15/09/2026: diária = dias marcados; sem dias marcados = segunda a sexta */
+      var dDias = (Array.isArray(ativ.diasSemana) && ativ.diasSemana.length) ? ativ.diasSemana : [1, 2, 3, 4, 5];
       guard = 0;
       for (d = ini; compareISO(d, fim) <= 0 && guard < 4000; d = addDias(d, 1)) {
-        out.push(d); guard++;
+        if (dDias.indexOf(diaSemana(d)) !== -1) { out.push(d); }
+        guard++;
       }
     } else if (tipo === RECORRENCIAS.SEMANAL) {
       var dows = ativ.diasSemana;
