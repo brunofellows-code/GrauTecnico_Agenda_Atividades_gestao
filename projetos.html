@@ -1067,6 +1067,67 @@
 
   /* Detalhe da reunião (F1-E): horas+atraso · presença · pauta · rollforward ·
      decisões por dono · resumo/ata obrigatório para encerrar.               */
+  /* Módulo 2 (noite 15/09) · a próxima instância da série nasce ao FECHAR a
+     ata da anterior — padrão Fellow/Ninety: série que depende de alguém
+     lembrar de criar morre na terceira semana. Os itens abertos rolam junto
+     com o contador de vezes (na 3ª, o motor marca como assunto).
+     Não duplica: se já existe reunião da mesma série naquela data, não cria. */
+  function criarProximaInstancia(r) {
+    if (!window.ReunioesMotor) { return Promise.resolve(); }
+    var prox = ReunioesMotor.proximaData(r.tipo, r.data);
+    if (!prox) { return Promise.resolve(); }   /* avulsa não tem próxima */
+    var serie = ReunioesMotor.serieIdDe(r);
+    var jaTem = REUN.filter(function (x) {
+      return x.data === prox && ReunioesMotor.serieIdDe(x) === serie;
+    }).length > 0;
+    if (jaTem) { return Promise.resolve(); }
+    var rolados = ReunioesMotor.rolarItens(r.pautaItens || []);
+    var doc = {
+      titulo: r.titulo || (TIPO_LABEL[r.tipo] || 'Reunião'),
+      data: prox,
+      tipo: r.tipo,
+      setorSigla: r.setorSigla || null,
+      horaPrevista: r.horaPrevista || null,
+      horaInicioReal: null, encerradaEm: null,
+      convocados: (r.convocados || []).slice(),
+      convocadosUids: (r.convocadosUids || []).slice(),
+      convidadosExternos: (r.convidadosExternos || []).slice(),
+      presentes: [],
+      pautaTexto: null, pautaGeradaEm: null,
+      pautaItens: rolados,
+      pautaBlocos: PautaModelo.blocosNovos(r.tipo),
+      preparo: PautaModelo.preparoNovo(r.tipo),
+      notaReuniao: null,
+      resumoTexto: '',
+      participantesUids: [], decisoes: [],
+      serieId: serie,
+      origemReuniaoId: r.id
+    };
+    return Store.criarReuniao(doc).then(function () {
+      toast('Próxima ' + (TIPO_LABEL[r.tipo] || 'reunião') + ' criada para ' + fmtBR(prox) +
+        (rolados.length ? (' com ' + rolados.length + ' item(ns) que rolaram.') : '.'));
+      return reload();
+    });
+  }
+
+  /* Módulo 2 · nomes para a ata: convocados, presentes e quem avisou que não vem. */
+  function nomesDaReuniao(r) {
+    var nomes = {};
+    (r.convocados || []).forEach(function (c) { if (c && c.uid) { nomes[c.uid] = c.nome || nomeUser(c.uid); } });
+    (r.presentes || []).forEach(function (p) {
+      var uid = typeof p === 'string' ? p : (p && p.uid);
+      if (uid && !nomes[uid]) { nomes[uid] = nomeUser(uid); }
+    });
+    var k;
+    for (k in (r.recusas || {})) {
+      if (Object.prototype.hasOwnProperty.call(r.recusas, k) && !nomes[k]) { nomes[k] = nomeUser(k); }
+    }
+    (r.decisoes || []).forEach(function (d) {
+      if (d && d.donoUid && !nomes[d.donoUid]) { nomes[d.donoUid] = nomeUser(d.donoUid); }
+    });
+    return nomes;
+  }
+
   function fillReuniao(r, box, atualizaMeta) {
     function redesenhar() { box.innerHTML = ''; fillReuniao(r, box, atualizaMeta); if (atualizaMeta) { atualizaMeta(); } }
     function podeEditar() { return CAN_WRITE() && !r.encerradaEm; }
@@ -1108,6 +1169,19 @@
         } }));
       }
       if (!r.encerradaEm) {
+        /* Módulo 2 · ata em 1 clique. O texto é determinístico (sem IA): sai
+           do reunioes-motor.js com presentes, ausentes com motivo, decisões
+           com dono, demandas com prazo e a média das notas. Cai no campo de
+           resumo para quem conduziu revisar — nunca grava sozinho. */
+        cab.appendChild(UI.button({ label: 'Gerar ata', variant: 'ghost', onClick: function () {
+          if (!window.ReunioesMotor) { toast('reunioes-motor.js não carregou — recarregue a página.', 'err'); return; }
+          if (!taResumo) { toast('Abra o bloco "Resumo / ata" primeiro.', 'err'); return; }
+          var texto = ReunioesMotor.ataTexto(r, { nomes: nomesDaReuniao(r), demandas: [] });
+          taResumo.value = texto;
+          try { taResumo.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) { /* autosave dispara no blur */ }
+          taResumo.focus();
+          toast('Ata montada. Revise e complete antes de encerrar.');
+        } }));
         cab.appendChild(UI.button({ label: 'Encerrar reunião', icon: 'check', onClick: function () {
           var resumo = (taResumo ? taResumo.value : (r.resumoTexto || '')).trim();
           if (!resumo) { toast('Preencha o resumo para encerrar. Sem ata, a reunião não fecha.', 'err'); return; }
@@ -1136,6 +1210,11 @@
               dEnc.pauta = null; dEnc.resumo = null; /* congelou — rascunhos cumpridos */
               toast('Reunião encerrada — ata registrada.');
               redesenhar();
+              /* Módulo 2 · a série continua sozinha. Se a criação da próxima
+                 falhar, o encerramento JÁ está gravado: só avisa, nunca desfaz. */
+              return criarProximaInstancia(r).catch(function (e2) {
+                toast('Reunião encerrada, mas a próxima da série não foi criada: ' + e2.message, 'err');
+              });
             })
             .catch(function (e) { toast(e.message, 'err'); });
         } }));
