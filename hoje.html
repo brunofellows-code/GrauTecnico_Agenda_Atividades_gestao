@@ -341,6 +341,24 @@
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
 
+  /* CORREÇÃO (noite de 15/09) · O BOARD NÃO TEM titulo NEM horario.
+     Cada item do board do kpi.js tem estas chaves e só estas: act, origData,
+     effDate, status, responsavel, semResp, uid, ov, atrasada. Esta tela lia
+     o.titulo em três lugares e o.horario em quatro. Como o txt() acima
+     transforma indefinido em string vazia, o NOME DA ATIVIDADE saía EM
+     BRANCO — na linha do tempo, no checkbox do dia e na lista de atrasadas —
+     sem nenhum erro no console. E, como o.horario era sempre indefinido, a
+     separação "com hora / sem hora" jogava TUDO em "sem hora": a faixa por
+     horário nunca enchia.
+     O nome e a hora moram em o.act; a ocorrência pode reescrever os dois
+     (tituloOverride / horarioOverride), como o quadro de Atividades já faz. */
+  function tituloDe(o) {
+    return (o && o.ov && o.ov.tituloOverride) || (o && o.act && o.act.titulo) || '(sem título)';
+  }
+  function horarioDe(o) {
+    return (o && o.ov && o.ov.horarioOverride) || (o && o.act && o.act.horario) || '';
+  }
+
   /* ---------- Firestore (mesmo padrão do atividades/kpi) ---------- */
   var _fb = null;
   function fb() {
@@ -685,9 +703,9 @@
       if (o.effDate === hoje && o.status !== 'pulada') { doHoje.push(o); }
     });
     atras.sort(function (a, b) { return a.effDate < b.effDate ? -1 : 1; });
-    var comHora = doHoje.filter(function (o) { return !!o.horario; })
+    var comHora = doHoje.filter(function (o) { return !!horarioDe(o); })
       .sort(function (a, b) { return (a.horario || '') < (b.horario || '') ? -1 : 1; });
-    var semHora = doHoje.filter(function (o) { return !o.horario; })
+    var semHora = doHoje.filter(function (o) { return !horarioDe(o); })
       .sort(function (a, b) { return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
     var feitasHoje = doHoje.filter(function (o) { return o.status === 'concluida'; }).length;
     return { doHoje: doHoje, atras: atras, comHora: comHora, semHora: semHora, feitasHoje: feitasHoje };
@@ -698,7 +716,7 @@
     var state = o.status === 'concluida' ? 'done' : (o.status === 'em_andamento' ? 'now' : 'todo');
     var timeClass = state === 'now' ? 'tcol-now' : state === 'done' ? 'tcol-done' : 'tcol-todo';
     var row = el('<div class="hj-tlrow"></div>');
-    row.appendChild(txt('div', 'hj-time ' + timeClass, o.horario || ''));
+    row.appendChild(txt('div', 'hj-time ' + timeClass, horarioDe(o)));
     row.appendChild(el('<div class="hj-rail"><div class="hj-seg" style="height:14px"></div><div class="node ' + state + '"></div><div class="hj-seg" style="flex:1"></div></div>'));
     var ev = el('<div class="hj-ev"></div>');
     var card = el('<div class="hj-evcard ' + (state === 'now' ? 'now' : 'std') + '"></div>');
@@ -709,7 +727,7 @@
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-evsec', 'em andamento'); em.style.color = 'var(--doing)'; meta.appendChild(em); }
     var trTl = chipTrava(o); if (trTl) { meta.appendChild(trTl); }
     card.appendChild(meta);
-    card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), o.titulo));
+    card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), tituloDe(o)));
     if (PODE_AGIR(o)) {
       var acts = el('<div class="hj-rowacts"></div>');
       if (state === 'done') { acts.appendChild(miniBtn('Reabrir', function () { reabrir(o); })); }
@@ -728,7 +746,7 @@
     var row = el('<div class="hj-daytask"></div>');
     var done = o.status === 'concluida';
     row.appendChild(UI.checkbox({
-      checked: done, label: o.titulo,
+      checked: done, label: tituloDe(o),
       /* R7·B1.3: devolver false/Promise → o checkbox REVERTE o visual quando
          a gravação é barrada ou falha (antes pintava ✓ e mentia). */
       onToggle: function () {
@@ -760,7 +778,7 @@
     dd.appendChild(txt('div', 'hj-late-dl', days === 1 ? 'DIA' : 'DIAS'));
     row.appendChild(dd);
     var main = el('<div class="hj-late-main"></div>');
-    main.appendChild(txt('div', 'hj-late-t', o.titulo));
+    main.appendChild(txt('div', 'hj-late-t', tituloDe(o)));
     var sigs = o.act.todosSetores ? 'Todos os setores' : KPI.setoresDe(o.act, MODELO.setores).join(' · ');
     var camTx = (o.act.camada && CAMADA_LABEL[o.act.camada]) ? ' · ' + CAMADA_LABEL[o.act.camada] : '';
     main.appendChild(txt('div', 'hj-late-s', sigs + camTx + (o.responsavel ? ' · ' + o.responsavel : '')));
