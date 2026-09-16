@@ -1,0 +1,124 @@
+/* ============================================================
+   mod-usuarios.css · GERA — modulo 6 (Usuarios)
+   ------------------------------------------------------------
+   SO as classes NOVAS da tela de usuarios:
+     - lista agrupada por setor (com o vazio "Sem equipe cadastrada");
+     - faixa de conta de teste;
+     - marca de socio na linha;
+     - cadastro em lote (passo a passo + previa antes de gravar).
+   O <style> que ja existia dentro de usuarios.html continua la,
+   intacto. Cor 100% por token do theme.css — zero hex neste arquivo.
+   ============================================================ */
+
+/* ---------- ajuste dos dois filtros da barra ----------
+   O check primitivo RISCA o rótulo quando marcado — combina com "tarefa feita",
+   mas aqui ele é um liga/desliga de filtro, e riscar faria parecer cancelado.
+   Correção escopada só a esta barra; o components.css continua intocado. */
+.us-toolright .ui-check .label.done { color: var(--text); text-decoration: none; }
+
+/* ---------- lista agrupada por setor ---------- */
+.us-grupo { margin-bottom: 22px; }
+.us-grupo:last-child { margin-bottom: 0; }
+
+.us-ghead {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 0 2px 8px; margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.us-gnome { font-size: 14px; font-weight: 800; letter-spacing: -.01em; color: var(--text); }
+.us-gsigla {
+  font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--muted);
+  background: var(--chipBg); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px;
+}
+.us-gsub { font-size: 12px; font-weight: 600; color: var(--muted); margin-left: auto; }
+.us-gsub b { color: var(--text); font-weight: 800; }
+.us-gfilho .us-gnome::before { content: "\21B3"; margin-right: 6px; color: var(--muted2); }
+
+/* vazio compacto: com 8 setores, um bloco alto por setor vazio empurraria a
+   lista inteira para baixo da dobra. Uma linha só diz o mesmo. */
+.us-gvazio {
+  font-size: 12.5px; font-weight: 500; color: var(--muted); line-height: 1.5;
+  background: var(--s1); border: 1px dashed var(--border); border-radius: 12px;
+  padding: 11px 14px;
+}
+.us-gvazio b { color: var(--text); font-weight: 800; }
+
+/* ---------- faixa de aviso (conta de teste) ---------- */
+.us-faixa {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--s2); border: 1px solid var(--amber); border-radius: 13px;
+  padding: 13px 16px; margin-bottom: 16px;
+}
+.us-faixa .ic { display: inline-flex; flex: none; color: var(--amber); }
+.us-faixa .tx { flex: 1; min-width: 240px; font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.5; }
+.us-faixa .tx span { display: block; margin-top: 2px; font-size: 12.5px; font-weight: 500; color: var(--muted); }
+
+/* ---------- marca de socio na linha ---------- */
+.us-socio {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .04em; flex: none;
+  border-radius: 6px; padding: 3px 8px;
+  background: var(--activeBg); color: var(--greenText); border: 1px solid var(--green);
+}
+.us-ibtn.socio.on { color: var(--greenText); border-color: var(--green); }
+
+/* ---------- cadastro em lote ---------- */
+.us-passo {
+  font-size: 12.5px; font-weight: 600; color: var(--muted); line-height: 1.6;
+  background: var(--s2); border: 1px solid var(--border); border-radius: 11px;
+  padding: 12px 14px; margin-bottom: 14px;
+}
+.us-passo b { color: var(--text); }
+.us-passo ol { margin: 7px 0 0; padding-left: 18px; }
+.us-passo li { margin-bottom: 4px; }
+
+.us-ta {
+  width: 100%; min-height: 128px; resize: vertical; display: block;
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 1.55;
+  color: var(--text); background: var(--s2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 11px 12px;
+}
+.us-ta::placeholder { color: var(--muted2); font-weight: 500; }
+.us-ta:focus { outline: none; border-color: var(--brand); background: var(--s1); }
+.us-ta:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.us-loteacts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+
+.us-resumo {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 12.5px; font-weight: 700; color: var(--muted);
+  padding: 11px 13px; margin: 16px 0 10px;
+  background: var(--s2); border: 1px solid var(--border); border-radius: 11px;
+}
+.us-resumo b { color: var(--text); font-weight: 800; }
+.us-resumo .ok { color: var(--greenText); }
+.us-resumo .bad { color: var(--red); }
+.us-resumo .warn { color: var(--amber); }
+
+.us-prev { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow: auto; padding: 2px; }
+.us-pl { border: 1px solid var(--border); border-radius: 11px; background: var(--s2); padding: 10px 12px; }
+.us-pl.pronto { border-color: var(--green); }
+.us-pl.erro { border-color: var(--red); }
+.us-pl.ja { opacity: .7; }
+.us-plh { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.us-pn { font-size: 10.5px; font-weight: 800; color: var(--muted2); flex: none; }
+.us-pnome { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.us-pmail { font-size: 12px; font-weight: 500; color: var(--muted); }
+.us-pchip {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .03em; flex: none;
+  border-radius: 6px; padding: 2px 7px;
+  background: var(--chipBg); color: var(--muted); border: 1px solid var(--border);
+}
+.us-pchip.ok { background: var(--activeBg); color: var(--greenText); border-color: var(--green); }
+.us-pchip.bad { color: var(--red); border-color: var(--red); }
+.us-pchip.warn { color: var(--amber); border-color: var(--amber); }
+.us-pmsg { font-size: 12px; font-weight: 600; line-height: 1.5; margin-top: 6px; color: var(--red); }
+.us-pwarn { font-size: 12px; font-weight: 600; line-height: 1.5; margin-top: 6px; color: var(--amber); }
+.us-pnota { font-size: 12px; font-weight: 500; line-height: 1.5; margin-top: 6px; color: var(--muted); }
+.us-puid { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.us-puid .rot { font-size: 11.5px; font-weight: 700; color: var(--muted); flex: none; }
+.us-puid .ui-input { font-size: 12.5px; }
+
+@media (max-width: 900px) {
+  .us-gsub { margin-left: 0; width: 100%; }
+  .us-prev { max-height: none; }
+}
