@@ -268,6 +268,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="pareto-motor.js"></script><!-- módulo 8: a conta das rotinas que mais falham -->
   <script src="ctx.js"></script>
   <script src="lentes.js"></script>
   <script>
@@ -463,7 +464,12 @@
     r.appendChild(el('<span class="dd-meta">' + st.l + '</span>'));
     return r;
   }
-  function abrirDrill(titulo, itens) {
+  /* janelaLabel (módulo 8): quase todo drill usa a janela da tela, mas o
+     cartão "As rotinas que mais falham" conta desde o marco zero, que é
+     outra janela. Sem este parâmetro o rodapé do modal diria uma janela que
+     não é a do número — mentira pequena, e mentira pequena em painel é o
+     que faz gestor parar de confiar. */
+  function abrirDrill(titulo, itens, janelaLabel) {
     UI.modal({
       title: titulo,
       width: 640,
@@ -471,7 +477,7 @@
         var box = document.createElement('div');
         box.appendChild(el('<div class="dd-count">' + itens.length + ' item(ns)' +
           (itens.length > DD_TETO ? ' · mostrando os ' + DD_TETO + ' primeiros' : '') +
-          ' · janela: ' + rotuloPeriodo(PERIODO) + '</div>'));
+          ' · janela: ' + (janelaLabel || rotuloPeriodo(PERIODO)) + '</div>'));
         if (!itens.length) {
           box.appendChild(el('<div class="dd-empty">Nenhum item compõe este número agora.</div>'));
           return box;
@@ -514,6 +520,160 @@
       }).sort(function (a, b) { return ((b.atrasada ? 1 : 0) - (a.atrasada ? 1 : 0)) || ddOrdData(a, b); });
     }
   };
+
+  /* ---------- As rotinas que mais falham (módulo 8 · noite de 15/09) ------
+     POR QUE ESTE CARTÃO EXISTE
+     O Livro do Produto pede o Pareto "por pessoa / setor / alavanca". A tela
+     só tinha POR SETOR — que responde "onde está o acúmulo", não "qual
+     rotina está falhando". Esta segunda pergunta é a que a reunião de terça
+     usa. Junto vem o terceiro bloco do Livro, "padrões de atraso", que não
+     existia em lugar nenhum: o motivo de impedimento que mais se repete em
+     cada rotina.
+
+     CONTA PRÓPRIA? NÃO. A conta inteira mora no pareto-motor.js, provada por
+     64 casos. Aqui só se lê o banco e se desenha — a tela nunca recalcula.
+
+     POR QUE CONSULTA PRÓPRIA. A janela da tela (atrasadas + 30 dias) cobre o
+     marco zero só até 31/10; a partir daí ela cortaria o começo da medição
+     em silêncio. Esta leitura é sempre "de 16/09 até hoje".
+
+     ESCOPO. Usa ATIV, que já vem recortado pelo papel (líder vê o próprio
+     setor) e pelo filtro global de setor. Reler as atividades do zero faria
+     este cartão divergir dos outros — e ninguém entenderia por quê.        */
+  var ROTINAS_TOKEN = 0;
+  function rotinasQueMaisFalham() {
+    if (!window.ParetoMotor || !KPI._buildBoard) { return null; }
+    var MARCO = ParetoMotor.MARCO_ZERO;
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">As rotinas que mais falham</div>'));
+    card.appendChild(h);
+    var corpo = el('<div class="pf-plano"></div>');
+    corpo.appendChild(el('<div class="pf-plano-act">Contando desde ' + brData(MARCO) + '…</div>'));
+    card.appendChild(corpo);
+
+    var meu = ++ROTINAS_TOKEN;
+    fbi().then(function (c) {
+      var q = c.f.query(c.f.collection(c.db, 'ocorrencias'),
+        c.f.where('data', '>=', MARCO), c.f.where('data', '<=', HOJE), c.f.limit(3000));
+      return c.f.getDocs(q);
+    }).then(function (snap) {
+      if (meu !== ROTINAS_TOKEN) { return; }
+      var docs = [];
+      snap.forEach(function (d) { docs.push(Object.assign({ id: d.id }, d.data())); });
+      var noTeto = docs.length >= 3000;
+      var board = KPI._buildBoard(ATIV, docs, { jIni: MARCO, jFim: HOJE }, HOJE);
+      var porAtiv = {};
+      board.forEach(function (o) {
+        var id = o.act && o.act.id;
+        if (!id) { return; }
+        if (!porAtiv[id]) { porAtiv[id] = { act: o.act, occs: [] }; }
+        porAtiv[id].occs.push(o);
+      });
+      var itens = [];
+      Object.keys(porAtiv).forEach(function (id) {
+        var g = porAtiv[id];
+        var r = ParetoMotor.resumoAtividade(g.occs, MARCO, HOJE);
+        if (!r.previstas) { return; }
+        itens.push({
+          chave: id,
+          rotulo: (g.act && g.act.titulo) || '(sem título)',
+          falhas: r.falhas, previstas: r.previstas,
+          atrasos: r.atrasos, travas: r.travas, puladas: r.puladas, foraDoPrazo: r.foraDoPrazo,
+          motivoQueMaisRepete: r.motivoQueMaisRepete
+        });
+      });
+      var p = ParetoMotor.pareto(itens);
+
+      corpo.innerHTML = '';
+      if (p.vazio) {
+        var vaz = el('<div class="pf-empty2"></div>');
+        vaz.textContent = p.mensagemVazia + ' A lista enche quando uma rotina vencer em aberto, travar com motivo, for pulada ou for entregue depois do dia.';
+        corpo.appendChild(vaz);
+        corpo.appendChild(el('<a class="dd-go" href="atividades.html">Ver o quadro em Atividades →</a>'));
+        h.appendChild(infoBtn({
+          title: 'As rotinas que mais falham',
+          formula: 'falhas de cada rotina, da data do marco zero até hoje.',
+          dados: 'as ocorrências planejadas de ' + brData(MARCO) + ' até hoje, cruzadas com as atividades do seu escopo.',
+          numeros: 'nenhuma falha registrada até agora · ' + itens.length + ' rotina(s) já com ocorrência vencida'
+        }));
+        return;
+      }
+
+      var max = p.linhas[0].falhas;
+      var acumAnterior = 0;
+      var poucas = 0;
+      var coberturaPoucas = 0;
+      p.linhas.forEach(function (x) {
+        /* "concentra" = as linhas até (e incluindo) aquela em que o acumulado
+           cruza 80%. De propósito NÃO chamo isso de "vital": no resto do
+           produto "vital" é uma das 5 alavancas, e a mesma palavra com duas
+           contas fere a regra "um critério, uma palavra". */
+        var concentra = acumAnterior < 80;
+        if (concentra) { poucas += 1; coberturaPoucas = x.pctAcumulado; }
+        acumAnterior = x.pctAcumulado;
+        var tok = concentra ? 'red' : 'muted2';
+
+        var row = el('<div class="pf-ss-row dd-click"></div>');
+        row.title = 'Clique para ver as ocorrências desta rotina desde ' + brData(MARCO);
+        row.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + tok + ')"></span>'));
+        var nome = el('<span class="pf-ss-nome"></span>');
+        nome.textContent = x.rotulo;
+        row.appendChild(nome);
+        var tr = el('<div class="pf-ss-track"></div>');
+        tr.appendChild(el('<div class="pf-ss-fill" style="width:' + Math.round(x.falhas / max * 100) + '%;background:var(--' + tok + ')"></div>'));
+        row.appendChild(tr);
+        var num = el('<span class="pf-ss-num" style="color:var(--' + tok + ')"></span>');
+        num.textContent = x.falhas + ' · Σ' + x.pctAcumulado + '%';
+        row.appendChild(num);
+        (function (id, rotulo) {
+          row.addEventListener('click', function () {
+            var lista = (porAtiv[id] ? porAtiv[id].occs : []).slice().sort(ddOrdPend);
+            abrirDrill(rotulo + ' — desde ' + brData(MARCO), lista, 'de ' + brData(MARCO) + ' até hoje');
+          });
+        }(x.chave, x.rotulo));
+        corpo.appendChild(row);
+
+        /* A divisão do que falhou. É ela que diz o remédio: impedimento pede
+           destravar, entrega fora do dia pede prazo realista, pulada pede
+           conversa sobre a rotina existir. */
+        var det = [];
+        if (x.atrasos) { det.push(x.atrasos + ' venceu(ram) em aberto'); }
+        if (x.foraDoPrazo) { det.push(x.foraDoPrazo + ' entregue(s) depois do dia'); }
+        if (x.travas) { det.push(x.travas + ' com impedimento'); }
+        if (x.puladas) { det.push(x.puladas + ' pulada(s)'); }
+        var sub = el('<div class="pf-plano-act"></div>');
+        sub.textContent = det.join(' · ') + ' · em ' + x.previstas + ' previstas' +
+          (x.motivoQueMaisRepete
+            ? (' · o que mais travou: ' + ParetoMotor.rotuloMotivo(x.motivoQueMaisRepete.motivo).toLowerCase() + ', ' + x.motivoQueMaisRepete.vezes + '×')
+            : '');
+        corpo.appendChild(sub);
+      });
+
+      var rod = el('<div class="pf-plano-act"></div>');
+      rod.textContent = 'Estas ' + poucas + ' rotina(s) concentram ' + coberturaPoucas +
+        '% das falhas desde ' + brData(MARCO) + '. Atacar estas primeiro rende mais do que espalhar esforço.';
+      corpo.appendChild(rod);
+
+      h.appendChild(infoBtn({
+        title: 'As rotinas que mais falham',
+        formula: 'falha de uma rotina = venceu e continua aberta, ou foi entregue depois do dia, ou travou com motivo, ou foi pulada — contando UMA vez por ocorrência, mesmo quando cai em mais de um caso. As rotinas entram em ordem decrescente até somarem 80% das falhas (no mínimo 3, no máximo 10).',
+        dados: 'as ocorrências planejadas de ' + brData(MARCO) + ' até hoje, cruzadas com as atividades do seu escopo. Ocorrência que ainda não venceu não entra — nem como falha, nem no total de previstas.',
+        numeros: p.total + ' falha(s) no total · ' +
+          p.linhas.slice(0, 3).map(function (x) { return x.rotulo + ' ' + x.falhas; }).join(' · ') +
+          ' → acumulado ' + coberturaPoucas + '%',
+        nota: noTeto ? 'Li o teto de 3.000 ocorrências: pode haver rotina de fora desta conta. Se aparecer, me avise para paginar a leitura.' : null
+      }));
+    }).catch(function (e) {
+      if (meu !== ROTINAS_TOKEN) { return; }
+      corpo.innerHTML = '';
+      var er = el('<div class="pf-plano-act"></div>');
+      er.textContent = 'Não consegui ler as ocorrências desde ' + brData(MARCO) + ': ' +
+        ((e && e.message) || 'erro ao ler o banco') + '. O resto do painel continua válido.';
+      corpo.appendChild(er);
+    });
+    return card;
+  }
 
   /* ---------- KPIs de topo (grandes) ---------- */
   function toneAder(v) { return v == null ? 'muted2' : v >= 90 ? 'green' : v >= 80 ? 'amber' : 'red'; }
@@ -1371,10 +1531,17 @@
     secA.appendChild(row2);
     var pa = chartPareto(m);                    /* F1-H: 80/20 das atrasadas (Juran) */
     if (pa) { pa.style.marginTop = '13px'; pa.setAttribute('data-lente', 'numeros'); secA.appendChild(pa); }
+    /* Módulo 8 · a outra dimensão do Pareto: por ROTINA, não por setor. */
+    var rf = rotinasQueMaisFalham();
+    if (rf) { rf.style.marginTop = '13px'; rf.setAttribute('data-lente', 'numeros'); secA.appendChild(rf); }
 
     /* R3 · lente EU FAÇO — minha parte nestes números (mesmo board; zero query nova) */
     (function () {
-      var minhas = (m.board || []).filter(function (o) { return o.act && o.act.responsavelUid === USER.uid; });
+      /* CORREÇÃO (noite 15/09): era (m.board || []), e m.board NÃO EXISTE —
+         KPI.computar não devolve o board (veja o return no kpi.js). O cartão
+         mostrava sempre 0 aberta(s) e 0 atrasada(s) para todo mundo, sem
+         erro no console. O board da tela é a global BOARD. */
+      var minhas = (BOARD || []).filter(function (o) { return o.act && o.act.responsavelUid === USER.uid; });
       var abertas = minhas.filter(function (o) { return o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada'; });
       var atr = minhas.filter(function (o) { return o.atrasada; });
       var mb = el('<div class="pf-card"></div>');
