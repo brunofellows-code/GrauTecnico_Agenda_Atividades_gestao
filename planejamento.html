@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="mod-planejamento.css"><!-- módulo 3 (noite 15/09): janela 25-28, célula da grade, acompanhamento -->
 <script src="theme.js"></script>
 <script src="guard.js"></script>
 <script src="mnav.js"></script>
@@ -153,7 +154,8 @@ h3.pl-sname{font-size:13px;font-weight:800}
         <span id="pl-info"></span>
         <div class="pl-actions" id="pl-actions"></div>
       </div>
-      <div class="pl-legenda">Previsto × realizado do setor — visível a todos. Entrega até o <b>dia 25</b> do mês anterior.</div><!-- R6/design: manual completo mora no "i" do eixo, não na tela (Krug) -->
+      <div class="pl-legenda">Previsto × realizado do setor — visível a todos. Entrega até o <b>dia 25</b> do mês anterior.</div>
+<!-- R6/design: manual completo mora no "i" do eixo, não na tela (Krug) -->
       <div id="pl-body"></div>
     </main>
   </div>
@@ -166,6 +168,7 @@ h3.pl-sname{font-size:13px;font-weight:800}
   <script src="riscos-catalogo.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="planejamento-motor.js"></script><!-- módulo 3: janela 25-28, acompanhamento, resgate -->
   <script type="module">
   (function () {
   'use strict';
@@ -2209,6 +2212,19 @@ h3.pl-sname{font-size:13px;font-weight:800}
       actionsEl.appendChild(nb);
     }
     bodyEl.innerHTML = '';
+    /* Módulo 3 (noite 15/09) · a janela do planejamento fica à vista. A tela
+       nunca some fora do período: ela diz QUANDO abre. O gestor pode abrir
+       fora da janela, e a tela avisa que a passagem fica registrada. */
+    if (window.PlanejamentoMotor) {
+      var jn = PlanejamentoMotor.janela(R.hojeISO());
+      var ehGestorJ = !!(window.Guard && Guard.isGestor && Guard.isGestor());
+      var banner = txt('div', 'pl-janela' + (jn.aberta ? ' aberta' : ''), jn.mensagem);
+      if (!jn.aberta && ehGestorJ) {
+        banner.textContent = jn.mensagem + ' · Como gestor, você pode abrir fora da janela — fica registrado.';
+      }
+      banner.setAttribute('role', 'status');
+      bodyEl.appendChild(banner);
+    }
     /* itens 5 e 12 — além do aviso de leitura truncada (AVISOS, nasce na carga),
        entram os avisos DERIVADOS do dado: plano órfão, catálogo de risco que não
        carregou e setor raiz sem mapeamento de risco. Nada falha em silêncio. */
