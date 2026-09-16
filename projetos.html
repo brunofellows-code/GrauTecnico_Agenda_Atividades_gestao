@@ -784,6 +784,13 @@
     return m ? decodeURIComponent(m[1]) : '';
   }());
   var ALVO_R_FEITO = false;
+  /* CORREÇÃO (noite de 15/09) · o aviso logo acima estava certo, e eu caí
+     nele. O link direto do Hoje ("Encerrar esta reunião") sempre aponta para
+     uma reunião que JÁ PASSOU — é isso que o Hoje cobra. Com a lista abrindo
+     em "Próximas", a linha dela nunca era desenhada, o bloco que rola até ela
+     nunca disparava, e o botão levava a uma tela muda. Havendo alvo, a lista
+     abre mostrando tudo. */
+  if (ALVO_R) { VIEW_QUANDO = 'todas'; VIEW_TIPO = 'todas'; }
 
   function renderReuniaoRow(r, container) {
     var row = el('<div class="pj-rrow"></div>');
@@ -805,7 +812,12 @@
       if (window.ReunioesMotor) {
         var c = ReunioesMotor.contagemConvites(r);
         rsvpEl.textContent = '✓ ' + c.vou + '  ✗ ' + c.naoVou + '  ? ' + c.semResposta;
-        rsvpEl.title = c.total + ' convocado(s): ' + c.vou + ' vão, ' + c.naoVou + ' não vão, ' + c.semResposta + ' sem resposta.';
+        /* O total daqui conta só quem responde pelo sistema. A linha de cima
+           soma os convidados de fora, que não têm onde responder — sem esta
+           frase, os dois números na mesma linha pareciam brigar. */
+        var deFora = (r.convidadosExternos || []).length;
+        rsvpEl.title = c.total + ' convocado(s) pelo sistema: ' + c.vou + ' vão, ' + c.naoVou + ' não vão, ' + c.semResposta + ' sem resposta.' +
+          (deFora ? (' Os ' + deFora + ' convidado(s) de fora não respondem por aqui.') : '');
         var dur = ReunioesMotor.duracaoDe(r.tipo);
         if (dur) { rsvpEl.title += ' Roteiro de ' + dur + ' min.'; }
         seloAta.style.display = ReunioesMotor.semAta(r, R.hojeISO()) ? '' : 'none';
@@ -814,9 +826,14 @@
     }
     atualizaMeta();
     head.appendChild(metaEl);
-    head.appendChild(rsvpEl);
-    head.appendChild(seloAta);
     row.appendChild(head);
+    /* Fora do cabeçalho de propósito: .pj-rrow-h é uma linha flex em que só o
+       título estica. Pendurar mais dois filhos ali fazia o título encolher e
+       virar reticências num notebook. Embaixo, cada sinal tem o seu espaço. */
+    var sinais = el('<div class="pj-rrow-sinais"></div>');
+    sinais.appendChild(rsvpEl);
+    sinais.appendChild(seloAta);
+    row.appendChild(sinais);
 
     var open = false;
     var box = el('<div style="display:none;margin-top:8px"></div>');
@@ -1177,10 +1194,35 @@
           if (!window.ReunioesMotor) { toast('reunioes-motor.js não carregou — recarregue a página.', 'err'); return; }
           if (!taResumo) { toast('Abra o bloco "Resumo / ata" primeiro.', 'err'); return; }
           var texto = ReunioesMotor.ataTexto(r, { nomes: nomesDaReuniao(r), demandas: [] });
-          taResumo.value = texto;
-          try { taResumo.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) { /* autosave dispara no blur */ }
-          taResumo.focus();
-          toast('Ata montada. Revise e complete antes de encerrar.');
+          /* CORREÇÃO (noite de 15/09): antes isto sobrescrevia direto o que a
+             pessoa tinha digitado durante a reunião — e o salvamento
+             automático gravava a perda 800 ms depois, sem desfazer. Havendo
+             texto, quem conduz escolhe o que fazer com ele. */
+          var jaEscrito = String(taResumo.value || '').trim();
+          function aplicaAta(juntar) {
+            taResumo.value = juntar
+              ? (texto + '\n\n--- escrito durante a reunião ---\n' + jaEscrito)
+              : texto;
+            try { taResumo.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) { /* o salvamento também dispara ao sair do campo */ }
+            taResumo.focus();
+            toast('Ata montada. Revise e complete antes de encerrar.');
+          }
+          if (!jaEscrito) { aplicaAta(false); return; }
+          UI.modal({
+            title: 'Você já escreveu nesta ata', width: 460,
+            body: [(function () {
+              var d = el('<div class="pj-dec-t"></div>');
+              d.textContent = 'Há ' + jaEscrito.length + ' caractere(s) escritos aqui. O que fazer com eles?';
+              return d;
+            }())],
+            footer: function (close) {
+              return [
+                UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+                UI.button({ label: 'Juntar os dois', variant: 'ghost', onClick: function () { close(); aplicaAta(true); } }),
+                UI.button({ label: 'Trocar pelo gerado', icon: 'check', onClick: function () { close(); aplicaAta(false); } })
+              ];
+            }
+          });
         } }));
         cab.appendChild(UI.button({ label: 'Encerrar reunião', icon: 'check', onClick: function () {
           var resumo = (taResumo ? taResumo.value : (r.resumoTexto || '')).trim();
@@ -2292,7 +2334,14 @@
     } else if (MODO_REUN === 'kanban') {
       card.appendChild(kanbanReunioes(REUNV));
     } else {
-      REUNV.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })
+      REUNV.slice().sort(function (a, b) {
+        /* Passadas e Todas: a mais recente no topo. Próximas: a mais PERTO no
+           topo — a lista existe para preparar a reunião que vem, e com a ordem
+           antiga a de amanhã ficava por último. */
+        return VIEW_QUANDO === 'proximas'
+          ? (a.data || '').localeCompare(b.data || '')
+          : (b.data || '').localeCompare(a.data || '');
+      })
         .forEach(function (r) { renderReuniaoRow(r, card); });
     }
     bodyEl.appendChild(card);

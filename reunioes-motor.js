@@ -188,7 +188,16 @@
   function rolarItens(itens) {
     var out = [];
     (itens || []).forEach(function (it) {
-      var st = it.status || 'aberta';
+      /* CORREÇÃO (noite de 15/09): só rola item que TEM ciclo de vida.
+         Nesta tela, item de pauta é gravado como { texto, uid, nome } — sem
+         status — e não existe onde marcá-lo como feito. Rolando por padrão,
+         100% dos itens eram copiados para a reunião seguinte toda semana e a
+         pauta virava um depósito, sem ninguém conseguir limpar. Item sem
+         status é recado daquela reunião; compromisso é decisão ou demanda,
+         que têm status. Quando a tela ganhar o "marcar como feita", o item
+         passa a ter status e volta a rolar sozinho. */
+      if (typeof it.status !== 'string' || !it.status) { return; }
+      var st = it.status;
       if (st === 'feita' || st === 'resolvida' || st === 'descartada') { return; }
       var n = (typeof it.semanasRolando === 'number' ? it.semanasRolando : 0) + 1;
       var novo = {};
@@ -205,7 +214,10 @@
     return out;
   }
   function percentFeitas(itens) {
-    var lista = (itens || []).filter(function (it) { return (it.secao || 'acoes') === 'acoes'; });
+    /* CORREÇÃO (noite de 15/09): era (it.secao || 'acoes'), então TODO item de
+       pauta sem seção entrava como "ação" e a ata dizia "0 de 4 feitas (0%)"
+       sobre recados que nunca foram ações. Só conta o que foi marcado ação. */
+    var lista = (itens || []).filter(function (it) { return it && it.secao === 'acoes'; });
     if (!lista.length) { return { feitas: 0, total: 0, pct: null, bate: null, meta: META_ACOES }; }
     var feitas = lista.filter(function (it) { return it.status === 'feita'; }).length;
     var pct = feitas / lista.length;
@@ -302,24 +314,34 @@
     });
     linhas.push('');
 
+    /* CORREÇÃO (noite de 15/09): seção sem nada para mostrar fica FORA da ata.
+       Antes, toda ata saía com "DEMANDAS (0) — (nenhuma)" e "NOTA DA REUNIÃO:
+       (ninguém deu nota)", porque a tela ainda não passa demanda nem tem onde
+       dar nota. Uma ata que afirma, em documento assinado, que a reunião não
+       gerou demanda nenhuma — quando gerou — é pior do que uma ata sem a
+       seção. O que não existe não é declarado. */
     var demandas = o.demandas || [];
-    linhas.push('DEMANDAS (' + demandas.length + ')');
-    if (!demandas.length) { linhas.push('- (nenhuma)'); }
-    demandas.forEach(function (d) {
-      linhas.push('- ' + (d.texto || '(sem texto)') + ' · ' + nomeDe(nomes, d.destinoUid) + ' · até ' + (d.prazo || 'sem prazo'));
-    });
-    linhas.push('');
+    if (demandas.length) {
+      linhas.push('DEMANDAS (' + demandas.length + ')');
+      demandas.forEach(function (d) {
+        linhas.push('- ' + (d.texto || '(sem texto)') + ' · ' + nomeDe(nomes, d.destinoUid) + ' · até ' + (d.prazo || 'sem prazo'));
+      });
+      linhas.push('');
+    }
 
     var m = mediaNotas(r.notas);
-    linhas.push('NOTA DA REUNIÃO: ' + (m.media == null ? '(ninguém deu nota)' : (m.media + ' (' + m.responderam + ' resposta' + (m.responderam === 1 ? '' : 's') + ')')));
-    if (m.sugestoes.length) {
-      linhas.push('O que faria ser 10:');
-      m.sugestoes.forEach(function (s) { linhas.push('- ' + s); });
+    if (m.responderam) {
+      linhas.push('NOTA DA REUNIÃO: ' + m.media + ' (' + m.responderam + ' resposta' + (m.responderam === 1 ? '' : 's') + ')');
+      if (m.sugestoes.length) {
+        linhas.push('O que faria ser 10:');
+        m.sugestoes.forEach(function (s) { linhas.push('- ' + s); });
+      }
     }
     var pf = percentFeitas(r.pautaItens);
     if (pf.total) {
       linhas.push('');
-      linhas.push('Ações da vez anterior: ' + pf.feitas + ' de ' + pf.total + ' feitas (' + Math.round(pf.pct * 100) + '%).');
+      /* "desta reunião", não "da vez anterior": a lista é a desta instância. */
+      linhas.push('Ações desta reunião: ' + pf.feitas + ' de ' + pf.total + ' feitas (' + Math.round(pf.pct * 100) + '%).');
     }
     return linhas.join('\n');
   }

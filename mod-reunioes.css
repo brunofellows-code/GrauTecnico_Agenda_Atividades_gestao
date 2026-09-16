@@ -5,6 +5,17 @@
    (todo sinal tem rótulo ou símbolo junto).
    ============================================================ */
 
+/* Linha própria para os sinais, abaixo do cabeçalho. Eles NÃO entram no
+   .pj-rrow-h: lá só o título estica, e pendurar mais filhos naquela linha
+   fazia o título virar reticências num notebook. */
+.pj-rrow-sinais {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 /* Resposta ao convite na linha da reunião: ✓ vou · ✗ não vou · ? sem resposta.
    Tabular para os números não dançarem quando a contagem muda.            */
 .pj-rsvp {
@@ -13,14 +24,12 @@
   letter-spacing: .04em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  margin-top: 2px;
 }
 
 /* Ata pendente. É dívida de quem conduziu, então aparece na linha da
    reunião e não numa caixa de aviso separada. */
 .pj-semata {
   display: inline-block;
-  margin-top: 4px;
   padding: 1px 8px;
   border: 1px solid var(--orange);
   border-radius: 999px;
