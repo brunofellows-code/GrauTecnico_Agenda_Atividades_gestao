@@ -1,0 +1,213 @@
+/* ============================================================
+   GERA · mod-agenda.css — MÓDULO 4 (AGENDA)
+   ------------------------------------------------------------
+   Namespace ag-. Só token do theme.css: ZERO hex aqui.
+   Desktop-first ≥1280px (a semana é a visão padrão); abaixo de
+   900px a semana vira lista vertical, um dia por bloco.
+
+   Regra de cor (D8): a cor NUNCA é a única informação. Todo
+   chip carrega uma marca (? ✓ ▸ •) e um rótulo em texto, e o
+   texto do chip é sempre var(--text) para manter o contraste.
+   ============================================================ */
+
+/* ---------- barra de controles (Unidade|Setor · Semana|Mês) ---------- */
+.ag-bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+.ag-bar-sp { flex: 1 1 auto; }
+
+.ag-seg {
+  display: inline-flex; background: var(--s2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 3px; gap: 3px;
+}
+.ag-segb {
+  appearance: none; border: 0; background: transparent; color: var(--muted);
+  font-family: inherit; font-size: 12.5px; font-weight: 800;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+}
+.ag-segb:hover { color: var(--text); }
+.ag-segb.on { background: var(--activeBg); color: var(--greenText); }
+.ag-segb:focus-visible { outline: 2px solid var(--cta); outline-offset: 1px; }
+
+.ag-nav { display: inline-flex; align-items: center; gap: 6px; }
+.ag-navb {
+  appearance: none; border: 1px solid var(--border); background: var(--s1);
+  color: var(--text); font-family: inherit; font-size: 15px; font-weight: 800;
+  width: 32px; height: 32px; border-radius: 9px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ag-navb:hover { background: var(--s2); }
+.ag-navb:focus-visible { outline: 2px solid var(--cta); outline-offset: 1px; }
+.ag-hoje {
+  appearance: none; border: 1px solid var(--border); background: var(--s1);
+  color: var(--text); font-family: inherit; font-size: 12.5px; font-weight: 800;
+  padding: 7px 14px; border-radius: 9px; cursor: pointer;
+}
+.ag-hoje:hover { background: var(--s2); }
+.ag-hoje:focus-visible { outline: 2px solid var(--cta); outline-offset: 1px; }
+
+.ag-per {
+  font-size: 16px; font-weight: 800; letter-spacing: -.01em;
+  text-transform: capitalize; min-width: 210px;
+}
+
+/* ---------- interruptor "Mostrar recusados" ---------- */
+.ag-check {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer;
+}
+.ag-check input { accent-color: var(--cta); width: 15px; height: 15px; cursor: pointer; }
+
+/* ---------- legenda fixa ---------- */
+.ag-legend {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--s1); border: 1px solid var(--border); border-radius: 11px;
+  padding: 9px 14px; margin: 0 0 12px;
+}
+.ag-lg { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.ag-lgs {
+  width: 13px; height: 13px; border-radius: 4px; flex: none;
+  border: 2px solid var(--border); background: transparent;
+}
+.ag-lgm { font-size: 11px; font-weight: 900; }
+
+/* ---------- caixa de convites esperando resposta ---------- */
+.ag-inbox {
+  background: var(--s1); border: 1px solid var(--red); border-radius: 12px;
+  padding: 12px 14px; margin: 0 0 14px;
+}
+.ag-inbox-t {
+  font-size: 13px; font-weight: 800; color: var(--text);
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+.ag-inbox-s { font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 10px; }
+.ag-inbox-i {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  border-top: 1px solid var(--border); padding: 9px 0 0; margin-top: 9px;
+}
+.ag-inbox-i:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.ag-inbox-n { font-size: 12.5px; font-weight: 800; color: var(--text); flex: 1 1 220px; min-width: 0; }
+.ag-inbox-w { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.ag-inbox-b { display: inline-flex; gap: 7px; flex: none; }
+
+/* ---------- visão SEMANA ---------- */
+.ag-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.ag-wcol {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 11px;
+  padding: 7px; min-height: 260px; display: flex; flex-direction: column; gap: 5px;
+}
+.ag-wcol.fds { background: var(--s2); }
+.ag-wh {
+  display: flex; align-items: flex-end; gap: 6px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+  color: var(--muted2); text-transform: uppercase; padding-bottom: 5px;
+  border-bottom: 1px solid var(--border); margin-bottom: 2px;
+}
+.ag-wh-d { font-size: 15px; font-weight: 900; color: var(--text); letter-spacing: -.02em; }
+.ag-wcol.hoje { border-color: var(--cta); }
+.ag-wcol.hoje .ag-wh-d {
+  background: var(--cta); color: var(--ctaText); border-radius: 50%;
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12.5px;
+}
+.ag-wempty { font-size: 11px; font-weight: 600; color: var(--muted2); padding: 6px 2px; }
+
+/* ---------- visão MÊS ---------- */
+.ag-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.ag-dow {
+  font-size: 10px; font-weight: 800; letter-spacing: .05em; color: var(--muted2);
+  text-align: center; padding: 4px 0; text-transform: uppercase;
+}
+.ag-day {
+  min-height: 116px; background: var(--s1); border: 1px solid var(--border);
+  border-radius: 11px; padding: 6px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  font-family: inherit; color: inherit; width: 100%;
+}
+.ag-day:hover { background: var(--s2); }
+.ag-day:focus-visible { outline: 2px solid var(--cta); outline-offset: 1px; }
+.ag-day.fora { opacity: .38; cursor: default; }
+.ag-day.fora:hover { background: var(--s1); }
+.ag-dn {
+  font-size: 11.5px; font-weight: 800; color: var(--muted);
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; flex: none;
+}
+.ag-day.hoje .ag-dn { background: var(--cta); color: var(--ctaText); }
+.ag-more { font-size: 9.5px; font-weight: 800; color: var(--muted2); padding-left: 2px; }
+
+/* ---------- chip do item (a cor sai do agenda-motor.js) ---------- */
+.ag-chip {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  font-family: inherit; font-size: 11px; font-weight: 700; line-height: 1.3;
+  text-align: left; color: var(--text);
+  background: var(--chipBg); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 5px 7px; cursor: pointer;
+}
+.ag-chip:hover { border-color: var(--muted); }
+.ag-chip:focus-visible { outline: 2px solid var(--cta); outline-offset: 1px; }
+.ag-chip-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ag-chip-h { font-size: 10px; font-weight: 800; color: var(--muted); flex: none; }
+.ag-mark { font-size: 11px; font-weight: 900; flex: none; }
+
+/* 🔴 convite sem resposta — CONTORNO (padrão Google Agenda) */
+.ag-chip.ag-red { background: transparent; border-color: var(--red); border-style: dashed; }
+.ag-chip.ag-red .ag-mark { color: var(--red); }
+/* 🔵 convite com "vou" — SÓLIDO */
+.ag-chip.ag-doing { background: var(--haloDoing); border-color: var(--doing); }
+.ag-chip.ag-doing .ag-mark { color: var(--doing); }
+/* 🟢 plano do próprio setor — SÓLIDO */
+.ag-chip.ag-green { background: var(--haloGreen); border-color: var(--green); }
+.ag-chip.ag-green .ag-mark { color: var(--greenText); }
+/* ⚪ evento da unidade — sólido cinza claro */
+.ag-chip.ag-muted2 { background: var(--chipBg); border-color: var(--border); }
+.ag-chip.ag-muted2 .ag-mark { color: var(--muted2); }
+/* recusado, só quando pedem para ver */
+.ag-chip.ag-riscado { opacity: .6; }
+.ag-chip.ag-riscado .ag-chip-t { text-decoration: line-through; }
+
+/* espelhos da legenda */
+.ag-lgs.ag-red { border-color: var(--red); border-style: dashed; }
+.ag-lgs.ag-doing { border-color: var(--doing); background: var(--haloDoing); }
+.ag-lgs.ag-green { border-color: var(--green); background: var(--haloGreen); }
+.ag-lgs.ag-muted2 { border-color: var(--border); background: var(--chipBg); }
+.ag-lg.ag-red .ag-lgm { color: var(--red); }
+.ag-lg.ag-doing .ag-lgm { color: var(--doing); }
+.ag-lg.ag-green .ag-lgm { color: var(--greenText); }
+.ag-lg.ag-muted2 .ag-lgm { color: var(--muted2); }
+
+/* ---------- popup do item ---------- */
+.ag-resp {
+  border-top: 1px solid var(--border); margin-top: 11px; padding-top: 11px;
+}
+.ag-resp-q { font-size: 12.5px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.ag-resp-b { display: flex; gap: 8px; flex-wrap: wrap; }
+.ag-resp-r {
+  font-size: 11.5px; font-weight: 700; color: var(--muted); margin-top: 8px; line-height: 1.45;
+}
+.ag-cat { font-size: 11.5px; flex: none; }
+.ag-cnt { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+
+/* ---------- estados (carregando · vazio · erro · sem permissão) ---------- */
+.ag-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; gap: 9px; min-height: 280px; padding: 40px 20px;
+}
+.ag-state-t { font-size: 16px; font-weight: 800; color: var(--text); }
+.ag-state-s { font-size: 13px; font-weight: 600; color: var(--muted); max-width: 440px; line-height: 1.55; }
+
+/* ---------- responsivo (desktop-first, mas não quebra menor) ---------- */
+@media (max-width: 1100px) {
+  .ag-per { min-width: 0; }
+  .ag-wcol { min-height: 190px; }
+}
+@media (max-width: 900px) {
+  .ag-week { grid-template-columns: 1fr; }
+  .ag-wcol { min-height: 0; }
+  .ag-wh { border-bottom: 0; margin-bottom: 0; padding-bottom: 2px; }
+  .ag-day { min-height: 62px; padding: 4px; }
+  .ag-chip { font-size: 10px; padding: 3px 5px; }
+  .ag-chip-h { display: none; }
+  .ag-legend { gap: 10px; padding: 8px 10px; }
+}

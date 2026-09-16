@@ -180,22 +180,13 @@
       dados.hoje = hoje;
       dados.user = user || null;
       return dados;
-    },
-
-    /* Variante síncrona com dados mock (para testes/desenvolvimento) */
-    loadFromMock: function (firebaseMock, uid, setorSigla) {
-      /* Usa firebase-mock.js como fonte */
-      if (!firebaseMock || !firebaseMock.atividades) {
-        return { atividades: [], usuarios: [], pessoas: [], reunioes: [], planos: [] };
-      }
-      return {
-        atividades: firebaseMock.atividades || [],
-        usuarios: firebaseMock.usuarios || [],
-        pessoas: firebaseMock.pessoas || [],
-        reunioes: firebaseMock.reunioes || [],
-        planos: firebaseMock.planos || []
-      };
     }
+
+    /* REMOVIDO em 16/09: loadFromMock(). Era uma porta de entrada para dado
+       falso dentro do adapter de produção — lia um 'firebase-mock.js' que não
+       existe neste repositório e ninguém chamava. Código morto que promete
+       mock é o começo de um número inventado chegando na tela; o simulador de
+       teste tem banco próprio, fora do repositório, e não precisa desta porta. */
   };
 
 })();

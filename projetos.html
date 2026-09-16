@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="mod-reunioes.css"><!-- módulo 2 (noite 15/09): convite, trilha de seções, fechamento -->
 <script src="theme.js"></script>
 <script src="guard.js"></script>
   <script src="mnav.js"></script>
@@ -119,7 +120,9 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="pautas-modelo.js"></script>
+  <script src="reunioes-motor.js"></script><!-- módulo 2: seções/tempo, rolagem, ata, nota -->
   <script src="kpi.js"></script>
+  <script src="conclusao.js"></script><!-- 16/09 (#46): concluir ao vivo na reunião também pede o relato de 60+ -->
   <script type="module">
   (function () {
   'use strict';
@@ -316,13 +319,23 @@
     },
 
     /* ===== F1-F · cascata de pauta (B4) ===== */
-    /* padrão §2.6: 1 where de igualdade + filtro fino no cliente (evita índice composto) */
+    /* padrão §2.6: 1 where de igualdade + filtro fino no cliente (evita índice composto).
+       CORREÇÃO (16/09, defeito #29): o where era ativo == true. Aceita e
+       descartada continuam ativo:true, então com o tempo o limit(300) virava
+       um recorte arbitrário do histórico e a sugestão PENDENTE podia ficar
+       de fora — a lista da tela e a trava de repetida não a veriam. Todo
+       leitor desta lista só usa as pendentes: o where passa a ser o status
+       (igualdade simples, sem índice composto) e o ativo vira filtro fino.
+       E o erro não vira mais "lista vazia": devolve null, para quem confere
+       repetida saber que NÃO conferiu (lista vazia liberaria a gravação). */
     listSugestoesPauta: function () {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
-        var q = f.query(f.collection(db, 'pauta_sugestoes'), f.where('ativo', '==', true), f.limit(300));
-        return f.getDocs(q).then(mapDocs);
-      }).catch(function () { return []; });
+        var q = f.query(f.collection(db, 'pauta_sugestoes'), f.where('status', '==', 'pendente'), f.limit(300));
+        return f.getDocs(q).then(function (snap) {
+          return mapDocs(snap).filter(function (g) { return g.ativo !== false; });
+        });
+      }).catch(function () { return null; });
     },
     criarSugestoesPauta: function (docs) {
       return fb().then(function (c) {
@@ -468,9 +481,15 @@
      do Hoje; 'Outro' exige detalhe. */
   var MOTIVOS_FALTA = ['Conflito de agenda', 'Atendimento urgente', 'Ausência justificada', 'Esquecimento/não vi', 'Outro'];
   var VIEW_TIPO = 'todas'; /* F1-F · chip ativo da lista de reuniões */
+  /* Módulo 2 (noite 15/09): a lista abre nas PRÓXIMAS. Reunião passada é
+     histórico; o que a pessoa faz na tela é se preparar para a que vem. */
+  var VIEW_QUANDO = 'proximas'; /* 'proximas' | 'passadas' | 'todas' */
   var MODO_REUN = 'lista'; /* F1-F · 'lista' | 'kanban' */
   var DEC_VIEW = 'lista';  /* F1-F · decisões: 'lista' | 'tabela' (5W2H) */
   var OLD_OCC = null;      /* F1-F · cache da varredura de únicas antigas (1×/sessão) */
+  var OLD_OCC_P = null;    /* 16/09 · varredura em andamento: quem chega junto espera a MESMA leitura */
+  var OLD_OCC_GEN = 0;     /* 16/09 · sobe no reload: varredura que volta depois não suja a carga nova */
+  var EM_VOO_SUGS = [];    /* 16/09 (#29) · sugestões sendo gravadas agora, por qualquer modal aberto */
   var TIPO_LABEL = {};
   TIPOS_REUNIAO.forEach(function (t) { TIPO_LABEL[t[0]] = t[1]; });
   var bodyEl, titleEl, actionsEl;
@@ -491,6 +510,11 @@
   }
 
   /* ===================== RENDER: REUNIÕES ===================== */
+  /* 16/09: as funções novas do reunioes-motor.js passam por esta guarda. Se
+     o navegador servir um reunioes-motor.js antigo do cache junto com este
+     HTML novo, a tela volta ao comportamento anterior em vez de quebrar ao
+     desenhar a reunião. */
+  function motorTem(nome) { return !!(window.ReunioesMotor && typeof ReunioesMotor[nome] === 'function'); }
   function nomeUser(uid) {
     var u = USERS.filter(function (x) { return x.uid === uid; })[0];
     return u ? u.nome : '';
@@ -547,21 +571,111 @@
   /* varredura das ÚNICAS com prazo ANTERIOR à janela (emenda 1) — 1×/sessão.
      Ordena da mais antiga p/ frente; teto 120 (4 lotes de where-in). Acima
      do teto: as excedentes NÃO são inventadas — o banner declara o corte. */
-  function garanteVarredura() {
-    if (OLD_OCC) { return Promise.resolve(OLD_OCC); }
-    var jIni = CTX.janela.jIni, hoje = R.hojeISO();
-    var antigas = (CTX.ativ || []).filter(function (a) {
+  function unicasAntigas() {
+    var jIni = CTX.janela.jIni;
+    return (CTX.ativ || []).filter(function (a) {
       return a && a.recorrencia === 'unico' && a.data && a.ativo !== false && R.compareISO(a.data, jIni) < 0;
     }).sort(function (a, b) { return R.compareISO(a.data, b.data); });
+  }
+  /* CORREÇÃO (16/09): duas chamadas juntas (o painel da raiz e uma reunião
+     aberta) disparavam DUAS varreduras, porque o cache só existe depois que
+     a primeira volta. Agora a segunda espera a mesma promessa. Se falhar,
+     nada fica em cache — a próxima chamada tenta de novo. */
+  function garanteVarredura() {
+    if (OLD_OCC) { return Promise.resolve(OLD_OCC); }
+    if (OLD_OCC_P) { return OLD_OCC_P; }
+    var jIni = CTX.janela.jIni, hoje = R.hojeISO();
+    var antigas = unicasAntigas();
     var extra = Math.max(0, antigas.length - 120);
     var lote = antigas.slice(0, 120);
-    if (!lote.length) { OLD_OCC = { itens: [], extra: 0 }; return Promise.resolve(OLD_OCC); }
-    return Store.listOccAntigas(lote.map(function (a) { return a.id; })).then(function (occs) {
-      OLD_OCC = { itens: KPI.vencidasUnicasAntigas(lote, occs, jIni, hoje), extra: extra };
-      return OLD_OCC;
+    if (!lote.length) { OLD_OCC = { itens: [], porAtividade: {}, extra: 0 }; return Promise.resolve(OLD_OCC); }
+    var gen = OLD_OCC_GEN;
+    OLD_OCC_P = Store.listOccAntigas(lote.map(function (a) { return a.id; })).then(function (occs) {
+      var res = {
+        itens: KPI.vencidasUnicasAntigas(lote, occs, jIni, hoje),
+        porAtividade: resolvidasPorAtividade(lote, occs, hoje),
+        extra: extra
+      };
+      if (gen === OLD_OCC_GEN) { OLD_OCC = res; OLD_OCC_P = null; }
+      return res;
+    }, function (e) {
+      if (gen === OLD_OCC_GEN) { OLD_OCC_P = null; }
+      throw e;
+    });
+    return OLD_OCC_P;
+  }
+  /* CORREÇÃO (16/09, defeito #15 — contestação do cético): a varredura já
+     lia TODAS as ocorrências das únicas antigas, mas só guardava as abertas
+     vencidas (KPI.vencidasUnicasAntigas). A decisão antiga JÁ FEITA ficava
+     sem ocorrência para sempre e caía em "status indisponível". Cenário:
+     decisão com prazo 01/07, atividade concluída em 30/06; hoje 16/09 a
+     janela começa em 02/08. Enquanto o painel contava indisponível como
+     concluída, isso acertava por acidente; contando à parte, todo o
+     histórico de decisões feitas há mais de 45 dias iria para "fora da
+     janela". Aqui cada única antiga ganha a ocorrência resolvida pelas
+     MESMAS regras do board (KPI._buildBoard na data única dela — a mesma
+     janela de um dia que a varredura usa), seja qual for o status. */
+  function resolvidasPorAtividade(lote, occs, hoje) {
+    var porAtiv = {};
+    (occs || []).forEach(function (o) {
+      if (o && o.atividadeId) { (porAtiv[o.atividadeId] = porAtiv[o.atividadeId] || []).push(o); }
+    });
+    var mapa = {};
+    (lote || []).forEach(function (act) {
+      var b = KPI._buildBoard([act], porAtiv[act.id] || [], { jIni: act.data, jFim: act.data }, hoje);
+      if (b.length) { b[0].foraJanela = true; mapa[act.id] = b[0]; }
+    });
+    return mapa;
+  }
+  /* A varredura só resolve decisão cuja atividade é única ANTIGA (prazo antes
+     da janela). Sem nenhuma assim, não há por que ler o banco. */
+  function precisaVarredura() {
+    if (OLD_OCC || !CTX || !CTX.janela) { return false; }
+    var antigas = {};
+    unicasAntigas().forEach(function (a) { antigas[a.id] = true; });
+    return REUN.some(function (r) {
+      return (r.decisoes || []).some(function (d) { return !!(d && d.atividadeId && antigas[d.atividadeId] === true); });
     });
   }
   function canDirect(act) { return (Guard.isGestor && Guard.isGestor()) || (act && act.criadoPor === USER.uid); }
+
+  /* CORREÇÃO (16/09, defeito #46): o "Concluir" da execução ao vivo gravava
+     { status:'concluida', concluidaEm } SEM relato — o último caminho do
+     sistema que concluía sem contar o que foi feito, contra a regra do
+     produto (relato de 60+ caracteres). Cenário: na reunião de terça o
+     líder zera 5 atrasadas do setor em 5 cliques; quem lê depois vê
+     "feito" sem uma linha sobre o que foi feito, e a regra R11-2 do
+     Firestore recusaria a gravação assim que for publicada. Agora passa
+     pelo GrautConclusao.pedir (conclusao.js), exatamente como o Hoje:
+     cancelar não grava nada; confirmar grava relato + relatoEm; e, se a
+     ocorrência estava travada, a trava morre junto (senão o Pareto somaria
+     trava de coisa já feita). Devolve Promise<boolean>. */
+  function concluirAoVivo(o, depois) {
+    if (!window.GrautConclusao) {
+      toast('Não carreguei o módulo de conclusão. Recarregue a página.', 'err');
+      return Promise.resolve(false);
+    }
+    return GrautConclusao.pedir({
+      titulo: 'Concluir · ' + ((o.act && o.act.titulo) || ''),
+      subtitulo: 'Venceu em ' + fmtBR(o.effDate) + '. Conte em uma linha o que foi feito — quem lidera lê isto, não o "ok".'
+    }).then(function (relato) {
+      if (relato == null) { return false; }   /* cancelou: nada muda */
+      var agora = Date.now();
+      var patch = { status: 'concluida', concluidaEm: agora, relato: relato, relatoEm: agora };
+      if (o.ov && o.ov.travadoMotivo) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
+      return Store.setOcorrencia(o.act, o.origData, patch, 'concluir_ocorrencia')
+        .then(function () {
+          o.status = 'concluida'; o.atrasada = false;
+          /* o override local espelha o que foi gravado: a decisão ligada a
+             esta atividade já sai "feita com atraso" sem recarregar */
+          o.ov = Object.assign({}, o.ov || {}, patch);
+          toast('Concluída.');
+          if (depois) { depois(); }
+          return true;
+        })
+        .catch(function (e) { toast(e.message, 'err'); return false; });
+    });
+  }
 
   function painelExecucao(r, aposVarredura) {
     function podeAgir() { return CAN_WRITE() && !r.encerradaEm; }
@@ -574,7 +688,7 @@
       ['Fórmula', 'Vencida em aberto = ocorrência pendente, reprogramada ou em andamento com data efetiva (override conta) ANTERIOR a hoje.'],
       ['Fonte', 'Board da janela (hoje−45 → hoje+30) + varredura das atividades ÚNICAS com prazo anterior à janela (teto de 120, da mais antiga p/ frente — atrasos de 400 dias reaparecem aqui). Rotina recorrente além da janela NÃO é listada item a item de propósito: o débito histórico de rotina é medido pela ADERÊNCIA.'],
       ['Recorte', 'Setor de lotação de cada presente interno + escopo dos líderes presentes (raiz inclui subsetores). "Todos os setores" conta em qualquer recorte. O check "escola toda" ignora o recorte.'],
-      ['Ações', 'Concluir e trocar responsável: quem tem escrita. Reprogramar: dono/gestor aplica na hora; os demais geram PEDIDO de aprovação — a mesma governança do Atividades.']
+      ['Ações', 'Concluir e trocar responsável: quem tem escrita. Concluir pede o relato do que foi feito (mínimo de 60 caracteres), igual ao Hoje e ao Atividades. Reprogramar: dono/gestor aplica na hora; os demais geram PEDIDO de aprovação — a mesma governança do Atividades.']
     ]));
     var lblT = el('<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-left:auto;font-size:12px;color:var(--muted)"></label>');
     var cbT = document.createElement('input'); cbT.type = 'checkbox';
@@ -601,11 +715,7 @@
       }
       if (podeAgir()) {
         var bts = el('<div style="display:flex;gap:6px;flex-wrap:wrap"></div>');
-        bts.appendChild(UI.button({ label: 'Concluir', variant: 'ghost', onClick: function () {
-          Store.setOcorrencia(o.act, o.origData, { status: 'concluida', concluidaEm: Date.now() }, 'concluir_ocorrencia')
-            .then(function () { o.status = 'concluida'; o.atrasada = false; toast('Concluída.'); desenha(); })
-            .catch(function (e) { toast(e.message, 'err'); });
-        } }));
+        bts.appendChild(UI.button({ label: 'Concluir', variant: 'ghost', onClick: function () { concluirAoVivo(o, desenha); } }));
         bts.appendChild(UI.button({ label: 'Reprogramar', variant: 'ghost', onClick: function () { modalReprogExec(o, desenha); } }));
         bts.appendChild(UI.button({ label: 'Responsável', variant: 'ghost', onClick: function () { modalRespExec(o, desenha); } }));
         lin.appendChild(bts);
@@ -660,7 +770,7 @@
            redesenhar não dispara varredura de novo). */
         if (primeiraVarredura && aposVarredura) { aposVarredura(); }
       })
-      .catch(function () { OLD_OCC = { itens: [], extra: 0 }; desenha(); toast('Falha na varredura de atrasadas antigas — mostrando só a janela.', 'err'); });
+      .catch(function () { OLD_OCC = { itens: [], porAtividade: {}, extra: 0 }; desenha(); toast('Falha na varredura de atrasadas antigas — mostrando só a janela.', 'err'); });
     return card;
   }
 
@@ -779,12 +889,24 @@
     return m ? decodeURIComponent(m[1]) : '';
   }());
   var ALVO_R_FEITO = false;
+  /* CORREÇÃO (noite de 15/09) · o aviso logo acima estava certo, e eu caí
+     nele. O link direto do Hoje ("Encerrar esta reunião") sempre aponta para
+     uma reunião que JÁ PASSOU — é isso que o Hoje cobra. Com a lista abrindo
+     em "Próximas", a linha dela nunca era desenhada, o bloco que rola até ela
+     nunca disparava, e o botão levava a uma tela muda. Havendo alvo, a lista
+     abre mostrando tudo. */
+  if (ALVO_R) { VIEW_QUANDO = 'todas'; VIEW_TIPO = 'todas'; }
 
   function renderReuniaoRow(r, container) {
     var row = el('<div class="pj-rrow"></div>');
     var head = el('<div class="pj-rrow-h"></div>');
     head.appendChild(txt('div', 'pj-rrow-t', (r.titulo || 'Reunião') + ' — ' + fmtBR(r.data)));
     var metaEl = txt('div', 'pj-rrow-meta', '');
+    /* Módulo 2 · resposta ao convite em 1 olhada e selo de ata pendente.
+       Os dois saem do reunioes-motor.js (função pura, testada no harness). */
+    var rsvpEl = txt('div', 'pj-rsvp', '');
+    var seloAta = txt('span', 'pj-semata', 'Sem ata');
+    seloAta.style.display = 'none';
     function atualizaMeta() {
       var conv = (r.convocados || []).length + (r.convidadosExternos || []).length;
       var pres = (r.presentes || []).length;
@@ -792,10 +914,31 @@
       var m = (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + conv + ' convocado(s) · ' + pres + ' presente(s) · ' + aus + ' ausente(s) · ' + (r.decisoes || []).length + ' decisão(ões)';
       if (r.encerradaEm) { m += ' · ENCERRADA'; }
       metaEl.textContent = m;
+      if (window.ReunioesMotor) {
+        var c = ReunioesMotor.contagemConvites(r);
+        rsvpEl.textContent = '✓ ' + c.vou + '  ✗ ' + c.naoVou + '  ? ' + c.semResposta;
+        /* O total daqui conta só quem responde pelo sistema. A linha de cima
+           soma os convidados de fora, que não têm onde responder — sem esta
+           frase, os dois números na mesma linha pareciam brigar. */
+        var deFora = (r.convidadosExternos || []).length;
+        rsvpEl.title = c.total + ' convocado(s) pelo sistema: ' + c.vou + ' vão, ' + c.naoVou + ' não vão, ' + c.semResposta + ' sem resposta.' +
+          (deFora ? (' Os ' + deFora + ' convidado(s) de fora não respondem por aqui.') : '');
+        var dur = ReunioesMotor.duracaoDe(r.tipo);
+        if (dur) { rsvpEl.title += ' Roteiro de ' + dur + ' min.'; }
+        seloAta.style.display = ReunioesMotor.semAta(r, R.hojeISO()) ? '' : 'none';
+        seloAta.title = 'A reunião passou e a ata não foi fechada. Quem conduziu fecha em 1 clique dentro da reunião.';
+      }
     }
     atualizaMeta();
     head.appendChild(metaEl);
     row.appendChild(head);
+    /* Fora do cabeçalho de propósito: .pj-rrow-h é uma linha flex em que só o
+       título estica. Pendurar mais dois filhos ali fazia o título encolher e
+       virar reticências num notebook. Embaixo, cada sinal tem o seu espaço. */
+    var sinais = el('<div class="pj-rrow-sinais"></div>');
+    sinais.appendChild(rsvpEl);
+    sinais.appendChild(seloAta);
+    row.appendChild(sinais);
 
     var open = false;
     var box = el('<div style="display:none;margin-top:8px"></div>');
@@ -832,6 +975,12 @@
       for (var j = 0; j < OLD_OCC.itens.length; j++) {
         if (OLD_OCC.itens[j].act && OLD_OCC.itens[j].act.id === atId) { return OLD_OCC.itens[j]; }
       }
+    }
+    /* 16/09 (#15): as abertas vencidas acima vêm primeiro de propósito — são
+       os objetos que o "Concluir" ao vivo altera na hora. Depois delas, a
+       ocorrência resolvida de QUALQUER única antiga, inclusive a já feita. */
+    if (OLD_OCC && OLD_OCC.porAtividade && Object.prototype.hasOwnProperty.call(OLD_OCC.porAtividade, atId)) {
+      return OLD_OCC.porAtividade[atId];
     }
     return null;
   }
@@ -909,7 +1058,12 @@
     var conv = (r.convocados || []).length + (r.convidadosExternos || []).length;
     L.push('Presença: ' + (r.presentes || []).length + ' de ' + conv + ' convocado(s).');
     var atrMin = KPI.minutosEntreHoras(r.horaPrevista, r.horaInicioReal);
+    /* 16/09 (#44): o encerramento não inventa mais o início — sem início
+       medido, a ata diz isso em vez de calar e deixar supor pontualidade. */
     if (atrMin != null && atrMin > 0) { L.push('Início com ' + atrMin + ' min de atraso (' + r.horaPrevista + ' → ' + r.horaInicioReal + ').'); }
+    else if (motorTem('inicioNaoRegistrado') && ReunioesMotor.inicioNaoRegistrado(r, R.hojeISO())) {
+      L.push('Início não registrado (ninguém usou "Iniciar reunião").');
+    }
     L.push('');
     L.push(r.resumoTexto || '(sem resumo)');
     /* O que saiu de cada bloco — sem isto a ata perde a rastreabilidade
@@ -1046,6 +1200,67 @@
 
   /* Detalhe da reunião (F1-E): horas+atraso · presença · pauta · rollforward ·
      decisões por dono · resumo/ata obrigatório para encerrar.               */
+  /* Módulo 2 (noite 15/09) · a próxima instância da série nasce ao FECHAR a
+     ata da anterior — padrão Fellow/Ninety: série que depende de alguém
+     lembrar de criar morre na terceira semana. Os itens abertos rolam junto
+     com o contador de vezes (na 3ª, o motor marca como assunto).
+     Não duplica: se já existe reunião da mesma série naquela data, não cria. */
+  function criarProximaInstancia(r) {
+    if (!window.ReunioesMotor) { return Promise.resolve(); }
+    var prox = ReunioesMotor.proximaData(r.tipo, r.data);
+    if (!prox) { return Promise.resolve(); }   /* avulsa não tem próxima */
+    var serie = ReunioesMotor.serieIdDe(r);
+    var jaTem = REUN.filter(function (x) {
+      return x.data === prox && ReunioesMotor.serieIdDe(x) === serie;
+    }).length > 0;
+    if (jaTem) { return Promise.resolve(); }
+    var rolados = ReunioesMotor.rolarItens(r.pautaItens || []);
+    var doc = {
+      titulo: r.titulo || (TIPO_LABEL[r.tipo] || 'Reunião'),
+      data: prox,
+      tipo: r.tipo,
+      setorSigla: r.setorSigla || null,
+      horaPrevista: r.horaPrevista || null,
+      horaInicioReal: null, encerradaEm: null,
+      convocados: (r.convocados || []).slice(),
+      convocadosUids: (r.convocadosUids || []).slice(),
+      convidadosExternos: (r.convidadosExternos || []).slice(),
+      presentes: [],
+      pautaTexto: null, pautaGeradaEm: null,
+      pautaItens: rolados,
+      pautaBlocos: PautaModelo.blocosNovos(r.tipo),
+      preparo: PautaModelo.preparoNovo(r.tipo),
+      notaReuniao: null,
+      resumoTexto: '',
+      participantesUids: [], decisoes: [],
+      serieId: serie,
+      origemReuniaoId: r.id
+    };
+    return Store.criarReuniao(doc).then(function () {
+      toast('Próxima ' + (TIPO_LABEL[r.tipo] || 'reunião') + ' criada para ' + fmtBR(prox) +
+        (rolados.length ? (' com ' + rolados.length + ' item(ns) que rolaram.') : '.'));
+      return reload();
+    });
+  }
+
+  /* Módulo 2 · nomes para a ata: convocados, presentes e quem avisou que não vem. */
+  function nomesDaReuniao(r) {
+    var nomes = {};
+    (r.convocados || []).forEach(function (c) { if (c && c.uid) { nomes[c.uid] = c.nome || nomeUser(c.uid); } });
+    (r.presentes || []).forEach(function (p) {
+      var uid = typeof p === 'string' ? p : (p && p.uid);
+      if (uid && !nomes[uid]) { nomes[uid] = nomeUser(uid); }
+    });
+    var k;
+    for (k in (r.recusas || {})) {
+      if (Object.prototype.hasOwnProperty.call(r.recusas, k) && !nomes[k]) { nomes[k] = nomeUser(k); }
+    }
+    (r.decisoes || []).forEach(function (d) {
+      if (d && d.donoUid && !nomes[d.donoUid]) { nomes[d.donoUid] = nomeUser(d.donoUid); }
+    });
+    return nomes;
+  }
+
   function fillReuniao(r, box, atualizaMeta) {
     function redesenhar() { box.innerHTML = ''; fillReuniao(r, box, atualizaMeta); if (atualizaMeta) { atualizaMeta(); } }
     function podeEditar() { return CAN_WRITE() && !r.encerradaEm; }
@@ -1071,13 +1286,26 @@
           ['Dados', 'reunioes.horaPrevista + reunioes.horaInicioReal (gravada pelo botão "Iniciar reunião").']
         ]));
       }
+    } else if (motorTem('inicioNaoRegistrado') && ReunioesMotor.inicioNaoRegistrado(r, hoje)) {
+      /* 16/09 (#44): antes o Encerrar gravava a hora prevista como início e
+         este selo dizia "Início real 16:00" de uma reunião que começou 16:40. */
+      var bni = txt('span', 'pj-badge', 'Início não registrado'); bni.style.color = 'var(--muted)';
+      cab.appendChild(bni);
+      cab.appendChild(iBtn('Início da reunião', [
+        ['Regra', 'Ninguém clicou em "Iniciar reunião" antes de a reunião ' + (r.encerradaEm ? 'ser encerrada' : 'passar') + '. O sistema não inventa a hora: sem início registrado, não há atraso a medir.'],
+        ['Dados', 'reunioes.horaInicioReal vazio — só o botão "Iniciar reunião" grava este campo.']
+      ]));
     }
     if (r.encerradaEm) {
       var be = txt('span', 'pj-badge', 'ENCERRADA'); be.style.color = 'var(--green)';
       cab.appendChild(be);
     }
     if (CAN_WRITE()) {
-      if (!r.encerradaEm && !r.horaInicioReal) {
+      /* 16/09 (#44): sem o início inventado no Encerrar, a reunião reaberta
+         voltaria a oferecer "Iniciar" — e o clique de dias depois gravaria a
+         hora da correção como início. Só inicia o que ainda dá para medir. */
+      var podeIni = motorTem('podeIniciar') ? ReunioesMotor.podeIniciar(r, hoje) : (!r.encerradaEm && !r.horaInicioReal);
+      if (podeIni) {
         cab.appendChild(UI.button({ label: 'Iniciar reunião', variant: 'ghost', onClick: function () {
           var ag = new Date();
           var hh = ('0' + ag.getHours()).slice(-2) + ':' + ('0' + ag.getMinutes()).slice(-2);
@@ -1087,6 +1315,44 @@
         } }));
       }
       if (!r.encerradaEm) {
+        /* Módulo 2 · ata em 1 clique. O texto é determinístico (sem IA): sai
+           do reunioes-motor.js com presentes, ausentes com motivo, decisões
+           com dono, demandas com prazo e a média das notas. Cai no campo de
+           resumo para quem conduziu revisar — nunca grava sozinho. */
+        cab.appendChild(UI.button({ label: 'Gerar ata', variant: 'ghost', onClick: function () {
+          if (!window.ReunioesMotor) { toast('reunioes-motor.js não carregou — recarregue a página.', 'err'); return; }
+          if (!taResumo) { toast('Abra o bloco "Resumo / ata" primeiro.', 'err'); return; }
+          var texto = ReunioesMotor.ataTexto(r, { nomes: nomesDaReuniao(r), demandas: [] });
+          /* CORREÇÃO (noite de 15/09): antes isto sobrescrevia direto o que a
+             pessoa tinha digitado durante a reunião — e o salvamento
+             automático gravava a perda 800 ms depois, sem desfazer. Havendo
+             texto, quem conduz escolhe o que fazer com ele. */
+          var jaEscrito = String(taResumo.value || '').trim();
+          function aplicaAta(juntar) {
+            taResumo.value = juntar
+              ? (texto + '\n\n--- escrito durante a reunião ---\n' + jaEscrito)
+              : texto;
+            try { taResumo.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) { /* o salvamento também dispara ao sair do campo */ }
+            taResumo.focus();
+            toast('Ata montada. Revise e complete antes de encerrar.');
+          }
+          if (!jaEscrito) { aplicaAta(false); return; }
+          UI.modal({
+            title: 'Você já escreveu nesta ata', width: 460,
+            body: [(function () {
+              var d = el('<div class="pj-dec-t"></div>');
+              d.textContent = 'Há ' + jaEscrito.length + ' caractere(s) escritos aqui. O que fazer com eles?';
+              return d;
+            }())],
+            footer: function (close) {
+              return [
+                UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+                UI.button({ label: 'Juntar os dois', variant: 'ghost', onClick: function () { close(); aplicaAta(true); } }),
+                UI.button({ label: 'Trocar pelo gerado', icon: 'check', onClick: function () { close(); aplicaAta(false); } })
+              ];
+            }
+          });
+        } }));
         cab.appendChild(UI.button({ label: 'Encerrar reunião', icon: 'check', onClick: function () {
           var resumo = (taResumo ? taResumo.value : (r.resumoTexto || '')).trim();
           if (!resumo) { toast('Preencha o resumo para encerrar. Sem ata, a reunião não fecha.', 'err'); return; }
@@ -1097,8 +1363,6 @@
             toast(semTrato.length + ' pendência(s) rolada(s) sem atualização — registre o andamento ou marque "Não tratado nesta reunião".', 'err');
             return;
           }
-          var ag2 = new Date();
-          var hh2 = ('0' + ag2.getHours()).slice(-2) + ':' + ('0' + ag2.getMinutes()).slice(-2);
           var patch = { resumoTexto: resumo, encerradaEm: Date.now() };
           /* R7: FLUSH do rascunho da pauta no MESMO write do encerramento
              (auditoria 27/07: autosave pendente gravava DEPOIS da reunião
@@ -1108,21 +1372,35 @@
             patch.pautaTexto = dEnc.pauta;
             patch.pautaGeradaEm = Date.now();
           }
-          if (!r.horaInicioReal) { patch.horaInicioReal = r.horaPrevista || hh2; }
+          /* CORREÇÃO (16/09, defeito #44): aqui, quem encerrava sem ter clicado
+             "Iniciar reunião" ganhava início = hora prevista (ou a hora do
+             fechamento, sem prevista). Prevista 16:00, começou 16:40,
+             encerrada 17:30: a tela passava a dizer "Início real 16:00", sem
+             atraso. Início não medido fica VAZIO; cabeçalho e ata dizem
+             "início não registrado". */
           Store.atualizarReuniao(r.id, patch, 'reuniao_encerrada')
             .then(function () {
               Object.assign(r, patch);
               dEnc.pauta = null; dEnc.resumo = null; /* congelou — rascunhos cumpridos */
               toast('Reunião encerrada — ata registrada.');
               redesenhar();
+              /* Módulo 2 · a série continua sozinha. Se a criação da próxima
+                 falhar, o encerramento JÁ está gravado: só avisa, nunca desfaz. */
+              return criarProximaInstancia(r).catch(function (e2) {
+                toast('Reunião encerrada, mas a próxima da série não foi criada: ' + e2.message, 'err');
+              });
             })
             .catch(function (e) { toast(e.message, 'err'); });
         } }));
       }
       if (r.encerradaEm && Guard.isGestor && Guard.isGestor()) {
         cab.appendChild(UI.button({ label: 'Reabrir', variant: 'ghost', onClick: function () {
-          Store.atualizarReuniao(r.id, { encerradaEm: null }, 'reuniao_reaberta')
-            .then(function () { r.encerradaEm = null; toast('Reunião reaberta.'); redesenhar(); })
+          /* 16/09 (#44): reabertaEm marca que esta reunião JÁ aconteceu —
+             é o que tira o "Iniciar reunião" dela (ReunioesMotor.podeIniciar)
+             e a mantém em "Em andamento" no kanban mesmo sem início medido. */
+          var agR = Date.now();
+          Store.atualizarReuniao(r.id, { encerradaEm: null, reabertaEm: agR }, 'reuniao_reaberta')
+            .then(function () { r.encerradaEm = null; r.reabertaEm = agR; toast('Reunião reaberta.'); redesenhar(); })
             .catch(function (e) { toast(e.message, 'err'); });
         } }));
       }
@@ -1153,9 +1431,9 @@
           linha.appendChild(b);
         });
         linha.appendChild(iBtn('Placar da reunião (formato da sua ATA)', [
-          ['Fórmula', 'Cada decisão cai num balde pelo status DERIVADO da atividade-filha: Realizadas (feitas — no prazo ou com atraso — ou resolvidas na própria reunião) · Em andamento (atividade iniciada) · Planejadas (abertas dentro do prazo) · Vencidas (prazo estourado) · Vence hoje (prazo é hoje e segue aberta). Nada é digitado: é o mesmo cabeçalho Realizado/Planejado/Em andamento da planilha ATA, automático.'],
-          ['Dados', 'reunioes.decisoes[] desta reunião + ocorrência da atividade-filha no board (kpi.js).'],
-          ['Números', pl.total + ' decisão(ões): ' + pl.realizadas + ' realizadas (' + pl.noPrazo + ' no prazo · ' + pl.comAtraso + ' com atraso) · ' + pl.andamento + ' em andamento · ' + pl.planejadas + ' planejadas · ' + pl.vencidas + ' vencidas · ' + pl.venceHoje + ' vencem hoje']
+          ['Fórmula', 'Cada decisão cai num balde pelo status DERIVADO da atividade-filha: Realizadas (feitas — no prazo ou com atraso — ou resolvidas na própria reunião) · Em andamento (atividade iniciada) · Planejadas (abertas dentro do prazo) · Vencidas (prazo estourado) · Vence hoje (prazo é hoje e segue aberta) · Fora da janela (virou atividade, mas a ocorrência dela não está nos dados lidos: status indisponível, fica fora dos outros baldes — o mesmo número à parte do painel Ciclo de decisões). Nada é digitado: é o mesmo cabeçalho Realizado/Planejado/Em andamento da planilha ATA, automático.'],
+          ['Dados', 'reunioes.decisoes[] desta reunião + ocorrência da atividade-filha no board (kpi.js) ou na varredura de atividades únicas antigas.'],
+          ['Números', pl.total + ' decisão(ões): ' + pl.realizadas + ' realizadas (' + pl.noPrazo + ' no prazo · ' + pl.comAtraso + ' com atraso) · ' + pl.andamento + ' em andamento · ' + pl.planejadas + ' planejadas · ' + pl.vencidas + ' vencidas · ' + (pl.indisponiveis || 0) + ' fora da janela · ' + pl.venceHoje + ' vencem hoje']
         ]));
       }
       if (linha.childNodes.length) { box.appendChild(linha); }
@@ -1776,31 +2054,99 @@
         depField
       ],
       footer: function (close) {
-        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
-          UI.button({ label: 'Encaminhar', icon: 'check', onClick: function () {
-            var texto = ta.value.trim();
-            if (!texto) { toast('Escreva o item.', 'err'); return; }
-            var tipoD = tipoSel.value;
-            if (tipoD === 'departamento' && !depSel.value) { toast('Escolha o setor de destino.', 'err'); return; }
-            var base = {
-              texto: texto, candidatoIndicador: false,
-              origem: { reuniaoId: r.id, tipo: r.tipo || null, data: r.data || null, titulo: r.titulo || null },
-              destinoTipo: tipoD, destinoSetorSigla: null, consumidaPorReuniaoId: null
-            };
-            var docs = [];
-            if (tipoD === 'departamento' && depSel.value === '__todos__') {
-              CTX.setores.filter(function (s) { return s.ativo !== false && !s.setorPaiSigla; })
-                .forEach(function (s) { docs.push(Object.assign({}, base, { destinoSetorSigla: s.sigla })); });
-            } else if (tipoD === 'departamento') {
-              docs.push(Object.assign({}, base, { destinoSetorSigla: depSel.value }));
-            } else {
-              docs.push(base);
-            }
-            Store.criarSugestoesPauta(docs)
-              .then(function () { close(); toast(docs.length + ' sugestão(ões) encaminhada(s) — entram na geração de pauta do destino.'); return Store.listSugestoesPauta().then(function (x) { SUGS = x.filter(function (g) { return g.status === 'pendente'; }); }); })
-              .catch(function (e) { toast(e.message, 'err'); });
-          } })];
+        var btnEnc = UI.button({ label: 'Encaminhar', icon: 'check', onClick: function () {
+          if (btnEnc.disabled) { return; }   /* gravando: o 2º clique não faz nada */
+          var texto = ta.value.trim();
+          if (!texto) { toast('Escreva o item.', 'err'); return; }
+          var tipoD = tipoSel.value;
+          if (tipoD === 'departamento' && !depSel.value) { toast('Escolha o setor de destino.', 'err'); return; }
+          var base = {
+            texto: texto, candidatoIndicador: false,
+            origem: { reuniaoId: r.id, tipo: r.tipo || null, data: r.data || null, titulo: r.titulo || null },
+            destinoTipo: tipoD, destinoSetorSigla: null, consumidaPorReuniaoId: null
+          };
+          var docs = [];
+          if (tipoD === 'departamento' && depSel.value === '__todos__') {
+            CTX.setores.filter(function (s) { return s.ativo !== false && !s.setorPaiSigla; })
+              .forEach(function (s) { docs.push(Object.assign({}, base, { destinoSetorSigla: s.sigla })); });
+          } else if (tipoD === 'departamento') {
+            docs.push(Object.assign({}, base, { destinoSetorSigla: depSel.value }));
+          } else {
+            docs.push(base);
+          }
+          encaminharSemRepetir(docs, btnEnc, close);
+        } });
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }), btnEnc];
       }
+    });
+  }
+
+  /* CORREÇÃO (16/09, defeito #29): o "Encaminhar" gravava direto, sem trava
+     nenhuma. UI.button não protege contra duplo clique e o modal só fecha
+     quando o banco responde — então o 2º clique gravava de novo. Cenário:
+     duplo clique encaminhando "Refazer escala" para Departamento/SEC criava
+     duas sugestões pendentes idênticas; na pauta do SEC as duas vinham
+     pré-marcadas e o texto gravado repetia a linha em "2) CASCATA".
+     Agora, na ordem:
+       1) o botão desabilita (aria-busy) até a gravação voltar;
+       2) trava na memória: o que já está pendente em SUGS ou sendo gravado
+          agora por outro modal (EM_VOO_SUGS) não segue;
+       3) relê as pendentes do banco antes de gravar — SUGS pode estar velho
+          (outra aba, outra pessoa, carga inicial que falhou). Se a leitura
+          falhar, NÃO grava: sem conferir, não dá para garantir;
+       4) as criadas entram em SUGS antes de fechar o modal, para quem
+          reabrir em seguida já ser barrado.
+     "Repetida" = mesma reunião de origem + mesmo texto + mesmo destino
+     (ReunioesMotor.jaTemPendente). Em "Todos os setores", só pula o setor
+     que já tem a sugestão pendente. Limite declarado: duas pessoas clicando
+     no mesmo segundo em computadores diferentes ainda podem duplicar — o
+     banco não tem chave única. */
+  function encaminharSemRepetir(docs, btn, close) {
+    if (!motorTem('jaTemPendente')) {
+      toast('reunioes-motor.js não carregou — recarregue a página.', 'err');
+      return Promise.resolve(false);
+    }
+    function repetida(lista, dc) { return ReunioesMotor.jaTemPendente(lista, dc); }
+    var novos = docs.filter(function (dc) { return !repetida(SUGS.concat(EM_VOO_SUGS), dc); });
+    if (!novos.length) {
+      toast('Essa sugestão já está pendente para este destino — nada foi gravado.', 'err');
+      return Promise.resolve(false);
+    }
+    if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
+    var voo = novos.map(function (dc) { return Object.assign({}, dc, { status: 'pendente', ativo: true }); });
+    EM_VOO_SUGS = EM_VOO_SUGS.concat(voo);
+    function termina() {
+      EM_VOO_SUGS = EM_VOO_SUGS.filter(function (x) { return voo.indexOf(x) < 0; });
+      if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); }
+    }
+    var gravar = [];
+    return Store.listSugestoesPauta().then(function (lidas) {
+      if (lidas == null) {
+        throw new Error('Não consegui conferir as sugestões pendentes agora — nada foi gravado. Verifique a conexão e tente de novo.');
+      }
+      SUGS = lidas.filter(function (g) { return g.status === 'pendente'; });
+      gravar = novos.filter(function (dc) { return !repetida(SUGS, dc); });
+      if (!gravar.length) { return []; }
+      return Store.criarSugestoesPauta(gravar);
+    }).then(function (ids) {
+      var agora = Date.now();
+      gravar.forEach(function (dc, i) {
+        SUGS.push(Object.assign({}, dc, { id: ids[i], status: 'pendente', ativo: true, criadoPorUid: USER.uid, criadoEm: agora }));
+      });
+      termina();
+      if (!gravar.length) {
+        toast('Essa sugestão já está pendente para este destino — nada foi gravado.', 'err');
+        return false;
+      }
+      var pulados = docs.length - gravar.length;
+      if (close) { close(); }
+      toast(gravar.length + ' sugestão(ões) encaminhada(s) — entram na geração de pauta do destino.' +
+        (pulados ? ' ' + pulados + ' destino(s) já tinha(m) essa sugestão pendente e não receberam de novo.' : ''));
+      return true;
+    }).catch(function (e) {
+      termina();
+      toast(e.message, 'err');
+      return false;
     });
   }
 
@@ -2025,13 +2371,86 @@
     });
   }
 
+  /* Painel "Ciclo de decisões" (F1-E · 4.3), montado por inteiro aqui para
+     poder ser repintado sozinho quando a varredura de antigas voltar.
+     CORREÇÃO (16/09, defeito #15): o laço fazia vencida → vencidas,
+     aberta → em aberto e ELSE → concluídas. O else engolia 'sem_janela'
+     (decisão que virou atividade cuja ocorrência não está nos dados
+     carregados). Cenário: hoje 16/09, decisão convertida com prazo 20/11,
+     não feita — "Decisões concluídas: 1" aqui, "fora da janela 1" no placar
+     da própria reunião, e o i jurando que concluída é "atividade feita".
+     Agora a conta sai de ReunioesMotor.cicloDecisoes (a mesma da pauta) e
+     "fora da janela" é um número à parte, o mesmo balde do placar.
+     estadoVarr: 'ok' | 'carregando' | 'falhou' — a varredura de antigas. */
+  function montaPainelCiclo(lista, hoje, estadoVarr) {
+    var painel = el('<div class="pj-card"></div>');
+    var ph0 = el('<div class="pj-card-h"></div>');
+    var pt0 = el('<div style="display:flex;align-items:center;gap:8px"></div>');
+    pt0.appendChild(txt('div', 'pj-card-t', 'Ciclo de decisões'));
+    ph0.appendChild(pt0);
+    painel.appendChild(ph0);
+    if (!motorTem('cicloDecisoes')) {
+      painel.appendChild(txt('div', 'pj-empty2', 'reunioes-motor.js não carregou — recarregue a página para ver o ciclo de decisões.'));
+      return painel;
+    }
+    var ciclo = ReunioesMotor.cicloDecisoes(lista, function (d) {
+      return KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hoje);
+    });
+    var n = ciclo.n;
+    pt0.appendChild(iBtn('Como o status é calculado', [
+      ['Fórmula', 'Cada decisão das reuniões desta visão: EM ABERTO = sem atividade e não resolvida, ou atividade ainda no prazo · VENCIDA = atividade com prazo estourado em aberto · CONCLUÍDA = resolvida na reunião, ou atividade feita (no prazo ou com atraso) · FORA DA JANELA = virou atividade, mas a ocorrência dela não está nos dados lidos (prazo depois de hoje+30, atividade inativada ou além do teto da varredura de antigas). Status indisponível: não entra em nenhum dos outros três — o mesmo "fora da janela" do placar dentro da reunião.'],
+      ['Dados', 'reunioes.decisoes[] das reuniões da visão (chips de tipo e Próximas/Passadas) + ocorrência da atividade-filha no board (hoje−45 a hoje+30) e, para prazo anterior a isso, na varredura de atividades únicas antigas (teto de 120). Status derivado na hora — nunca gravado.'],
+      ['Números', n.total + ' decisão(ões) = ' + n.aberta + ' em aberto + ' + n.vencida + ' vencida(s) + ' + n.concluida + ' concluída(s) + ' + n.foraJanela + ' fora da janela.' +
+        (estadoVarr === 'carregando' ? ' Atividades antigas ainda sendo conferidas.' : '') +
+        (estadoVarr === 'falhou' ? ' A leitura das atividades antigas falhou: as decisões delas estão em fora da janela.' : '')]
+    ]));
+    var pgrid = el('<div class="pj-dgrid"></div>');
+    var cartoes = [['Decisões em aberto', n.aberta, 'var(--orange)'], ['Decisões vencidas', n.vencida, 'var(--red)'], ['Decisões concluídas', n.concluida, 'var(--green)']];
+    if (n.foraJanela) { cartoes.push(['Decisões fora da janela', n.foraJanela, 'var(--muted)']); }
+    cartoes.forEach(function (kk) {
+      var dm = el('<div class="pj-dm"></div>');
+      dm.appendChild(txt('div', 'pj-dm-k', kk[0]));
+      var vEl = txt('div', 'pj-dm-v', String(kk[1]));
+      vEl.style.color = kk[2];
+      dm.appendChild(vEl);
+      pgrid.appendChild(dm);
+    });
+    painel.appendChild(pgrid);
+    if (estadoVarr === 'carregando' || estadoVarr === 'falhou') {
+      var aviso = txt('div', 'pj-empty2', estadoVarr === 'carregando'
+        ? 'Conferindo as decisões de atividades antigas — os números podem mudar em instantes.'
+        : 'Não consegui ler as atividades antigas agora — as decisões delas seguem em "fora da janela". Recarregue para tentar de novo.');
+      aviso.setAttribute('role', 'status');
+      /* --bandaAlta e não --orange: --orange é cor de preenchimento e, como
+         texto no tema claro, fica em 3,56:1 (reprova WCAG 1.4.3) */
+      if (estadoVarr === 'falhou') { aviso.style.color = 'var(--bandaAlta)'; }
+      painel.appendChild(aviso);
+    }
+    return painel;
+  }
+
   function renderListaReunioes() {
     var hoje = R.hojeISO();
     /* F1-F · B6 — visões por tipo: chips DERIVADOS do dado (nada hardcoded).
        Tipo sem reunião não vira chip; o contador é a contagem real.        */
+    /* São DOIS eixos de filtro (tipo × quando) e o contador de cada chip tem de
+       respeitar o outro eixo — senão o chip promete um número e a lista entrega
+       outro. Era o caso: os chips de tipo contavam sobre REUN inteiro enquanto a
+       lista já aplicava "Próximas", então "Reunião de Líderes (12)" abria uma
+       lista com 1. Mesma família do cabeçalho corrigido no commit 3b63e58.
+       Agora cada chip diz exatamente quantas linhas aparecem se você clicar. */
+    function ehFutura(r) { return (r.data || '') >= hoje; }
+    function passaQuando(r) {
+      if (VIEW_QUANDO === 'todas') { return true; }
+      return VIEW_QUANDO === 'proximas' ? ehFutura(r) : !ehFutura(r);
+    }
+    function passaTipo(r) { return VIEW_TIPO === 'todas' || (r.tipo || 'sem_tipo') === VIEW_TIPO; }
+    var baseTipo = REUN.filter(passaQuando);   /* conta os chips de TIPO */
+    var baseQuando = REUN.filter(passaTipo);   /* conta os chips de QUANDO */
+
     var chipsBar = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;overflow-x:auto"></div>');
     var contTipo = {};
-    REUN.forEach(function (r) { var t = r.tipo || 'sem_tipo'; contTipo[t] = (contTipo[t] || 0) + 1; });
+    baseTipo.forEach(function (r) { var t = r.tipo || 'sem_tipo'; contTipo[t] = (contTipo[t] || 0) + 1; });
     function rotuloTipo(t) { return TIPO_LABEL[t] || (t === 'sem_tipo' ? '(sem tipo)' : t); }
     function chip(valor, rotulo, n) {
       var on = VIEW_TIPO === valor;
@@ -2042,44 +2461,55 @@
       b.addEventListener('click', function () { VIEW_TIPO = valor; rerender(); });
       return b;
     }
-    chipsBar.appendChild(chip('todas', 'Todas', REUN.length));
+    chipsBar.appendChild(chip('todas', 'Todas', baseTipo.length));
     Object.keys(contTipo).sort(function (a, b) { return rotuloTipo(a).localeCompare(rotuloTipo(b), 'pt-BR'); })
       .forEach(function (t) { chipsBar.appendChild(chip(t, rotuloTipo(t), contTipo[t])); });
     bodyEl.appendChild(chipsBar);
-    var REUNV = VIEW_TIPO === 'todas' ? REUN : REUN.filter(function (r) { return (r.tipo || 'sem_tipo') === VIEW_TIPO; });
+
+    /* Módulo 2 · Próximas | Passadas (padrão Fellow/Ninety: a série vive em
+       duas metades). A tela abre nas próximas: reunião passada é histórico,
+       o que a pessoa faz aqui é se preparar para a que vem. */
+    var nProx = 0, nPass = 0;
+    /* conta sobre baseQuando (já recortado pelo tipo ativo) pelo mesmo motivo
+       dos chips de tipo: o número do chip é a promessa da lista */
+    baseQuando.forEach(function (r) { if (ehFutura(r)) { nProx += 1; } else { nPass += 1; } });
+    var quandoBar = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"></div>');
+    function chipQuando(valor, rotulo, n) {
+      var on = VIEW_QUANDO === valor;
+      var b = txt('button', 'pj-status', rotulo + ' (' + n + ')');
+      b.type = 'button'; b.style.cursor = 'pointer'; b.style.whiteSpace = 'nowrap';
+      b.style.color = on ? 'var(--greenText)' : 'var(--muted)';
+      b.style.background = on ? 'var(--activeBg)' : 'transparent';
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.addEventListener('click', function () { VIEW_QUANDO = valor; rerender(); });
+      return b;
+    }
+    quandoBar.appendChild(chipQuando('proximas', 'Próximas', nProx));
+    quandoBar.appendChild(chipQuando('passadas', 'Passadas', nPass));
+    quandoBar.appendChild(chipQuando('todas', 'Todas', baseQuando.length));
+    bodyEl.appendChild(quandoBar);
+
+    var REUNV = REUN.filter(passaTipo).filter(passaQuando);
 
     /* painel do ciclo de decisões (F1-E · 4.3) — status DERIVADO, nunca gravado.
-       F1-F: respeita a visão ativa (mesmos números da lista embaixo).       */
-    var cAb = 0, cVc = 0, cCc = 0;
-    REUNV.forEach(function (r) {
-      (r.decisoes || []).forEach(function (d) {
-        var st = KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hoje);
-        if (st.chave === 'vencida') { cVc++; }
-        else if (st.chave === 'aberta') { cAb++; }
-        else { cCc++; }
-      });
-    });
-    var painel = el('<div class="pj-card"></div>');
-    var ph0 = el('<div class="pj-card-h"></div>');
-    var pt0 = el('<div style="display:flex;align-items:center;gap:8px"></div>');
-    pt0.appendChild(txt('div', 'pj-card-t', 'Ciclo de decisões'));
-    pt0.appendChild(iBtn('Como o status é calculado', [
-      ['Fórmula', 'Cada decisão de cada reunião ativa: EM ABERTO = sem atividade e não resolvida, ou atividade ainda no prazo · VENCIDA = atividade com prazo estourado em aberto · CONCLUÍDA = resolvida na reunião, ou atividade feita (no prazo ou com atraso).'],
-      ['Dados', 'reunioes.decisoes[] + ocorrência da atividade-filha no board (kpi.js, janela padrão). Status derivado na hora — nunca gravado.']
-    ]));
-    ph0.appendChild(pt0);
-    painel.appendChild(ph0);
-    var pgrid = el('<div class="pj-dgrid"></div>');
-    [['Decisões em aberto', cAb, 'var(--orange)'], ['Decisões vencidas', cVc, 'var(--red)'], ['Decisões concluídas', cCc, 'var(--green)']].forEach(function (kk) {
-      var dm = el('<div class="pj-dm"></div>');
-      dm.appendChild(txt('div', 'pj-dm-k', kk[0]));
-      var vEl = txt('div', 'pj-dm-v', String(kk[1]));
-      vEl.style.color = kk[2];
-      dm.appendChild(vEl);
-      pgrid.appendChild(dm);
-    });
-    painel.appendChild(pgrid);
+       F1-F: respeita a visão ativa (mesmos números da lista embaixo).
+       16/09 (#15): decisão de atividade única antiga só tem status depois da
+       varredura, que antes só rodava ao abrir uma reunião. Roda aqui também
+       (1×/sessão, só se houver decisão assim) e, quando volta, repinta SÓ
+       este painel — a lista embaixo não é redesenhada, então nenhuma
+       reunião aberta fecha na cara de quem está lendo. */
+    var varrer = precisaVarredura();
+    var painel = montaPainelCiclo(REUNV, hoje, varrer ? 'carregando' : 'ok');
     bodyEl.appendChild(painel);
+    if (varrer) {
+      var repinta = function (estado) {
+        if (!painel.parentNode) { return; }   /* a tela já foi redesenhada: o painel novo cuida de si */
+        var novo = montaPainelCiclo(REUNV, R.hojeISO(), estado);
+        painel.parentNode.replaceChild(novo, painel);
+        painel = novo;
+      };
+      garanteVarredura().then(function () { repinta('ok'); }, function () { repinta('falhou'); });
+    }
 
     /* botão de pauta */
     var pcard = el('<div class="pj-card"></div>');
@@ -2087,12 +2517,24 @@
     var pt = el('<div style="display:flex;align-items:center;gap:8px"></div>');
     pt.appendChild(txt('div', 'pj-card-t', 'Pauta da reunião de líderes'));
     pt.appendChild(iBtn('O que entra na pauta', [
-      ['Conteúdo', 'Atrasadas por setor + setores abaixo da banda (só com previsto VENCIDO; 2 períodos consecutivos = ação obrigatória) + gargalos nomeados (score 50/30/20) + decisões ABERTAS + solicitações de data PENDENTES. Siglas fora do cadastro ativo são ignoradas e listadas no rodapé.'],
+      ['Conteúdo', 'Atrasadas por setor + setores abaixo da banda (só com previsto VENCIDO; 2 períodos consecutivos = ação obrigatória) + gargalos nomeados (score 50/30/20) + decisões EM ABERTO ou VENCIDAS pelo status derivado (o mesmo do painel Ciclo de decisões — inclui a que virou atividade e não foi feita), com as de fora da janela listadas à parte para conferir + solicitações de data PENDENTES. Siglas fora do cadastro ativo são ignoradas e listadas no rodapé.'],
       ['Uso', 'Gere, copie e cole onde a reunião acontece — ou grave direto numa reunião aberta (modelo L10/EOS: métricas → pendências → ações).']
     ]));
     ph.appendChild(pt);
     var gen = UI.button({ label: 'Gerar pauta', icon: 'check' });
-    gen.addEventListener('click', function () { modalPauta(null); });
+    /* 16/09 (#16): a seção de decisões lê o status derivado; se a varredura
+       das antigas ainda não voltou, espera por ela antes de montar o texto
+       (senão a antiga vencida sairia em "fora da janela" em vez de VENCIDA).
+       Falhou: abre assim mesmo — a antiga fica listada para conferir. */
+    gen.addEventListener('click', function () {
+      if (gen.disabled) { return; }
+      if (!precisaVarredura()) { modalPauta(null); return; }
+      gen.disabled = true; gen.setAttribute('aria-busy', 'true');
+      garanteVarredura().then(null, function () { return null; }).then(function () {
+        gen.disabled = false; gen.removeAttribute('aria-busy');
+        modalPauta(null);
+      });
+    });
     ph.appendChild(gen);
     pcard.appendChild(ph);
     pcard.appendChild(txt('div', 'pj-empty2', 'Texto pronto com atrasadas por setor, banda de aderência, gargalos, decisões abertas e aprovações pendentes.'));
@@ -2150,7 +2592,14 @@
 
     var card = el('<div class="pj-card"></div>');
     var h = el('<div class="pj-card-h"></div>');
-    var tituloLista = VIEW_TIPO === 'todas' ? 'Todas as reuniões' : rotuloTipo(VIEW_TIPO);
+    /* O título diz o que a lista REALMENTE tem. Antes lia só VIEW_TIPO: como a
+       tela abre em "Próximas", o cabeçalho anunciava "Todas as reuniões (1)"
+       escondendo as 2 passadas — quem procurava a reunião de ontem concluía que
+       o sistema tinha perdido o registro. Cabeçalho que mente custa confiança. */
+    var tituloLista = VIEW_TIPO === 'todas' ? '' : rotuloTipo(VIEW_TIPO);
+    if (VIEW_QUANDO === 'proximas') { tituloLista = tituloLista ? (tituloLista + ' · próximas') : 'Próximas reuniões'; }
+    else if (VIEW_QUANDO === 'passadas') { tituloLista = tituloLista ? (tituloLista + ' · passadas') : 'Reuniões passadas'; }
+    else if (!tituloLista) { tituloLista = 'Todas as reuniões'; }
     h.appendChild(txt('div', 'pj-card-t', tituloLista + ' (' + REUNV.length + ')'));
     /* F1-F · B7 — toggle Lista | Kanban (leitura; sem arrastar: as travas de
        Iniciar/Encerrar/Reabrir do F1-E continuam mandando no status).      */
@@ -2164,19 +2613,35 @@
     } else if (MODO_REUN === 'kanban') {
       card.appendChild(kanbanReunioes(REUNV));
     } else {
-      REUNV.slice().sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); })
+      REUNV.slice().sort(function (a, b) {
+        /* Passadas e Todas: a mais recente no topo. Próximas: a mais PERTO no
+           topo — a lista existe para preparar a reunião que vem, e com a ordem
+           antiga a de amanhã ficava por último. */
+        return VIEW_QUANDO === 'proximas'
+          ? (a.data || '').localeCompare(b.data || '')
+          : (b.data || '').localeCompare(a.data || '');
+      })
         .forEach(function (r) { renderReuniaoRow(r, card); });
     }
     bodyEl.appendChild(card);
   }
 
+  /* 16/09 (#44): antes, a reunião encerrada sem "Iniciar" ganhava um início
+     inventado, e por causa dele, quando reaberta, caía em "Em andamento".
+     Sem o início inventado, KPI.statusReuniao a mandaria para "Agendadas" —
+     uma reunião que já aconteceu. Reaberta (reabertaEm) conta como em
+     andamento, com ou sem início medido. */
+  function statusReuniaoTela(r) {
+    if (r && !r.encerradaEm && !r.horaInicioReal && r.reabertaEm) { return { chave: 'andamento', rotulo: 'Em andamento' }; }
+    return KPI.statusReuniao(r);
+  }
   /* F1-F · B7 — kanban de LEITURA: 3 colunas com status derivado
      (K.statusReuniao — harness). Card abre a reunião completa em modal
      (o MESMO fillReuniao da lista: zero lógica duplicada).             */
   function kanbanReunioes(lista) {
     var wrap = el('<div style="display:flex;gap:10px;align-items:flex-start;overflow-x:auto;margin-top:6px"></div>');
     [['agendada', 'Agendadas'], ['andamento', 'Em andamento'], ['encerrada', 'Encerradas']].forEach(function (c) {
-      var itens = lista.filter(function (r) { return KPI.statusReuniao(r).chave === c[0]; })
+      var itens = lista.filter(function (r) { return statusReuniaoTela(r).chave === c[0]; })
         .sort(function (a, b) { return (b.data || '').localeCompare(a.data || ''); });
       var col = el('<div style="flex:1;min-width:220px;border:1px solid var(--border);border-radius:10px;padding:8px"></div>');
       var ch = txt('div', 'pj-rrow-meta', c[1] + ' (' + itens.length + ')');
@@ -2244,18 +2709,39 @@
     if (!gg.length) { L.push('   — nenhum gargalo detectado (só conta setor com previsto vencido).'); }
     gg.forEach(function (g) { L.push('   · ' + g.sigla + ' — ' + g.motivo); });
     L.push('');
-    L.push('4) DECISÕES AINDA EM ABERTO');
-    var nAb = 0;
-    REUN.slice().sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); }).forEach(function (r) {
-      (r.decisoes || []).forEach(function (d) {
-        if (d.aberta === true) {
-          nAb++;
-          L.push('   · ' + d.texto + ' — dono: ' + (d.donoNome || nomeUser(d.donoUid) || '—') +
-            ' · prazo ' + fmtBR(d.prazo) + ' · reunião ' + fmtBR(r.data));
-        }
+    /* CORREÇÃO (16/09, defeito #16): esta seção filtrava d.aberta === true,
+       o critério v1. Virar atividade grava aberta:false, então a decisão
+       convertida sumia daqui mesmo com a atividade vencida e não feita.
+       Cenário: "Refazer escala", prazo 10/09, virou atividade, ocorrência
+       pendente; hoje 16/09 o painel da mesma tela mostra "Decisões
+       vencidas: 1" e esta pauta dizia "— nenhuma decisão aberta.". Agora é
+       o status derivado de KPI.statusDecisao, pela mesma conta do painel
+       (ReunioesMotor.cicloDecisoes): em aberto e vencida entram, vencida
+       marcada; a de status indisponível (fora da janela) vem à parte, para
+       conferir — nunca some e nunca passa por feita. */
+    var hojeP = R.hojeISO();
+    if (!motorTem('cicloDecisoes')) {
+      L.push('4) DECISÕES AINDA EM ABERTO');
+      L.push('   (reunioes-motor.js não carregou — recarregue a página para listar as decisões.)');
+    } else {
+      var ciclo = ReunioesMotor.cicloDecisoes(REUN, function (d) {
+        return KPI.statusDecisao(d, occDaAtividade(d.atividadeId), hojeP);
       });
-    });
-    if (!nAb) { L.push('   — nenhuma decisão aberta.'); }
+      var linhaDec = function (it) {
+        return (it.dec.texto || '(sem texto)') + (it.st.chave === 'vencida' ? ' [VENCIDA]' : '') +
+          ' — dono: ' + (it.dec.donoNome || nomeUser(it.dec.donoUid) || '—') +
+          ' · prazo ' + fmtBR(it.dec.prazo) + ' · reunião ' + fmtBR(it.reuniao.data);
+      };
+      L.push('4) DECISÕES AINDA EM ABERTO (' + ciclo.emAberto.length + ')');
+      ciclo.emAberto.forEach(function (it) { L.push('   · ' + linhaDec(it)); });
+      if (!ciclo.emAberto.length) {
+        L.push(ciclo.foraJanela.length ? '   — nenhuma decisão aberta com status conhecido (confira as de fora da janela abaixo).' : '   — nenhuma decisão aberta.');
+      }
+      if (ciclo.foraJanela.length) {
+        L.push('   Fora da janela — conferir (' + ciclo.foraJanela.length + '): viraram atividade, mas o sistema não achou a ocorrência; não contam como abertas nem como feitas.');
+        ciclo.foraJanela.forEach(function (it) { L.push('   · ' + linhaDec(it)); });
+      }
+    }
     L.push('');
     L.push('5) APROVAÇÕES DE DATA PENDENTES (' + PENDS.length + ')');
     if (!PENDS.length) { L.push('   — nenhuma pendente.'); }
@@ -2540,6 +3026,7 @@
       USERS = r[2]; PENDS = r[3]; SNAPS = r[4] || [];
       SUGS = (r[5] || []).filter(function (g) { return g.status === 'pendente'; }); /* F1-F · B4 */
       OLD_OCC = null; /* F1-F · B2: reload zera o cache da varredura */
+      OLD_OCC_P = null; OLD_OCC_GEN++; /* 16/09: a que ainda estava no ar vale para o CTX velho */
       rerender();
     }).catch(function (e) { renderError(e); });
   }

@@ -23,6 +23,11 @@
    - As tab bars ESTÁTICAS de mock (.hj-tabbar / .pf-tabbar) são
      ocultadas aqui: sem a barra real por cima, elas voltariam a
      aparecer mortas no celular.
+   - MÓDULO 4 (agenda): o destino 'eventos.html' passa a se chamar
+     'Agenda' e aparece para os TRÊS perfis (gestor cai na regra
+     "fora do mapa = vê tudo"). A sidebar do desktop (ui.js, arquivo
+     congelado) ainda escreve 'Eventos' — divergência registrada no
+     handoff do módulo, para casar quando o ui.js puder ser tocado.
    - ES5 puro. Sem dependência: se Guard não existir (login),
      não faz nada.
    ============================================================ */
@@ -33,7 +38,7 @@
   /* mesmos destinos do guard.js (rótulo → arquivo) */
   var LIVE = {
     'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html',
-    'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Cockpit': 'cockpit.html',
+    'Agenda': 'eventos.html', 'Atividades': 'atividades.html', 'Cockpit': 'cockpit.html',
     'Importar': 'importacao.html',
     'Inteligência': 'inteligencia.html', 'Performance': 'performance.html',
     'Glossário': 'glossario.html', 'Riscos': 'riscos.html',
@@ -41,12 +46,12 @@
   };
   /* mesma regra de exibição do guard.js (gestor fora do mapa = vê tudo) */
   var NAV_BY_PERFIL = {
-    lider: { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Glossário': 1 },
-    usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Eventos': 1, 'Glossário': 1 }
+    lider: { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Agenda': 1, 'Inteligência': 1, 'Performance': 1, 'Glossário': 1 },
+    usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Agenda': 1, 'Glossário': 1 }
   };
   /* mesmos grupos da sidebar do desktop (ui.js + injeções do guard) */
   var GRUPOS = [
-    ['PRINCIPAL', ['Hoje', 'Reuniões', 'Planejamento', 'Atividades', 'Eventos']],
+    ['PRINCIPAL', ['Hoje', 'Agenda', 'Reuniões', 'Planejamento', 'Atividades']],
     ['GESTÃO', ['Cockpit', 'Importar', 'Inteligência', 'Performance', 'Glossário', 'Riscos']],
     ['CADASTRO', ['Setores', 'Usuários']]
   ];
@@ -55,7 +60,7 @@
   var ICONS = {
     'Hoje': '<circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>',
     'Atividades': '<path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path>',
-    'Eventos': '<rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path>',
+    'Agenda': '<rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path>',
     'Inteligência': '<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4z"></path>',
     'Reuniões': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"></path>',
     'Planejamento': '<rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 13l2 2 4-4"></path>',
@@ -128,7 +133,7 @@
       + '#gera-mdrawer .gm-it{display:flex;align-items:center;gap:12px;width:100%;background:none;'
       + 'border:0;border-radius:10px;padding:11px 10px;font:inherit;font-size:14px;font-weight:700;'
       + 'color:var(--muted);cursor:pointer;text-align:left}'
-      + '#gera-mdrawer .gm-it.on{color:var(--brand);background:var(--activeBg)}'
+      + '#gera-mdrawer .gm-it.on{color:var(--accentText);background:var(--activeBg)}'
       + '#gera-mdrawer .gm-user{display:flex;align-items:center;gap:10px;border-top:1px solid var(--border);'
       + 'padding:12px 8px 4px;margin-top:8px}'
       + '#gera-mdrawer .gm-av{width:34px;height:34px;border-radius:50%;background:var(--s3);'

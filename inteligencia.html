@@ -188,6 +188,11 @@
 .dd-sig{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 6px;white-space:nowrap}
 .dd-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}
 .dd-late{color:var(--red);font-weight:700}
+/* #37: o motivo da falha entra no lugar do status, numa segunda linha inteira
+   (alinhada ao título, depois do ponto). No fim da linha, com largura fixa, ele
+   espremia o título da atividade até "Conf…" no desktop e cortava o motivo. */
+.dd-row-motivo{flex-wrap:wrap}
+.dd-motivo{flex-basis:100%;padding-left:19px;color:var(--text);font-weight:700;white-space:normal}
 .dd-more,.dd-empty{font-size:12px;color:var(--muted2);text-align:center;padding:10px}
 .dd-go{font-size:12.5px;font-weight:700;color:var(--greenText);text-decoration:none;margin-right:auto;align-self:center}
 .dd-go:hover{text-decoration:underline}
@@ -268,6 +273,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="pareto-motor.js"></script><!-- módulo 8: a conta das rotinas que mais falham -->
   <script src="ctx.js"></script>
   <script src="lentes.js"></script>
   <script>
@@ -325,6 +331,15 @@
   function closePop() { POP.classList.remove('on'); BACK.classList.remove('on'); }
 
   /* ---------- sparkline (tendência REAL: fotos diárias do kpi_snapshots) ---------- */
+  /* A tendência (Δ7d e linha) compara duas FOTOS do dia, e a foto é sempre da
+     escola inteira (#3). Ao lado de um número recortado ela mentia: a líder
+     de PED via 32 atrasadas com "▲ +50 vs 7d", e os +50 eram da escola — o
+     mesmo com o gestor usando o seletor de setor. Por isso só aparece quando
+     o número do cartão também é da escola inteira, na janela padrão em que as
+     fotos são tiradas. O modelo sabe de qual leitura veio (m.escopoEscola). */
+  function tendenciaVale(m) {
+    return !!(m && m.escopoEscola && m.periodo === 'band' && HOJE);
+  }
   /* ---------- card de KPI (sem tendência: ainda não há histórico real) ---------- */
   function kpiCard(k, big) {
     var c = el('<div class="' + (big ? 'pf-big' : 'pf-small') + '"></div>');
@@ -341,8 +356,9 @@
     c.appendChild(el('<div class="pf-val">' + k.value + '</div>'));
     if (k.sub) { c.appendChild(el('<div class="pf-sub2">' + k.sub + '</div>')); }
     /* N2: tendência real por fotos diárias — só na janela padrão (as fotos
-       são gravadas nela; comparar com semana/mês misturaria métricas). */
-    if (PERIODO === 'band' && k.trendKey && HOJE) {
+       são gravadas nela; comparar com semana/mês misturaria métricas) e só
+       quando o cartão mostra a escola inteira, como as fotos (#3). */
+    if (k.trendKey && tendenciaVale(MODELO)) {
       var t = KPI._trend(SNAPSHOTS, k.trendKey, HOJE);
       if (!t.suficiente) {
         c.appendChild(el('<span class="pf-colet">coletando ' + t.coletando + ' dias</span>'));
@@ -437,7 +453,12 @@
     var d1 = new Date(+a[0], +a[1] - 1, +a[2]), d2 = new Date(+b[0], +b[1] - 1, +b[2]);
     return Math.round((d2 - d1) / 86400000);
   }
-  function ddRow(o, hoje) {
+  /* rotuloStatus (opcional): função que troca o rótulo de status da linha.
+     Nasceu com a correção #37 (auditoria de 16/09): no drill das rotinas que
+     mais falham a pergunta é "por que isto é falha?", e o status responde
+     errado — a entrega fora do prazo aparece como "Concluída" e a trava como
+     "Pendente", iguais às que não são falha. Sem a função, nada muda. */
+  function ddRow(o, hoje, rotuloStatus) {
     var st = DD_STATUS[o.status] || { l: o.status, t: 'muted2' };
     var r = el('<div class="dd-row"></div>');
     r.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + st.t + ')"></span>'));
@@ -451,7 +472,7 @@
     r.appendChild(resp);
     /* F1-I: do insight à ação em 1 clique — abre a atividade na tela Atividades */
     if (o.act && o.act.id) {
-      var lk = el('<a class="dd-meta" style="color:var(--brand);font-weight:800;text-decoration:none;flex:0 0 auto"></a>');
+      var lk = el('<a class="dd-meta" style="color:var(--accentText);font-weight:800;text-decoration:none;flex:0 0 auto"></a>');
       lk.textContent = 'abrir →';
       lk.href = 'atividades.html#a=' + encodeURIComponent(o.act.id);
       lk.addEventListener('click', function (ev) { ev.stopPropagation(); });
@@ -460,10 +481,21 @@
     var dt = el('<span class="dd-meta' + (o.atrasada ? ' dd-late' : '') + '"></span>');
     dt.textContent = brData(o.effDate) + (o.atrasada ? ' · ' + ddDias(o.effDate, hoje) + 'd' : '');
     r.appendChild(dt);
-    r.appendChild(el('<span class="dd-meta">' + st.l + '</span>'));
+    /* textContent, não HTML: o motivo de trava fora da lista volta do banco
+       como foi digitado, e status desconhecido também vem cru. */
+    var outro = (typeof rotuloStatus === 'function') ? rotuloStatus(o) : null;
+    var stl = el('<span class="dd-meta' + (outro ? ' dd-motivo' : '') + '"></span>');
+    stl.textContent = outro || st.l;
+    if (outro) { r.classList.add('dd-row-motivo'); }
+    r.appendChild(stl);
     return r;
   }
-  function abrirDrill(titulo, itens) {
+  /* janelaLabel (módulo 8): quase todo drill usa a janela da tela, mas o
+     cartão "As rotinas que mais falham" conta desde o marco zero, que é
+     outra janela. Sem este parâmetro o rodapé do modal diria uma janela que
+     não é a do número — mentira pequena, e mentira pequena em painel é o
+     que faz gestor parar de confiar. */
+  function abrirDrill(titulo, itens, janelaLabel, rotuloStatus) {
     UI.modal({
       title: titulo,
       width: 640,
@@ -471,13 +503,13 @@
         var box = document.createElement('div');
         box.appendChild(el('<div class="dd-count">' + itens.length + ' item(ns)' +
           (itens.length > DD_TETO ? ' · mostrando os ' + DD_TETO + ' primeiros' : '') +
-          ' · janela: ' + rotuloPeriodo(PERIODO) + '</div>'));
+          ' · janela: ' + (janelaLabel || rotuloPeriodo(PERIODO)) + '</div>'));
         if (!itens.length) {
           box.appendChild(el('<div class="dd-empty">Nenhum item compõe este número agora.</div>'));
           return box;
         }
         var list = el('<div class="dd-list"></div>');
-        itens.slice(0, DD_TETO).forEach(function (o) { list.appendChild(ddRow(o, HOJE)); });
+        itens.slice(0, DD_TETO).forEach(function (o) { list.appendChild(ddRow(o, HOJE, rotuloStatus)); });
         box.appendChild(list);
         if (itens.length > DD_TETO) {
           box.appendChild(el('<div class="dd-more">+ ' + (itens.length - DD_TETO) + ' item(ns) — refine na tela de Atividades.</div>'));
@@ -515,6 +547,193 @@
     }
   };
 
+  /* O DRILL DA LINHA (correção de 16/09, auditoria #37). O número da linha é
+     o de FALHAS, mas o clique abria todas as ocorrências da rotina desde o
+     marco zero — as cumpridas no dia, a pendente de hoje e até as
+     reprogramadas para depois de hoje. Na conferência de caixa da auditoria a
+     linha dizia 5 e o drill abria 18 itens, sem dizer quais eram os 5: a
+     entrega fora do prazo aparecia como "Concluída" e ninguém conseguia
+     refazer a conta. Regra do produto: o drill mostra os itens que FORMAM o
+     número. O filtro é o mesmo do motor (contaNaMedicao + ehFalha, que é o
+     que resumoAtividade soma), então a lista tem sempre o tamanho da linha. */
+  function falhasDaRotina(occs, marco, hoje) {
+    return (occs || []).filter(function (o) {
+      return ParetoMotor.contaNaMedicao(o, marco, hoje) && ParetoMotor.ehFalha(o);
+    }).sort(ddOrdPend);
+  }
+  /* O motivo de cada falha, com as palavras da linha do cartão. Quem decide
+     O QUE é falha é o pareto-motor.js; aqui só se dá nome. */
+  function rotuloFalha(o) {
+    var mot = ParetoMotor.motivoFalha(o);
+    if (mot === 'pulada') { return 'Pulada'; }
+    if (mot === 'trava') {
+      var tr = ParetoMotor.rotuloMotivo(ParetoMotor.travaDe(o));
+      return 'Impedimento: ' + tr.charAt(0).toLowerCase() + tr.slice(1);
+    }
+    if (mot === 'fora_do_prazo') { return 'Entregue depois do dia'; }
+    if (mot === 'atraso') { return 'Venceu em aberto'; }
+    return null;
+  }
+  function contagem(n, um, varios) { return n + ' ' + (n === 1 ? um : varios); }
+
+  /* ---------- As rotinas que mais falham (módulo 8 · noite de 15/09) ------
+     POR QUE ESTE CARTÃO EXISTE
+     O Livro do Produto pede o Pareto "por pessoa / setor / alavanca". A tela
+     só tinha POR SETOR — que responde "onde está o acúmulo", não "qual
+     rotina está falhando". Esta segunda pergunta é a que a reunião de terça
+     usa. Junto vem o terceiro bloco do Livro, "padrões de atraso", que não
+     existia em lugar nenhum: o motivo de impedimento que mais se repete em
+     cada rotina.
+
+     CONTA PRÓPRIA? NÃO. A conta inteira mora no pareto-motor.js, provada por
+     64 casos. Aqui só se lê o banco e se desenha — a tela nunca recalcula.
+
+     POR QUE CONSULTA PRÓPRIA. A janela da tela (atrasadas + 30 dias) cobre o
+     marco zero só até 31/10; a partir daí ela cortaria o começo da medição
+     em silêncio. Esta leitura é sempre "de 16/09 até hoje".
+
+     ESCOPO. Usa ATIV, que já vem recortado pelo papel (líder vê o próprio
+     setor) e pelo filtro global de setor. Reler as atividades do zero faria
+     este cartão divergir dos outros — e ninguém entenderia por quê.        */
+  var ROTINAS_TOKEN = 0;
+  function rotinasQueMaisFalham() {
+    if (!window.ParetoMotor || !KPI._buildBoard) { return null; }
+    var MARCO = ParetoMotor.MARCO_ZERO;
+    var card = el('<div class="pf-card"></div>');
+    var h = el('<div class="pf-card-h"></div>');
+    h.appendChild(el('<div class="pf-card-t">As rotinas que mais falham</div>'));
+    card.appendChild(h);
+    var corpo = el('<div class="pf-plano"></div>');
+    corpo.appendChild(el('<div class="pf-plano-act">Contando desde ' + brData(MARCO) + '…</div>'));
+    card.appendChild(corpo);
+
+    var meu = ++ROTINAS_TOKEN;
+    fbi().then(function (c) {
+      var q = c.f.query(c.f.collection(c.db, 'ocorrencias'),
+        c.f.where('data', '>=', MARCO), c.f.where('data', '<=', HOJE), c.f.limit(3000));
+      return c.f.getDocs(q);
+    }).then(function (snap) {
+      if (meu !== ROTINAS_TOKEN) { return; }
+      var docs = [];
+      snap.forEach(function (d) { docs.push(Object.assign({ id: d.id }, d.data())); });
+      var noTeto = docs.length >= 3000;
+      var board = KPI._buildBoard(ATIV, docs, { jIni: MARCO, jFim: HOJE }, HOJE);
+      var porAtiv = {};
+      board.forEach(function (o) {
+        var id = o.act && o.act.id;
+        if (!id) { return; }
+        if (!porAtiv[id]) { porAtiv[id] = { act: o.act, occs: [] }; }
+        porAtiv[id].occs.push(o);
+      });
+      var itens = [];
+      Object.keys(porAtiv).forEach(function (id) {
+        var g = porAtiv[id];
+        var r = ParetoMotor.resumoAtividade(g.occs, MARCO, HOJE);
+        if (!r.previstas) { return; }
+        itens.push({
+          chave: id,
+          rotulo: (g.act && g.act.titulo) || '(sem título)',
+          falhas: r.falhas, previstas: r.previstas,
+          atrasos: r.atrasos, travas: r.travas, puladas: r.puladas, foraDoPrazo: r.foraDoPrazo,
+          motivoQueMaisRepete: r.motivoQueMaisRepete
+        });
+      });
+      var p = ParetoMotor.pareto(itens);
+
+      corpo.innerHTML = '';
+      if (p.vazio) {
+        var vaz = el('<div class="pf-empty2"></div>');
+        vaz.textContent = p.mensagemVazia + ' A lista enche quando uma rotina vencer em aberto, travar com motivo, for pulada ou for entregue depois do dia.';
+        corpo.appendChild(vaz);
+        corpo.appendChild(el('<a class="dd-go" href="atividades.html">Ver o quadro em Atividades →</a>'));
+        h.appendChild(infoBtn({
+          title: 'As rotinas que mais falham',
+          formula: 'falhas de cada rotina, da data do marco zero até hoje.',
+          dados: 'as ocorrências planejadas de ' + brData(MARCO) + ' até hoje, cruzadas com as atividades do seu escopo.',
+          numeros: 'nenhuma falha registrada até agora · ' + itens.length + ' rotina(s) com ocorrência prevista até hoje'
+        }));
+        return;
+      }
+
+      var max = p.linhas[0].falhas;
+      var acumAnterior = 0;
+      var poucas = 0;
+      var coberturaPoucas = 0;
+      p.linhas.forEach(function (x) {
+        /* "concentra" = as linhas até (e incluindo) aquela em que o acumulado
+           cruza 80%. De propósito NÃO chamo isso de "vital": no resto do
+           produto "vital" é uma das 5 alavancas, e a mesma palavra com duas
+           contas fere a regra "um critério, uma palavra". */
+        var concentra = acumAnterior < 80;
+        if (concentra) { poucas += 1; coberturaPoucas = x.pctAcumulado; }
+        acumAnterior = x.pctAcumulado;
+        var tok = concentra ? 'red' : 'muted2';
+
+        var row = el('<div class="pf-ss-row dd-click"></div>');
+        row.title = 'Clique para ver as falhas desta rotina desde ' + brData(MARCO) + ', com o motivo de cada uma';
+        row.appendChild(el('<span class="pf-ss-dot" style="background:var(--' + tok + ')"></span>'));
+        var nome = el('<span class="pf-ss-nome"></span>');
+        nome.textContent = x.rotulo;
+        row.appendChild(nome);
+        var tr = el('<div class="pf-ss-track"></div>');
+        tr.appendChild(el('<div class="pf-ss-fill" style="width:' + Math.round(x.falhas / max * 100) + '%;background:var(--' + tok + ')"></div>'));
+        row.appendChild(tr);
+        var num = el('<span class="pf-ss-num" style="color:var(--' + tok + ')"></span>');
+        num.textContent = x.falhas + ' · Σ' + x.pctAcumulado + '%';
+        row.appendChild(num);
+        (function (id, rotulo, falhas, previstas) {
+          row.addEventListener('click', function () {
+            var lista = falhasDaRotina(porAtiv[id] ? porAtiv[id].occs : [], MARCO, HOJE);
+            abrirDrill(rotulo + ' — ' + contagem(falhas, 'falha', 'falhas') + ' de ' + contagem(previstas, 'prevista', 'previstas') +
+              ' desde ' + brData(MARCO), lista, 'de ' + brData(MARCO) + ' até hoje', rotuloFalha);
+          });
+        }(x.chave, x.rotulo, x.falhas, x.previstas));
+        corpo.appendChild(row);
+
+        /* A divisão do que falhou. É ela que diz o remédio: impedimento pede
+           destravar, entrega fora do dia pede prazo realista, pulada pede
+           conversa sobre a rotina existir. */
+        var det = [];
+        if (x.atrasos) { det.push(x.atrasos + ' venceu(ram) em aberto'); }
+        if (x.foraDoPrazo) { det.push(x.foraDoPrazo + ' entregue(s) depois do dia'); }
+        if (x.travas) { det.push(x.travas + ' com impedimento'); }
+        if (x.puladas) { det.push(x.puladas + ' pulada(s)'); }
+        var sub = el('<div class="pf-plano-act"></div>');
+        sub.textContent = det.join(' · ') + ' · em ' + x.previstas + ' previstas' +
+          (x.motivoQueMaisRepete
+            ? (' · o que mais travou: ' + ParetoMotor.rotuloMotivo(x.motivoQueMaisRepete.motivo).toLowerCase() + ', ' + x.motivoQueMaisRepete.vezes + '×')
+            : '');
+        corpo.appendChild(sub);
+      });
+
+      var rod = el('<div class="pf-plano-act"></div>');
+      rod.textContent = 'Estas ' + poucas + ' rotina(s) concentram ' + coberturaPoucas +
+        '% das falhas desde ' + brData(MARCO) + '. Atacar estas primeiro rende mais do que espalhar esforço.';
+      corpo.appendChild(rod);
+
+      h.appendChild(infoBtn({
+        title: 'As rotinas que mais falham',
+        formula: 'falha de uma rotina = venceu e continua aberta, ou foi entregue depois do dia, ou travou com motivo, ou foi pulada — contando UMA vez por ocorrência, mesmo quando cai em mais de um caso. As rotinas entram em ordem decrescente até somarem 80% das falhas (no mínimo 3, no máximo 10). O clique na linha abre exatamente essas falhas, com o motivo de cada uma.',
+        /* #41 (cético): o texto antigo dizia que "ocorrência que ainda não
+           venceu não entra", mas a de HOJE entra nas previstas (contaNaMedicao
+           usa data ≤ hoje) — e o "i" é justamente onde a pessoa refaz a conta. */
+        dados: 'as ocorrências planejadas de ' + brData(MARCO) + ' até hoje, cruzadas com as atividades do seu escopo. Ocorrência com data depois de hoje (inclusive a reprogramada para depois de hoje) não entra — nem como falha, nem no total de previstas. A ocorrência de hoje já entra nas previstas, mas só vira falha se for pulada ou travar.',
+        numeros: p.total + ' falha(s) no total · ' +
+          p.linhas.slice(0, 3).map(function (x) { return x.rotulo + ' ' + x.falhas; }).join(' · ') +
+          ' → acumulado ' + coberturaPoucas + '%',
+        nota: noTeto ? 'Li o teto de 3.000 ocorrências: pode haver rotina de fora desta conta. Se aparecer, me avise para paginar a leitura.' : null
+      }));
+    }).catch(function (e) {
+      if (meu !== ROTINAS_TOKEN) { return; }
+      corpo.innerHTML = '';
+      var er = el('<div class="pf-plano-act"></div>');
+      er.textContent = 'Não consegui ler as ocorrências desde ' + brData(MARCO) + ': ' +
+        ((e && e.message) || 'erro ao ler o banco') + '. O resto do painel continua válido.';
+      corpo.appendChild(er);
+    });
+    return card;
+  }
+
   /* ---------- KPIs de topo (grandes) ---------- */
   function toneAder(v) { return v == null ? 'muted2' : v >= 90 ? 'green' : v >= 80 ? 'amber' : 'red'; }
   function focusKPIs(m) {
@@ -527,17 +746,17 @@
         sub: t.previstasVencidas === 0 ? 'coletando — mede quando a 1ª rotina vencer' : (t.concluidasAteHoje + ' de ' + t.previstasAteHoje + ' previstas até hoje'),
         trendKey: 'aderencia', menorMelhor: false,
         drill: function () { return DD.previstas(); }, drillTitle: 'Aderência — previstas até hoje (abertas primeiro)',
-        info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas. Δ7d e linha: fotos diárias (kpi_snapshots) da janela padrão', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
+        info: { title: 'Aderência à rotina (indicador-mestre)', formula: 'concluídas até hoje ÷ previstas até hoje × 100', dados: 'ocorrências da janela com data ≤ hoje; “previstas” exclui as puladas. Δ7d e linha: fotos diárias da escola inteira (kpi_snapshots, janela padrão) — aparecem só quando o cartão também mostra a escola inteira', numeros: t.concluidasAteHoje + ' ÷ ' + t.previstasAteHoje + ' = ' + fmtPct(m.aderencia) } },
       { label: 'Atividades atrasadas', value: String(t.atrasadas), tone: t.atrasadas ? 'red' : 'green',
         sub: 'vencidas e ainda abertas',
         trendKey: 'atrasadas', menorMelhor: true,
         drill: function () { return DD.atrasadas(); }, drillTitle: 'Atrasadas — mais antigas primeiro',
-        info: { title: 'Atividades atrasadas', formula: 'ocorrências abertas (pendente, em andamento ou reprogramada) com data efetiva < hoje', dados: 'ocorrências da janela + override de data. Δ7d (queda = verde) e linha: fotos diárias (kpi_snapshots)', numeros: t.atrasadas + ' atrasada(s) agora' } },
+        info: { title: 'Atividades atrasadas', formula: 'ocorrências abertas (pendente, em andamento ou reprogramada) com data efetiva < hoje', dados: 'ocorrências da janela + override de data. Δ7d (queda = verde) e linha: fotos diárias da escola inteira (kpi_snapshots) — aparecem só quando o cartão também mostra a escola inteira', numeros: t.atrasadas + ' atrasada(s) agora' } },
       { label: 'Em andamento', value: String(t.andamento), tone: t.andamento ? 'doing' : 'muted2',
         sub: 'já iniciadas, não concluídas',
         trendKey: 'andamento', menorMelhor: true,
         drill: function () { return DD.andamento(); },
-        info: { title: 'Trabalho em andamento (WIP)', formula: 'ocorrências com status = em andamento', dados: 'ocorrências: override de status. Δ7d (queda = verde: menos WIP parado) e linha: fotos diárias (kpi_snapshots)', numeros: t.andamento + ' em andamento' } },
+        info: { title: 'Trabalho em andamento (WIP)', formula: 'ocorrências com status = em andamento', dados: 'ocorrências: override de status. Δ7d (queda = verde: menos WIP parado) e linha: fotos diárias da escola inteira (kpi_snapshots) — aparecem só quando o cartão também mostra a escola inteira', numeros: t.andamento + ' em andamento' } },
       { label: 'Concluídas na janela', value: String(t.concluidas), tone: 'green',
         sub: rotuloPeriodo(m.periodo),
         drill: function () { return DD.concluidas(); }, drillTitle: 'Concluídas na janela',
@@ -549,7 +768,17 @@
   function scoreKPIs(m) {
     var t = m.totais;
     var pessoas = m.carga.filter(function (c) { return c.nome !== '(sem responsável)'; }).length;
-    var cargaMedia = pessoas ? (Math.round(t.abertas / pessoas * 10) / 10) : null;
+    /* Correção de 16/09 (auditoria, #20): o denominador já tirava o backlog sem
+       dono, mas o numerador não — dividia TODAS as abertas pelas pessoas. Com
+       4 pessoas de 5 abertas cada e 60 sem responsável, o cartão dizia 20 por
+       pessoa enquanto as barras de "Carga por responsável", logo abaixo,
+       mostravam 5 para cada uma. Agora o numerador também é só de quem tem
+       dono. t.semResp e a chave '(sem responsável)' do kpi.js saem do mesmo
+       critério (responsavelNome vazio), então este numerador é exatamente a
+       soma das barras. O sem dono continua nos cartões "Sem responsável" e
+       "Backlog sem dono". */
+    var abertasComDono = t.abertas - t.semResp;
+    var cargaMedia = pessoas ? (Math.round(abertasComDono / pessoas * 10) / 10) : null;
     var cargaStr = cargaMedia == null ? '—' : String(cargaMedia).replace('.', ',');
     return [
       { label: 'Previstas até hoje', value: String(t.previstasAteHoje), tone: 'muted2',
@@ -568,8 +797,8 @@
         drill: function () { return DD.semResp(); }, drillTitle: 'Abertas sem responsável',
         info: { title: 'Abertas sem responsável', formula: 'ocorrências abertas cujo responsável está vazio', dados: 'atividade: responsavelNome', numeros: t.semResp + ' sem responsável' } },
       { label: 'Carga média / pessoa', value: cargaStr, tone: 'muted2',
-        drill: function () { return DD.abertas(); }, drillTitle: 'Abertas (carga) — todas as pessoas',
-        info: { title: 'Carga média por pessoa', formula: 'abertas ÷ nº de responsáveis com carga', dados: 'abertas + responsáveis distintos', numeros: pessoas ? (t.abertas + ' ÷ ' + pessoas + ' = ' + cargaStr) : 'sem responsáveis' } }
+        drill: function () { return DD.abertas().filter(function (o) { return !o.semResp; }); }, drillTitle: 'Abertas com responsável (carga) — todas as pessoas',
+        info: { title: 'Carga média por pessoa', formula: 'abertas com responsável ÷ nº de responsáveis com carga. O backlog sem dono fica fora da média (está no cartão "Sem responsável").', dados: 'abertas (pendente, em andamento ou reprogramada) cujo responsável está preenchido + responsáveis distintos', numeros: pessoas ? (abertasComDono + ' ÷ ' + pessoas + ' = ' + cargaStr + (t.semResp ? ' · fora da média: ' + t.semResp + ' sem responsável' : '')) : 'sem responsáveis' } }
     ];
   }
 
@@ -650,13 +879,26 @@
     return m.porSetor.filter(function (s) { return s.sig !== '—' && sigAtiva(s.sig, m.setores) && (s.previstas + (s.carga || 0)) > 0 && s.prevVencidas === 0; });
   }
   function setoresOrfaos(m) {
-    /* siglas desativadas/inexistentes ainda apontadas por atividades */
-    var tot = 0, sigs = [];
+    /* siglas desativadas/inexistentes ainda apontadas por atividades.
+       Correção de 16/09 (auditoria, #21): o total era previstas + carga do
+       porSetor. Só que "previstas" (data até hoje, sem as puladas) e "carga"
+       (abertas da janela inteira) se sobrepõem: a ocorrência atrasada entra
+       nas duas. Uma única atrasada numa sigla desativada aparecia como
+       "2 ocorrência(s) em SEC"; e a atividade apontando para duas siglas
+       desativadas ainda era somada uma vez por sigla. Agora a conta é no
+       board, uma vez por ocorrência: a mesma união (prevista até hoje OU
+       aberta), sem repetir. BOARD é o board de onde saiu este m — os dois
+       nascem na mesma leitura de carregar(). */
+    var sigs = [];
     m.porSetor.forEach(function (s) {
       if (s.sig === '—' || sigAtiva(s.sig, m.setores)) { return; }
-      tot += (s.previstas || 0) + (s.carga || 0);
       sigs.push(s.sig);
     });
+    var tot = !sigs.length ? 0 : (BOARD || []).filter(function (o) {
+      var prevista = o.effDate <= m.hoje && o.status !== 'pulada';
+      if (!prevista && !ddAberta(o)) { return false; }
+      return KPI.setoresDe(o.act, m.setores).some(function (sg) { return sigs.indexOf(sg) >= 0; });
+    }).length;
     return { total: tot, sigs: sigs };
   }
   function scoreSetores(m) {
@@ -676,7 +918,12 @@
       title: 'Nota composta por setor',
       formula: 'nota = 0,5×A + 0,3×B + 0,2×C. A = aderência% (peso 50) · B = 100 − %atrasadas (atrasadas ÷ abertas do setor; peso 30) · C = 100 − atraso médio (dias)×12,5 (0d=100 · 4d=50 · 8d+=0; peso 20). Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.',
       dados: 'ocorrências por setor até hoje (aderência, atrasadas, atraso médio) + abertas por setor (carga). Multi-setor conta em cada área.',
-      numeros: nums
+      numeros: nums,
+      /* #21: o número do rodapé de setor desativado também precisa de "i" */
+      nota: orfa.sigs.length
+        ? ('Setor desativado (ou sigla que saiu do cadastro) fica fora da nota. O aviso do rodapé conta cada ocorrência dessas atividades UMA vez — prevista até hoje (sem as puladas) ou ainda aberta —, mesmo quando a atividade aponta para mais de uma sigla desativada. Agora: ' +
+           orfa.total + ' ocorrência(s) em ' + orfa.sigs.join(', ') + '.')
+        : null
     }));
     card.appendChild(h);
     var list = el('<div></div>');
@@ -716,7 +963,8 @@
     /* F1-D(g): siglas desativadas/inexistentes — fora do score, com ação */
     if (orfa.sigs.length) {
       var of = el('<div class="pf-orfa"></div>');
-      of.textContent = '(setor desativado — reatribuir): ' + orfa.total + ' ocorrência(s) em ' + orfa.sigs.join(', ') + '. Reatribua o setor dessas atividades na tela Atividades.';
+      of.textContent = '(setor desativado — reatribuir): ' + orfa.total + ' ocorrência(s) em ' + orfa.sigs.join(', ') +
+        ', cada uma contada uma vez (prevista até hoje, sem as puladas, ou ainda aberta). Reatribua o setor dessas atividades na tela Atividades.';
       card.appendChild(of);
     }
     return card;
@@ -898,16 +1146,17 @@
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
     h.appendChild(el('<div class="pf-card-t">Matriz de risco dinâmica — prioridade × comportamento</div>'));
-    /* F1-J: tendência REAL dos Críticos via fotos diárias (menor = melhor) */
+    /* F1-J: tendência REAL dos Críticos via fotos diárias (menor = melhor).
+       #3: o Δ7d é da escola (foto do dia) — só ao lado do nº da escola. */
     var nCrit = riscos.filter(function (r) { return r.faixa === 'critico'; }).length;
-    if (PERIODO === 'band' && KPI._trend) {
+    if (tendenciaVale(m) && KPI._trend) {
       var tR = KPI._trend(SNAPSHOTS, 'riscoCriticos', HOJE);
       if (tR && tR.suficiente) {
         var dfR = KPI._deltaFmt(tR.delta7, true);
         var corR = dfR.tom === 'ok' ? 'green' : dfR.tom === 'bad' ? 'red' : 'muted2';
         var chipR = el('<span class="pf-colet" style="color:var(--' + corR + ')"></span>');
         chipR.textContent = 'Críticos ' + nCrit + ' · Δ7d ' + dfR.texto;
-        chipR.title = 'Variação do nº de atividades CRÍTICAS vs 7 dias atrás (fotos diárias). Menor é melhor.';
+        chipR.title = 'Variação do nº de atividades CRÍTICAS da escola inteira vs 7 dias atrás (fotos diárias). Menor é melhor.';
         h.appendChild(chipR);
       }
     }
@@ -1371,10 +1620,17 @@
     secA.appendChild(row2);
     var pa = chartPareto(m);                    /* F1-H: 80/20 das atrasadas (Juran) */
     if (pa) { pa.style.marginTop = '13px'; pa.setAttribute('data-lente', 'numeros'); secA.appendChild(pa); }
+    /* Módulo 8 · a outra dimensão do Pareto: por ROTINA, não por setor. */
+    var rf = rotinasQueMaisFalham();
+    if (rf) { rf.style.marginTop = '13px'; rf.setAttribute('data-lente', 'numeros'); secA.appendChild(rf); }
 
     /* R3 · lente EU FAÇO — minha parte nestes números (mesmo board; zero query nova) */
     (function () {
-      var minhas = (m.board || []).filter(function (o) { return o.act && o.act.responsavelUid === USER.uid; });
+      /* CORREÇÃO (noite 15/09): era (m.board || []), e m.board NÃO EXISTE —
+         KPI.computar não devolve o board (veja o return no kpi.js). O cartão
+         mostrava sempre 0 aberta(s) e 0 atrasada(s) para todo mundo, sem
+         erro no console. O board da tela é a global BOARD. */
+      var minhas = (BOARD || []).filter(function (o) { return o.act && o.act.responsavelUid === USER.uid; });
       var abertas = minhas.filter(function (o) { return o.status === 'pendente' || o.status === 'em_andamento' || o.status === 'reprogramada'; });
       var atr = minhas.filter(function (o) { return o.atrasada; });
       var mb = el('<div class="pf-card"></div>');
@@ -1393,7 +1649,7 @@
         r.appendChild(tt2);
         mb.appendChild(r);
       });
-      mb.appendChild(el('<a href="hoje.html" style="display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:var(--brand)">Resolver no Hoje →</a>'));
+      mb.appendChild(el('<a href="hoje.html" style="display:inline-block;margin-top:8px;font-size:12.5px;font-weight:800;color:var(--accentText)">Resolver no Hoje →</a>'));
       body.appendChild(mb);
     })();
 
@@ -1401,21 +1657,41 @@
     if (window.GrautLentes) { GrautLentes.aplicar(); } /* R3 · lentes */
   }
 
-  /* ---------- N2: foto do dia (idempotente; falha nunca quebra o painel) ---------- */
-  function gravarFotoDoDia(m) {
-    if (SNAP_TENTADO || PERIODO !== 'band') { return; }             /* fotos SÓ da janela padrão (comparável dia a dia) */
-    if (!USER || (USER.profile !== 'Admin' && USER.profile !== 'Editor')) { return; }
-    SNAP_TENTADO = true;
-    var ja = SNAPSHOTS.some(function (s) { return s.data === m.hoje; });
-    if (ja) { return; }
-    /* F1-J: contagens de risco entram na foto (Δ7d da lente) — derivadas na hora */
+  /* ---------- N2: foto do dia (idempotente; falha nunca quebra o painel) ----------
+     FOTO DA ESCOLA INTEIRA, GRAVADA SÓ PELO GESTOR (correção de 16/09,
+     auditoria #3). Antes a foto era o mesmo número da tela de quem abrisse
+     primeiro — e o banco aceita UMA foto por dia, sem nunca deixar corrigir.
+     Se a líder de PED abrisse às 8h, o dia inteiro ficava com as 22
+     atrasadas de PED quando a escola tinha 110. Uma semana depois o gestor
+     via "+138 vs 7d", piora falsa, porque a base era só PED; e a foto do
+     líder não trazia SEC nem CRA, o que quebrava a banda consecutiva deles
+     (Reuniões) e escondia a reunião obrigatória. O mesmo acontecia com o
+     gestor que abria com o seletor global em um setor.
+     Agora: (1) só o gestor (inclusive o sócio) grava; (2) a conta usa o
+     contexto como veio do banco, antes do recorte de papel e do seletor de
+     setor, inclusive as contagens de risco. A tela de quem abriu continua
+     recortada: só a gravação usa a escola inteira. */
+  function modeloDaFoto(ctxEscola) {
+    var mf = KPI.computar(ctxEscola);
+    /* F1-J: contagens de risco entram na foto (Δ7d da lente) — derivadas na
+       hora, do board da ESCOLA (não do BOARD recortado da tela) */
     try {
-      var rr = KPI.riscoAtividades(BOARD, m.hoje);
-      m.riscoCriticos = rr.filter(function (r) { return r.faixa === 'critico'; }).length;
-      m.riscoEmRisco = rr.filter(function (r) { return r.faixa === 'em_risco'; }).length;
-    } catch (eR) { m.riscoCriticos = null; m.riscoEmRisco = null; }
-    KPI.gravarSnapshotHoje(m, USER.uid).then(function (res) {
-      if (res && res.gravado) { SNAPSHOTS.push(KPI.snapshotDoc(m)); } /* cache local coerente p/ o resto da sessão */
+      var rr = KPI.riscoAtividades(ctxEscola.board, mf.hoje);
+      mf.riscoCriticos = rr.filter(function (r) { return r.faixa === 'critico'; }).length;
+      mf.riscoEmRisco = rr.filter(function (r) { return r.faixa === 'em_risco'; }).length;
+    } catch (eR) { mf.riscoCriticos = null; mf.riscoEmRisco = null; }
+    return mf;
+  }
+  function gravarFotoDoDia(ctxEscola) {
+    if (SNAP_TENTADO || !ctxEscola || ctxEscola.periodo !== 'band') { return; } /* fotos SÓ da janela padrão (comparável dia a dia) */
+    if (!USER || USER.perfil !== 'gestor') { return; }
+    if (!ctxEscola.ativ || !ctxEscola.ativ.length) { return; }
+    SNAP_TENTADO = true;
+    var ja = SNAPSHOTS.some(function (s) { return s.data === ctxEscola.hoje; });
+    if (ja) { return; }
+    var mf = modeloDaFoto(ctxEscola);
+    KPI.gravarSnapshotHoje(mf, USER.uid).then(function (res) {
+      if (res && res.gravado) { SNAPSHOTS.push(KPI.snapshotDoc(mf)); } /* cache local coerente p/ o resto da sessão */
     }).catch(function (e) {
       if (window.console && console.warn) { console.warn('[inteligencia] foto do dia não gravada (painel segue normal):', (e && e.message) || e); }
     });
@@ -1429,6 +1705,13 @@
     body.appendChild(box);
   }
 
+  /* Cada carregar() leva um número, e só a leitura mais nova pinta (#3/#21,
+     auditoria de 16/09). Trocar o seletor de setor, o período ou clicar em
+     Atualizar no meio de uma leitura deixava duas respostas correndo: a mais
+     lenta pintava por cima da mais nova, e BOARD (drill, plano de ação,
+     setor desativado) podia sair de uma leitura enquanto o modelo pintado
+     saía da outra. */
+  var CARREGAR_TOKEN = 0;
   function carregar() {
     /* F1-B: painel de gestão. Usuário não tem no menu; se chegar por URL, barra. */
     if (Guard.isUsuario && Guard.isUsuario()) {
@@ -1437,23 +1720,34 @@
       return;
     }
     showState('Carregando indicadores…', 'Lendo as ocorrências da janela.');
+    var meu = ++CARREGAR_TOKEN;
+    var ctxEscola = null; /* #3: o contexto como veio do banco — a foto do dia sai dele, nunca do recortado */
     Promise.all([
       KPI.carregar(PERIODO).then(function (ctx) {
+        ctxEscola = ctx;
         ctx = KPI.recortarContexto(ctx, USER);
         /* F1-D(j): pré-filtro global de setor — mesmos números das outras telas */
+        var cxSig = '';
         if (window.GrautCtx) {
-          var cxSig = GrautCtx.sanear(GrautCtx.get(), ctx.setores, USER);
+          cxSig = GrautCtx.sanear(GrautCtx.get(), ctx.setores, USER);
           if (cxSig) {
             ctx = { board: ctx.board.filter(function (o) { return GrautCtx.aplicaAtividade(o.act, cxSig); }),
                     ativ: ctx.ativ.filter(function (a) { return GrautCtx.aplicaAtividade(a, cxSig); }),
                     setores: ctx.setores, janela: ctx.janela, hoje: ctx.hoje, periodo: ctx.periodo };
           }
         }
-        BOARD = ctx.board; ATIV = ctx.ativ; DATA_OPER_MIN = KPI.minDataInicio(ctx.ativ); return KPI.computar(ctx);
+        var m = KPI.computar(ctx);
+        /* #3: o número da tela é da escola inteira? Só gestor sem seletor de
+           setor. Fica no próprio modelo (e não numa global) para a lente que
+           repinta o MODELO nunca misturar a marca de uma leitura com outra. */
+        m.escopoEscola = !!(USER && USER.perfil === 'gestor') && !cxSig;
+        return { m: m, ctx: ctx };
       }),
       KPI.lerSnapshots(window.GrautRecorrencia.hojeISO()) /* degrada p/ [] se as regras ainda não foram publicadas */
     ]).then(function (r) {
-      var m = r[0];
+      if (meu !== CARREGAR_TOKEN) { return; } /* chegou leitura mais nova: esta não pinta nem grava */
+      var m = r[0].m;
+      BOARD = r[0].ctx.board; ATIV = r[0].ctx.ativ; DATA_OPER_MIN = KPI.minDataInicio(r[0].ctx.ativ);
       SNAPSHOTS = r[1] || [];
       HOJE = m.hoje;
       if (!m.totais.atividadesAtivas) {
@@ -1462,11 +1756,13 @@
         showState(ehLider ? 'Nada no seu escopo' : 'Ainda não há atividades',
           ehLider ? 'Não há atividades ativas nos setores que você lidera nesta janela.'
                   : 'Cadastre atividades para ver os indicadores de gestão.');
+        gravarFotoDoDia(ctxEscola); /* #3: o seletor do gestor pode estar num setor vazio; a escola não */
         return;
       }
       paint(m);
-      gravarFotoDoDia(m);
+      gravarFotoDoDia(ctxEscola);
     }).catch(function (e) {
+      if (meu !== CARREGAR_TOKEN) { return; }
       showState('Não consegui carregar os indicadores', (e && e.message) || 'Erro ao ler o banco.');
     });
   }

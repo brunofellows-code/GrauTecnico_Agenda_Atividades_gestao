@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="mod-planejamento.css"><!-- módulo 3 (noite 15/09): janela 25-28, célula da grade, acompanhamento -->
 <script src="theme.js"></script>
 <script src="guard.js"></script>
 <script src="mnav.js"></script>
@@ -153,7 +154,8 @@ h3.pl-sname{font-size:13px;font-weight:800}
         <span id="pl-info"></span>
         <div class="pl-actions" id="pl-actions"></div>
       </div>
-      <div class="pl-legenda">Previsto × realizado do setor — visível a todos. Entrega até o <b>dia 25</b> do mês anterior.</div><!-- R6/design: manual completo mora no "i" do eixo, não na tela (Krug) -->
+      <div class="pl-legenda">Previsto × realizado do setor — visível a todos. Entrega até o <b>dia 25</b> do mês anterior.</div>
+<!-- R6/design: manual completo mora no "i" do eixo, não na tela (Krug) -->
       <div id="pl-body"></div>
     </main>
   </div>
@@ -195,6 +197,8 @@ h3.pl-sname{font-size:13px;font-weight:800}
          (WhatsApp/E-mail com texto pronto — padrão 3 canais F1-E).
        - Nota mensal 50/30/20 (KPI.planejamentoNota) + ranking "quem
          precisa de atenção". Tudo com "i" (fórmula+dados+números).
+         Só para competência que JÁ COMEÇOU (decisão de 16/09, defeito
+         47): mês futuro mostra "nota a partir de 01/MM" e não ranqueia.
        - Fora das 3 lentes (eixo próprio VEM×FOI — decisão travada).
      Fundamentos: where()+limit() sempre · SIGLA nunca ID · status e
      nota DERIVADOS (nunca gravados) · toda mutação em atividade_log ·
@@ -534,6 +538,45 @@ h3.pl-sname{font-size:13px;font-weight:800}
     return y + '-' + (m < 10 ? '0' : '') + m;
   }
   function compSeguinte(hojeISO) { return compShift(hojeISO.slice(0, 7), 1); }
+  /* ============================================================
+     defeito 47 · MÊS QUE AINDA NÃO COMEÇOU NÃO TEM NOTA
+     (decisão do Bruno, 16/09)
+     ------------------------------------------------------------
+     A tela abre em compSeguinte(HOJE), a competência que se PLANEJA agora.
+     Em 16/09 isso é out/2026. Num mês que só começa em 01/10 o normal é
+     nada estar realizado ainda, então KPI.planejamentoNota dava aderência
+     0: o selo pintava "Nota 0" em VERMELHO num plano recém-montado, e o
+     cartão "Quem precisa de atenção" ranqueava setores que ainda não
+     tinham o que fazer. Nota de um mês que não aconteceu não mede nada.
+     Decisão 10 de 16/09 (tarde), ainda NÃO aplicada em KPI.planejamentoNota:
+     a nota vai contar só itens vencidos. Com ela, a conta de um mês futuro
+     sai VAZIA em vez de zero, porque o formulário só aceita data prevista
+     dentro da competência (nenhum item de out/2026 vence antes de 01/10).
+     A regra desta tela continua a mesma nos dois casos (sem nota e sem
+     ranking antes do dia 01), e os textos do "i" (iRowsNotaFutura e o "i"
+     do cabeçalho) foram escritos para valer antes e depois da decisão 10.
+     (Item realizado antes de 01/10 — modalRealizar aceita data desde a
+     criação do item — continua gravado e entra na nota quando ela começar.)
+     O corte fica AQUI, na tela, e não em KPI.planejamentoNota: a mesma
+     função calcula os meses que já começaram, onde a nota é real.
+     O farol de ENTREGA (D-5/D-3/D-0) e o botão "cobrar" continuam: entregar
+     até o dia 25 o plano do mês seguinte é a cobrança que vale ANTES de o
+     mês começar. 'YYYY-MM' compara certo como texto.
+     ============================================================ */
+  function compFutura(comp, hojeISO) { return !!comp && !!hojeISO && comp > hojeISO.slice(0, 7); }
+  function inicioComp(comp) { return '01/' + comp.slice(5, 7) + '/' + comp.slice(0, 4); }
+  /* Selo de nota de UMA linha de setor: texto + cor. Mês futuro -> texto
+     neutro, sem número e sem cor de alerta (--muted, o mesmo tom de .pl-smeta). */
+  function seloNota(vivos, comp, hojeISO) {
+    if (compFutura(comp, hojeISO)) {
+      return { futura: true, nota: null, texto: 'nota a partir de ' + inicioComp(comp).slice(0, 5), cor: 'var(--muted)' };
+    }
+    var n = KPI.planejamentoNota(vivos);
+    return {
+      futura: false, nota: n, texto: n ? ('Nota ' + n.nota) : 'sem nota',
+      cor: n ? (n.nota >= 80 ? 'var(--green)' : n.nota >= 50 ? 'var(--amber)' : 'var(--red)') : null
+    };
+  }
   function novoItemId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
   function itensVivos(pl) { return ((pl && pl.itens) || []).filter(function (i) { return i && !i.removido; }); }
 
@@ -901,11 +944,24 @@ h3.pl-sname{font-size:13px;font-weight:800}
       ['Números', 'prazo ' + fmtBR(pz.deadline) + ' · ' + textoPrazo(pz) + ' · fase ' + pz.fase.toUpperCase()]
     ];
   }
+  var FORMULA_NOTA = 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − atraso médio ÷ 7); teto 7 dias). O atraso médio é a média APENAS dos itens que atrasaram — os entregues no prazo não entram nessa média (entram no componente "no prazo"). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes. Item ABERTO aguardando aprovação da alçada fica FORA do denominador (clock-pause — a espera não é do setor); item marcado "não realizado" CONTA e derruba a aderência.';
   function iRowsNota(n) {
     return [
-      ['Fórmula', 'Nota = 50% aderência (realizados ÷ previstos) + 30% no prazo (realizados até a data prevista ÷ realizados) + 20% atraso residual (100 × max(0, 1 − atraso médio ÷ 7); teto 7 dias). O atraso médio é a média APENAS dos itens que atrasaram — os entregues no prazo não entram nessa média (entram no componente "no prazo"). Pesos e teto calibráveis. Item removido sai do cálculo; nada realizado zera os dois últimos componentes. Item ABERTO aguardando aprovação da alçada fica FORA do denominador (clock-pause — a espera não é do setor); item marcado "não realizado" CONTA e derruba a aderência.'],
+      ['Fórmula', FORMULA_NOTA],
       ['Dados', 'Os itens do plano deste mês: o que foi previsto, o que foi realizado, o que foi marcado como não feito e o que dependia de aprovação.'],
       ['Números', n ? ('aderência ' + n.aderencia + '% (' + n.realizados + '/' + n.previstos + ') · no prazo ' + n.noPrazoPct + '% (' + n.realizadosNoPrazo + '/' + n.realizados + ') · atraso médio dos que atrasaram ' + n.mediaDiasAtraso + 'd → componente ' + n.atrasoPct + '% · nota ' + n.nota + (n.pausadosAprovacao ? (' · ' + plural(n.pausadosAprovacao, 'item', 'itens') + ' em pause de aprovação (fora do cálculo)') : '')) : 'sem itens ranqueáveis — não ranqueia']
+    ];
+  }
+  /* defeito 47 — o "i" do selo de mês futuro explica a AUSÊNCIA do número
+     (sem ele, "nota a partir de 01/10" pareceria defeito de carga). */
+  function iRowsNotaFutura(comp, qtdItens) {
+    var ini = inicioComp(comp);
+    return [
+      ['Por que ainda não há nota', 'A competência ' + compLabel(comp) + ' só começa em ' + ini + '. Antes disso o plano está sendo montado: quase nada foi executado e nenhum item chegou à data prevista (o formulário só aceita data prevista dentro do mês). Uma nota calculada agora não mediria desempenho nenhum, e um "Nota 0" em vermelho acusaria de mau desempenho um plano que acabou de ser montado. Mês que ainda não começou não tem nota e não entra no ranking "Quem precisa de atenção". Item já realizado antes do início fica registrado e conta quando a nota começar.'],
+      ['Fórmula (vale a partir de ' + ini + ')', FORMULA_NOTA],
+      ['O que já vale agora', 'O prazo de ENTREGA do plano: dia 25 do mês anterior, com o farol D-5/D-3/D-0 ao lado do nome do setor. A cobrança da entrega continua normal.'],
+      ['Dados', 'Os itens do plano de ' + compLabel(comp) + '. A nota é calculada na hora em que você abre a tela, a partir de ' + ini + '.'],
+      ['Números', plural(qtdItens, 'item', 'itens') + ' no plano · nota ainda não calculada (o mês não começou)']
     ];
   }
   var I_ALCADA = [
@@ -1215,8 +1271,13 @@ h3.pl-sname{font-size:13px;font-weight:800}
     bodyEl.appendChild(wrap);
 
     /* --- R5-B2: PARETO DE MOTIVOS (só quando houver não-realizados) --- */
-    var todosI = [];
-    PLANOS.forEach(function (p) { itensVivos(p).forEach(function (i) { todosI.push(i); }); });
+    /* defeito 24 (16/09) — MESMA BASE DE O QUE VEM e O QUE FOI. Este era o
+       único laço do eixo que lia PLANOS cru, sem o filtro de setor ativo de
+       todosItens(). Cenário: setor CSA desativado com plano de out/2026 e 3
+       itens "não realizei". O aviso do topo dizia que o plano "NÃO entra nos
+       números desta tela", O QUE FOI mostrava "0 desfechos", e logo abaixo
+       este cartão contava "3 itens não realizados" com as barras. */
+    var todosI = all.map(function (x) { return x.item; });
     var par = KPI.paretoMotivos(todosI);
     if (par.length) {
       var pc = el('<div class="pl-card" style="margin-top:14px"></div>');
@@ -1296,6 +1357,13 @@ h3.pl-sname{font-size:13px;font-weight:800}
        Setor sem plano (ou com plano sem item ranqueável) entra ANTES de
        todos, marcado, dizendo o que aconteceu.
        ============================================================ */
+    /* defeito 47 — mês que ainda não começou não tem ranking de nota. Em
+       out/2026, visto em 16/09, o cartão punha no topo, em vermelho, setores
+       "sem nota" e ranqueava "nota 0" quem acabou de montar o plano. A
+       cobrança que vale antes do dia 01 é a da ENTREGA, e ela continua no
+       farol D-5/D-3/D-0 e no botão "cobrar" da lista de setores. O "i" do
+       cabeçalho da tela e o selo de cada setor dizem por que não há nota. */
+    if (compFutura(COMP, HOJE)) { return; }
     var ativa = {};
     SETORES.forEach(function (s) { ativa[s.sigla] = true; });
     var comNota = {};
@@ -1466,11 +1534,13 @@ h3.pl-sname{font-size:13px;font-weight:800}
         head.appendChild(txt('span', 'pl-smeta', plural(vivos.length, 'item', 'itens')
           + ' · ' + plural(qtdReal, 'realizado', 'realizados')
           + (qtdNao ? (' · ' + plural(qtdNao, 'não realizado', 'não realizados')) : '')));
-        var n = KPI.planejamentoNota(vivos);
+        /* defeito 47 — mês futuro: "nota a partir de 01/MM" sem cor de alerta,
+           no lugar do "Nota 0" vermelho (regra em seloNota). */
+        var sn = seloNota(vivos, COMP, HOJE);
         var nb = el('<span class="pl-nota"></span>');
-        nb.appendChild(txt('span', '', n ? ('Nota ' + n.nota) : 'sem nota'));
-        if (n) { nb.style.color = n.nota >= 80 ? 'var(--green)' : n.nota >= 50 ? 'var(--amber)' : 'var(--red)'; }
-        nb.appendChild(iBtn('Nota do mês — ' + s.sigla, function () { return iRowsNota(n); }));
+        nb.appendChild(txt('span', '', sn.texto));
+        if (sn.cor) { nb.style.color = sn.cor; }
+        nb.appendChild(iBtn('Nota do mês — ' + s.sigla, function () { return sn.futura ? iRowsNotaFutura(COMP, vivos.length) : iRowsNota(sn.nota); }));
         head.appendChild(nb);
       } else {
         head.appendChild(txt('span', 'pl-smeta', 'sem plano nesta competência'));
@@ -2209,6 +2279,18 @@ h3.pl-sname{font-size:13px;font-weight:800}
       actionsEl.appendChild(nb);
     }
     bodyEl.innerHTML = '';
+    /* A FAIXA DA JANELA FOI RETIRADA (noite de 15/09, depois da auditoria).
+       Ela dizia "Planejamento do próximo mês abre dia 25". Esta tela cobra o
+       oposto, e cobra desde sempre: o dia 25 é o PRAZO DE ENTREGA, não a
+       abertura — está no rodapé desde a R4 ("Entrega até o dia 25 do mês
+       anterior"), no farol D-5/D-3/D-0 (kpi.js, planejamentoPrazo) e no "i"
+       do cartão ("vence no dia 25 do mês ANTERIOR"). As duas frases juntas,
+       na mesma tela, no mesmo segundo, fariam o líder duvidar das duas —
+       e no dia 26 a faixa ficaria VERDE, dizendo "aberto", em cima de um
+       selo vermelho de "não conforme".
+       O motor (janela, semana do acompanhamento, validações, resgate) está
+       pronto e testado; só esta faixa ficou de fora, esperando o Bruno
+       decidir qual das duas regras vale. Detalhe em NOITE/DUVIDAS.md. */
     /* itens 5 e 12 — além do aviso de leitura truncada (AVISOS, nasce na carga),
        entram os avisos DERIVADOS do dado: plano órfão, catálogo de risco que não
        carregou e setor raiz sem mapeamento de risco. Nada falha em silêncio. */
@@ -2255,7 +2337,9 @@ h3.pl-sname{font-size:13px;font-weight:800}
       ['Entrega', 'Até o dia 25 do mês anterior à competência. Farol D-5 (dia 20, alerta ao líder) · D-3 (dia 22, gestão) · D-0 (dia 25, flag de não-conformidade). NUNCA bloqueia.'],
       ['Alçada', 'Item até R$ 200: autonomia do líder. Acima: trava o ITEM até GESTOR + SÓCIO assinarem (paralelo). Quem CRIOU o item não assina — o botão "aprovar" não aparece para o autor (four-eyes). A trava é pelo custo PREVISTO. O plano nunca trava.'],
       ['Risco aceito', 'Dispensar risco de banda CRÍTICA (nível 15 a 25) exige DUAS assinaturas — gestor e sócio —, a mesma exigência de gastar acima de R$ 200. Banda ALTA (nível 10 a 14) segue com uma. Aceitar risco é decisão de risco residual (ISO 31000), não formalidade.'],
-      ['Nota', '50% aderência + 30% no prazo + 20% atraso residual (teto 7 dias) — ranking "quem precisa de atenção". Calibrável.']
+      ['Nota', '50% aderência + 30% no prazo + 20% atraso residual (teto 7 dias) — ranking "quem precisa de atenção". Calibrável.'],
+      /* defeito 47 (decisão de 16/09): a tela abre no mês SEGUINTE, que ainda não começou. */
+      ['Mês que ainda não começou', 'Não tem nota. A tela abre na competência do mês seguinte (a que se planeja agora). Nesse mês quase nada foi executado e nenhum item chegou à data prevista, então uma nota calculada agora não mediria desempenho nenhum. Por isso, em competência futura, o selo de cada setor diz "nota a partir de 01/MM", sem número e sem cor de alerta, e o cartão "Quem precisa de atenção" não aparece. O prazo de ENTREGA (farol D-5/D-3/D-0) e o botão "cobrar" continuam valendo normalmente.']
     ]);
     document.getElementById('pl-info').appendChild(ib);
     var app = document.getElementById('app');

@@ -35,6 +35,7 @@
 .at-toolleft{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .at-toolright{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .at-count{font-size:12.5px;font-weight:600;color:var(--muted)}
+.at-countwrap{display:inline-flex;align-items:center;gap:6px}
 .at-count b{color:var(--text);font-weight:800}
 
 /* select compacto na toolbar (reaproveita a borda do tema) */
@@ -185,6 +186,17 @@
 
 /* cap aviso */
 .at-capnote{font-size:11.5px;font-weight:600;color:var(--amber);margin:14px 2px 0}
+/* #23 · aviso de corte no topo do palco: base .et-warn (mesma faixa da sobrecarga).
+   O destaque fica em --text, não em âmbar: âmbar sobre o halo âmbar do tema claro
+   não chega a 4,5:1 (WCAG 1.4.3); a cor de alerta mora na borda e no ícone. */
+.at-cutnote{align-items:flex-start;line-height:1.45}
+.at-cutnote b{color:var(--text)}
+.at-cutnote .tx{flex:1;min-width:0}
+/* #6 · rodapé de quem não escreve: é a instrução do responsável, então vai em
+   --muted e não no --muted2 do .et-foot. Sobre o --bg do tema v3: --muted2 dá
+   3,92:1 no escuro e 4,44:1 no claro (reprova WCAG 1.4.3, mínimo 4,5:1);
+   --muted dá 7,59:1 e 6,91:1. */
+.et-foot.at-leitura{color:var(--muted)}
 
 /* onboarding (first-run) */
 .at-onb{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:30px 30px 28px;max-width:720px}
@@ -284,11 +296,81 @@
 .at-pact{display:flex;gap:9px;margin-top:12px}
 .at-pempty{font-size:13px;font-weight:500;color:var(--muted);text-align:center;padding:18px 8px}
 
+/* ===== 16/09 · Pareto: selo de classificação, filtro, inativas e duplicata =====
+   Só tokens do theme.css. Contraste de TEXTO medido com a fórmula WCAG 2.x,
+   compondo o fundo translúcido sobre a superfície onde o elemento mora (conta
+   refeita a partir do theme.css no NOITE/harness_fix_pareto.js, seção 10):
+     selo Vital      --text sobre --haloRed · cartão do Quadro (--s2)   12,19:1 escuro · 13,33:1 claro
+                                            · série Por recorrência (--s1) 13,11:1 · 15,01:1
+     selo Importante --muted sobre --chipBg                             6,66:1 · 6,55:1
+     selo Rotina     --muted sem fundo, em --s2 / --s1                  6,66:1 · 6,55:1 / 7,14:1 · 7,42:1
+     chip ligado     --accentText sobre --activeBg, na página (--bg)
+     motivo, meta e mensagens da lista de inativas: --text/--muted sobre --s1/--s2
+   Por que o texto do Vital NÃO é vermelho: --red sobre --haloRed no cartão dá
+   3,80:1 (escuro) e 3,56:1 (claro) — abaixo de 4,5:1. O vermelho fica na borda
+   e nas barras (não são texto); o texto fica em --text. O nível também está nas
+   barras (3 · 2 · 1, padrão de prioridade do Linear) e na palavra: nunca só cor. */
+.at-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.at-peso{display:inline-flex;align-items:center;gap:5px;flex:none;font-size:var(--fs-xs);font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  line-height:1.2;white-space:nowrap;color:var(--muted);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 7px 2px 6px}
+.at-peso.vital{color:var(--text);background:var(--haloRed);border-color:var(--red)}
+.at-peso.rotina{background:transparent;border-style:dashed}
+.at-bars{display:inline-flex;align-items:flex-end;gap:2px;height:9px;flex:none}
+.at-bars i{display:block;width:3px;border-radius:1px;background:currentColor}
+.at-bars i:nth-child(1){height:4px}
+.at-bars i:nth-child(2){height:6px}
+.at-bars i:nth-child(3){height:9px}
+.at-bars i.off{background:var(--border)}
+.at-peso.vital .at-bars i,.at-bars.vital i{background:var(--red)}
+.et-card .at-clinha{display:flex;align-items:center;flex-wrap:wrap;gap:4px 7px}
+/* barra de filtros do palco (classificação + "Só as minhas") */
+.at-fbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 12px}
+.at-fgroup{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.at-flabel{font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.at-fchip{display:inline-flex;align-items:center;gap:6px}
+.at-fchip .q{font-weight:700;color:var(--muted)}
+.at-fchip.on .q{color:var(--accentText)}
+.at-fsep{width:1px;height:20px;background:var(--border)}
+.at-fhint{font-size:var(--fs-xs);color:var(--muted)}
+@media (max-width:640px){.at-fsep{display:none}} /* quebrando em várias linhas, o traço ficava solto no começo de uma */
 /* lista de inativas */
-.at-inact{display:flex;flex-direction:column;gap:9px}
-.at-inrow{display:flex;align-items:center;gap:12px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px}
-.at-inname{flex:1;min-width:0;font-size:13.5px;font-weight:700;color:var(--muted)}
+.at-inbtn{white-space:nowrap}
+/* com o botão Inativas a barra passa da largura em telas até ~1440px: o que quebra de linha fica sob os
+   outros botões de ação (à direita), e não solto sob o seletor de visão */
+@media (min-width:901px){.at-toolright{justify-content:flex-end}}
+.at-inwrap{display:flex;flex-direction:column;gap:12px}
+.at-insum{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:var(--fs-sm);font-weight:600;color:var(--muted);line-height:1.45}
+.at-insum b{color:var(--text)}
+.at-inlive{font-size:var(--fs-sm);font-weight:700;color:var(--text)}
+.at-inact{display:flex;flex-direction:column;gap:8px;max-height:min(52vh,560px);overflow:auto;padding:2px}
+.at-inrow{display:flex;flex-direction:column;gap:9px;background:var(--s2);border:1px solid var(--border);border-radius:11px;padding:11px 13px}
+.at-inrow.conf{border-color:var(--brand)}
+.at-intop{display:flex;align-items:flex-start;gap:12px}
+.at-ininfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.at-inname{font-size:var(--fs-base);font-weight:700;color:var(--text);line-height:1.35}
+.at-incod{font-size:var(--fs-xs);font-weight:800;letter-spacing:.03em;color:var(--muted);margin-right:7px}
+.at-inmeta{display:flex;align-items:center;flex-wrap:wrap;gap:5px 10px;font-size:var(--fs-xs);font-weight:600;color:var(--muted);line-height:1.4}
+.at-inmot{font-size:var(--fs-xs);font-weight:800;color:var(--text);background:var(--s1);border:1px solid var(--border);border-radius:6px;padding:2px 7px}
+.at-inmot.sem{color:var(--muted);border-style:dashed}
+.at-inrow .ui-btn.ghost{background:var(--s1);flex:none}
+.at-inconf{display:flex;flex-direction:column;gap:10px;border-top:1px dashed var(--border);padding-top:10px}
+.at-inconf .at-date{background:var(--s1)}
+.at-inconf .at-banner{color:var(--text);background:var(--haloRed)}
+.at-inmsgs{display:flex;flex-direction:column;gap:4px}
+.at-inmsg{margin:0;font-size:var(--fs-sm);font-weight:600;color:var(--text);line-height:1.55}
+.at-inmsg.quem{font-weight:500;color:var(--muted)}
+.at-inmsg:empty{display:none}
+.at-inacts{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px}
 .at-inempty{font-size:13px;font-weight:500;color:var(--muted);text-align:center;padding:16px 8px}
+.at-inempty-t{font-weight:800;color:var(--text);margin-bottom:4px}
+.at-inempty .ui-btn{margin-top:10px}
+/* aviso de inativa igual ao criar (catálogo / criar do zero) */
+.at-dup{display:flex;flex-direction:column;gap:9px;background:var(--haloAmber);border:1px solid var(--amber);border-radius:11px;padding:12px 13px}
+.at-dup-t{font-size:var(--fs-base);font-weight:800;color:var(--text)}
+.at-dup-p{font-size:var(--fs-sm);color:var(--text);line-height:1.5}
+.at-duprow{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:8px 10px}
+.at-duprow .t{flex:1;min-width:0;font-size:var(--fs-sm);font-weight:700;color:var(--text);line-height:1.35}
+.at-duprow .s{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--muted);margin-top:2px}
 
 /* disabled (botão sem permissão) */
 .at-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
@@ -342,7 +424,7 @@
 
       <div class="at-content">
         <div id="at-toolbar"></div>
-        <div id="at-setornav"></div><div id="at-setorpanel"></div><div id="at-aviso"></div><!-- Item 1 -->
+        <div id="at-setornav"></div><div id="at-setorpanel"></div><div id="at-filtros"></div><div id="at-aviso"></div><!-- Item 1 · at-filtros: 16/09 (classificação + "Só as minhas") -->
         <div id="at-stage"></div>
       </div>
 
@@ -537,20 +619,27 @@
           }).catch(function (e) { throw ferr(e); });
         },
 
-        inativarAtividade: function (id) {
+        /* 16/09 · inativar e ativar gravam o que a tela montou (patchInativacao
+           e planoAtivacao, funções puras mais abaixo) e o histórico recebe o
+           antes e o depois de VERDADE. Antes: inativar gravava só ativo:false
+           (sem motivo, data nem autor) e reativar só ativo:true — que trazia a
+           atividade de volta com todos os dias parada contados como atraso. */
+        inativarAtividade: function (id, patch, antes) {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
-            return f.updateDoc(f.doc(db, 'atividades', id), { ativo: false, atualizadoEm: Date.now() }).then(function () {
-              api.log({ acao: 'inativar_atividade', entidade: 'atividade', refId: id, antes: { ativo: true }, depois: { ativo: false } });
+            var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+            return f.updateDoc(f.doc(db, 'atividades', id), up).then(function () {
+              api.log({ acao: 'inativar_atividade', entidade: 'atividade', refId: id, antes: antes || null, depois: patch });
             });
           }).catch(function (e) { throw ferr(e); });
         },
 
-        reativarAtividade: function (id) {
+        reativarAtividade: function (id, patch, antes) {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
-            return f.updateDoc(f.doc(db, 'atividades', id), { ativo: true, atualizadoEm: Date.now() }).then(function () {
-              api.log({ acao: 'reativar_atividade', entidade: 'atividade', refId: id, antes: { ativo: false }, depois: { ativo: true } });
+            var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
+            return f.updateDoc(f.doc(db, 'atividades', id), up).then(function () {
+              api.log({ acao: 'reativar_atividade', entidade: 'atividade', refId: id, antes: antes || null, depois: patch });
             });
           }).catch(function (e) { throw ferr(e); });
         },
@@ -672,6 +761,198 @@
 
     var CAP = 300; /* teto de cartões renderizados por vez */
 
+    /* =========================================================
+       16/09 · PARETO — CLASSIFICAÇÃO, INATIVAS E ATIVAR SEM ATRASO FALSO
+       Decisões do Bruno (16/09): as 187 atividades da planilha do Pareto
+       ficam ATIVAS com a classificação no campo `peso` (vital · importante ·
+       rotina); a que está no banco e não está na planilha fica INATIVA
+       (motivoInativa 'fora_pareto'), sem apagar; deixar ativa ou inativa tem
+       de ser fácil para líder, gestor e sócio; e reativar não conta o período
+       parado como falha. Até aqui nenhuma tela lia `peso`, a lista de inativas
+       só abria com a escola sem nenhuma atividade ativa e reativar trazia de
+       volta todos os dias parados como atraso. Funções puras primeiro (o
+       harness NOITE/harness_fix_pareto.js roda estas mesmas funções).
+       ========================================================= */
+    var PESO_DEF = {
+      vital: { rotulo: 'Vital', nivel: 3 },
+      importante: { rotulo: 'Importante', nivel: 2 },
+      rotina: { rotulo: 'Rotina', nivel: 1 }
+    };
+    var PESO_ORDEM = ['vital', 'importante', 'rotina'];
+
+    /* Classificação gravada, ou '' quando não há. Aceita caixa e espaço
+       diferentes (quem mexe no banco à mão erra), mas NÃO inventa: valor fora
+       das três palavras = sem classificação, sem selo. */
+    function pesoDe(act) {
+      var p = act && act.peso;
+      if (typeof p !== 'string') { return ''; }
+      p = p.trim().toLowerCase();
+      return Object.prototype.hasOwnProperty.call(PESO_DEF, p) ? p : '';
+    }
+    function passaPeso(act, filtro) {
+      if (!filtro) { return true; }
+      var p = pesoDe(act);
+      return filtro === 'sem' ? !p : p === filtro;
+    }
+    function rotuloFiltroPeso(f) {
+      if (f === 'sem') { return 'sem classificação'; }
+      return PESO_DEF[f] ? PESO_DEF[f].rotulo : 'todas';
+    }
+    /* Conta atividades DISTINTAS (por id) por classificação. A mesma atividade
+       aparece em mais de uma coluna do Quadro (ex.: FEITAS e A FAZER) e em
+       várias ocorrências — o chip conta cartões de atividade, não repetições. */
+    function contarPorPeso(acts) {
+      var c = { todas: 0, vital: 0, importante: 0, rotina: 0, sem: 0 }, visto = {};
+      (acts || []).forEach(function (a) {
+        if (!a || !a.id || visto[a.id]) { return; }
+        visto[a.id] = true;
+        c.todas++;
+        c[pesoDe(a) || 'sem']++;
+      });
+      return c;
+    }
+    function barrasPeso(nivel, extra) {
+      var b = el('<span class="at-bars' + (extra ? ' ' + extra : '') + '" aria-hidden="true"></span>');
+      for (var i = 1; i <= 3; i++) { var bi = document.createElement('i'); if (i > nivel) { bi.className = 'off'; } b.appendChild(bi); }
+      return b;
+    }
+    /* Selo: a palavra está sempre lá (nunca só cor). Vital com destaque;
+       Importante e Rotina discretos — padrão Linear/Jira, em que só o nível
+       mais alto ganha cor e o nível também aparece no desenho (barras). */
+    function seloPeso(act) {
+      var p = pesoDe(act);
+      if (!p) { return null; }
+      var d = PESO_DEF[p];
+      var s = el('<span class="at-peso ' + p + '"></span>');
+      s.title = 'Classificação do Pareto: ' + d.rotulo;
+      s.appendChild(barrasPeso(d.nivel));
+      s.appendChild(txt('span', 'at-sr', 'Classificação: '));
+      s.appendChild(document.createTextNode(d.rotulo));
+      return s;
+    }
+
+    /* texto para comparar: sem acento, sem caixa, pontuação vira espaço */
+    function normTexto(s) {
+      s = String(s == null ? '' : s).toLowerCase();
+      try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (eN) { }
+      return s.replace(/[^a-z0-9]+/g, ' ').trim();
+    }
+
+    var MOTIVO_INATIVA = { fora_pareto: 'Fora do Pareto', manual: 'Inativada à mão' };
+    /* Motivo para a lista de inativas. As 20 + 2 desativadas pelos arquivos de
+       11 e 15/09 gravaram só ativo:false: aparecem como "Sem motivo registrado"
+       — a tela diz o que sabe, não chuta. */
+    function motivoInativaDe(act) {
+      var m = (act && typeof act.motivoInativa === 'string') ? act.motivoInativa.trim() : '';
+      if (Object.prototype.hasOwnProperty.call(MOTIVO_INATIVA, m)) { return { chave: m, rotulo: MOTIVO_INATIVA[m] }; }
+      if (m) { return { chave: 'outro', rotulo: 'Motivo: ' + m }; }
+      return { chave: 'sem', rotulo: 'Sem motivo registrado' };
+    }
+
+    /* G · inativas "iguais" à que se vai criar, no escopo de quem cria: mesmo
+       item do catálogo (catalogoId) ou mesmo título normalizado. */
+    function inativasIguais(cand, lista) {
+      var nt = normTexto(cand && cand.titulo);
+      return (lista || inativasNoEscopo()).filter(function (a) {
+        if (!a) { return false; }
+        if (cand && cand.catalogoId && a.catalogoId && a.catalogoId === cand.catalogoId) { return true; }
+        return !!nt && normTexto(a.titulo) === nt;
+      });
+    }
+
+    /* F · inativar grava QUEM, QUANDO e POR QUÊ. Cenário que motivou: a lista
+       de inativas não tinha como separar o que o arquivo do Pareto tirou
+       (fora_pareto) do que um líder desligou à mão — as duas gravavam só
+       ativo:false. inativadaEm é o dia civil (AAAA-MM-DD), como no arquivo. */
+    function patchInativacao(act, hoje, uid) {
+      return {
+        patch: { ativo: false, motivoInativa: 'manual', inativadaEm: hoje, inativadaPor: uid || null },
+        antes: {
+          ativo: !(act && act.ativo === false),
+          motivoInativa: (act && act.motivoInativa) || null,
+          inativadaEm: (act && act.inativadaEm) || null,
+          inativadaPor: (act && act.inativadaPor) || null
+        }
+      };
+    }
+
+    function listaComE(partes) {
+      if (partes.length <= 1) { return partes.join(''); }
+      return partes.slice(0, -1).join(', ') + ' e ' + partes[partes.length - 1];
+    }
+    function diaCurto(iso) { return DOW[R.diaSemana(iso)].toLowerCase() + ' ' + fmtBR(iso); }
+
+    /* "No Hoje de quem aparece": o mesmo predicado do Hoje (KPI.visivelPara) —
+       o responsável vê como sua, a liderança do setor vê na equipe e a gestão
+       vê tudo. Sem a lista de usuários (perfil sem permissão), diz o papel. */
+    function quemVeNoHoje(act) {
+      var partes = [];
+      if (act.responsavelUid) { partes.push('de ' + (act.responsavelNome || 'quem é o responsável') + ' (responsável)'); }
+      var lideres = (USERS_ALL || []).filter(function (u) {
+        return u && u.perfil === 'lider' && u.uid !== act.responsavelUid && window.KPI && typeof KPI.visivelPara === 'function' &&
+          KPI.visivelPara(act, { perfil: 'lider', uid: u.uid, setoresLiderados: u.setoresLiderados || [] }, SETORES);
+      }).map(function (u) { return u.nome; });
+      if (lideres.length) { partes.push('de ' + lideres.join(', ') + ' (liderança do setor)'); }
+      else if (!(USERS_ALL || []).length) { partes.push('de quem lidera o setor'); }
+      partes.push('da gestão');
+      return (act.responsavelUid ? 'Aparece no Hoje ' : 'Sem responsável: fica em “Esperam dono” e aparece no Hoje ') + listaComE(partes) + '.';
+    }
+
+    /* E · o que ATIVAR grava e o que a confirmação diz. Pura: recebe a
+       atividade inativa, o hoje, a escolha da pessoa ({ data } quando a única
+       já passou, { dataFim } quando o fim já passou) e o uid; devolve se pode,
+       o patch, o "antes" do histórico, o texto e o que falta pedir.
+       A data de onde volta a contar vem do motor (R.inicioAoReativar), para o
+       Hoje, a Inteligência e o Pareto enxergarem a mesma coisa. */
+    function planoAtivacao(act, hoje, escolha, uid) {
+      escolha = escolha || {};
+      var alvo = Object.assign({}, act);
+      var novaData = (act.recorrencia === 'unico' && typeof escolha.data === 'string' && escolha.data) ? escolha.data : null;
+      var mexeFim = Object.prototype.hasOwnProperty.call(escolha, 'dataFim') && escolha.dataFim !== undefined;
+      if (novaData) { alvo.data = novaData; }
+      if (mexeFim) { alvo.dataFim = escolha.dataFim || null; }
+      var r = R.inicioAoReativar(alvo, hoje);
+      var out = { pode: false, r: r, patch: null, antes: null, texto: '', textoDatas: '', textoQuem: '', pede: null };
+      if (!r.ok) {
+        if (r.motivo === 'unica_passada' || r.motivo === 'unica_sem_data') {
+          out.pede = 'data';
+          out.texto = novaData
+            ? 'A nova data precisa ser hoje (' + fmtBR(hoje) + ') ou depois.'
+            : (act.data ? 'A data desta tarefa (' + fmtBR(act.data) + ') já passou. ' : 'Esta tarefa está sem data. ') + 'Escolha a nova data — sem ela, a tarefa voltaria atrasada.';
+        } else if (r.motivo === 'fim_passado') {
+          out.pede = 'fim';
+          out.texto = (mexeFim && alvo.dataFim)
+            ? 'Com fim em ' + fmtBR(alvo.dataFim) + ' não sobra nenhuma ocorrência de hoje em diante. Escolha um fim mais adiante ou deixe em branco.'
+            : 'O fim desta rotina (' + fmtBR(act.dataFim) + ') já passou. Escolha um novo fim ou deixe em branco para não ter término.';
+        } else {
+          out.pede = 'regra';
+          out.texto = 'A regra desta atividade está incompleta (' + (r.erros[0] || 'regra inválida') + '). Corrija em “Editar a regra” e ative depois — ativada assim, não geraria nenhuma ocorrência.';
+        }
+        return out;
+      }
+      var patch = { ativo: true, reativadaEm: hoje, reativadaPor: uid || null, motivoInativa: null };
+      var antes = { ativo: act.ativo === undefined ? null : act.ativo, motivoInativa: act.motivoInativa || null, reativadaEm: act.reativadaEm || null, reativadaPor: act.reativadaPor || null };
+      if (r.patch.dataInicio) { patch.dataInicio = r.patch.dataInicio; antes.dataInicio = act.dataInicio || null; }
+      if (novaData) { patch.data = novaData; antes.data = act.data || null; }
+      if (mexeFim) { patch.dataFim = alvo.dataFim; antes.dataFim = act.dataFim || null; }
+
+      var t;
+      if (act.recorrencia === 'unico') {
+        t = novaData ? 'Nova data: ' + diaCurto(novaData) + '.' : 'A data continua ' + diaCurto(act.data) + '.';
+      } else {
+        if (!patch.dataInicio) { t = 'As datas não mudam: a rotina começa em ' + diaCurto(act.dataInicio) + ', como já estava.'; }
+        else if (patch.dataInicio === hoje) { t = 'Volta a contar a partir de hoje, ' + diaCurto(hoje) + '.'; }
+        else { t = 'Volta a contar a partir de ' + diaCurto(patch.dataInicio) + ', para manter o ciclo ' + (act.recorrencia === 'trimestral' ? 'a cada 3 meses' : 'a cada 2 meses') + '.'; }
+        t += ' Primeira ocorrência: ' + diaCurto(r.proxima) + '. Os dias em que ficou inativa não viram atraso nem falha.';
+        if (mexeFim) { t += ' O fim anterior (' + fmtBR(act.dataFim) + ') já tinha passado: ' + (alvo.dataFim ? 'novo fim em ' + fmtBR(alvo.dataFim) : 'agora fica sem término') + '.'; }
+      }
+      out.pode = true; out.patch = patch; out.antes = antes;
+      out.textoDatas = t;
+      out.textoQuem = quemVeNoHoje(act);
+      out.texto = t + ' ' + out.textoQuem;
+      return out;
+    }
+
     /* ===================== estado ===================== */
     var SETORES = [];      /* docs de setores */
     var ATIV = [];         /* TODAS as atividades ativas (filtro de setor é em memória) */
@@ -686,7 +967,13 @@
     var BOARD_FULL = [];   /* Item 1: mesma lista ANTES do corte de 300 (contagem real do quadro por etapa) */
     var byKey = {};        /* key -> ocorrência (para drag & drop e ações) */
     var dragKey = null;    /* ocorrência em arraste */
-    var capped = false;    /* houve corte pelo teto? */
+    var CORTE = null;      /* #23: houve corte pelo teto? o que ficou de fora? (cortarPertoDeHoje; substitui o antigo booleano capped) */
+    var BOARD_TODAS = [];  /* 16/09: o mesmo recorte ANTES do filtro de classificação (base da contagem dos chips) */
+    var FILTRO_PESO = '';  /* 16/09: '' = todas · 'vital' | 'importante' | 'rotina' | 'sem' (sem classificação) */
+    var PESO_CONTA = { todas: 0, vital: 0, importante: 0, rotina: 0, sem: 0 }; /* quantas atividades cada chip mostra se clicado */
+    var CHIPS_FILTRO = {}; /* chip desenhado por valor — devolve o foco do teclado depois de redesenhar */
+    var INATIVAS = null;   /* 16/09: atividades com ativo:false (null = ainda não lidas; só para quem escreve) */
+    var INATIVAS_ERRO = null;
 
     var selSetor = '';     /* '' = todos os setores */
     var periodo = 'band';
@@ -736,6 +1023,29 @@
 
     function safeUsers() { return Store.listUsuariosAtivos().catch(function () { return []; }); }
     function safeSubs() { return Store.listSubtarefas().catch(function () { return []; }); }
+    /* 16/09 · inativas só para quem escreve (quem vê o botão). Falha de leitura
+       não derruba a tela: o botão fica sem número e a lista tenta de novo ao
+       abrir. Custo: 1 leitura por inativa (~30 hoje), dentro do plano gratuito. */
+    function safeInativas() {
+      if (!CAN_WRITE) { return Promise.resolve(null); }
+      return Store.listInativas().then(function (a) { INATIVAS_ERRO = null; return a; }, function (e) { INATIVAS_ERRO = e; return null; });
+    }
+    function aplicarInativas(lista) { if (lista) { INATIVAS = lista; } }
+    /* inativas que ESTE usuário pode ver (o mesmo escopo do quadro), em ordem de setor e título */
+    function inativasNoEscopo() {
+      var ordem = {};
+      SETORES.forEach(function (s, i) { ordem[s.sigla] = (s.ordem || (i + 1)); });
+      function ordemDe(sig) { /* subsetor vem logo depois do setor-pai (FIN sob SEC), não no fim da lista */
+        var so = SETORES.filter(function (x) { return x.sigla === sig; })[0];
+        if (so && so.setorPaiSigla && ordem[so.setorPaiSigla] != null) { return ordem[so.setorPaiSigla] + 0.5; }
+        return ordem[sig] != null ? ordem[sig] : 999;
+      }
+      return (INATIVAS || []).filter(function (a) { return a && a.ativo !== true && visivelPara(a, CURRENT_USER); })
+        .sort(function (x, y) {
+          var ox = ordemDe(setorPrincipal(x)), oy = ordemDe(setorPrincipal(y));
+          return (ox - oy) || (x.titulo || '').localeCompare(y.titulo || '', 'pt-BR');
+        });
+    }
 
     function indexOcc() {
       OCC_BY_ATIV = {};
@@ -756,9 +1066,10 @@
     function load() {
       toolbarEl.innerHTML = '';
       renderLoading();
-      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers(), safeSubs()])
+      Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), safeUsers(), safeSubs(), safeInativas()])
         .then(function (res) {
           SETORES = res[0]; ATIV = res[1];
+          aplicarInativas(res[4]); /* 16/09 */
           SUBS = {};
           res[3].forEach(function (sb) { (SUBS[sb.atividadeId] = SUBS[sb.atividadeId] || []).push(sb); });
           /* F1-D(b): líder enxerga só os liderados do escopo; gestor vê todos. */
@@ -786,8 +1097,8 @@
 
     /* recarrega atividades + janela após mutações (sem skeleton) */
     function refresh() {
-      Store.listAtividadesAtivas()
-        .then(function (a) { ATIV = a; return loadBoardData(); })
+      Promise.all([Store.listAtividadesAtivas(), safeInativas()]) /* 16/09: o "Inativas (N)" acompanha inativar/ativar */
+        .then(function (r) { ATIV = r[0]; aplicarInativas(r[1]); return loadBoardData(); })
         .then(function () { renderAll(); })
         .catch(function (e) { toast((e && e.message) || 'Falha ao atualizar.', 'err'); });
     }
@@ -806,9 +1117,18 @@
       stage.appendChild(box);
     }
 
+    /* 16/09: os painéis de fora do palco (setores, dono, filtros, aviso) não
+       podem sobrar de um desenho anterior quando o palco vira erro ou vazio. */
+    function limparPaineis() {
+      ['at-setornav', 'at-setorpanel', 'at-filtros', 'at-aviso'].forEach(function (id) {
+        var h = document.getElementById(id); if (h) { h.innerHTML = ''; }
+      });
+    }
+
     function renderError(e) {
       toolbarEl.innerHTML = '';
       stage.innerHTML = '';
+      limparPaineis();
       var box = el('<div class="at-msg"></div>');
       var icw = el('<div class="at-msg-ic err"></div>'); icw.appendChild(ico(PATH.alert, 22)); box.appendChild(icw);
       box.appendChild(el('<div class="at-msg-t">Não consegui carregar as atividades</div>'));
@@ -821,8 +1141,23 @@
 
     function renderEmpty() {
       stage.innerHTML = '';
+      limparPaineis();
       var box = el('<div class="at-onb"></div>');
       var icw = el('<div class="at-onb-ic"></div>'); icw.appendChild(ico(PATH.repeat, 24)); box.appendChild(icw);
+      /* 16/09: sem nenhuma ATIVA mas com inativas no escopo, o convite certo é
+         ativar, não "crie a primeira" (as 7 fora do Pareto, por exemplo). */
+      var nInativas = (CAN_WRITE && INATIVAS) ? inativasNoEscopo().length : 0;
+      if (nInativas) {
+        box.appendChild(el('<div class="at-onb-t">Nenhuma atividade ativa no seu escopo</div>'));
+        box.appendChild(txt('div', 'at-onb-p', 'Há ' + nInativas + ' atividade(s) inativa(s). Ative as que devem voltar para a agenda — os dias em que ficaram paradas não viram atraso. Se for algo novo, use o catálogo ou crie do zero.'));
+        var acts0 = el('<div class="at-onb-actions"></div>');
+        acts0.appendChild(UI.button({ label: 'Ver inativas (' + nInativas + ')', icon: 'repeat', onClick: function () { openInativas(); } }));
+        acts0.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', variant: 'ghost', onClick: abrirCatalogo }));
+        acts0.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { openEditor(null); } }));
+        box.appendChild(acts0);
+        stage.appendChild(box);
+        return;
+      }
       box.appendChild(el('<div class="at-onb-t">Crie a primeira atividade</div>'));
       box.appendChild(el('<div class="at-onb-p">Atividades são as rotinas e tarefas da escola — diárias, semanais, quinzenais (dias 1 e 15), mensais ou de data única. Cada atividade liga-se a um <b>setor</b> e a um <b>responsável</b>, e gera <b>ocorrências</b> que você acompanha em lista ou no quadro (Kanban). Concluir, pular ou reprogramar uma ocorrência não apaga o histórico.</div>'));
 
@@ -836,7 +1171,7 @@
         var actions = el('<div class="at-onb-actions"></div>');
         actions.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', onClick: abrirCatalogo }));
         actions.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { openEditor(null); } }));
-        var inb = UI.button({ label: 'Ver inativas', variant: 'ghost', icon: 'repeat', onClick: openInativas });
+        var inb = UI.button({ label: INATIVAS ? 'Ver inativas (0)' : 'Ver inativas', variant: 'ghost', icon: 'repeat', onClick: function () { openInativas(); } });
         actions.appendChild(inb);
         box.appendChild(actions);
       } else {
@@ -867,21 +1202,23 @@
     function uniqSig(a) { var seen = {}, out = []; a.forEach(function (x) { if (x && !seen[x]) { seen[x] = 1; out.push(x); } }); return out; }
 
     /* F1-B · escopo de visibilidade por papel (RBAC de conteúdo).
-       gestor: tudo · líder: interseção com setoresLiderados (todos→visível) ·
-       usuário: só as suas (responsavelUid). Reaproveita o setoresDe local. */
+       gestor: tudo · líder de raiz: a raiz + os subsetores dela · líder de
+       subsetor: só o subsetor · usuário: só as suas (responsavelUid).
+       Correção de 16/09 (#9): aqui havia uma CÓPIA local dessa regra, que
+       comparava setoresLiderados só com setorSigla/setorSiglas — campos que,
+       por contrato, guardam a sigla da RAIZ — e nunca olhava subsetorSigla.
+       Cenário que motivou: líder com setoresLiderados ['CX'] (CX é subsetor
+       de ADM) e atividades gravadas pelo editor como { setorSigla: 'ADM',
+       subsetorSigla: 'CX' }. A cópia dava falso para todas: a tela abria
+       "Nada no seu escopo" e a navegação mostrava "Meu escopo 0 · ADM 0",
+       enquanto o Hoje listava as mesmas atividades para o mesmo líder.
+       Agora a tela usa o predicado do motor (kpi.js, já carregado acima), o
+       MESMO do Hoje: uma regra só, num lugar só, para as duas telas não
+       voltarem a discordar. Sem o motor carregado, ninguém vê nada (falha
+       fechada): a tela nunca mostra além do escopo. */
     function visivelPara(act, u) {
-      if (!u) { return false; }
-      if (u.perfil === 'gestor') { return true; }
-      if (u.perfil === 'lider') {
-        var lid = Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [];
-        if (!lid.length) { return false; }
-        if (act && act.todosSetores) { return true; }
-        var sigs = setoresDe(act);
-        for (var i = 0; i < sigs.length; i++) { if (lid.indexOf(sigs[i]) !== -1) { return true; } }
-        return false;
-      }
-      if (u.perfil === 'usuario') { return !!(act && act.responsavelUid && u.uid && act.responsavelUid === u.uid); }
-      return false;
+      if (!window.KPI || typeof KPI.visivelPara !== 'function') { return false; }
+      return KPI.visivelPara(act, u, SETORES);
     }
 
     function renderToolbar() {
@@ -891,8 +1228,11 @@
       /* ---- esquerda: contagem ---- */
       var left = el('<div class="at-toolleft"></div>');
       var count = txt('div', 'at-count', '');
-      count.innerHTML = '<b>' + BOARD.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo];
-      left.appendChild(count);
+      count.innerHTML = htmlContagem();
+      var countWrap = el('<div class="at-countwrap"></div>'); /* #23: número + "i" juntos */
+      countWrap.appendChild(count);
+      countWrap.appendChild(infoAt('Ocorrências da janela — como este número é contado', infoContagem));
+      left.appendChild(countWrap);
       /* F1-D(j): contexto global de setor — 1 escolha vale em Hoje/Atividades/Inteligência */
       if (window.GrautCtx && !document.getElementById('at-setornav')) { /* Item 1: a navegação de setores substitui o select */
         GrautCtx.mount(left, { setores: SETORES, user: CURRENT_USER,
@@ -954,19 +1294,82 @@
       if (CAN_WRITE) {
         right.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', onClick: abrirCatalogo }));
         right.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { openEditor(null); } }));
+        right.appendChild(botaoInativas()); /* 16/09 · D: sempre na barra de quem escreve */
       }
 
       bar.appendChild(right);
       toolbarEl.appendChild(bar);
     }
 
+    /* Correção de 16/09 (#23) · o contador conta o conjunto REAL (BOARD_FULL).
+       Antes lia BOARD, que já vem cortado em 300. Cenário que motivou: 6
+       diárias de segunda a sexta em "Atrasadas + 30d" dão 330 ocorrências; o
+       Quadro (visão padrão) desenhava as 330 e os "i" das colunas contavam
+       330, mas o topo dizia "300 ocorrência(s)", sem aviso nenhum. O teto de
+       300 é só de DESENHO da visão Por recorrência — e lá o aviso de corte
+       diz quantas ficaram de fora. htmlContagem é a fonte única do texto
+       (a toolbar e o updateCount escreviam a mesma string em dois lugares). */
+    function htmlContagem() {
+      /* 16/09: com filtro de classificação o número é só daquela classificação — e diz isso */
+      return '<b>' + BOARD_FULL.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo] + (FILTRO_PESO ? ' · ' + rotuloFiltroPeso(FILTRO_PESO) : '');
+    }
+    /* recorte da classificação em texto, para os "i" (vazio sem filtro) */
+    function recortePeso() { return FILTRO_PESO ? ' + classificação ' + rotuloFiltroPeso(FILTRO_PESO) : ''; }
+    function botaoInativas() {
+      var n = INATIVAS ? inativasNoEscopo().length : null;
+      var b = UI.button({ label: n == null ? 'Inativas' : 'Inativas (' + n + ')', variant: 'ghost', icon: 'folder', onClick: function () { openInativas(); } });
+      b.className += ' at-inbtn';
+      b.title = n == null
+        ? 'Atividades inativas — ' + (INATIVAS_ERRO ? 'não consegui contar agora; a lista tenta de novo ao abrir' : 'ver o motivo e ativar de novo')
+        : n + ' atividade(s) inativa(s) no seu escopo — ver o motivo e ativar de novo';
+      return b;
+    }
+    function infoContagem() {
+      var w = windowFor(periodo);
+      var recorte = ((view === 'etapas')
+        ? 'seu escopo + setor + busca' + (ET_SO_MINHAS ? ' + só as minhas' : '')
+        : 'seu escopo + setor + busca + lente') + recortePeso();
+      return {
+        formula: 'Conta ocorrências (cada dia previsto de cada atividade, com a data reprogramada quando houver), não atividades. É o conjunto inteiro: o teto de ' + CAP + ' só limita o que a visão Por recorrência desenha. O Quadro junta as ocorrências por atividade, por isso a soma das colunas dele não é este número.',
+        dados: 'atividades ativas × regra de recorrência + ocorrências gravadas · período ' + fmtBR(w.jIni) + ' a ' + fmtBR(w.jFim) + ' · ' + recorte,
+        numeros: BOARD_FULL.length + ' ocorrência(s)' + (usaConjuntoReal()
+          ? ' · esta visão usa todas'
+          : ((CORTE && CORTE.cortadas) ? ' · esta visão desenha ' + CORTE.itens.length + ' e deixa ' + CORTE.cortadas + ' de fora (aviso acima das colunas)' : ' · esta visão desenha todas'))
+      };
+    }
+
     /* atualiza só o número de ocorrências (sem reconstruir a toolbar — preserva o foco da busca) */
     function updateCount() {
       var c = toolbarEl.querySelector('.at-count');
-      if (c) { c.innerHTML = '<b>' + BOARD.length + '</b> ocorrência(s) · ' + PERIODO_LABEL[periodo]; }
+      if (c) { c.innerHTML = htmlContagem(); }
     }
 
     /* ===================== permissões de ação ===================== */
+    /* Correção de 16/09 (#6) · o RESPONSÁVEL executa as PRÓPRIAS ocorrências.
+       Mesma regra do PODE_AGIR do hoje.html (F1-J, padrão Asana: quem é
+       assignado conclui a própria tarefa mesmo sendo só leitura no resto).
+       Cenário que motivou: Ana (perfil usuario → Visualizador, logo
+       CAN_WRITE falso) é a responsável pela diária "Fechar caixa". No Hoje ela
+       concluía com relato; aqui o cartão aparecia em A FAZER sem nenhum botão
+       e o rodapé dizia "Somente leitura", porque todo portão era CAN_WRITE.
+       O que o responsável ganha é só EXECUÇÃO — concluir (com relato),
+       iniciar e desfazer a própria conclusão —, o mesmo que o Hoje libera e
+       que as regras F1-J do Firestore aceitam dele. Pular, reprogramar,
+       editar, inativar, o menu "Mais ações" e arrastar cartões seguem só com
+       CAN_WRITE. Líder e gestor não ganham nada: já passavam por CAN_WRITE.
+       A checagem de uid preenchido é a única diferença para o Hoje: sem ela,
+       usuário sem uid "seria responsável" por atividade sem responsável
+       (null === null). */
+    function podeAgir(o) {
+      if (CAN_WRITE) { return true; }
+      return !!(o && o.act && CURRENT_USER && CURRENT_USER.uid && o.act.responsavelUid === CURRENT_USER.uid);
+    }
+    /* "Mais ações" abre o actionsMenu, que é só de quem escreve: para os
+       outros o botão não faria nada (botão órfão), então nem aparece. */
+    function acaoMais(o, rotulo) {
+      return CAN_WRITE ? [[rotulo, PATH.dots, function () { actionsMenu(o); }]] : [];
+    }
+    var MSG_SO_RESPONSAVEL = 'Só o responsável (ou líder/gestor) mexe nesta atividade.'; /* mesmo texto do Hoje */
     function isOwner(act) { return !!(act && act.criadoPor && CURRENT_USER.uid && act.criadoPor === CURRENT_USER.uid); }
     function canApproveDirect(act) { return IS_ADMIN || isOwner(act); }
     function pendentesAcionaveis() {
@@ -1002,6 +1405,15 @@
           var ov = oc.override || null;
           var effDate = (ov && ov.dataOverride) || oc.data;
           var aberto = (oc.status === 'pendente' || oc.status === 'reprogramada' || oc.status === 'em_andamento');
+          /* responsavel/semResp/uid existem no board do kpi.js (buildBoard) e
+             faltavam aqui — mas este mesmo objeto é entregue a KPI.computar,
+             que faz abertas.filter(o => o.semResp). Sem o campo, o filtro lia
+             undefined e o card "Sem responsável" mostrava 0 · todas com dono
+             na MESMA tela em que 12 cartões diziam "Sem responsável".
+             É o mecanismo do defeito de hoje.html (15/09), na direção inversa:
+             lá a tela lia campo que o board não tinha; aqui o board não entrega
+             campo que o motor lê. */
+          var respNome = (act.responsavelNome || '').trim();
           var enriched = {
             key: act.id + '|' + oc.data,
             act: act,
@@ -1011,6 +1423,9 @@
             ov: ov,
             titulo: (ov && ov.tituloOverride) || act.titulo,
             horario: (ov && ov.horarioOverride) || act.horario || '',
+            responsavel: respNome,
+            semResp: !respNome,
+            uid: act.responsavelUid || null,
             atrasada: aberto && R.compareISO(effDate, hoje) < 0
           };
           out.push(enriched);
@@ -1031,13 +1446,64 @@
         return (a.titulo || '').localeCompare(b.titulo || '', 'pt-BR');
       });
 
+      /* 16/09 · Pareto: o filtro de classificação é o ÚLTIMO corte, depois de
+         escopo, setor, lente/"só as minhas" e busca. BOARD_TODAS guarda o recorte
+         sem ele — é de onde sai quanto cada chip mostraria se clicado. */
+      BOARD_TODAS = out;
+      if (FILTRO_PESO) { out = out.filter(function (o) { return passaPeso(o.act, FILTRO_PESO); }); }
+
       BOARD_FULL = out; /* Item 1: antes do corte */
-      capped = out.length > CAP;
-      if (capped) { out = out.slice(0, CAP); }
+      CORTE = cortarPertoDeHoje(out, hoje, CAP); /* #23: fica o mais perto de hoje, não o mais antigo */
+      out = CORTE.itens;
 
       byKey = {};
       out.forEach(function (o) { byKey[o.key] = o; });
       return out;
+    }
+
+    /* Correção de 16/09 (#23) · QUAIS 300 FICAM quando a janela passa do teto.
+       Antes era out.slice(0, 300) logo depois de ordenar por data CRESCENTE:
+       ficavam as 300 MAIS ANTIGAS. Cenário que motivou: 12 diárias em
+       "Atrasadas + 30d" dão 660 ocorrências; a visão Por recorrência parava
+       em 04/09 — sumiam as de hoje e todas as futuras, justamente as que a
+       pessoa abre a tela para ver, e os contadores das colunas mentiam.
+       Agora ficam as 300 com data efetiva mais PERTO DE HOJE (distância em
+       dias, para trás ou para frente). Empate de distância: a do passado
+       entra antes — é no passado que estão as atrasadas, que são cobrança
+       agora; a futura do mesmo tanto de dias ainda pode esperar. Empate
+       dentro do mesmo lado: a ordem da lista (data, horário, título).
+       O que sai continua em ordem de data e a função devolve o que ficou de
+       fora (quantas antes, quantas depois, e até/desde quando) — é disso que
+       o aviso de corte fala. Função pura: só lê a lista, o hoje e o teto. */
+    function cortarPertoDeHoje(lista, hoje, cap) {
+      var r = { itens: lista, total: lista.length, cortadas: 0, antes: 0, depois: 0, antesAte: null, depoisDe: null, de: null, ate: null };
+      if (lista.length <= cap) { return r; }
+      var ranking = lista.map(function (o, i) {
+        var d = R.diasEntre(hoje, o.effDate); /* > 0 futuro · < 0 passado */
+        return { i: i, dist: Math.abs(d), lado: d < 0 ? 0 : 1 };
+      });
+      ranking.sort(function (a, b) { return (a.dist - b.dist) || (a.lado - b.lado) || (a.i - b.i); });
+      var fica = {};
+      for (var k = 0; k < cap; k++) { fica[ranking[k].i] = true; }
+      var itens = [];
+      lista.forEach(function (o, i) {
+        if (fica[i]) {
+          itens.push(o);
+          if (!r.de || R.compareISO(o.effDate, r.de) < 0) { r.de = o.effDate; }
+          if (!r.ate || R.compareISO(o.effDate, r.ate) > 0) { r.ate = o.effDate; }
+          return;
+        }
+        r.cortadas++;
+        if (R.compareISO(o.effDate, hoje) < 0) {
+          r.antes++;
+          if (!r.antesAte || R.compareISO(o.effDate, r.antesAte) > 0) { r.antesAte = o.effDate; }
+        } else {
+          r.depois++;
+          if (!r.depoisDe || R.compareISO(o.effDate, r.depoisDe) < 0) { r.depoisDe = o.effDate; }
+        }
+      });
+      r.itens = itens;
+      return r;
     }
 
     /* R3 · "i" desta tela (mesmo padrão do Hoje — Protocolo A) */
@@ -1062,17 +1528,25 @@
 
     /* R3 · lente OS NÚMEROS: os mesmos números do motor (KPI.computar) sobre
        o escopo da janela atual. Com esta lente ativa o predicado não corta
-       por responsável, então o BOARD já é a base completa. Zero query nova. */
+       por responsável. Zero query nova.
+       Correção de 16/09 (#23): a base é BOARD_FULL, não BOARD. O BOARD vem
+       cortado no teto de desenho (300) e a conta saía sobre um pedaço da
+       janela sem aviso — o aviso de corte ficava depois do return desta
+       lente. Cenário que motivou: 12 diárias, Por recorrência + OS NÚMEROS:
+       a tela mostrava 300 ocorrências, aderência 84%, 48 atrasadas e atraso
+       médio 26,5d; o real era 660, 79%, 72 e 19,5d. E o "i" afirmava "as
+       MESMAS ocorrências desta tela". Número de indicador não tem teto de
+       desenho: conta tudo. */
     function renderNumeros() {
       var hoje = R.hojeISO();
-      var mm = KPI.computar({ board: BOARD, hoje: hoje, setores: SETORES, ativ: ATIV });
+      var mm = KPI.computar({ board: BOARD_FULL, hoje: hoje, setores: SETORES, ativ: ATIV });
       var wrap = el('<div data-lente="numeros"></div>');
       var head = el('<div style="display:flex;align-items:center;gap:7px;margin:2px 0 10px"></div>');
-      head.appendChild(el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)">Números da janela (' + PERIODO_LABEL[periodo] + ')</div>'));
+      head.appendChild(el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)">Números da janela (' + PERIODO_LABEL[periodo] + (FILTRO_PESO ? ' · ' + rotuloFiltroPeso(FILTRO_PESO) : '') + ')</div>'));
       head.appendChild(infoAt('Números da janela — como cada um é calculado', function () {
         return {
           formula: 'Aderência = concluídas ÷ previstas até hoje × 100 (meta 90%). Atrasadas = abertas com data efetiva vencida; atraso médio = média de dias de atraso. Em andamento = status "em andamento". Reprogramação = reprogramadas ÷ total × 100 (limite 20%). Sem responsável = abertas sem dono (não medem).',
-          dados: 'as MESMAS ocorrências desta tela (seu escopo + contexto de setor + busca + período acima); dia civil de Salvador.',
+          dados: 'as MESMAS ocorrências desta tela (seu escopo + contexto de setor + busca' + recortePeso() + ' + período acima), todas — o teto de ' + CAP + ' da visão Por recorrência é só de desenho e não entra na conta; dia civil de Salvador.',
           numeros: 'ocorrências ' + mm.totais.ocorrencias + ' · aderência ' + (mm.aderencia == null ? '—' : mm.aderencia + '%') + ' · atrasadas ' + mm.totais.atrasadas + ' (atraso médio ' + (Math.round(mm.agingMedio * 10) / 10) + 'd) · andamento ' + mm.totais.andamento + ' · reprog ' + mm.reprogPct + '% · sem resp. ' + mm.totais.semResp
         };
       }));
@@ -1087,8 +1561,46 @@
         { label: 'Sem responsável', value: String(mm.totais.semResp), sub: mm.totais.semResp ? 'defina o dono — não medem' : 'todas com dono', tone: mm.totais.semResp ? 'amber' : 'green' }
       ].forEach(function (k) { grid.appendChild(UI.kpiCard(k)); });
       wrap.appendChild(grid);
-      wrap.appendChild(el('<div style="margin-top:12px;font-size:12px;color:var(--muted2)">Detalhe por pessoa em <a href="performance.html" style="color:var(--brand);font-weight:700">Performance</a> · plano de ação em <a href="inteligencia.html" style="color:var(--brand);font-weight:700">Inteligência</a>.</div>'));
+      wrap.appendChild(el('<div style="margin-top:12px;font-size:12px;color:var(--muted2)">Detalhe por pessoa em <a href="performance.html" style="color:var(--accentText);font-weight:700">Performance</a> · plano de ação em <a href="inteligencia.html" style="color:var(--accentText);font-weight:700">Inteligência</a>.</div>'));
       stage.appendChild(wrap);
+    }
+
+    /* #23 · a visão ativa desenha o conjunto real? O Quadro (etapas) lê
+       BOARD_FULL e desenha em lotes de 40 com "mostrar mais"; a lente OS
+       NÚMEROS conta BOARD_FULL. As demais visões desenham BOARD (cortado). */
+    function usaConjuntoReal() {
+      return view === 'etapas' || !!(window.GrautLentes && GrautLentes.ativa() === 'numeros');
+    }
+
+    /* Correção de 16/09 (#23) · AVISO DE CORTE em qualquer visão que corte.
+       Antes a nota só existia com view !== 'etapas', ficava no FIM do palco
+       (depois de até 300 cartões) e não saía na lente OS NÚMEROS, que
+       retornava antes dela; e dizia "as primeiras 300", sem contar o que
+       sumiu. Agora a condição é o próprio corte — o conjunto que a visão
+       desenha é menor que o real —, o aviso abre o palco e diz quantas
+       ficaram de fora, de que lado de hoje e até/desde quando, com "i".
+       No Quadro não aparece porque lá nada é cortado (desenha as N reais);
+       mostrar aviso ali seria dizer uma coisa que não acontece. */
+    function avisoCorte() {
+      if (usaConjuntoReal() || !CORTE || !CORTE.cortadas) { return null; }
+      var c = CORTE;
+      var partes = [];
+      if (c.antes) { partes.push(c.antes + ' mais antiga(s) (até ' + fmtBR(c.antesAte) + ')'); }
+      if (c.depois) { partes.push(c.depois + ' mais adiante (a partir de ' + fmtBR(c.depoisDe) + ')'); }
+      var w = el('<div class="et-warn at-cutnote"><span class="ic" aria-hidden="true">!</span></div>');
+      var s = el('<span class="tx"></span>');
+      s.appendChild(txt('b', null, 'Mostrando ' + c.itens.length + ' de ' + c.total + ' ocorrências'));
+      s.appendChild(document.createTextNode(' — as mais próximas de hoje (' + fmtBR(c.de) + ' a ' + fmtBR(c.ate) + '). Ficaram de fora ' + partes.join(' e ') + '. Para ver todas, escolha um setor, use a busca ou um período mais curto.'));
+      w.appendChild(s);
+      w.appendChild(infoAt('Corte de exibição — o que ficou de fora', function () {
+        var jw = windowFor(periodo);
+        return {
+          formula: 'Esta visão desenha no máximo ' + CAP + ' ocorrências por vez. Passando disso, ficam as ' + CAP + ' com data efetiva mais perto de hoje (distância em dias, para trás ou para frente); em distância igual, a do passado entra antes, porque é lá que estão as atrasadas. O contador do topo, a lente OS NÚMEROS e o Quadro usam todas.',
+          dados: 'ocorrências do período ' + fmtBR(jw.jIni) + ' a ' + fmtBR(jw.jFim) + ' no seu escopo + setor + busca + lente' + recortePeso() + ' · data efetiva = data reprogramada, quando houver.',
+          numeros: 'total ' + c.total + ' · desenhadas ' + c.itens.length + ' (' + fmtBR(c.de) + ' a ' + fmtBR(c.ate) + ') · de fora ' + c.cortadas + ' = ' + c.antes + ' antes + ' + c.depois + ' depois'
+        };
+      }));
+      return w;
     }
 
     function renderBoard() {
@@ -1096,39 +1608,138 @@
       stage.innerHTML = '';
       renderSetorNav(); renderPainelSetor(); if (typeof etLentesVisivel === 'function') { etLentesVisivel(); } /* Item 1 */
       var _av = document.getElementById('at-aviso'); if (_av) { _av.innerHTML = ''; }
+      /* 16/09 · Pareto: no Quadro as colunas são montadas UMA vez sem o filtro
+         de classificação (dadosEtapas) — daí sai a contagem dos chips — e depois
+         filtradas para desenhar. Nas outras visões a base é BOARD_TODAS. Assim
+         cada chip diz exatamente quantas atividades aparecem se for clicado. */
+      var etTodas = (view === 'etapas') ? dadosEtapas(BOARD_TODAS) : null;
+      var etVista = etTodas ? filtrarEtapas(etTodas, FILTRO_PESO) : null;
+      PESO_CONTA = contarPorPeso(etTodas ? atividadesDoQuadro(etTodas) : BOARD_TODAS.map(function (o) { return o.act; }));
+      renderFiltros();
+      var nota = avisoCorte(); if (nota) { stage.appendChild(nota); } /* #23: abre o palco, em qualquer visão que corte */
       /* R3 · lente OS NÚMEROS troca o palco pelos indicadores da janela */
       if (view !== 'etapas' && window.GrautLentes && GrautLentes.ativa() === 'numeros') { renderNumeros(); updateCount(); return; }
-      if (!BOARD.length) {
-        var box = el('<div class="at-msg"></div>');
-        var icw = el('<div class="at-msg-ic"></div>'); icw.appendChild(ico(PATH.calendar, 22)); box.appendChild(icw);
-        /* F1-B: distinguir "vazio por escopo" de "vazio por período/filtro" */
-        var algumVisivel = ATIV.some(function (a) { return visivelPara(a, CURRENT_USER); });
-        if (ATIV.length && !algumVisivel) {
-          box.appendChild(el('<div class="at-msg-t">Nada no seu escopo</div>'));
-          box.appendChild(txt('div', 'at-msg-p', (Guard.isLider && Guard.isLider())
-            ? 'Você vê apenas as atividades dos setores que lidera.'
-            : 'Você vê apenas as atividades atribuídas a você.'));
-        } else {
-          box.appendChild(el('<div class="at-msg-t">Nada na janela selecionada</div>'));
-          box.appendChild(txt('div', 'at-msg-p', (search.trim() || selSetor) ? 'Nenhuma ocorrência bate com o filtro/busca atual. Limpe o filtro ou troque o período.' : 'Não há ocorrências para este período. Troque o período acima ou crie uma atividade.'));
-        }
-        stage.appendChild(box);
+      /* 16/09: o Quadro só está vazio quando as QUATRO colunas estão (A FAZER
+         mostra a próxima data mesmo fora do período); antes o teste era a
+         janela, e uma mensal do mês seguinte sumia atrás de "Nada na janela". */
+      if (etVista ? quadroVazio(etVista) : !BOARD.length) {
+        renderPalcoVazio();
+        /* #23: sem isto o topo seguia com o número anterior (ex.: "330
+           ocorrência(s) · esta semana" ao lado de "Nada na janela"), porque
+           a troca de lente e o refresh só chamam renderBoard. */
+        updateCount();
         return;
       }
-      if (view === 'etapas') { renderEtapas(); } /* Item 1 */
+      if (view === 'etapas') { renderEtapas(etVista); } /* Item 1 */
       else if (view === 'recor') { renderColunasRecorrencia(); }
       else if (view === 'kanban') { renderKanban(); }
       else if (view === 'setor') { renderPorSetor(); }
       else if (view === 'quadro') { renderQuadroSetor(); }
       else if (view === 'serie') { renderColapsadoSerie(); }
       else { renderList(); }
-      if (capped && view !== 'etapas') { stage.appendChild(txt('div', 'at-capnote', 'Mostrando as primeiras ' + CAP + ' ocorrências. Use o filtro de setor, a busca ou um período mais curto para refinar.')); }
       updateCount(); /* F1-E · 0.3: BOARD acabou de ser reconstruído — o contador do topo acompanha */
       if (window.GrautLentes) { GrautLentes.aplicar(); } /* R3 · lentes */
     }
 
+    function renderPalcoVazio() {
+      var box = el('<div class="at-msg"></div>');
+      var icw = el('<div class="at-msg-ic"></div>'); icw.appendChild(ico(PATH.calendar, 22)); box.appendChild(icw);
+      /* F1-B: distinguir "vazio por escopo" de "vazio por período/filtro" */
+      var algumVisivel = ATIV.some(function (a) { return visivelPara(a, CURRENT_USER); });
+      if (ATIV.length && !algumVisivel) {
+        box.appendChild(el('<div class="at-msg-t">Nada no seu escopo</div>'));
+        box.appendChild(txt('div', 'at-msg-p', (Guard.isLider && Guard.isLider())
+          ? 'Você vê apenas as atividades dos setores que lidera.'
+          : 'Você vê apenas as atividades atribuídas a você.'));
+      } else if (FILTRO_PESO && PESO_CONTA.todas > 0) {
+        /* 16/09: vazio SÓ por causa da classificação — diz isso e dá a saída */
+        var rot = rotuloFiltroPeso(FILTRO_PESO);
+        box.appendChild(txt('div', 'at-msg-t', FILTRO_PESO === 'sem' ? 'Todas as atividades deste recorte têm classificação' : 'Nenhuma atividade ' + rot + ' neste recorte'));
+        box.appendChild(txt('div', 'at-msg-p', 'Com o setor, a busca e o período de agora aparecem ' + PESO_CONTA.todas + ' atividade(s), nenhuma ' + (FILTRO_PESO === 'sem' ? 'sem classificação' : 'com a classificação ' + rot) + '. Escolha outra classificação acima ou volte para Todas.'));
+        var acts = el('<div class="at-msg-actions"></div>');
+        acts.appendChild(UI.button({ label: 'Mostrar todas as classificações', variant: 'ghost', onClick: function () { trocarFiltroPeso(''); } }));
+        box.appendChild(acts);
+      } else {
+        box.appendChild(el('<div class="at-msg-t">Nada na janela selecionada</div>'));
+        box.appendChild(txt('div', 'at-msg-p', (search.trim() || selSetor) ? 'Nenhuma ocorrência bate com o filtro/busca atual. Limpe o filtro ou troque o período.' : 'Não há ocorrências para este período. Troque o período acima ou crie uma atividade.'));
+      }
+      stage.appendChild(box);
+    }
+
+    /* ===================== 16/09 · filtros do palco =====================
+       Classificação (Todas · Vital · Importante · Rotina · Sem classificação,
+       este só quando existe) e, no Quadro, "Só as minhas". Mora FORA do palco
+       (#at-filtros): o aviso de corte continua abrindo o palco (#23) e os
+       filtros continuam na tela quando o palco fica vazio — antes o "Só as
+       minhas" sumia junto com o quadro e quem o ligava sem ter atividade
+       própria ficava sem como desligar. */
+    function trocarFiltroPeso(v) {
+      if (FILTRO_PESO === v) { return; }
+      FILTRO_PESO = v;
+      renderBoard(); updateCount();
+      var b = CHIPS_FILTRO['peso:' + v];
+      if (b && typeof b.focus === 'function') { try { b.focus(); } catch (eF) { } }
+    }
+    function renderFiltros() {
+      var host = document.getElementById('at-filtros');
+      if (!host) { return; }
+      host.innerHTML = '';
+      CHIPS_FILTRO = {};
+      var bar = el('<div class="at-fbar"></div>');
+      var grp = el('<div class="at-fgroup" role="group" aria-label="Filtrar por classificação do Pareto"></div>');
+      var lb = txt('span', 'at-flabel', 'Classificação');
+      lb.setAttribute('aria-hidden', 'true');
+      grp.appendChild(lb);
+      var ops = [['', 'Todas', PESO_CONTA.todas, 0]];
+      PESO_ORDEM.forEach(function (k) { ops.push([k, PESO_DEF[k].rotulo, PESO_CONTA[k], PESO_DEF[k].nivel]); });
+      if (PESO_CONTA.sem > 0 || FILTRO_PESO === 'sem') { ops.push(['sem', 'Sem classificação', PESO_CONTA.sem, 0]); }
+      ops.forEach(function (op) {
+        var on = FILTRO_PESO === op[0];
+        var b = el('<button type="button" class="et-chip at-fchip' + (on ? ' on' : '') + '"></button>');
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        b.title = op[0]
+          ? op[2] + ' atividade(s) ' + (op[0] === 'sem' ? 'sem classificação' : 'com a classificação ' + op[1]) + ' neste recorte'
+          : op[2] + ' atividade(s) neste recorte, de todas as classificações';
+        if (op[3]) { b.appendChild(barrasPeso(op[3], op[0] === 'vital' ? 'vital' : '')); }
+        b.appendChild(document.createTextNode(op[1] + ' '));
+        b.appendChild(txt('span', 'q', String(op[2])));
+        b.addEventListener('click', function () { trocarFiltroPeso(op[0]); });
+        CHIPS_FILTRO['peso:' + op[0]] = b;
+        grp.appendChild(b);
+      });
+      grp.appendChild(infoAt('Classificação do Pareto — o que é e como cada chip conta', infoPeso));
+      bar.appendChild(grp);
+      if (view === 'etapas') {
+        bar.appendChild(el('<span class="at-fsep" aria-hidden="true"></span>'));
+        var chip = el('<button type="button" class="et-chip' + (ET_SO_MINHAS ? ' on' : '') + '"></button>');
+        chip.textContent = 'Só as minhas';
+        chip.setAttribute('aria-pressed', ET_SO_MINHAS ? 'true' : 'false');
+        chip.addEventListener('click', function () {
+          ET_SO_MINHAS = !ET_SO_MINHAS; renderBoard(); updateCount();
+          var nb = CHIPS_FILTRO.minhas; if (nb && typeof nb.focus === 'function') { try { nb.focus(); } catch (eM) { } }
+        });
+        CHIPS_FILTRO.minhas = chip;
+        bar.appendChild(chip);
+        /* --muted e não o --muted2 do .et-fhint: sobre --bg o --muted2 dá 3,92:1 (escuro) e 4,44:1 (claro) */
+        bar.appendChild(txt('span', 'at-fhint', ET_SO_MINHAS ? 'Mostrando só as atividades em que você é o dono.' : 'Mostrando o setor inteiro.'));
+      }
+      host.appendChild(bar);
+    }
+    function infoPeso() {
+      var c = PESO_CONTA;
+      var quadro = (view === 'etapas');
+      return {
+        formula: 'Vital = as poucas atividades que mais sustentam o resultado da escola (princípio de Pareto: no máximo 25% das atividades). Importante = relevantes, sem ser vitais. Rotina = as demais. Cada chip conta atividades DISTINTAS com aquela classificação ' +
+          (quadro ? 'que aparecem nas quatro colunas do Quadro (a mesma atividade em duas colunas conta uma vez)' : 'que têm ocorrência no período (as séries da visão Por recorrência)') + ' — clicar mostra exatamente essas.',
+        dados: 'campo peso da atividade (vital · importante · rotina), gravado a partir da planilha do Pareto de 15/09 ou escolhido em “Editar a atividade”. Atividade sem o campo fica sem classificação: a tela não inventa. Recorte: seu escopo + setor + busca' +
+          (quadro ? (ET_SO_MINHAS ? ' + só as minhas' : '') + ' · A FAZER sem limite de período, FEITAS dos últimos ' + ET_FEITAS_DIAS + ' dias' : ' + lente + período ' + PERIODO_LABEL[periodo]) + '.',
+        numeros: 'Todas ' + c.todas + ' = Vital ' + c.vital + ' + Importante ' + c.importante + ' + Rotina ' + c.rotina + ' + sem classificação ' + c.sem + (FILTRO_PESO ? ' · filtro ligado: ' + rotuloFiltroPeso(FILTRO_PESO) : ' · filtro desligado (Todas)')
+      };
+    }
+
     /* ----- meta comum dos cartões ----- */
     function metaChips(o, into) {
+      var selo = seloPeso(o.act); if (selo) { into.appendChild(selo); } /* 16/09: classificação primeiro — é o que se lê antes */
       if (o.act.todosSetores) {
         var alltag = txt('span', 'at-tag', 'Todos os setores'); alltag.style.color = 'var(--muted)'; alltag.style.background = 'var(--chipBg)'; into.appendChild(alltag);
       } else {
@@ -1194,9 +1805,9 @@
       var doing = o.status === 'em_andamento';
       var card = el('<div class="at-card' + (o.atrasada ? ' late' : '') + (done ? ' done' : '') + (skip ? ' skip' : '') + (doing ? ' doing' : '') + '"></div>');
 
-      /* check (concluir/reabrir) — só quem escreve */
+      /* check (concluir/reabrir) — quem escreve ou o responsável (#6) */
       var chkHolder = el('<span class="at-check"></span>');
-      if (CAN_WRITE && !skip) {
+      if (podeAgir(o) && !skip) {
         chkHolder.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { return concluir(o); } } }));
       } else {
         var ph = el('<span class="ui-check"><span class="box' + (done ? ' on' : '') + '"></span></span>');
@@ -1282,7 +1893,7 @@
       var top = el('<div class="at-kt"></div>');
       var chk = el('<span class="at-kcheck"></span>');
       var done = o.status === 'concluida';
-      if (CAN_WRITE) {
+      if (podeAgir(o)) { /* #6: o responsável conclui/desfaz a própria; arrastar e "Mais ações" seguem CAN_WRITE */
         chk.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { return concluir(o); } } }));
       } else {
         var ph = el('<span class="ui-check"><span class="box' + (done ? ' on' : '') + '"></span></span>'); if (done) { ph.querySelector('.box').appendChild(UI.icon('check', 12)); } chk.appendChild(ph);
@@ -1445,7 +2056,7 @@
       var done = o.status === 'concluida';
       var skip = o.status === 'pulada';
       var row = el('<div class="at-orow' + (done ? ' done' : '') + (skip ? ' skip' : '') + '"></div>');
-      if (CAN_WRITE && !skip) {
+      if (podeAgir(o) && !skip) { /* #6: o responsável conclui/desfaz a própria */
         row.appendChild(UI.checkbox({ checked: done, onToggle: function () { if (done) { reabrir(o); } else { return concluir(o); } } }));
       }
       var p = (o.effDate || '').split('-');
@@ -1456,10 +2067,14 @@
       if (skip) { row.appendChild(txt('span', 'at-ostate skip', 'Pulada')); }
       if (o.horario) { var hr = txt('span', 'at-mi', o.horario); row.appendChild(hr); }
       row.appendChild(el('<span class="at-osp"></span>'));
-      var kb = el('<button type="button" class="at-okebab" title="Ações da ocorrência"></button>');
-      kb.appendChild(ico('<circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle>', 15));
-      kb.addEventListener('click', function () { actionsMenu(o); });
-      row.appendChild(kb);
+      /* #6: o kebab saía para todo mundo, mas actionsMenu volta vazio sem
+         CAN_WRITE — para o usuário comum era um botão que não fazia nada. */
+      if (CAN_WRITE) {
+        var kb = el('<button type="button" class="at-okebab" title="Ações da ocorrência" aria-label="Ações da ocorrência"></button>');
+        kb.appendChild(ico('<circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle>', 15));
+        kb.addEventListener('click', function () { actionsMenu(o); });
+        row.appendChild(kb);
+      }
       return row;
     }
 
@@ -1470,6 +2085,7 @@
       var hd = el('<button type="button" class="at-schd" aria-expanded="' + (open ? 'true' : 'false') + '"></button>');
       hd.appendChild(txt('div', 'at-sct', g.act.titulo));
       var meta = el('<div class="at-scmeta"></div>');
+      var seloS = seloPeso(g.act); if (seloS) { meta.appendChild(seloS); } /* 16/09: selo na lista por recorrência */
       if (g.act.todosSetores) {
         var atag = txt('span', 'at-tag', 'Todos'); atag.style.color = 'var(--muted)'; atag.style.background = 'var(--chipBg)'; meta.appendChild(atag);
       } else {
@@ -1619,7 +2235,7 @@
       nav.appendChild(infoAt('Números da navegação de setores', function () {
         return { formula: 'Contagem de atividades ativas que você pode ver em cada setor. "Toda a escola"/"Meu escopo" = todas as visíveis, sem repetir.',
           dados: 'atividades (ativo = verdadeiro) · escopo do seu papel · atividade marcada para todos os setores entra em todos',
-          numeros: 'Visíveis: ' + vis.length + ' · setores na lista: ' + ops.length + '. Não depende da lente nem da busca.' };
+          numeros: 'Visíveis: ' + vis.length + ' · setores na lista: ' + ops.length + '. Não depende da lente, da busca nem da classificação.' };
       }));
       host.appendChild(nav);
     }
@@ -1644,7 +2260,7 @@
         head.appendChild(txt('span', 'et-pcount' + (tot ? '' : ' zero'), tot ? (tot + ' esperam dono') : 'tudo com dono'));
         head.appendChild(infoAt('Esperam dono', function () {
           return { formula: 'Atividades ativas visíveis para você, sem responsável com login (responsavelUid vazio), contadas pelo setor principal.',
-            dados: 'atividades · responsavelUid · setorSigla. Apelido de cargo ("Assis. PED 2") conta como sem dono. Não depende da lente.',
+            dados: 'atividades · responsavelUid · setorSigla. Apelido de cargo ("Assis. PED 2") conta como sem dono. Não depende da lente nem da classificação.',
             numeros: 'Total: ' + tot + ' em ' + linhas.length + ' setor(es).' };
         }));
         panel.appendChild(head);
@@ -1687,7 +2303,7 @@
       head.appendChild(txt('span', 'et-pcount' + (pend.length ? '' : ' zero'), pend.length ? (pend.length + ' esperam dono') : 'tudo com dono'));
       head.appendChild(infoAt('Esperam dono · ' + sig, function () {
         return { formula: 'Atividades ativas deste setor (setor principal) sem responsável com login.',
-          dados: 'atividades · responsavelUid vazio · setorSigla = ' + sig + '. Não depende da lente nem da busca.',
+          dados: 'atividades · responsavelUid vazio · setorSigla = ' + sig + '. Não depende da lente, da busca nem da classificação.',
           numeros: pend.length + ' atividade(s) esperando dono.' };
       }));
       if (pend.length && podeDarDono(sig)) {
@@ -1905,10 +2521,14 @@
       return grupos;
     }
 
-    function renderEtapas() {
-      etLentesVisivel();
-      var base = BOARD_FULL.length ? BOARD_FULL : BOARD;
-      var sig = ctxAtual();
+    /* 16/09 · Pareto: os DADOS das colunas saem daqui, SEM o filtro de
+       classificação; renderBoard conta os chips nesta base e só depois filtra
+       (filtrarEtapas) para desenhar. Em que coluna uma atividade cai depende só
+       das ocorrências DELA (ATRASADAS > FAZENDO > A FAZER; FEITAS pelos docs),
+       então filtrar depois dá o mesmo quadro que filtrar antes — e o número do
+       chip nunca discorda do que o clique mostra. Corpo igual ao do antigo
+       renderEtapas (Item 1, 15/09). */
+    function dadosEtapas(base) {
       var g = { afazer: [], fazendo: [], atrasada: [], pulada: [] };
       base.forEach(function (o) { var e = etapaDe(o); if (e !== 'feita') { g[e].push(o); } });
 
@@ -1933,7 +2553,31 @@
           titulo: act.titulo, horario: act.horario || '', atrasada: false, foraPeriodo: true }] });
       });
       afz.sort(function (a, b) { return porData(a.itens[0], b.itens[0]) || (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
-      var feitas = feitasRecentes();
+      return { g: g, atr: atr, faz: faz, afz: afz, feitas: feitasRecentes() };
+    }
+    function filtrarEtapas(E, filtro) {
+      if (!filtro) { return E; }
+      function ok(x) { return passaPeso(x.act, filtro); }
+      return {
+        g: { afazer: E.g.afazer.filter(ok), fazendo: E.g.fazendo.filter(ok), atrasada: E.g.atrasada.filter(ok), pulada: E.g.pulada.filter(ok) },
+        atr: E.atr.filter(ok), faz: E.faz.filter(ok), afz: E.afz.filter(ok), feitas: E.feitas.filter(ok)
+      };
+    }
+    /* atividades com cartão no quadro (pode repetir: contarPorPeso tira a repetição) */
+    function atividadesDoQuadro(E) {
+      var acts = [];
+      E.atr.forEach(function (x) { acts.push(x.act); });
+      E.faz.forEach(function (o) { acts.push(o.act); });
+      E.afz.forEach(function (x) { acts.push(x.act); });
+      E.feitas.forEach(function (x) { acts.push(x.act); });
+      return acts;
+    }
+    function quadroVazio(E) { return !E.atr.length && !E.faz.length && !E.afz.length && !E.feitas.length && !E.g.pulada.length; }
+
+    function renderEtapas(E) {
+      etLentesVisivel();
+      var sig = ctxAtual();
+      var g = E.g, atr = E.atr, faz = E.faz, afz = E.afz, feitas = E.feitas;
       var fazAtiv = {}; faz.forEach(function (o) { fazAtiv[o.act.id] = 1; });
 
       var COL = {
@@ -1943,22 +2587,17 @@
         feita: { itens: feitas, n: feitas.length }
       };
 
-      renderAvisoSobrecarga(base);
-
-      /* filtro rápido opcional (desligado por padrão) */
-      var fbar = el('<div class="et-fbar"></div>');
-      var chip = el('<button type="button" class="et-chip' + (ET_SO_MINHAS ? ' on' : '') + '"></button>');
-      chip.textContent = 'Só as minhas';
-      chip.setAttribute('aria-pressed', ET_SO_MINHAS ? 'true' : 'false');
-      chip.addEventListener('click', function () { ET_SO_MINHAS = !ET_SO_MINHAS; renderBoard(); updateCount(); });
-      fbar.appendChild(chip);
-      fbar.appendChild(txt('span', 'et-fhint', ET_SO_MINHAS ? 'Mostrando só as atividades em que você é o dono.' : 'Mostrando o setor inteiro.'));
-      stage.appendChild(fbar);
+      renderAvisoSobrecarga(BOARD_FULL);
+      /* o chip "Só as minhas" mudou para a barra de filtros (#at-filtros, renderFiltros) */
 
       var board = el('<div class="et-board"></div>');
       ET_COLS.forEach(function (c) {
         var col = COL[c.k];
-        var lim = sig ? (ET_LIM[c.k] || 0) : 0;
+        /* 16/09: com filtro de classificação a coluna é só um pedaço dela; o
+           limite do setor vale para a coluna INTEIRA — comparar 3 vitais com o
+           limite de 8 diria "folga" numa coluna que pode estar estourada. O
+           limite volta com "Todas"; o "i" da coluna explica. */
+        var lim = (sig && !FILTRO_PESO) ? (ET_LIM[c.k] || 0) : 0;
         var colEl = el('<div class="et-col c-' + c.k + (lim && col.n > lim ? ' over' : '') + '" data-etapa="' + c.k + '"></div>');
         var hd = el('<div class="et-colh"></div>');
         hd.appendChild(txt('span', 't', c.t));
@@ -1985,17 +2624,21 @@
       if (g.pulada.length) {
         var ft = el('<div class="et-foot"></div>');
         ft.appendChild(txt('span', null, g.pulada.length + ' ocorrência(s) pulada(s) no período — ficam fora do quadro.'));
-        ft.appendChild(infoAt('Puladas', { formula: 'Ocorrências com status pulada dentro do período.', dados: 'ocorrencias · status = pulada', numeros: String(g.pulada.length) }));
+        ft.appendChild(infoAt('Puladas', { formula: 'Ocorrências com status pulada dentro do período.', dados: 'ocorrencias · status = pulada' + recortePeso(), numeros: String(g.pulada.length) }));
         stage.appendChild(ft);
       }
-      if (!CAN_WRITE) { stage.appendChild(txt('div', 'et-foot', 'Somente leitura: seu perfil não conclui nem move cartões nesta tela.')); }
+      /* #6: o rodapé dizia "Somente leitura: seu perfil não conclui", mas o
+         responsável conclui as próprias (igual ao Hoje). Diz o que ele faz e
+         o que continua com líder/gestor. */
+      if (!CAN_WRITE) { stage.appendChild(txt('div', 'et-foot at-leitura', 'Nas atividades em que você é o responsável: concluir (com relato), iniciar e desfazer a conclusão. Arrastar cartões, reprogramar, pular e editar ficam com o líder ou o gestor.')); }
     }
 
     function contagemInfo(k, COL, g, lim, sig) {
       return function () {
         var janela = windowFor(periodo);
-        var dados = 'período ' + fmtBR(janela.jIni) + ' a ' + fmtBR(janela.jFim) + ' · escopo do papel + setor + busca' + (ET_SO_MINHAS ? ' + só as minhas' : '');
-        var limTxt = lim ? ' Limite com 1 setor (' + sig + '): ' + lim + ' atividades.' : ' O limite só aparece com 1 setor selecionado.';
+        var dados = 'período ' + fmtBR(janela.jIni) + ' a ' + fmtBR(janela.jFim) + ' · escopo do papel + setor + busca' + (ET_SO_MINHAS ? ' + só as minhas' : '') + recortePeso();
+        var limTxt = lim ? ' Limite com 1 setor (' + sig + '): ' + lim + ' atividades.'
+          : ((sig && FILTRO_PESO) ? ' O limite do setor vale para a coluna inteira: aparece com a classificação em “Todas”.' : ' O limite só aparece com 1 setor selecionado.');
         if (k === 'atrasada') {
           var occ = 0; COL.atrasada.itens.forEach(function (x) { occ += x.itens.length; });
           return { formula: 'Atividades com ao menos 1 ocorrência aberta (pendente, em andamento ou reprogramada) com data efetiva já vencida. 1 cartão por atividade.', dados: dados, numeros: COL.atrasada.n + ' atividade(s) · ' + occ + ' ocorrência(s) atrasada(s).' + limTxt };
@@ -2008,7 +2651,7 @@
           return { formula: 'Todas as atividades com próxima ocorrência aberta (pendente ou reprogramada) de hoje em diante, sem limite de período, ordenadas pela data. Não conta quem já está em ATRASADAS ou FAZENDO. Atividade com regra incompleta (sem data ou sem dia) não tem próxima data e não aparece.', dados: dados + ' · próxima data calculada pela regra da atividade', numeros: COL.afazer.n + ' atividade(s) · ' + (COL.afazer.n - fora) + ' com ocorrência no período (' + tot + ' ocorrências) · ' + fora + ' só depois do período.' };
         }
         var fo = 0; COL.feita.itens.forEach(function (x) { fo += x.itens.length; });
-        return { formula: 'Atividades com ocorrência concluída nos últimos ' + ET_FEITAS_DIAS + ' dias (pela hora da conclusão), 1 cartão por atividade.', dados: 'ocorrencias · status concluida · concluidaEm · escopo do papel + setor + busca', numeros: COL.feita.n + ' atividade(s) · ' + fo + ' conclusão(ões).' };
+        return { formula: 'Atividades com ocorrência concluída nos últimos ' + ET_FEITAS_DIAS + ' dias (pela hora da conclusão), 1 cartão por atividade.', dados: 'ocorrencias · status concluida · concluidaEm · escopo do papel + setor + busca' + (ET_SO_MINHAS ? ' + só as minhas' : '') + recortePeso(), numeros: COL.feita.n + ' atividade(s) · ' + fo + ' conclusão(ões).' };
       };
     }
 
@@ -2046,6 +2689,8 @@
       return b;
     }
 
+    /* arrastar continua só com CAN_WRITE (#6): o responsável executa pelos
+       botões, que também servem a teclado e leitor de tela — o arraste não. */
     function arrastavel(card, payload) {
       if (!CAN_WRITE) { return; }
       card.setAttribute('draggable', 'true');
@@ -2055,13 +2700,25 @@
 
     function montarCartao(titulo, linha, linhaCls, act, recTxt, acoes) {
       var card = el('<div class="et-card" tabindex="0"></div>');
-      if (CAN_WRITE && acoes.length) {
+      /* #6: era CAN_WRITE — o responsável (perfil usuario) via o cartão sem
+         botão nenhum. A lista já chega sem "Mais ações" para quem não escreve
+         (acaoMais), então aqui só sobra concluir/iniciar/desfazer. */
+      if (podeAgir({ act: act }) && acoes.length) {
         var acts = el('<div class="et-acts"></div>');
         acoes.forEach(function (a) { acts.appendChild(botaoAcao(a[0], a[1], a[2])); });
         card.appendChild(acts);
       }
       card.appendChild(txt('div', 'et-ctitle', titulo));
-      if (linha) { card.appendChild(txt('div', linhaCls, linha)); }
+      /* 16/09: o selo de classificação abre a linha logo abaixo do título —
+         é o que se lê primeiro ao varrer a coluna, sem somar uma linha ao
+         cartão. Sem classificação gravada, nada aparece (não inventa). */
+      var selo = seloPeso(act);
+      if (linha || selo) {
+        var ln = el('<div class="' + linhaCls + ' at-clinha"></div>');
+        if (selo) { ln.appendChild(selo); }
+        if (linha) { ln.appendChild(txt('span', null, linha)); }
+        card.appendChild(ln);
+      }
       var foot = el('<div class="et-cfoot"></div>');
       rodapeDono(act, foot);
       foot.appendChild(txt('span', 'et-rec', recTxt));
@@ -2073,14 +2730,14 @@
       var o = gr.itens[0], n = o.foraPeriodo ? 0 : gr.itens.length;
       var card = montarCartao(o.titulo, 'próxima: ' + dayLabel(o.effDate) + (o.foraPeriodo ? ' · fora do período' : (n > 1 ? ' · +' + (n - 1) + ' no período' : '')), 'et-next', gr.act,
         RECOR_LABEL[gr.act.recorrencia] || 'Única',
-        [['Concluir a próxima', PATH.check, function () { concluir(o); }], ['Iniciar a próxima', PATH.play, function () { iniciar(o); }], ['Mais ações', PATH.dots, function () { actionsMenu(o); }]]);
+        [['Concluir a próxima', PATH.check, function () { concluir(o); }], ['Iniciar a próxima', PATH.play, function () { iniciar(o); }]].concat(acaoMais(o, 'Mais ações')));
       arrastavel(card, { tipo: 'grupo', o: o, n: n, de: 'afazer' });
       return card;
     }
 
     function cartaoFazendo(o) {
       var card = montarCartao(o.titulo, 'em andamento · ' + dayLabel(o.effDate), 'et-next', o.act, RECOR_LABEL[o.act.recorrencia] || 'Única',
-        [['Concluir', PATH.check, function () { concluir(o); }], ['Mais ações', PATH.dots, function () { actionsMenu(o); }]]);
+        [['Concluir', PATH.check, function () { concluir(o); }]].concat(acaoMais(o, 'Mais ações')));
       arrastavel(card, { tipo: 'occ', o: o, de: 'fazendo' });
       return card;
     }
@@ -2091,7 +2748,7 @@
       var o = gr.itens[0], n = gr.itens.length;
       var card = montarCartao(o.titulo, (n === 1 ? 'atrasou 1× · ' : 'atrasou ' + n + '× desde ') + fmtBR(o.effDate), 'et-late', gr.act,
         RECOR_LABEL[gr.act.recorrencia] || 'Única',
-        [['Concluir a mais antiga', PATH.check, function () { concluir(o, subAntiga(o, n)); }], ['Mais ações (mais antiga)', PATH.dots, function () { actionsMenu(o); }]]);
+        [['Concluir a mais antiga', PATH.check, function () { concluir(o, subAntiga(o, n)); }]].concat(acaoMais(o, 'Mais ações (mais antiga)')));
       arrastavel(card, { tipo: 'grupo', o: o, n: n, de: 'atrasada' });
       return card;
     }
@@ -2102,7 +2759,7 @@
       var dd = pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1);
       var card = montarCartao(o.titulo, 'feita ' + n + '× em ' + ET_FEITAS_DIAS + ' dias · última ' + dd, 'et-done', gr.act,
         RECOR_LABEL[gr.act.recorrencia] || 'Única',
-        [['Desfazer a mais recente', PATH.undo, function () { reabrir(o); }], ['Mais ações', PATH.dots, function () { actionsMenu(o); }]]);
+        [['Desfazer a mais recente', PATH.undo, function () { reabrir(o); }]].concat(acaoMais(o, 'Mais ações')));
       if (o.ov && o.ov.relato) { card.appendChild(txt('div', 'et-relato', o.ov.relato)); }
       arrastavel(card, { tipo: 'feita', o: o, n: n, de: 'feita' });
       return card;
@@ -2151,7 +2808,7 @@
       s.appendChild(document.createTextNode(sobre.map(function (x) { return x.nome + ' (' + x.n + ' atividades)'; }).join(', ') + ' — 8 ou mais na mesma pessoa. Redistribua parte em Dar dono.'));
       w.appendChild(s);
       w.appendChild(infoAt('Sobrecarga', { formula: 'Por pessoa: atividades distintas com ocorrência aberta (não concluída, não pulada) na janela. Aviso a partir de 8.',
-        dados: 'ocorrências da janela no escopo atual · responsavelUid', numeros: sobre.map(function (x) { return x.nome + ': ' + x.n; }).join(' · ') }));
+        dados: 'ocorrências da janela no escopo atual' + recortePeso() + ' · responsavelUid', numeros: sobre.map(function (x) { return x.nome + ': ' + x.n; }).join(' · ') }));
       host.appendChild(w);
     }
 
@@ -2159,23 +2816,36 @@
     /* Item 1 (D2): concluir exige relato >= 60 (conclusao.js). Devolve Promise<boolean>:
        false = cancelou/falhou -> o check otimista do UI.checkbox reverte. */
     function concluir(o, sub) {
-      if (!CAN_WRITE) { return Promise.resolve(false); }
+      if (!podeAgir(o)) { toast(MSG_SO_RESPONSAVEL, 'err'); return Promise.resolve(false); } /* #6: era CAN_WRITE */
       if (!window.GrautConclusao) { toast('Não carreguei o módulo de conclusão. Recarregue a página.', 'err'); return Promise.resolve(false); }
       return GrautConclusao.pedir({ titulo: 'Concluir · ' + (o.titulo || ''), subtitulo: sub || ('Ocorrência de ' + fmtBR(o.effDate) + '.') })
         .then(function (relato) {
           if (relato == null) { return false; }
           var agora = Date.now();
-          return Store.setOcorrencia(o.act, o.origData, { status: 'concluida', concluidaEm: agora, relato: relato, relatoEm: agora }, 'concluir_ocorrencia')
+          var patch = { status: 'concluida', concluidaEm: agora, relato: relato, relatoEm: agora };
+          /* #6 · concluir aqui faz o mesmo que concluir no Hoje: a trava morre
+             junto. Sem isto, ocorrência travada no Hoje ("Travei nesta") e
+             concluída neste quadro guardava travadoMotivo — e o pareto-motor
+             checa a trava ANTES do status, então contava como FALHA "trava"
+             uma tarefa entregue no prazo, e a causa seguia somando no Pareto
+             do líder. Só manda os 3 campos quando havia trava (patch enxuto,
+             igual ao Hoje). */
+          if (o.ov && o.ov.travadoMotivo) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
+          return Store.setOcorrencia(o.act, o.origData, patch, 'concluir_ocorrencia')
             .then(function () { toast('Ocorrência concluída.'); refresh(); return true; })
             .catch(function (e) { toast(e.message, 'err'); return false; });
         });
     }
     function reabrir(o) {
-      if (!CAN_WRITE) { return; }
+      if (!podeAgir(o)) { toast(MSG_SO_RESPONSAVEL, 'err'); return; } /* #6: o responsável desfaz a própria conclusão (o Hoje também deixa) */
       Store.setOcorrencia(o.act, o.origData, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia')
         .then(function () { toast('Conclusão desfeita.'); refresh(); })
         .catch(function (e) { toast(e.message, 'err'); });
     }
+    /* pular, retomar e pendenciar seguem só com CAN_WRITE (#6): o responsável
+       não pula nem devolve etapa — igual ao Hoje e às regras F1-J, que negam
+       'pulada' a ele. Nesta tela os três só chegam por "Mais ações" e pelo
+       arraste, que já são de quem escreve. */
     function pular(o) {
       if (!CAN_WRITE) { return; }
       Store.setOcorrencia(o.act, o.origData, { status: 'pulada' }, 'pular_ocorrencia')
@@ -2189,7 +2859,7 @@
         .catch(function (e) { toast(e.message, 'err'); });
     }
     function iniciar(o) {
-      if (!CAN_WRITE) { return; }
+      if (!podeAgir(o)) { toast(MSG_SO_RESPONSAVEL, 'err'); return; } /* #6: era CAN_WRITE */
       Store.setOcorrencia(o.act, o.origData, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia')
         .then(function () { toast('Marcada como em andamento.'); refresh(); })
         .catch(function (e) { toast(e.message, 'err'); });
@@ -2393,17 +3063,28 @@
       }
     }
 
+    /* F (16/09): grava motivo 'manual', o dia e quem (patchInativacao). O aviso
+       dizia "reative em Ver inativas" — botão que só existia com a escola sem
+       nenhuma atividade ativa; agora aponta o "Inativas" da barra, que existe. */
     function inativarAtividade(act) {
       if (!CAN_WRITE) { return; }
       var m = UI.modal({
-        title: 'Inativar atividade', width: 420,
-        body: function () { var p = txt('p', null, 'Inativar “' + act.titulo + '”? Ela some das listas e do quadro, mas o histórico de ocorrências é preservado. Você pode reativá-la depois em “Ver inativas”.'); p.setAttribute('style', 'margin:0;color:var(--muted);font-size:13.5px;line-height:1.55'); return p; },
+        title: 'Inativar atividade', width: 440,
+        body: function () { var p = txt('p', null, 'Inativar “' + act.titulo + '”? Ela sai do quadro, do Hoje e dos indicadores, e o histórico de ocorrências fica guardado. Para trazer de volta, use “Inativas” na barra de Atividades — ao ativar, os dias parada não contam como atraso.'); p.setAttribute('style', 'margin:0;color:var(--muted);font-size:13.5px;line-height:1.55'); return p; },
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
-          var go = UI.button({ label: 'Inativar', icon: 'archive', onClick: function () { close(); Store.inativarAtividade(act.id).then(function () { toast('Atividade inativada.'); refresh(); }).catch(function (e) { toast(e.message, 'err'); }); } });
+          var go = UI.button({ label: 'Inativar', icon: 'archive', onClick: function () {
+            close();
+            var pi = patchInativacao(act, R.hojeISO(), CURRENT_USER.uid);
+            return Store.inativarAtividade(act.id, pi.patch, pi.antes).then(function () {
+              if (INATIVAS) { INATIVAS = INATIVAS.filter(function (x) { return x.id !== act.id; }).concat([Object.assign({}, act, pi.patch)]); }
+              toast('Atividade inativada · está em “Inativas”.'); refresh();
+            }).catch(function (e) { toast(e.message, 'err'); });
+          } });
           return [cancel, go];
         }
       });
+      return m;
     }
 
     /* ===================== editor de atividade ===================== */
@@ -2551,6 +3232,18 @@
       });
       var camField = UI.field({ label: 'Camada', control: camSelect, hint: 'Quem acompanha essa rotina: Sócio, Gestor ou Operacional.' });
 
+      /* 16/09 · C: classificação do Pareto no formulário. Quem já edita a
+         atividade (CAN_WRITE: líder, gestor, sócio) escolhe. Nova atividade
+         nasce sem classificação — ninguém inventa um peso por ela. Na edição
+         só grava se a escolha MUDOU: um valor fora das três palavras gravado à
+         mão no banco não é apagado só por abrir e salvar o formulário. */
+      var pesoAtual = editing ? pesoDe(act) : '';
+      var pesoSelect = UI.select({
+        value: pesoAtual,
+        options: [{ value: '', label: 'Sem classificação' }, { value: 'vital', label: 'Vital' }, { value: 'importante', label: 'Importante' }, { value: 'rotina', label: 'Rotina' }]
+      });
+      var pesoField = UI.field({ label: 'Classificação (Pareto)', control: pesoSelect, hint: 'Vital = das poucas que mais pesam no resultado (no máximo 25% das atividades) · Importante · Rotina. Sem classificação, o cartão fica sem selo.' });
+
       /* F1-H · SUPERVISOR (padrão Jira/Asana: quem acompanha por cima do
          responsável). Campo NULLABLE + sugestão determinística subindo a
          árvore de setores por camada (KPI.sugerirSupervisor, harness_f1h):
@@ -2656,10 +3349,50 @@
       var banner = el('<div class="at-banner"></div>');
       function showBanner(msg) { banner.textContent = msg; banner.classList.add('on'); }
 
+      /* 16/09 · G: antes de CRIAR, confere se já existe inativa igual no escopo
+         (mesmo item do catálogo ou mesmo título, sem acento/caixa/pontuação).
+         Cenário que motivou: as 7 atividades inativadas por estarem fora do
+         Pareto (ex.: "Conferir conciliação bancária") continuavam no banco; o
+         líder que a quisesse de volta ia em "Usar do catálogo" ou "Criar do
+         zero" — o único caminho visível — e nascia uma SEGUNDA atividade, com
+         histórico zerado, ao lado da inativa. A oferta é ativar a que existe;
+         criar outra continua possível (mesmo título em outro setor pode ser
+         outra rotina), mas só com um segundo clique consciente. */
+      var dupBox = el('<div class="at-dup" role="alert"></div>');
+      dupBox.style.display = 'none';
+      var criarMesmoAssim = false;
+      titInp.addEventListener('input', function () { criarMesmoAssim = false; if (dupBox.style.display !== 'none') { dupBox.style.display = 'none'; } });
+      function mostrarIguais(lista) {
+        dupBox.innerHTML = '';
+        dupBox.appendChild(txt('div', 'at-dup-t', lista.length === 1 ? 'Já existe uma atividade INATIVA igual' : 'Já existem ' + lista.length + ' atividades INATIVAS iguais'));
+        dupBox.appendChild(txt('div', 'at-dup-p', 'Ativar a que já existe guarda o histórico e não duplica a rotina — os dias em que ficou parada não viram atraso. Crie outra só se for mesmo uma rotina diferente.'));
+        var primeiro = null;
+        lista.slice(0, 3).forEach(function (a) {
+          var r = el('<div class="at-duprow"></div>');
+          var t = el('<div class="t"></div>');
+          t.appendChild(document.createTextNode((a.codigo ? a.codigo + ' · ' : '') + (a.titulo || '(sem título)')));
+          var info = [a.todosSetores ? 'Todos os setores' : setoresDe(a).join(', '), RECOR_LABEL[a.recorrencia] || 'sem recorrência', motivoInativaDe(a).rotulo];
+          if (a.inativadaEm) { info.push('inativa desde ' + fmtBR(a.inativadaEm)); }
+          t.appendChild(txt('span', 's', info.join(' · ')));
+          r.appendChild(t);
+          var b = UI.button({ label: 'Ativar esta', icon: 'check', onClick: function () { m.close(); openInativas({ focoId: a.id }); } });
+          b.appendChild(txt('span', 'at-sr', ': ' + (a.titulo || '')));
+          if (!primeiro) { primeiro = b; }
+          r.appendChild(b);
+          dupBox.appendChild(r);
+        });
+        if (lista.length > 3) { dupBox.appendChild(txt('div', 'at-dup-p', '… e mais ' + (lista.length - 3) + '. Todas estão em “Inativas”.')); }
+        var pe = el('<div class="at-inacts"></div>');
+        pe.appendChild(UI.button({ label: 'Criar outra mesmo assim', variant: 'ghost', onClick: function () { criarMesmoAssim = true; dupBox.style.display = 'none'; onSave(); } }));
+        dupBox.appendChild(pe);
+        dupBox.style.display = '';
+        if (primeiro && typeof primeiro.focus === 'function') { try { primeiro.focus(); } catch (eD) { } }
+      }
+
       var saveBtn = null;
       var m = UI.modal({
         title: editing ? 'Editar atividade' : 'Nova atividade', width: 540,
-        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, supField, recField, recBox, hrField, banner],
+        body: [titField, descField, obsField, setorField, subField, multiField, respField, camField, pesoField, supField, recField, recBox, hrField, dupBox, banner],
         footer: function (close) {
           var cancel = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
           saveBtn = UI.button({ label: editing ? 'Salvar' : 'Criar atividade', icon: 'check', onClick: onSave });
@@ -2707,23 +3440,45 @@
           dataFim: (tipo !== 'unico' && dfInp.value) ? dfInp.value : null,
           catalogoId: editing ? (act.catalogoId || null) : (pre ? pre.id : null) /* F1-G: rastreio ATA->atividade */
         };
+        /* 16/09 · C: classificação — nova grava a escolha (ou nada); edição só o que mudou */
+        var antesEd = { titulo: act ? act.titulo : null, recorrencia: act ? act.recorrencia : null };
+        if (!editing) { payload.peso = pesoSelect.value || null; }
+        else if (pesoSelect.value !== pesoAtual) { payload.peso = pesoSelect.value || null; antesEd.peso = (act.peso == null) ? null : act.peso; }
 
         var verr = R.validar(payload);
         if (verr.length) { showBanner('Revise: ' + verr[0]); return; }
 
-        if (saveBtn) { saveBtn.disabled = true; }
-
         if (!editing) {
+          if (!criarMesmoAssim) {
+            if (INATIVAS === null) {
+              /* a lista ainda não foi lida (ou falhou): lê antes de gravar — sem ela não dá para garantir que não duplica */
+              if (saveBtn) { saveBtn.disabled = true; }
+              Store.listInativas().then(function (lista) {
+                INATIVAS = lista; INATIVAS_ERRO = null;
+                if (saveBtn) { saveBtn.disabled = false; }
+                onSave();
+              }, function () {
+                if (saveBtn) { saveBtn.disabled = false; }
+                showBanner('Não consegui conferir se já existe uma atividade inativa igual. Verifique a conexão e tente de novo.');
+              });
+              return;
+            }
+            var iguais = inativasIguais(payload);
+            if (iguais.length) { mostrarIguais(iguais); return; }
+          }
+          if (saveBtn) { saveBtn.disabled = true; }
           Store.criarAtividade(payload, CURRENT_USER.uid)
             .then(function () { m.close(); toast('Atividade criada.'); refresh(); })
             .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } showBanner(e.message); });
           return;
         }
 
+        if (saveBtn) { saveBtn.disabled = true; }
+
         /* edição: trava de data só p/ único de não-dono (input já vem desabilitado) */
         if (act.recorrencia === 'unico' && !canApproveDirect(act)) { payload.data = act.data; payload.deslizante = act.deslizante != null ? act.deslizante : false; }
 
-        Store.atualizarAtividade(act.id, payload, { titulo: act.titulo, recorrencia: act.recorrencia })
+        Store.atualizarAtividade(act.id, payload, antesEd)
           .then(function () { m.close(); toast('Atividade atualizada.'); refresh(); })
           .catch(function (e) { if (saveBtn) { saveBtn.disabled = false; } showBanner(e.message); });
       }
@@ -2756,25 +3511,254 @@
       }
     }
 
-    /* ===================== inativas (reativação) ===================== */
-    function openInativas() {
-      if (!CAN_WRITE) { return; }
-      var holder = el('<div class="at-inact"></div>'); holder.appendChild(txt('div', 'at-inempty', 'Carregando…'));
-      UI.modal({ title: 'Atividades inativas', width: 520, body: holder });
-      Store.listInativas().then(function (rows) {
-        holder.innerHTML = '';
-        if (!rows.length) { holder.appendChild(txt('div', 'at-inempty', 'Nenhuma atividade inativa.')); return; }
-        rows.forEach(function (a) {
-          var row = el('<div class="at-inrow"></div>');
-          row.appendChild(txt('span', 'at-inname', a.titulo + ' · ' + a.setorSigla));
-          row.appendChild(UI.button({
-            label: 'Reativar', variant: 'ghost', icon: 'repeat', onClick: function () {
-              Store.reativarAtividade(a.id).then(function () { if (row.parentNode) { row.parentNode.removeChild(row); } toast('Atividade reativada.'); refresh(); if (!holder.querySelector('.at-inrow')) { holder.appendChild(txt('div', 'at-inempty', 'Nenhuma atividade inativa.')); } }).catch(function (e) { toast(e.message, 'err'); });
-            }
-          }));
-          holder.appendChild(row);
+    /* ===================== inativas (lista, busca e ativar) =====================
+       16/09 · D/E. Antes esta lista só abria pelo "Ver inativas" do estado
+       vazio — que só aparece com a escola sem NENHUMA atividade ativa. Na
+       prática ninguém listava nem reativava, embora o aviso de inativar e a
+       importação prometessem "Atividades → Inativas". E reativar trazia de volta
+       todos os dias parados como atraso. Agora: botão "Inativas (N)" na barra
+       de quem escreve; lista no escopo de quem vê (KPI.visivelPara — o líder vê
+       as do setor dele); título, setor, recorrência, responsável, classificação
+       e MOTIVO; busca; e ativar com confirmação que diz de quando passa a contar
+       e no Hoje de quem aparece (planoAtivacao + R.inicioAoReativar).
+       opts.focoId: abre já confirmando aquela atividade (vem do "Ativar esta"
+       do formulário, quando alguém ia criar uma duplicata). */
+    function openInativas(opts) {
+      if (!CAN_WRITE) { return null; }
+      opts = opts || {};
+      var focoId = opts.focoId || null;
+      var termo = '';
+      var painelAberto = null;
+      var pendenteFoco = null;
+      var SEQ_CONF = 0; /* id único da explicação de cada confirmação (aria-describedby) */
+
+      var wrap = el('<div class="at-inwrap"></div>');
+      var busca = UI.input({ placeholder: 'Título, código, setor, responsável ou motivo' });
+      wrap.appendChild(UI.field({ label: 'Buscar nas inativas', control: busca }));
+      var resumo = el('<div class="at-insum"></div>');
+      /* região viva fica SEMPRE na árvore de acessibilidade (escondida só visualmente enquanto vazia): região que nasce com display:none não é anunciada pelo leitor de tela */
+      var aviso = el('<div class="at-inlive at-sr" role="status" aria-live="polite"></div>');
+      var lista = el('<div class="at-inact" role="list" aria-label="Atividades inativas"></div>');
+      wrap.appendChild(resumo);
+      wrap.appendChild(aviso);
+      wrap.appendChild(lista);
+      var m = UI.modal({
+        title: 'Atividades inativas', width: 660, body: wrap,
+        footer: function (close) { return [UI.button({ label: 'Fechar', variant: 'ghost', onClick: close })]; }
+      });
+      busca.addEventListener('input', function () { termo = busca.value; pintar(); });
+
+      function nomeUsuario(uid) {
+        if (!uid) { return ''; }
+        if (CURRENT_USER && uid === CURRENT_USER.uid) { return 'você'; }
+        var u = (USERS_ALL || []).filter(function (x) { return x.uid === uid; })[0];
+        return u ? u.nome : '';
+      }
+      function rotuloSetores(a) {
+        if (a.todosSetores) { return 'Todos os setores'; }
+        var s = setoresDe(a).map(function (sg) { return sg + ' · ' + nomeSetor(sg); }).join(', ') || 'sem setor';
+        return a.subsetorSigla ? s + ' / ' + a.subsetorSigla : s;
+      }
+      function quandoInativou(a) {
+        if (!a.inativadaEm) { return ''; }
+        var quem = nomeUsuario(a.inativadaPor);
+        return 'inativa desde ' + fmtBR(a.inativadaEm) + (quem ? ' por ' + quem : '');
+      }
+      function textoBusca(a) {
+        return normTexto([a.codigo, a.titulo, rotuloSetores(a), RECOR_LABEL[a.recorrencia], a.responsavelNome, motivoInativaDe(a).rotulo, PESO_DEF[pesoDe(a)] ? PESO_DEF[pesoDe(a)].rotulo : ''].join(' '));
+      }
+
+      function carregar() {
+        resumo.innerHTML = '';
+        lista.innerHTML = '';
+        lista.appendChild(txt('div', 'at-inempty', 'Carregando as atividades inativas…'));
+        return Store.listInativas().then(function (rows) {
+          INATIVAS = rows; INATIVAS_ERRO = null;
+          pintar();
+          if (ATIV.length) { renderToolbar(); } /* o "Inativas (N)" da barra ganha o número */
+        }, function (e) {
+          INATIVAS_ERRO = e;
+          lista.innerHTML = '';
+          var box = el('<div class="at-inempty"></div>');
+          box.appendChild(txt('div', 'at-inempty-t', 'Não consegui carregar as inativas'));
+          box.appendChild(txt('div', null, ((e && e.message) || 'Falha de leitura.')));
+          box.appendChild(UI.button({ label: 'Tentar de novo', variant: 'ghost', icon: 'repeat', onClick: carregar }));
+          lista.appendChild(box);
         });
-      }).catch(function (e) { holder.innerHTML = ''; holder.appendChild(txt('div', 'at-inempty', (e && e.message) || 'Falha ao carregar inativas.')); });
+      }
+
+      function pintar() {
+        if (painelAberto) { painelAberto = null; }
+        var todas = inativasNoEscopo();
+        var t = normTexto(termo);
+        var vis = t ? todas.filter(function (a) { return textoBusca(a).indexOf(t) !== -1; }) : todas;
+
+        resumo.innerHTML = '';
+        if (todas.length) {
+          var cont = { fora_pareto: 0, manual: 0, sem: 0, outro: 0 };
+          todas.forEach(function (a) { cont[motivoInativaDe(a).chave]++; });
+          var partes = [];
+          if (cont.fora_pareto) { partes.push(cont.fora_pareto + ' fora do Pareto'); }
+          if (cont.manual) { partes.push(cont.manual + ' inativada(s) à mão'); }
+          if (cont.outro) { partes.push(cont.outro + ' com outro motivo'); }
+          if (cont.sem) { partes.push(cont.sem + ' sem motivo registrado'); }
+          var s = el('<span></span>');
+          s.appendChild(txt('b', null, todas.length + ' inativa(s)'));
+          s.appendChild(document.createTextNode(' no seu escopo · ' + partes.join(' · ') + (t ? ' · ' + vis.length + ' bate(m) com a busca' : '')));
+          resumo.appendChild(s);
+          resumo.appendChild(infoAt('Inativas — de onde vem cada número', function () {
+            return {
+              formula: 'Atividades com ativo = falso que o seu papel pode ver (gestor e sócio: todas; líder: as dos setores que lidera). Motivo: “Fora do Pareto” = tirada pelo arquivo da planilha do Pareto; “Inativada à mão” = alguém usou Inativar; “Sem motivo registrado” = inativada antes de 16/09, quando o motivo não era gravado.',
+              dados: 'atividades · ativo, motivoInativa, inativadaEm, inativadaPor · escopo do papel' + (t ? ' · busca “' + termo.trim() + '”' : ''),
+              numeros: todas.length + ' inativa(s) = ' + cont.fora_pareto + ' fora do Pareto + ' + cont.manual + ' à mão + ' + cont.outro + ' outro motivo + ' + cont.sem + ' sem motivo' + (t ? ' · ' + vis.length + ' na busca' : '')
+            };
+          }));
+        }
+
+        lista.innerHTML = '';
+        if (!todas.length) {
+          var vz = el('<div class="at-inempty"></div>');
+          vz.appendChild(txt('div', 'at-inempty-t', 'Nenhuma atividade inativa no seu escopo.'));
+          vz.appendChild(txt('div', null, 'Quando uma atividade for inativada — à mão ou pelo arquivo do Pareto —, ela aparece aqui para ser ativada de novo.'));
+          lista.appendChild(vz);
+          return;
+        }
+        if (!vis.length) {
+          lista.appendChild(txt('div', 'at-inempty', 'Nenhuma inativa bate com “' + termo.trim() + '”.'));
+          return;
+        }
+        vis.forEach(function (a) { lista.appendChild(linha(a)); });
+        /* confirmação pedida de fora ("Ativar esta"): abre depois de a linha estar na lista, para o foco e a rolagem funcionarem */
+        if (pendenteFoco) { var pf = pendenteFoco; pendenteFoco = null; abrirConfirmacao(pf.a, pf.row, pf.bt); }
+      }
+
+      function linha(a) {
+        var row = el('<div class="at-inrow" role="listitem"></div>');
+        var top = el('<div class="at-intop"></div>');
+        var info = el('<div class="at-ininfo"></div>');
+        var nome = el('<div class="at-inname"></div>');
+        if (a.codigo) { nome.appendChild(txt('span', 'at-incod', a.codigo)); }
+        nome.appendChild(document.createTextNode(a.titulo || '(sem título)'));
+        info.appendChild(nome);
+        var meta = el('<div class="at-inmeta"></div>');
+        var mot = motivoInativaDe(a);
+        var chip = el('<span class="at-inmot' + (mot.chave === 'sem' ? ' sem' : '') + '"></span>');
+        chip.appendChild(txt('span', 'at-sr', 'Motivo: '));
+        chip.appendChild(document.createTextNode(mot.chave === 'outro' ? mot.rotulo.replace(/^Motivo: /, '') : mot.rotulo));
+        meta.appendChild(chip);
+        var selo = seloPeso(a); if (selo) { meta.appendChild(selo); }
+        meta.appendChild(txt('span', null, rotuloSetores(a)));
+        meta.appendChild(txt('span', null, RECOR_LABEL[a.recorrencia] || 'recorrência não definida'));
+        meta.appendChild(txt('span', null, a.responsavelNome ? 'Resp.: ' + a.responsavelNome : 'Sem responsável'));
+        var quando = quandoInativou(a); if (quando) { meta.appendChild(txt('span', null, quando)); }
+        info.appendChild(meta);
+        top.appendChild(info);
+        var bt = UI.button({ label: 'Ativar', variant: 'ghost', icon: 'repeat', onClick: function () { abrirConfirmacao(a, row, bt); } });
+        bt.appendChild(txt('span', 'at-sr', ': ' + (a.titulo || 'atividade'))); /* nome acessível único por linha; o visível continua contido nele */
+        top.appendChild(bt);
+        row.appendChild(top);
+        if (focoId && focoId === a.id) { focoId = null; pendenteFoco = { a: a, row: row, bt: bt }; }
+        return row;
+      }
+
+      function abrirConfirmacao(a, row, bt) {
+        if (painelAberto) { painelAberto.fechar(false); }
+        var hoje = R.hojeISO();
+        var base = planoAtivacao(a, hoje, {}, CURRENT_USER.uid);
+        var painel = el('<div class="at-inconf" role="group"></div>');
+        painel.setAttribute('aria-label', 'Confirmar ativação: ' + (a.titulo || 'atividade'));
+        var dataInp = null, fimInp = null;
+        if (base.pede === 'data') {
+          dataInp = el('<input type="date" class="at-date">');
+          dataInp.setAttribute('min', hoje);
+          painel.appendChild(UI.field({ label: 'Nova data', required: true, control: dataInp, hint: 'Hoje ou um dia depois.' }));
+        } else if (base.pede === 'fim') {
+          fimInp = el('<input type="date" class="at-date">');
+          fimInp.setAttribute('min', hoje);
+          painel.appendChild(UI.field({ label: 'Novo fim (opcional)', control: fimInp, hint: 'Em branco = sem término.' }));
+        }
+        /* duas linhas: de quando conta (o que muda) e em que Hoje aparece (quem é afetado) */
+        SEQ_CONF += 1;
+        var msgId = 'at-inconf-msg-' + SEQ_CONF;
+        var msg = el('<div class="at-inmsgs" aria-live="polite" id="' + msgId + '"></div>');
+        var msgDatas = txt('p', 'at-inmsg', '');
+        var msgQuem = txt('p', 'at-inmsg quem', '');
+        msg.appendChild(msgDatas); msg.appendChild(msgQuem);
+        painel.appendChild(msg);
+        var erro = el('<div class="at-banner" role="alert"></div>');
+        painel.appendChild(erro);
+        var acts = el('<div class="at-inacts"></div>');
+        var cancelar = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: function () { fechar(true); } });
+        acts.appendChild(cancelar);
+        var confirmar = null;
+        if (base.pede === 'regra') {
+          acts.appendChild(UI.button({ label: 'Editar a regra', icon: 'repeat', onClick: function () { m.close(); openEditor(a); } }));
+        } else {
+          confirmar = UI.button({ label: 'Ativar agora', icon: 'check', onClick: function () { return go(); } });
+          confirmar.setAttribute('aria-describedby', msgId); /* quem chega pelo teclado ouve de quando conta e no Hoje de quem aparece */
+          acts.appendChild(confirmar);
+        }
+        painel.appendChild(acts);
+        row.appendChild(painel);
+        row.classList.add('conf');
+        bt.disabled = true;
+
+        function escolha() {
+          var e = {};
+          if (dataInp) { e.data = dataInp.value || ''; }
+          if (fimInp) { e.dataFim = fimInp.value || null; }
+          return e;
+        }
+        function atualizar() {
+          var p = planoAtivacao(a, hoje, escolha(), CURRENT_USER.uid);
+          msgDatas.textContent = p.pode ? p.textoDatas : p.texto;
+          msgQuem.textContent = p.pode ? p.textoQuem : '';
+          if (confirmar) { confirmar.disabled = !p.pode; }
+          return p;
+        }
+        function fechar(devolverFoco) {
+          if (painel.parentNode) { painel.parentNode.removeChild(painel); }
+          row.classList.remove('conf');
+          bt.disabled = false;
+          painelAberto = null;
+          if (devolverFoco && typeof bt.focus === 'function') { try { bt.focus(); } catch (eF) { } }
+        }
+        function go() {
+          erro.classList.remove('on');
+          var p = atualizar();
+          if (!p.pode) { erro.textContent = p.texto; erro.classList.add('on'); return Promise.resolve(false); }
+          if (confirmar) { confirmar.disabled = true; }
+          cancelar.disabled = true;
+          return Store.reativarAtividade(a.id, p.patch, p.antes).then(function () {
+            INATIVAS = (INATIVAS || []).filter(function (x) { return x.id !== a.id; });
+            painelAberto = null;
+            var desde = p.patch.dataInicio || p.patch.data || null;
+            aviso.textContent = '“' + (a.titulo || 'Atividade') + '” ativada' + (p.r && p.r.proxima ? ' — primeira ocorrência ' + fmtBR(p.r.proxima) : '') + '.';
+            aviso.classList.remove('at-sr');
+            toast('Atividade ativada' + (desde ? ' · conta a partir de ' + fmtBR(desde) : '') + '.');
+            pintar();
+            if (typeof busca.focus === 'function') { try { busca.focus(); } catch (eB) { } }
+            refresh();
+            return true;
+          }, function (e) {
+            erro.textContent = (e && e.message) || 'Não consegui ativar agora. Tente de novo.';
+            erro.classList.add('on');
+            if (confirmar) { confirmar.disabled = false; }
+            cancelar.disabled = false;
+            return false;
+          });
+        }
+        if (dataInp) { dataInp.setAttribute('aria-describedby', msgId); dataInp.addEventListener('input', atualizar); dataInp.addEventListener('change', atualizar); }
+        if (fimInp) { fimInp.setAttribute('aria-describedby', msgId); fimInp.addEventListener('input', atualizar); fimInp.addEventListener('change', atualizar); }
+        atualizar();
+        painelAberto = { fechar: fechar, go: go };
+        var alvoFoco = dataInp || fimInp || confirmar || cancelar;
+        if (alvoFoco && typeof alvoFoco.focus === 'function') { try { alvoFoco.focus(); } catch (eA) { } }
+        if (typeof row.scrollIntoView === 'function') { try { row.scrollIntoView({ block: 'nearest' }); } catch (eS) { } }
+      }
+
+      if (INATIVAS === null) { carregar(); } else { pintar(); }
+      return m;
     }
 
     /* ===================== fila de pendentes (mudança de data) ===================== */

@@ -111,6 +111,7 @@
 
 /* disabled (botão sem permissão) */
 .st-disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.2)}
+.st-readonly{font-size:12.5px;color:var(--muted);line-height:1.4;max-width:34ch;display:inline-block}
 
 @media (max-width:900px){
   .st-app>.ui-side{display:none}
@@ -181,7 +182,13 @@
        ========================================================= */
     var CURRENT_USER = { name: '', profile: 'Visualizador', initials: '' }; /* placeholder NEUTRO: Guard.onReady injeta o usuário real ANTES do mount() (fim do script) */
     var CAN_WRITE = CURRENT_USER.profile === 'Admin';
-    var CAN_VIEW  = CURRENT_USER.profile !== 'Consultor Externo';
+    /* 'Consultor Externo' é um tier legado que o RBAC de hoje não produz mais:
+       capabilityOf() do guard.js só devolve Admin | Editor | Visualizador. A
+       condição antiga era sempre verdadeira, então renderNoAccess() nunca rodava.
+       Ler o cadastro de setores é leitura de referência (a sigla liga atividade a
+       área), então o certo aqui é liberar a LEITURA a quem entra e travar a
+       ESCRITA — que é o que CAN_WRITE já faz, e o que as Regras confirmam. */
+    var CAN_VIEW  = true;
 
     /* estrutura inicial sugerida (editável depois) */
     var SETORES_INICIAIS = [
@@ -620,9 +627,20 @@
         mig.setAttribute('title', 'Cria CSA + subsetores e converte a estrutura antiga. Idempotente.');
         nb.appendChild(mig);
       }
-      var btn = UI.button({ label: 'Novo setor', icon: 'plus', onClick: function () { if (CAN_WRITE) { openEditor(null, null); } } });
-      if (!CAN_WRITE) { btn.classList.add('st-disabled'); btn.setAttribute('title', 'Apenas o perfil Admin cadastra setores.'); }
-      nb.appendChild(btn);
+      /* Sem permissão de escrita, o botão NÃO nasce — e a tela diz por quê.
+         Antes ele era desenhado com a classe st-disabled: parecia clicável,
+         o teclado chegava nele, o leitor de tela anunciava "botão Novo setor"
+         e o clique não fazia nada. Botão que clica e não responde ensina que o
+         sistema falha — é a mesma regra que poda o menu sem destino no guard.js.
+         Os botões de editar/inativar de cada linha já seguiam esse padrão
+         (actionBtns devolve vazio sem CAN_WRITE); aqui só faltava alinhar. */
+      if (CAN_WRITE) {
+        nb.appendChild(UI.button({ label: 'Novo setor', icon: 'plus', onClick: function () { openEditor(null, null); } }));
+      } else {
+        var aviso = txt('span', 'st-readonly', 'Você está consultando. Quem cadastra setor é o gestor.');
+        aviso.setAttribute('role', 'note');
+        nb.appendChild(aviso);
+      }
       toolbar.hidden = false;
     }
 

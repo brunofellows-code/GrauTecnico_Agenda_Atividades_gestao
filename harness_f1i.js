@@ -76,8 +76,16 @@ e=K.escalonamentoPlano(pl('2026-07-21'),85,H);
 ok(e===null,'faltam 5 mas 85% ≥ 70% → null (no ritmo)');
 e=K.escalonamentoPlano(pl('2026-07-15'),100,H);
 ok(e===null,'100% entregue → null mesmo vencido');
+/* defeito 33 (decisão de 16/09): pct null NÃO é 0. Antes este caso esperava
+   D3 ("coletando tratado como 0 → escala") e o plano saía "Coletando" e
+   "Escalado à gestão (D-3)" ao mesmo tempo. Sem medição não escala por
+   aderência; só o PRAZO vencido escala (D0). */
 e=K.escalonamentoPlano(pl('2026-07-19'),null,H);
-ok(e && e.nivel==='D3','pct null (coletando) tratado como 0 → escala');
+ok(e===null,'pct null (coletando) faltando 3d → null (sem medição não escala por aderência)');
+e=K.escalonamentoPlano(pl('2026-07-21'),null,H);
+ok(e===null,'pct null (coletando) faltando 5d → null (nem D5)');
+e=K.escalonamentoPlano(pl('2026-07-15'),null,H);
+ok(e && e.nivel==='D0' && e.quem==='nc','pct null (coletando) com prazo vencido → D0 (o prazo escala sozinho)');
 e=K.escalonamentoPlano({prazo:''},10,H);
 ok(e===null,'sem prazo válido → null (nunca inventa)');
 

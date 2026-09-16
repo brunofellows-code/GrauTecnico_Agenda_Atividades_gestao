@@ -351,3 +351,54 @@ body {
   --elev-1:0 1px 3px rgba(2,6,23,.10);
   --elev-2:0 6px 20px rgba(2,6,23,.14);
   --elev-3:0 20px 60px rgba(2,6,23,.22); }
+
+/* ============================================================
+   v4 — MARCA VERDE DE VOLTA (decisão do Bruno, 16/09/2026)
+   ------------------------------------------------------------
+   A migração de 02/09 (bloco "marca / CTA — AZUL" acima) trocou
+   a marca para azul. A decisão de 15/09 (verde da marca #34E27E
+   no escuro / #16A34A no claro, DIFERENTE do verde de sucesso) e
+   a confirmação do Bruno em 16/09 ("o logo tá azul e não verde")
+   prevalecem. Mecânica igual à do bloco azul: vem DEPOIS, com a
+   mesma especificidade, e vence pela cascata. Nada acima mudou.
+
+   Por que a tinta sobre o verde é ESCURA e não branca: branco
+   sobre #34E27E dá 1,70:1 e branco sobre #16A34A dá 3,30:1 —
+   os dois reprovam no WCAG 1.4.3 (texto pede 4,5:1). Trocar só
+   --brand, sem trocar --onBrand, apagaria o "G" do logo e o
+   texto de todo botão de marca. Acessibilidade nunca relaxa.
+
+   Contrastes medidos (script node, fórmula WCAG 2.x):
+     escuro · #06140C sobre #34E27E (logo/botão)   = 11,07:1
+            · #34E27E sobre #0F1420 (texto verde)  = 10,80:1
+            · #34E27E sobre #090C14 (fundo)        = 11,47:1
+     claro  · #06140C sobre #16A34A (logo/marca)   =  5,72:1
+            · #FFFFFF sobre #15803D (botão)        =  5,02:1
+            · #166534 sobre #FFFFFF (texto verde)  =  7,13:1
+            · #166534 sobre #F5F7FB (fundo)        =  6,65:1
+   #15803D como TEXTO no claro daria 4,68:1 no fundo — perto
+   demais do limite; por isso o texto usa o #166534.
+
+   PONTO EM ABERTO (registrado, não resolvido aqui): no tema
+   CLARO a marca #16A34A coincide com o verde de SUCESSO
+   (--green #16A34A, linha ~108). A regra "verde da marca ≠
+   verde de sucesso" só se cumpre por inteiro no escuro. Mexer
+   no semáforo é decisão do Bruno.
+   ============================================================ */
+:root,
+[data-theme="dark"] {
+  --brand:      #34E27E;               /* preenchimento: logo, avatar, anéis, barras */
+  --accentText: #34E27E;               /* verde para TEXTO (10,80:1 sobre --s1) */
+  --cta:        #34E27E;               /* botão primário */
+  --ctaText:    #06140C;               /* tinta escura sobre o verde (11,07:1) */
+  --onBrand:    #06140C;               /* texto sobre --brand (11,07:1) */
+  --activeBg:   rgba(52,226,126,.13);
+}
+[data-theme="light"] {
+  --brand:      #16A34A;
+  --accentText: #166534;               /* 7,13:1 sobre branco */
+  --cta:        #15803D;
+  --ctaText:    #FFFFFF;               /* 5,02:1 */
+  --onBrand:    #06140C;               /* 5,72:1 sobre #16A34A */
+  --activeBg:   rgba(22,163,74,.10);
+}

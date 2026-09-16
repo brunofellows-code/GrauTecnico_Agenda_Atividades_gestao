@@ -77,7 +77,12 @@
   }
 
   /* ---------- helpers de setor (mesma lógica multi-homing/cor do atividades.html) ---------- */
-  function setoresRaiz(setores) { return setores.filter(function (s) { return !s.setorPaiSigla && s.ativo; }); }
+  /* defensivo de propósito: esta função já derrubou a tela Hoje quando um
+     chamador esqueceu de passar a lista. Devolver vazio é errado, mas errado
+     e visível — estourar leva a tela inteira junto. */
+  function setoresRaiz(setores) {
+    return (Array.isArray(setores) ? setores : []).filter(function (s) { return s && !s.setorPaiSigla && s.ativo; });
+  }
   function setoresDe(act, setores) {
     if (act && act.todosSetores) { return setoresRaiz(setores).map(function (s) { return s.sigla; }); }
     if (act && Array.isArray(act.setorSiglas) && act.setorSiglas.length) { return act.setorSiglas.slice(); }
@@ -1026,11 +1031,27 @@
         b.pctNoPrazo = b.concluidasTotal ? Math.round(b.noPrazo / b.concluidasTotal * 100) : null;
         b.residual = K.residualPct(b.atrasadas, b.prevVencidas);
         var sc = K.scoreDesempenho(b.ader, b.pctNoPrazo, b.residual);
-        if (sc && b.prevVencidas === 0) { b.coletando = true; }
+        /* PARTIDA FRIA SEM NOTA (defeito 17, 16/09) — mesma regra de
+           computarPorPessoa: nada venceu ainda -> score null, tom 'flat'.
+           Antes só a marca "coletando" era ligada e a nota ficava. Com a
+           rotina de hoje ainda aberta às 9h (aderência 0) e sem dado de
+           prazo nem de residual, scoreDesempenho renormalizava só sobre a
+           aderência e devolvia 0/bad: na performance.html a tabela Ranking
+           mostrava "0 · coletando" em VERMELHO e em último, enquanto o card
+           da mesma pessoa dizia "— coletando" e o "i" do ranking prometia
+           "partida fria, não pune". No período Semana (jIni = hoje) ninguém
+           tem prevista vencida, então TODA linha caía aqui, todo dia: quem
+           ainda não tinha fechado o dia saía com nota baixa em vermelho,
+           abaixo de quem fechou ("100 · coletando"). */
+        if (sc && b.prevVencidas === 0) { b.coletando = true; sc = null; }
         b.score = sc ? sc.score : null; b.tom = sc ? sc.tom : 'flat'; b.usados = sc ? sc.usados : [];
         out.push(b);
       });
       out.sort(function (a, bb) {                 /* ranking clássico: MELHOR primeiro */
+        /* Sem nota vai para o FIM. Entre os sem nota, mais previstas
+           primeiro: quem está "coletando" sempre tem previstas (a nota só
+           existe com aderência), então fica acima de quem não tem previstas
+           na janela, e nunca no meio dos que têm nota. */
         if (a.score == null && bb.score == null) { return bb.previstas - a.previstas; }
         if (a.score == null) { return 1; }
         if (bb.score == null) { return -1; }
@@ -1300,7 +1321,8 @@
      à GESTÃO · D-0 (vencido) vira NÃO-CONFORMIDADE. NUNCA bloqueia —
      só muda de dono e de cor. Determinístico e derivado (nada gravado):
        pct >= 100            -> null (entregue)
-       prazo < hoje          -> D0  (não-conformidade, red)
+       prazo < hoje          -> D0  (não-conformidade, red) — com ou sem medição
+       pct null (coletando)  -> null (sem medição não escala por aderência)
        faltam <= 3 e pct<70  -> D3  (gestão, red)
        faltam <= 5 e pct<70  -> D5  (dono, amber)
        senão                 -> null                                  */
@@ -1311,10 +1333,26 @@
     if (R.compareISO(prazo, hoje) < 0) {
       return { nivel: 'D0', quem: 'nc', rotulo: 'Não-conformidade (venceu)', tom: 'red' };
     }
+    /* PLANO "COLETANDO" NÃO ESCALA POR ADERÊNCIA (defeito 33, decisão de
+       16/09). Antes o pct null virava 0 aqui, e o mesmo plano saía com dois
+       rótulos que brigam: "Coletando" (statusPlano) e "⚠ Escalado à gestão
+       (D-3)" com bolinha vermelha. D-5 e D-3 medem "está abaixo de 70%";
+       sem nenhuma prevista ATÉ HOJE nas atividades vinculadas (nenhuma
+       ocorrência não pulada de hoje para trás) não existe % para estar
+       abaixo, e o 0 era inventado. Cuidado: pctPlano conta effDate <= hoje,
+       então o que vence HOJE já é prevista. Atividade vinculada que vence
+       hoje e segue aberta dá pct 0 (e não null) e escala normalmente; null
+       é só quando nada venceu nem vence hoje. O caso mais grave: na
+       Inteligência, com o recorte PED (seletor do gestor ou líder PED), o
+       plano de SEC 90% feito com prazo em 2 dias perdia as atividades no
+       board recortado, ficava sem %, e aparecia escalado à gestão, enquanto
+       a escola toda via "No prazo · 90%". O PRAZO continua escalando
+       sozinho: vencido é D-0 (acima) mesmo sem medição, porque a data
+       estourou de fato. */
+    if (pct == null) { return null; }
     var faltam = R.diasEntre(hoje, prazo);
-    var p = pct == null ? 0 : pct;
-    if (faltam <= 3 && p < 70) { return { nivel: 'D3', quem: 'gestao', rotulo: 'Escalado à gestão (D-3)', tom: 'red' }; }
-    if (faltam <= 5 && p < 70) { return { nivel: 'D5', quem: 'dono', rotulo: 'Alerta ao dono (D-5)', tom: 'amber' }; }
+    if (faltam <= 3 && pct < 70) { return { nivel: 'D3', quem: 'gestao', rotulo: 'Escalado à gestão (D-3)', tom: 'red' }; }
+    if (faltam <= 5 && pct < 70) { return { nivel: 'D5', quem: 'dono', rotulo: 'Alerta ao dono (D-5)', tom: 'amber' }; }
     return null;
   };
 })();
@@ -1380,9 +1418,17 @@
       .sort(function (a, b) { return R.compareISO(a.effDate, b.effDate); })[0];
     if (atr) { return { occ: atr, motivo: 'atrasada', dias: R.diasEntre(atr.effDate, hoje) }; }
     var doDia = minhas.filter(function (o) { return o.effDate === hoje; });
-    var comHora = doDia.filter(function (o) { return o.act.horaPrevista; })
-      .sort(function (a, b) { return String(a.act.horaPrevista).localeCompare(String(b.act.horaPrevista)); })[0];
-    if (comHora) { return { occ: comHora, motivo: 'hora', hora: comHora.act.horaPrevista }; }
+    /* O horário da atividade é 'horario' — 'horaPrevista' é campo de REUNIÃO e
+       nunca existe aqui. O ramo "mais cedo do dia" portanto NUNCA disparava, e
+       "Comece por esta" caía sempre no desempate alfabético: com caixa às 17h,
+       chamados às 8h e turma às 10h, a tela sugeria "Abrir chamados" por
+       acaso, não por horário, e ainda rotulava "de hoje, sem horário".
+       Irmão do defeito de titulo/horario corrigido em hoje.html em 15/09.
+       A ocorrência pode ter horário próprio (horarioOverride) — respeitado. */
+    var horaDe = function (o) { return (o && o.ov && o.ov.horarioOverride) || (o && o.act && o.act.horario) || ''; };
+    var comHora = doDia.filter(function (o) { return !!horaDe(o); })
+      .sort(function (a, b) { return String(horaDe(a)).localeCompare(String(horaDe(b))); })[0];
+    if (comHora) { return { occ: comHora, motivo: 'hora', hora: horaDe(comHora) }; }
     var semHora = doDia.sort(function (a, b) {
       return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR');
     })[0];
@@ -1391,23 +1437,45 @@
 
   /* G1/G3 · KPIs DE UM ESCOPO de setores (mesmas fórmulas do painel:
      aderência = concluídas ÷ previstas até hoje ×100, puladas fora;
-     reprog% = reprogramadas ÷ total da janela ×100). esc = mapa
-     {SIG:true} ou array de siglas. null se nada previsto no escopo. */
+     reprog% = reprogramadas ÷ TODAS as ocorrências do escopo na janela
+     ×100, puladas DENTRO, igual a computar). esc = mapa {SIG:true} ou
+     array de siglas. null se nada previsto no escopo (só puladas também
+     dá null: não há o que mostrar). */
   function escMapa(esc) {
     if (!esc) { return {}; }
     if (Array.isArray(esc)) { var m = {}; esc.forEach(function (s) { m[s] = true; }); return m; }
     return esc;
   }
   function noEscopo(act, mapa) {
-    var sigs = K.setoresDe(act);
+    /* Atividade marcada "todos os setores" vale para TODO escopo — é a mesma
+       regra que visivelPara já usa (linha 133 deste arquivo). Além de ser o
+       critério certo, é o que conserta um estouro: a chamada abaixo era
+       K.setoresDe(act) SEM a lista de setores, e com todosSetores:true isso
+       virava setoresRaiz(undefined).filter → TypeError. O erro subia até o
+       .catch do refresh() e a tela Hoje inteira virava "Não consegui carregar
+       o seu dia", sem nenhum número — para líder e para gestor. */
+    if (act && act.todosSetores) { return true; }
+    var sigs = K.setoresDe(act, []);
     for (var i = 0; i < sigs.length; i++) { if (mapa[sigs[i]]) { return true; } }
     return !!(act && act.subsetorSigla && mapa[act.subsetorSigla]);
   }
   K.kpisDoEscopo = function (board, esc, hoje) {
     var mapa = escMapa(esc);
-    var prev = 0, conc = 0, atras = 0, agingMax = 0, reprog = 0, total = 0;
+    var prev = 0, conc = 0, atras = 0, agingMax = 0, reprog = 0, total = 0, ocorrencias = 0;
     (Array.isArray(board) ? board : []).forEach(function (o) {
       if (!o || !o.act || !noEscopo(o.act, mapa)) { return; }
+      /* DENOMINADOR DO REPROG% ANTES DO FILTRO DE PULADA (defeito 18, 16/09).
+         O painel (computar) divide as reprogramadas por board.length, com as
+         puladas; computarPorPessoa também. Aqui a pulada saía antes da
+         contagem, e o card "Seu setor hoje" (hoje.html) dividia por menos.
+         Cenário: escopo do líder SEC com 10 ocorrências, 2 puladas e 2
+         reprogramadas. O KPI do topo da MESMA tela dizia "Reprogramação 20%"
+         em verde, e o card dizia "Reprog 25%" em laranja (limite 20%), com
+         um "i" que promete "mesmas fórmulas do painel". A Inteligência
+         também mostrava 20%. O ajuste é aqui, e não em computar: o reprogPct
+         do painel já está gravado dia a dia nos kpi_snapshots, e mudar a
+         conta dele quebraria a série da tendência. */
+      ocorrencias++;
       if (o.status === 'pulada') { return; }
       total++;
       if (o.status === 'reprogramada') { reprog++; }
@@ -1425,8 +1493,8 @@
     return { previstas: prev, concluidas: conc,
       aderencia: prev ? Math.round(conc / prev * 100) : null,
       atrasadas: atras, agingMax: agingMax,
-      reprog: reprog, reprogPct: total ? Math.round(reprog / total * 100) : 0,
-      total: total };
+      reprog: reprog, reprogPct: ocorrencias ? Math.round(reprog / ocorrencias * 100) : 0,
+      total: total, ocorrencias: ocorrencias };
   };
 
   /* G2 · QUEM PRECISA DE AJUDA (sem ranking público — Kahneman):
@@ -1449,6 +1517,44 @@
         a.nome.localeCompare(b.nome, 'pt-BR');
     });
     return lista.slice(0, n || 3);
+  };
+
+  /* G4 · ENTREGUE HOJE — o espelho de pessoasCriticas.
+     Motivo: a tela do líder é hoje uma parede de falha. "Ataque agora" (as 5
+     mais urgentes, todas atrasadas), "Onde está travando", "Quem precisa de
+     ajuda". Não existe UM elemento que mostre o que deu certo. Isso tem dois
+     custos concretos: o líder perde a calibragem (não sabe o que está
+     funcionando, então não reforça), e a conversa com o liderado nasce sempre
+     punitiva, porque a tela só deu munição de cobrança.
+     O padrão de mercado resolve assim: no Level 10 do EOS a reunião ABRE pelo
+     "Segue"/boa notícia antes da lista de issues; o 15Five abre a visão do
+     gestor pelos "wins". Não é gentileza — é calibragem.
+     Aqui: MESMO board, MESMO escopo, MESMA janela de pessoasCriticas. Nenhuma
+     leitura nova, nenhum critério paralelo. Devolve também o último relato de
+     cada pessoa, porque o relato é o que o líder de fato lê (e saber que é
+     lido é o que faz a pessoa escrever um relato que presta).
+     PURO e testável — casos no harness. */
+  K.entreguesHoje = function (board, esc, hoje, n) {
+    var mapa = escMapa(esc);
+    var prev = 0, feitas = 0, por = {};
+    (Array.isArray(board) ? board : []).forEach(function (o) {
+      if (!o || !o.act || !noEscopo(o.act, mapa)) { return; }
+      if (o.effDate !== hoje || o.status === 'pulada') { return; }
+      prev++;
+      if (o.status !== 'concluida') { return; }
+      feitas++;
+      var uid = o.act.responsavelUid || '(sem)';
+      var b = por[uid] || (por[uid] = { uid: uid, nome: o.act.responsavelNome || '(sem responsável)', quantas: 0, relato: '', relatoEm: 0 });
+      b.quantas++;
+      var rel = (o.ov && o.ov.relato) || '';
+      var em = (o.ov && (o.ov.relatoEm || o.ov.concluidaEm)) || 0;
+      if (rel && em >= b.relatoEm) { b.relato = rel; b.relatoEm = em; }
+    });
+    var lst = Object.keys(por).map(function (k) { return por[k]; });
+    lst.sort(function (a, b) { return (b.quantas - a.quantas) || a.nome.localeCompare(b.nome, 'pt-BR'); });
+    return { previstas: prev, entregues: feitas,
+      pct: prev ? Math.round(feitas / prev * 100) : null,
+      pessoas: lst.slice(0, n || 4) };
   };
 })();
 
@@ -1736,5 +1842,126 @@
       pts.push((Math.round(x * 10) / 10) + ',' + (Math.round(y * 10) / 10));
     }
     return pts.join(' ');
+  };
+})();
+
+/* ============================================================
+   R12 · PERMISSÃO DE ESCRITA POR SETOR (decisões do Bruno, 16/09)
+   ------------------------------------------------------------
+   Uma regra SÓ, usada por todas as telas (e espelhada nas Regras do
+   Firestore, proposta R12). Antes cada tela tinha a sua — CAN_WRITE,
+   PODE_AGIR, canDirect, escreveNoSetor, podeEditar, ehLiderDe — e nenhuma
+   olhava setor: o líder gravava em qualquer setor.
+
+   Decisões aplicadas:
+   (a) líder grava SÓ no próprio setor (a raiz que lidera + subsetores dela,
+       ou o subsetor que lidera), inclusive para as pessoas lotadas ali;
+       para outro setor, PEDE ao líder de lá, que aceita. Gestor e sócio
+       gravam tudo, para quem quiserem.
+   (3) atividade que aparece em vários setores: cada setor envolvido EXECUTA
+       (conclui, inicia, trava, adia) e vale para todos; EDITAR a atividade
+       (regra, título, responsável, inativar) é do setor dono.
+   (6) pedido de mudança de data: decide o líder do setor dono.
+
+   Posse × vitrine: o setor DONO é setorSigla (ou o subsetor, quando é filho
+   do setorSigla gravado). "Também aparece em" (setorSiglas) e "todos os
+   setores" são VITRINE — dão direito de executar (decisão 3), não de editar.
+
+   PURO e testável: NOITE/harness_permissoes.js.
+   ============================================================ */
+(function () {
+  'use strict';
+  var K = window.KPI;
+  if (!K || typeof K.escopoLider !== 'function') { return; }
+
+  function ehGestor(u) { return !!u && u.perfil === 'gestor'; }
+  function ehLider(u) { return !!u && u.perfil === 'lider'; }
+  function escopo(u, setores) {
+    return ehLider(u) ? K.escopoLider(Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [], Array.isArray(setores) ? setores : []) : {};
+  }
+  function paiDe(sig, setores) {
+    var lst = Array.isArray(setores) ? setores : [];
+    for (var i = 0; i < lst.length; i++) { if (lst[i] && lst[i].sigla === sig) { return lst[i].setorPaiSigla || null; } }
+    return null;
+  }
+
+  /* a sigla está no escopo de quem grava? (gestor: sempre) */
+  K.meuSetor = function (sig, user, setores) {
+    if (!sig || !user) { return false; }
+    if (ehGestor(user)) { return true; }
+    if (!ehLider(user)) { return false; }
+    return !!escopo(user, setores)[sig];
+  };
+
+  /* POSSE: o setor dono da atividade está no escopo do líder */
+  K.possuiAtividade = function (act, user, setores) {
+    if (!act || !user) { return false; }
+    if (ehGestor(user)) { return true; }
+    if (!ehLider(user)) { return false; }
+    var esc = escopo(user, setores);
+    if (act.setorSigla && esc[act.setorSigla]) { return true; }
+    return !!(act.subsetorSigla && esc[act.subsetorSigla] && paiDe(act.subsetorSigla, setores) === act.setorSigla);
+  };
+
+  /* EDITAR a atividade (regra, título, responsável, classificação, inativar/ativar) */
+  K.podeEditarAtividade = function (act, user, setores) {
+    return K.possuiAtividade(act, user, setores);
+  };
+
+  /* EXECUTAR a ocorrência (concluir, iniciar, travar, adiar direto) — decisão 3.
+     Responsável sempre executa a própria (regra F1-J, já em produção). */
+  K.podeExecutarOcorrencia = function (act, user, setores) {
+    if (!act || !user) { return false; }
+    if (ehGestor(user)) { return true; }
+    if (act.responsavelUid && user.uid && act.responsavelUid === user.uid) { return true; }
+    if (!ehLider(user)) { return false; }
+    if (K.possuiAtividade(act, user, setores)) { return true; }
+    if (act.todosSetores === true) { return true; }
+    var esc = escopo(user, setores);
+    var extras = Array.isArray(act.setorSiglas) ? act.setorSiglas : [];
+    for (var i = 0; i < extras.length; i++) { if (esc[extras[i]]) { return true; } }
+    return false;
+  };
+
+  /* VITRINE que o líder pode gravar ao criar/editar: nunca "todos os setores";
+     "também aparece em" só com setores do escopo dele (além do dono). */
+  K.vitrineNoEscopo = function (setorSigla, setorSiglas, todosSetores, user, setores) {
+    if (!user) { return false; }
+    if (ehGestor(user)) { return true; }
+    if (!ehLider(user) || todosSetores === true) { return false; }
+    var esc = escopo(user, setores);
+    var extras = Array.isArray(setorSiglas) ? setorSiglas : [];
+    for (var i = 0; i < extras.length; i++) {
+      if (extras[i] !== setorSigla && !esc[extras[i]]) { return false; }
+    }
+    return true;
+  };
+
+  /* PESSOA que o líder pode pôr como responsável: ninguém (sem dono), ele
+     mesmo, ou quem tem a lotação (usuarios.setor) no escopo. Usuário sem
+     'setor' no cadastro fica de fora — mesmo critério de usuariosNoEscopo. */
+  K.pessoaNoEscopo = function (uid, usuarios, user, setores) {
+    if (!user) { return false; }
+    if (ehGestor(user)) { return true; }
+    if (!ehLider(user)) { return false; }
+    if (!uid || uid === user.uid) { return true; }
+    var lst = Array.isArray(usuarios) ? usuarios : [];
+    var alvo = null;
+    for (var i = 0; i < lst.length; i++) { if (lst[i] && (lst[i].uid === uid || lst[i].id === uid)) { alvo = lst[i]; break; } }
+    return !!(alvo && alvo.setor && escopo(user, setores)[alvo.setor]);
+  };
+
+  /* LÍDERES que respondem por uma sigla (para onde vai o pedido): quem tem a
+     sigla no escopo expandido. Ativos apenas. Vazio → o pedido vai ao gestor. */
+  K.lideresDoSetor = function (sig, usuarios, setores) {
+    var lst = Array.isArray(usuarios) ? usuarios : [], out = [];
+    if (!sig) { return out; }
+    lst.forEach(function (u) {
+      /* perfil cru do banco: 'lider' ou o legado 'Editor' (o guard normaliza igual) */
+      if (!u || (u.perfil !== 'lider' && u.perfil !== 'Editor') || u.ativo !== true) { return; }
+      var esc = K.escopoLider(Array.isArray(u.setoresLiderados) ? u.setoresLiderados : [], Array.isArray(setores) ? setores : []);
+      if (esc[sig]) { out.push(u); }
+    });
+    return out;
   };
 })();

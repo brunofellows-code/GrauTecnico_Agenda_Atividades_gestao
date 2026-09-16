@@ -48,6 +48,7 @@
     setores: [],                 /* siglas que o líder lidera */
     user: null,
     ctx: null,                   /* MODELO cru (banda inteira) */
+    recorte: null,               /* MODELO no escopo do papel (KPI.recortarContexto) — base de "Onde está travando" */
     dados: null,                 /* contrato scores.js (escopo do papel) */
     dadosEmpresa: null,          /* contrato scores.js (banda inteira, p/ ranking) */
     cockpit: null,
@@ -103,6 +104,7 @@
 
         /* escopo do papel = o MESMO predicado de hoje.html (KPI.recortarContexto) */
         var recorte = (window.KPI && window.KPI.recortarContexto) ? window.KPI.recortarContexto(ctx, user) : ctx;
+        APP.recorte = recorte;
         APP.dados = window.ADAPTER.fromContexto(recorte, user);
         APP.dadosEmpresa = (perfil === 'gestor') ? APP.dados : window.ADAPTER.fromContexto(ctx, user);
 
@@ -233,37 +235,49 @@
     },
 
     /* 4. onde está travando (gestor/líder). Linguagem de resgate: quem
-          precisa de ajuda — nunca "pessoas em risco". */
+          precisa de ajuda — nunca "pessoas em risco".
+       #38 (16/09) · FILTRAR ANTES DE CORTAR. As listas vinham prontas de
+       SCORES.cockpit, já cortadas em 3 pelo score de gargalo
+       (3×atrasadas − 2×entregas no prazo; o adapter zera o resto), e só
+       DEPOIS esta função descartava quem tinha 0 atrasada. Quem entrega muito
+       e também atrasa muito fica com score negativo e perdia a vaga para
+       colegas sem nada vencido (score 0). No SEC: Ana com 1 atrasada, Beto e
+       Caio sem nada vencido, Dani com 5 atrasadas e 10 no prazo → a tela
+       listava só a Ana; sem a Ana, dizia "Ninguém travado no seu escopo
+       agora" — enquanto o cartão "Quem precisa de ajuda hoje", na mesma tela,
+       punha a Dani em primeiro. Setores sofriam igual: SEC com 5 atrasadas
+       perdia a vaga para setores zerados.
+       Agora as duas listas nascem aqui, do escopo do papel: primeiro fica só
+       quem tem atraso, depois ordena, e só então corta em 3. scores.js
+       (congelado, Lote 2) não muda: SCORES.cockpit continua devolvendo
+       "gargalos", mas ninguém mais decide lista por ele — em 16/09 esta função
+       era a única que o lia. */
     renderGargalos: function () {
       var div = document.createElement('div');
       div.className = 'ck-gargalos-section';
-      var g = (APP.cockpit && APP.cockpit.gargalos) || {};
-      var pessoas = g.pessoas || [], setores = g.setores || [];
-      var atrasPorUid = {}, atrasPorSetor = {}, i, p;
-      for (i = 0; i < APP.dados.pessoas.length; i++) { p = APP.dados.pessoas[i]; atrasPorUid[p.uid] = p.atrasadas || 0; atrasPorSetor[p.setorSigla] = (atrasPorSetor[p.setorSigla] || 0) + (p.atrasadas || 0); }
       var html = '<h3>Onde está travando</h3>';
-      var temAlgo = false;
-      var comAtraso = [];
-      for (i = 0; i < pessoas.length; i++) { if ((atrasPorUid[pessoas[i].uid] || 0) > 0) { comAtraso.push(pessoas[i]); } }
-      if (comAtraso.length) {
+      var temAlgo = false, i, p, n;
+      var ajuda = APP.quemPrecisaDeAjuda(3);
+      if (ajuda.length) {
         temAlgo = true;
-        html += '<h4>Quem precisa de ajuda</h4><ul>';
-        for (i = 0; i < Math.min(3, comAtraso.length); i++) {
-          p = comAtraso[i];
-          var n = atrasPorUid[p.uid] || 0;
+        html += '<h4>Quem precisa de ajuda</h4>' +
+          '<p class="ck-helper">Mais atrasadas primeiro; no empate, o atraso mais antigo e depois o nome — a mesma ordem do cartão “Quem precisa de ajuda hoje”.</p><ul>';
+        for (i = 0; i < ajuda.length; i++) {
+          p = ajuda[i];
+          n = p.atrasadas;
           html += '<li>' + esc(p.nome) + ' — ' + n + ' atrasada' + (n > 1 ? 's' : '') + (p.setorSigla ? ' <small>' + esc(p.setorSigla) + '</small>' : '') + '</li>';
         }
         html += '</ul>';
       }
       if (APP.perfil === 'gestor') {
-        var setComAtraso = [];
-        for (i = 0; i < setores.length; i++) { if ((atrasPorSetor[setores[i].setorSigla] || 0) > 0) { setComAtraso.push(setores[i]); } }
-        if (setComAtraso.length) {
+        var setores = APP.setoresComAtraso(3);
+        if (setores.length) {
           temAlgo = true;
-          html += '<h4>Setores com mais atraso</h4><ul>';
-          for (i = 0; i < Math.min(3, setComAtraso.length); i++) {
-            var sg = setComAtraso[i].setorSigla, ns = atrasPorSetor[sg] || 0;
-            html += '<li>' + esc(sg) + ' — ' + ns + ' atrasada' + (ns > 1 ? 's' : '') + '</li>';
+          html += '<h4>Setores com mais atraso</h4>' +
+            '<p class="ck-helper">Cada atrasada conta no setor da tarefa (tarefa de vários setores conta em cada um) — a mesma conta do Pareto das atrasadas da Inteligência.</p><ul>';
+          for (i = 0; i < setores.length; i++) {
+            n = setores[i].atrasadas;
+            html += '<li>' + esc(setores[i].sigla === '—' ? 'Sem setor' : setores[i].sigla) + ' — ' + n + ' atrasada' + (n > 1 ? 's' : '') + '</li>';
           }
           html += '</ul>';
         }
@@ -271,6 +285,55 @@
       if (!temAlgo) { html += '<p class="ck-helper">Ninguém travado no seu escopo agora.</p>'; }
       div.innerHTML = html;
       return div;
+    },
+
+    /* #38 · quem precisa de ajuda: as pessoas do escopo (APP.dados.pessoas, a
+       mesma base que já dava o número de atrasadas) com PELO MENOS 1 atrasada,
+       na ordem de KPI.pessoasCriticas — mais atrasadas, depois o atraso mais
+       antigo, depois o nome. O "atraso mais antigo" sai do board do recorte,
+       pela marca atrasada que o kpi.js já calculou; nenhuma regra nova de
+       atraso nasce aqui. Quem não tem responsável não é pessoa: fica fora,
+       como já ficava (KPI.computarPorPessoa separa em semResp). */
+    quemPrecisaDeAjuda: function (max) {
+      var pessoas = (APP.dados && APP.dados.pessoas) || [];
+      var board = (APP.recorte && APP.recorte.board) || [];
+      var pior = {}, lista = [], i, o, d, p;
+      for (i = 0; i < board.length; i++) {
+        o = board[i];
+        if (!o || !o.atrasada || !o.uid) { continue; }
+        d = diasEntre(o.effDate, APP.hoje);
+        if (!pior.hasOwnProperty(o.uid) || d > pior[o.uid]) { pior[o.uid] = d; }
+      }
+      for (i = 0; i < pessoas.length; i++) {
+        p = pessoas[i];
+        if ((p.atrasadas || 0) > 0) {
+          lista.push({ uid: p.uid, nome: p.nome, setorSigla: p.setorSigla, atrasadas: p.atrasadas,
+            agingMax: pior.hasOwnProperty(p.uid) ? pior[p.uid] : 0 });
+        }
+      }
+      lista.sort(function (a, b) {
+        return (b.atrasadas - a.atrasadas) || (b.agingMax - a.agingMax) ||
+          String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+      });
+      return lista.slice(0, max || 3);
+    },
+
+    /* #38 · setores com mais atraso: o Pareto das atrasadas da Inteligência
+       (KPI.computar → porSetor → KPI.paretoAtrasadas), sobre o mesmo recorte.
+       A soma antiga (atrasadas da PESSOA no 1º setor dela, em ordem
+       alfabética) punha num setor atraso que era de outro: Eva com 1 tarefa
+       futura no ADM e 2 atrasadas no SEC aparecia como "ADM — 2 atrasadas".
+       Atividade sem setor vem como "—" do kpi.js e aparece como "Sem setor". */
+    setoresComAtraso: function (max) {
+      var base = APP.recorte || {};
+      var m = window.KPI.computar({ board: base.board || [], hoje: APP.hoje, setores: base.setores || [],
+        ativ: base.ativ || [], janela: base.janela, periodo: base.periodo });
+      var par = window.KPI.paretoAtrasadas(m.porSetor);
+      var itens = (par && par.itens) || [], out = [], i;
+      for (i = 0; i < itens.length && out.length < (max || 3); i++) {
+        out.push({ sigla: itens[i].sig, atrasadas: itens[i].atrasadas });
+      }
+      return out;
     },
 
     /* 5. ranking — Top 3 público + sua posição. Bottom NUNCA (scores.js

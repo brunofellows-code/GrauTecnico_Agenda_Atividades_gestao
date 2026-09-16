@@ -54,6 +54,14 @@
 .ck-chip.verde{border-color:var(--green);color:var(--greenText)}
 .ck-chip.ambar{border-color:var(--amber);color:var(--amber)}
 .ck-chip.vermelho{border-color:var(--red);color:var(--red)}
+/* aviso de gravação: "salvando…" / "ainda não salvo" / "não salvo".
+   Âmbar NÃO serve aqui: no tema claro --amber dá ~3,2:1 em texto
+   pequeno. Pendente usa --text em negrito; erro usa --red (~4,8:1
+   nos dois temas). A cor só reforça: o texto já diz o estado. */
+.ck-grav.pend{color:var(--text);font-weight:800}
+.ck-grav.err{color:var(--red);font-weight:800}
+.ck-bar .ui-btn[hidden]{display:none}
+.ck-bar:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
 /* grade de KPIs */
 .ck-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(238px,1fr));gap:12px}
@@ -204,28 +212,79 @@
         });
       }).catch(function (e) { throw ferr(e); });
     },
-    /* histórico curto: os N lançamentos anteriores do mesmo ciclo.
-       Só para desenhar os pontinhos de tendência do card. */
-    listar: function (ciclo, limite) {
+    /* histórico curto: os N lançamentos IMEDIATAMENTE ANTERIORES ao
+       período visível. Só para desenhar os pontinhos do card.
+
+       POR QUE PELA CHAVE (#27): a consulta antiga era
+       where(ciclo) + limit(40), sem orderBy. Sem orderBy o Firestore
+       devolve em ordem crescente de id, ou seja, os 40 lançamentos MAIS
+       ANTIGOS. Com lançamento em todo dia útil desde 16/09/2026, a
+       partir de 12/11 os pontinhos "antes" congelavam em 02/11…10/11 e
+       o gestor lia aquilo como a última semana.
+       O id já é o período e já é cronológico dentro do prefixo do ciclo
+       (d_AAAA-MM-DD · s_AAAA-Snn · m_AAAA-MM, largura fixa; s_2026-S53
+       vem antes de s_2027-S01). Então a consulta é uma FAIXA de ids
+       [início da janela, id visível): o próprio período visível nunca
+       entra (#28).
+
+       POR QUE NÃO orderBy(documentId(), 'desc') + limit(7)
+       Leria só 7, mas ordem DESCENDENTE na chave não sai dos índices
+       automáticos: a documentação de índices do Datastore põe "sort
+       order on keys in descending order" entre as consultas que exigem
+       índice composto, e o mesmo FAILED_PRECONDITION foi relatado no
+       Firestore com orderBy(documentId, desc) (flutterfire #4398). A
+       casa não cria índice composto (kpi.js, atividades.html), e a
+       consulta recusada apagaria os pontinhos. Faixa de id em ordem
+       CRESCENTE sai do índice embutido de __name__.
+       Para não ler o ciclo inteiro, a faixa começa numa janela curta
+       (JANELAS), que no uso normal já tem os 7; só se faltar busca a
+       janela seguinte, mais antiga, e por último até o começo do ciclo.
+       Se a consulta falhar, os pontinhos somem — antes sumiam em
+       silêncio; o aviso no console é para quem for conferir. */
+    listar: function (ciclo, data, limite) {
+      var n = limite || 7;
+      var ate = M.idPeriodo(ciclo, data);
+      var cortes = (JANELAS[ciclo] || []).map(function (j) { return idRecuado(ciclo, data, j); });
+      cortes.push(ate.slice(0, 2));   /* última faixa: até o começo do ciclo */
       return fb().then(function (c) {
-        var q = c.f.query(c.f.collection(c.db, 'cockpit'),
-          c.f.where('ciclo', '==', ciclo), c.f.limit(limite || 40));
-        return c.f.getDocs(q).then(function (snap) {
-          var a = [];
-          snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); });
-          a.sort(function (x, y) { return String(x.periodo).localeCompare(String(y.periodo)); });
-          return a;
-        });
-      }).catch(function () { return []; });
+        var achados = [];
+        function faixa(i, teto) {
+          var desde = cortes[i];
+          var q = c.f.query(c.f.collection(c.db, 'cockpit'),
+            c.f.where(c.f.documentId(), '>=', desde),
+            c.f.where(c.f.documentId(), '<', teto));
+          return c.f.getDocs(q).then(function (snap) {
+            var a = [];
+            snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); });
+            achados = a.concat(achados);
+            if (achados.length >= n || i === cortes.length - 1) { return achados; }
+            return faixa(i + 1, desde);
+          });
+        }
+        return faixa(0, ate);
+      }).then(function (a) {
+        a.sort(function (x, y) { return x.id < y.id ? -1 : (x.id > y.id ? 1 : 0); });
+        return a.slice(-n);
+      }).catch(function (e) {
+        if (window.console && console.warn) { console.warn('[cockpit] histórico "antes" não carregou', e); }
+        return [];
+      });
     },
-    salvar: function (id, ciclo, periodo, valores) {
+    /* grava a FOTOGRAFIA do período tirada no momento da edição (ver
+       fotografar). Chave que o gestor limpou vai como deleteField():
+       com merge:true o Firestore MESCLA mapas aninhados, então mandar
+       `valores` sem a chave deixava o número antigo no banco — o campo
+       limpo (ou o SIM desmarcado) voltava ao recarregar a tela. */
+    salvar: function (foto) {
       return fb().then(function (c) {
+        var valores = Object.assign({}, foto.valores);
+        foto.apagar.forEach(function (k) { valores[k] = c.f.deleteField(); });
         var doc = {
-          ciclo: ciclo, periodo: periodo, valores: valores, ativo: true,
-          atualizadoEm: Date.now(), atualizadoPorUid: USER.uid, atualizadoPorNome: USER.name || ''
+          ciclo: foto.ciclo, periodo: foto.periodo, valores: valores, ativo: true,
+          atualizadoEm: foto.em, atualizadoPorUid: USER.uid, atualizadoPorNome: USER.name || ''
         };
-        return c.f.setDoc(c.f.doc(c.db, 'cockpit', id), doc, { merge: true }).then(function () {
-          return Store.log({ acao: 'lancar_cockpit', entidade: 'cockpit', refId: id, antes: null, depois: { ciclo: ciclo, periodo: periodo } });
+        return c.f.setDoc(c.f.doc(c.db, 'cockpit', foto.id), doc, { merge: true }).then(function () {
+          return Store.log({ acao: 'lancar_cockpit', entidade: 'cockpit', refId: foto.id, antes: null, depois: { ciclo: foto.ciclo, periodo: foto.periodo } });
         });
       }).catch(function (e) { throw ferr(e); });
     },
@@ -242,6 +301,9 @@
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
   function toast(msg, kind) {
     var t = txt('div', '', msg);
+    /* erro de gravação num período que já saiu da tela só aparece aqui:
+       sem role, o leitor de tela não anunciava o "não salvei". */
+    t.setAttribute('role', kind === 'err' ? 'alert' : 'status');
     t.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;max-width:calc(100vw - 32px);text-align:center;background:var(--s2);border:1px solid var(--border);color:' + (kind === 'err' ? 'var(--red)' : 'var(--text)') + ';font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:11px;box-shadow:var(--cardShadow)';
     document.body.appendChild(t);
     setTimeout(function () { if (t.parentNode) { t.parentNode.removeChild(t); } }, 3000);
@@ -274,6 +336,7 @@
   var CICLO = 'diario';
   var DATA = HOJE;            /* data DENTRO do período visível */
   var DOC = null;             /* documento carregado do banco */
+  var DOC_DE = null;          /* id do período a que DOC pertence */
   var VALORES = {};           /* estado em edição (espelho de DOC.valores) */
   var HIST = [];              /* lançamentos anteriores do ciclo */
   var bodyEl, tabsEl, perEl;
@@ -288,27 +351,80 @@
     var d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
     if (CICLO === 'diario') { d.setDate(d.getDate() + dir); }
     else if (CICLO === 'semanal') { d.setDate(d.getDate() + dir * 7); }
-    else { d.setMonth(d.getMonth() + dir); }
+    else {
+      /* trava no dia 1 ANTES de somar o mês (#43). A aba Mensal abre em
+         HOJE; em 31/10, setMonth(-1) virava "31/09", que o Date normaliza
+         para 01/10: o rótulo seguia 10/2026, a tela recarregava o mesmo mês
+         e o clique parecia não fazer nada. Acontecia ao abrir a aba em
+         qualquer dia 29, 30 ou 31. No mensal só o mês importa. */
+      d.setDate(1);
+      d.setMonth(d.getMonth() + dir);
+    }
     var mm = d.getMonth() + 1, dd = d.getDate();
     DATA = d.getFullYear() + '-' + (mm < 10 ? '0' + mm : mm) + '-' + (dd < 10 ? '0' + dd : dd);
   }
   /* não deixa navegar para o futuro: lançar KPI de amanhã é ficção */
   function noFuturo() { return M.idPeriodo(CICLO, DATA) >= M.idPeriodo(CICLO, HOJE); }
 
+  /* data gravada no campo `periodo`: o 1º dia do período (diário = o
+     próprio dia · semanal = a segunda-feira da semana ISO · mensal =
+     dia 01). Antes gravava DATA, o dia que estava na tela no momento
+     de salvar — com merge, o do ÚLTIMO salvamento (#28): m_2026-09
+     lançado em 10/09 ficava com periodo 2026-09-10 e, reaberto em
+     16/09, entrava no próprio "antes"; a semana 38 lançada na segunda
+     aparecia no "antes" dela mesma na quarta. Docs antigos não
+     quebram: qualquer dia dentro do período dá a mesma chave e o
+     mesmo rótulo, e a próxima gravação normaliza o campo. */
+  function inicioPeriodo(ciclo, iso) {
+    if (ciclo === 'mensal') { return iso.slice(0, 8) + '01'; }
+    if (ciclo === 'semanal') { return R.addDias(iso, 1 - (R.diaSemana(iso) || 7)); }
+    return iso;
+  }
+
+  /* janelas do histórico "antes", em períodos contados para trás a partir
+     do visível (ver Store.listar). A 1ª cobre o uso normal com folga: 7
+     dias úteis cabem em 16 dias corridos mesmo com feriado; 7 semanas em
+     10; 7 meses em 9. A 2ª só roda depois de um recesso longo. Depois
+     delas, a última faixa vai até o começo do ciclo. */
+  var JANELAS = { diario: [16, 120], semanal: [10, 52], mensal: [9, 60] };
+
+  /* id do período que fica n períodos antes do período de `iso` */
+  function idRecuado(ciclo, iso, n) {
+    if (ciclo === 'diario') { return M.idPeriodo(ciclo, R.addDias(iso, -n)); }
+    if (ciclo === 'semanal') { return M.idPeriodo(ciclo, R.addDias(iso, -7 * n)); }
+    var a = Number(iso.slice(0, 4)), m = Number(iso.slice(5, 7)) - n;
+    while (m < 1) { m += 12; a -= 1; }
+    return M.idPeriodo(ciclo, a + '-' + (m < 10 ? '0' + m : m) + '-01');
+  }
+
   /* ===================== carga ===================== */
   function carregar() {
+    /* corrida (#4b): dois cliques rápidos em ‹ disparam duas cargas, e a
+       resposta do dia 15 podia chegar DEPOIS da do dia 14. A tela ficava
+       com o rótulo 14/09 e os números do dia 15 — e a próxima edição
+       gravava os números do 15 no documento do 14. Resposta de um
+       período que já saiu da tela é descartada. */
+    var alvo = idAtual();
     bodyEl.innerHTML = '';
     var ld = el('<div class="ck-state"></div>');
     ld.appendChild(txt('div', 'ck-state-t', 'Carregando o lançamento…'));
     bodyEl.appendChild(ld);
-    Promise.all([Store.ler(idAtual()), Store.listar(CICLO, 40)])
+    Promise.all([Store.ler(alvo), Store.listar(CICLO, DATA, 7)])
       .then(function (r) {
+        if (alvo !== idAtual()) { return; }
         DOC = r[0];
+        DOC_DE = alvo;
         VALORES = (DOC && DOC.valores) ? Object.assign({}, DOC.valores) : {};
         HIST = r[1] || [];
+        /* a tela agora mostra o que está no banco (com o que ainda está
+           no ar já aplicado pelo SDK). Um "não salvo" antigo deste período
+           não descreve mais o que se vê: o toast já avisou na hora. */
+        var g = GRAV[alvo];
+        if (g && !g.voo && !g.prox) { g.erro = ''; }
         pintar();
       })
       .catch(function (e) {
+        if (alvo !== idAtual()) { return; }
         bodyEl.innerHTML = '';
         var st = el('<div class="ck-state"></div>');
         st.appendChild(txt('div', 'ck-state-t', 'Não consegui abrir o Cockpit.'));
@@ -317,24 +433,113 @@
       });
   }
 
-  /* grava o estado INTEIRO do período (o documento é o período).
-     Se o gestor pular de campo em campo rápido, uma gravação pega a
-     outra em voo. Descartar a segunda perderia o número digitado —
-     então em vez de descartar, marcamos que ficou pendente e
-     regravamos ao final. Como sempre gravamos VALORES completo, a
-     última gravação já contém tudo. */
-  var salvando = false, pendente = false;
+  /* ===================== gravação =====================
+     O QUE ESTAVA ERRADO (#4)
+     salvar() engolia o erro e os dois chamadores faziam
+     salvar().then(tocado): a barra carimbava "salvo 12:04 por Bruno"
+     com o banco tendo RECUSADO. Pior sem rede: o setDoc não falha, fica
+     esperando; no 2º campo o atalho "já tem gravação no ar" devolvia
+     Promise.resolve() e carimbava "salvo" na hora, sem nada confirmado
+     — fechar a aba perdia os dois números. E a regravação da fila lia
+     idAtual() e VALORES só quando rodava: com um clique em ‹ no meio,
+     os números do dia 16 iam parar no documento do dia 15.
+
+     COMO FICOU
+     · cada edição tira uma FOTOGRAFIA: id, ciclo, período, valores e
+       chaves limpas, no instante da edição (fotografar);
+     · a fila é POR PERÍODO (GRAV[id]): uma gravação no ar, e na fila
+       só a fotografia mais nova daquele período — ela contém tudo;
+     · "salvo HH:MM" só depois de o banco confirmar a última da fila,
+       e só se aquele período ainda for o da tela;
+     · enquanto não confirma: "salvando…"; passou de LENTO_MS ou o
+       navegador está sem rede: "ainda não salvo … não feche";
+     · recusado: "não salvo — motivo" + botão "Tentar de novo". */
+  var LENTO_MS = 5000;
+  var GRAV = {};    /* id -> { voo, prox, erro, desde } */
+  var LIMPAS = {};  /* id -> { chave: true } — chaves que o gestor limpou */
+
+  function estadoGrav(id) {
+    if (!GRAV[id]) { GRAV[id] = { voo: false, prox: null, erro: '', desde: 0 }; }
+    return GRAV[id];
+  }
+
+  /* limpar = tirar a chave de VALORES E lembrar de apagá-la no banco */
+  function limpar(k) {
+    if (VALORES[k] == null) { return; }
+    delete VALORES[k];
+    var id = idAtual();
+    if (!LIMPAS[id]) { LIMPAS[id] = {}; }
+    LIMPAS[id][k] = true;
+  }
+
+  function fotografar() {
+    var id = idAtual(), limpas = LIMPAS[id] || {}, apagar = [];
+    Object.keys(limpas).forEach(function (k) { if (VALORES[k] == null) { apagar.push(k); } });
+    return {
+      id: id, ciclo: CICLO, periodo: inicioPeriodo(CICLO, DATA),
+      valores: Object.assign({}, VALORES), apagar: apagar, em: Date.now()
+    };
+  }
+
   function salvar() {
-    if (!CAN_WRITE()) { return Promise.resolve(); }
-    if (salvando) { pendente = true; return Promise.resolve(); }
-    salvando = true;
-    return Store.salvar(idAtual(), CICLO, DATA, VALORES)
-      .then(function () {
-        salvando = false;
-        if (pendente) { pendente = false; return salvar(); }
-        return null;
-      })
-      .catch(function (e) { salvando = false; pendente = false; toast(e.message, 'err'); });
+    if (!CAN_WRITE()) { return; }
+    gravar(fotografar());
+  }
+
+  function gravar(foto) {
+    var g = estadoGrav(foto.id);
+    if (g.voo) { g.prox = foto; pintarGravacao(); return; }
+    g.voo = true;
+    g.erro = '';
+    g.desde = Date.now();
+    pintarGravacao();
+    /* se o banco demorar, a barra troca "salvando…" pelo aviso de não fechar */
+    setTimeout(pintarGravacao, LENTO_MS + 50);
+    /* then(ok, falha) e não then().catch(): um erro de pintura depois de
+       gravar não pode virar "não salvo". */
+    Store.salvar(foto).then(function () {
+      g.voo = false;
+      if (g.prox) { var p = g.prox; g.prox = null; gravar(p); return; }
+      tocado(foto);
+    }, function (e) {
+      g.voo = false;
+      /* há fotografia mais nova deste período na fila: ela contém este
+         número e os seguintes. Tenta ela em vez de jogar a fila fora
+         (antes a falha zerava `pendente` e o 2º número nunca ia). */
+      if (g.prox) { var p = g.prox; g.prox = null; gravar(p); return; }
+      g.erro = e.message;
+      toast('Não salvei ' + M.rotuloPeriodo(foto.ciclo, foto.periodo) + ': ' + e.message, 'err');
+      if (foto.id === idAtual()) { pintarGravacao(); }
+    });
+  }
+
+  /* texto honesto do estado de gravação (função pura: recebe tudo) */
+  function estadoGravacao(g, doc, agora, online) {
+    if (g && (g.voo || g.prox)) {
+      if (!online || agora - g.desde >= LENTO_MS) {
+        return {
+          tipo: 'pend', tentar: false,
+          texto: 'ainda não salvo — o banco não confirmou' + (online ? '' : ' (sem conexão)') +
+            '. Não feche esta tela: grava sozinho quando a conexão voltar.'
+        };
+      }
+      return { tipo: 'voo', tentar: false, texto: 'salvando…' };
+    }
+    if (g && g.erro) { return { tipo: 'err', tentar: true, texto: 'não salvo — ' + g.erro }; }
+    if (doc && doc.atualizadoEm) {
+      return { tipo: 'ok', tentar: false, texto: 'salvo ' + hhmm(doc.atualizadoEm) + (doc.atualizadoPorNome ? ' por ' + doc.atualizadoPorNome : '') };
+    }
+    return { tipo: 'nada', tentar: false, texto: '' };
+  }
+
+  /* fechar a aba com gravação sem confirmação perde o número: a fila do
+     Firestore desta tela vive só na memória (getFirestore padrão, ver
+     firebase.js). O navegador pergunta antes de sair. */
+  function haNaoSalvo() {
+    return Object.keys(GRAV).some(function (id) {
+      var g = GRAV[id];
+      return g.voo || !!g.prox || (id === idAtual() && !!g.erro);
+    });
   }
 
   /* ===================== pintura =====================
@@ -344,18 +549,33 @@
      numa grade de 12 números isso inviabiliza o lançamento.
      Então: pintar() monta a tela uma vez e guarda as referências
      do que é DERIVADO (semáforo do card, barra de placar,
-     mensagem do grupo). Ao salvar, só esses pedaços são
-     reescritos, via refrescar(). Os inputs nunca são recriados. */
+     mensagem do grupo). A cada edição, só esses pedaços são
+     reescritos, via refrescar(); a confirmação do banco só mexe
+     no aviso de gravação (pintarGravacao). Os inputs nunca são
+     recriados. */
   var CARDS = [];    /* [{kpi, card, sem}] — o que o semáforo pinta */
   var barEl = null, msgEl = null;
+  var stEl = null, tentarEl = null;   /* aviso de gravação e "Tentar de novo" */
 
   function pintar() {
     bodyEl.innerHTML = '';
-    CARDS = []; barEl = null; msgEl = null;
+    CARDS = []; barEl = null; msgEl = null; stEl = null; tentarEl = null;
     pintarPeriodo();
 
     /* --- barra de estado --- */
     barEl = el('<div class="ck-bar"></div>');
+    /* tabindex -1: se o "Tentar de novo" some com o foco nele, o foco
+       vem para a barra em vez de cair no <body> (teclado perdia o lugar) */
+    barEl.setAttribute('tabindex', '-1');
+    /* o aviso de gravação é um nó FIXO com role=status: pintarBarra()
+       redesenha título e chips em volta dele sem recriá-lo, senão o
+       leitor de tela não anuncia "salvo"/"não salvo". */
+    stEl = el('<span class="ck-bar-s ck-grav" role="status" aria-live="polite"></span>');
+    tentarEl = UI.button({ label: 'Tentar de novo', variant: 'ghost' });
+    tentarEl.hidden = true;
+    tentarEl.addEventListener('click', function () { salvar(); });
+    barEl.appendChild(stEl);
+    barEl.appendChild(tentarEl);
     pintarBarra();
     bodyEl.appendChild(barEl);
 
@@ -397,28 +617,50 @@
 
   function pintarBarra() {
     if (!barEl) { return; }
-    barEl.innerHTML = '';
+    /* tudo ANTES do aviso de gravação é redesenhado; o aviso fica */
+    while (barEl.firstChild && barEl.firstChild !== stEl) { barEl.removeChild(barEl.firstChild); }
     var c = M.ciclos[CICLO];
     var p = M.placar(CICLO, VALORES);
     var bt = el('<div class="ck-bar-t"></div>');
     bt.appendChild(txt('div', '', 'Lançamento ' + c.label.toLowerCase() + ' · ' + rotuloAtual()));
     bt.appendChild(txt('div', 'ck-bar-s', p.preenchidos + ' de ' + p.total + ' preenchidos · fecha ' + c.quando + ' · vai para ' + c.destino));
-    barEl.appendChild(bt);
-    if (p.verde) { barEl.appendChild(txt('span', 'ck-chip verde', p.verde + ' no verde')); }
-    if (p.ambar) { barEl.appendChild(txt('span', 'ck-chip ambar', p.ambar + ' no amarelo')); }
-    if (p.vermelho) { barEl.appendChild(txt('span', 'ck-chip vermelho', p.vermelho + ' no vermelho')); }
-    if (p.nd) { barEl.appendChild(txt('span', 'ck-chip', p.nd + ' sem dado')); }
-    if (DOC && DOC.atualizadoEm) {
-      barEl.appendChild(txt('span', 'ck-bar-s', 'salvo ' + hhmm(DOC.atualizadoEm) + (DOC.atualizadoPorNome ? ' por ' + DOC.atualizadoPorNome : '')));
-    }
+    barEl.insertBefore(bt, stEl);
+    if (p.verde) { barEl.insertBefore(txt('span', 'ck-chip verde', p.verde + ' no verde'), stEl); }
+    if (p.ambar) { barEl.insertBefore(txt('span', 'ck-chip ambar', p.ambar + ' no amarelo'), stEl); }
+    if (p.vermelho) { barEl.insertBefore(txt('span', 'ck-chip vermelho', p.vermelho + ' no vermelho'), stEl); }
+    if (p.nd) { barEl.insertBefore(txt('span', 'ck-chip', p.nd + ' sem dado'), stEl); }
+    pintarGravacao();
   }
 
-  /* marca o documento como salvo agora e redesenha os derivados */
-  function tocado() {
+  /* escreve o estado de gravação do período DA TELA no aviso fixo */
+  function pintarGravacao() {
+    if (!stEl) { return; }
+    var s = estadoGravacao(GRAV[idAtual()], DOC, Date.now(), navigator.onLine !== false);
+    /* só troca o texto quando muda: reescrever igual faria o leitor de
+       tela repetir o anúncio a cada número digitado. aria-busy durante
+       o "salvando…" curto: o leitor espera e anuncia só o desfecho
+       ("salvo", "não salvo" ou "ainda não salvo"), não 24 avisos numa
+       grade de 12 números. */
+    stEl.setAttribute('aria-busy', s.tipo === 'voo' ? 'true' : 'false');
+    if (stEl.textContent !== s.texto) { stEl.textContent = s.texto; }
+    stEl.className = 'ck-bar-s ck-grav' + (s.tipo === 'err' ? ' err' : (s.tipo === 'pend' ? ' pend' : ''));
+    var mostrar = s.tentar && CAN_WRITE();
+    if (!mostrar && tentarEl && !tentarEl.hidden && document.activeElement === tentarEl) { barEl.focus(); }
+    if (tentarEl) { tentarEl.hidden = !mostrar; }
+  }
+
+  /* o banco confirmou a última gravação de foto.id. Carimba só se esse
+     período ainda é o da tela E o DOC em memória é dele: o gestor que
+     lançou no dia 16 e clicou em ‹ não pode ver "salvo 12:04" na tela do
+     dia 15; e com a carga do período em voo, DOC ainda é o do período
+     anterior (a carga já traz o carimbo do banco). A hora é a mesma
+     gravada em atualizadoEm — a que volta ao recarregar. */
+  function tocado(foto) {
+    if (foto.id !== idAtual() || foto.id !== DOC_DE) { return; }
     DOC = DOC || {};
-    DOC.atualizadoEm = Date.now();
-    DOC.atualizadoPorNome = USER.name || '';
-    refrescar();
+    DOC.atualizadoEm = foto.em;
+    DOC.atualizadoPorNome = (USER && USER.name) || '';
+    pintarGravacao();
   }
 
   function hhmm(ts) {
@@ -440,7 +682,8 @@
       ['Para que serve', kpi.paraQue],
       ['Meta', M.fmtMeta(kpi) + ' — vinda da linha META da sua planilha, não inventada aqui.'],
       ['Como o semáforo é calculado', M.explicaSemaforo(kpi)],
-      ['Sem o dado', 'Escreva ND. ND não é zero: não pinta semáforo e aparece na mensagem do grupo como "sem dado", para ninguém confundir "deu zero" com "não apurei".']
+      ['Sem o dado', 'Escreva ND. ND não é zero: não pinta semáforo e aparece na mensagem do grupo como "sem dado", para ninguém confundir "deu zero" com "não apurei".'],
+      ['Pontinhos "antes"', 'Os até 7 LANÇAMENTOS imediatamente anteriores ao período da tela, do mais antigo (esquerda) ao mais recente (direita). Período sem lançamento não vira pontinho, então 7 pontinhos no diário podem cobrir mais de 7 dias. Mesma cor do semáforo; sem cor = vazio ou ND.']
     ]));
     card.appendChild(hd);
 
@@ -477,7 +720,7 @@
     inp.addEventListener('blur', function () {
       var bruto = String(inp.value).trim();
       var antes = VALORES[kpi.k];
-      if (bruto === '') { delete VALORES[kpi.k]; }
+      if (bruto === '') { limpar(kpi.k); }
       else if (M.ehND(bruto)) { VALORES[kpi.k] = M.ND; }
       else {
         var n = Number(bruto.replace(',', '.'));
@@ -491,7 +734,10 @@
       if (String(antes) === String(VALORES[kpi.k])) { return; }
       /* normaliza o que ficou no campo (9.5 digitado vira 9,5) */
       inp.value = VALORES[kpi.k] == null ? '' : String(VALORES[kpi.k]).replace('.', ',');
-      salvar().then(tocado);
+      /* semáforo, placar e mensagem mostram o número NA HORA; o "salvo"
+         só vem quando o banco confirmar (ver gravar) */
+      refrescar();
+      salvar();
     });
     wrap.appendChild(inp);
     return wrap;
@@ -517,9 +763,10 @@
       botoes.push({ el: b, valor: op[1], cls: op[2] });
       b.addEventListener('click', function () {
         /* clicar de novo no mesmo botão limpa — sempre reversível */
-        if (VALORES[kpi.k] === op[1]) { delete VALORES[kpi.k]; } else { VALORES[kpi.k] = op[1]; }
+        if (VALORES[kpi.k] === op[1]) { limpar(kpi.k); } else { VALORES[kpi.k] = op[1]; }
         marcar();
-        salvar().then(tocado);
+        refrescar();
+        salvar();
       });
       box.appendChild(b);
     });
@@ -530,9 +777,14 @@
   /* pontinhos dos últimos períodos ANTERIORES ao visível.
      Verde = bateu · âmbar vazado = perto · vermelho = furou.
      Só aparece quando existe passado — card novo não mente
-     mostrando bolinha cinza como se fosse histórico. */
+     mostrando bolinha cinza como se fosse histórico.
+     "Anterior" é pela CHAVE do período (id), não pelo campo `periodo`:
+     `periodo` guardava o dia em que se salvou, e o mês/semana lançado
+     num dia e reaberto num dia posterior entrava no próprio "antes"
+     (#28). listar() já só traz ids menores; o filtro fica como defesa. */
   function historico(kpi) {
-    var ants = HIST.filter(function (d) { return String(d.periodo) < String(DATA); }).slice(-7);
+    var vis = idAtual();
+    var ants = HIST.filter(function (d) { return String(d.id) < vis; }).slice(-7);
     if (!ants.length) { return null; }
     var box = el('<div class="ck-hist"></div>');
     box.appendChild(txt('span', 'ck-hl', 'antes'));
@@ -610,6 +862,16 @@
     BACK = document.getElementById('ck-backdrop');
     BACK.addEventListener('click', closePop);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closePop(); } });
+    /* caiu/voltou a rede: o aviso de gravação troca na hora, sem esperar LENTO_MS */
+    window.addEventListener('online', pintarGravacao);
+    window.addEventListener('offline', pintarGravacao);
+    window.addEventListener('beforeunload', function (e) {
+      if (!haNaoSalvo()) { return; }
+      e.preventDefault();
+      /* navegador antigo só pergunta com returnValue preenchido; o texto
+         em si é ignorado (cada navegador mostra o aviso padrão dele) */
+      e.returnValue = 'Há números do Cockpit ainda não salvos.';
+    });
     bodyEl = document.getElementById('ck-body');
     tabsEl = document.getElementById('ck-tabs');
     perEl = document.getElementById('ck-per');
@@ -621,7 +883,7 @@
       ['O que é', 'A planilha Cockpit_Diario_Gestor.xlsx virou tela. Mesmos 12 indicadores diários, 5 semanais e 8 mensais, com as mesmas metas.'],
       ['O que ele NÃO faz', 'Não calcula nada. Estes números são apurados nos sistemas da escola e digitados aqui. O sistema não tem como inventá-los.'],
       ['Rotina', 'Diário 17h30 → mensagem no grupo dos sócios. Semanal sexta 17h → reunião com sócios. Mensal até o dia 5 → reunião estratégica.'],
-      ['Salvamento', 'Salva sozinho quando você sai do campo. Um lançamento por período: salvar de novo corrige, nunca duplica.'],
+      ['Salvamento', 'Salva sozinho quando você sai do campo. A barra diz "salvando…" até o banco confirmar e só então "salvo HH:MM por Nome". Se o banco recusar, aparece "não salvo" com o botão Tentar de novo. Sem conexão, a gravação espera nesta tela: não feche a aba antes de aparecer "salvo". Um lançamento por período: salvar de novo corrige, nunca duplica.'],
       ['Quem lança', 'Só o gestor. Os demais perfis nem veem esta tela no menu.']
     ]));
 

@@ -40,6 +40,9 @@
 .im-banner.crit{background:var(--haloRed);color:var(--red)}
 .im-banner.warn{background:var(--haloOrange);color:var(--orange)}
 .im-banner.ok{background:var(--haloGreen);color:var(--green)}
+/* aviso de limite, não de erro: peso normal e cor de texto secundário — quem
+   só consulta não fez nada errado para receber um banner vermelho */
+.im-banner.nota{margin-top:0;margin-bottom:12px;background:var(--chipBg);color:var(--muted);font-weight:500}
 /* preview */
 .im-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
 .im-sm{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center}
@@ -138,6 +141,17 @@
         });
       }).catch(function (e) { throw ferr(e); });
     },
+    /* 16/09 · as INATIVAS entram no índice por código (indexarCodigos). Mesma
+       forma da leitura das ativas; ~30 documentos hoje, dentro do plano gratuito. */
+    listAtividadesInativas: function () {
+      return fb().then(function (c) {
+        var q = c.f.query(c.f.collection(c.db, 'atividades'), c.f.where('ativo', '==', false), c.f.limit(2000));
+        return c.f.getDocs(q).then(function (snap) {
+          var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; a.push(o); });
+          return a;
+        });
+      }).catch(function (e) { throw ferr(e); });
+    },
     /* P2-Resp: usuários ativos p/ resolver a coluna "responsavel" e o default líder-do-setor */
     listUsuariosAtivos: function () {
       return fb().then(function (c) {
@@ -212,6 +226,7 @@
   }
 
   var SETORES = [], ATIV = [], PLANO = null;
+  var INATIVAS = []; /* 16/09: atividades com ativo:false — só para o índice por código (nunca reativa sozinha) */
   var USUARIOS = []; /* P2-Resp: base p/ resolver responsável no import */
   var DATA_OPER = null; /* P1: carimbo da data de início da operação (definida no passo 1) */
   var bodyEl, POP, BACK;
@@ -291,9 +306,30 @@
       || USUARIOS.filter(function (u) { return u.perfil === 'gestor'; })[0] || null;
   }
 
+  /* 16/09 · ÍNDICE POR CÓDIGO QUE ENXERGA AS INATIVAS (pura).
+     Cenário que motivou: a importação indexava por código só as ATIVAS. As 7
+     atividades que o arquivo do Pareto inativou (ex.: SEC-001, GES-028) somem
+     desse índice; reimportar a planilha antiga com SEC-001 caía em "código
+     novo" e criava OUTRA atividade SEC-001, ativa, com histórico zerado, ao lado
+     da inativa — duplicata que nenhuma tela mostrava junta.
+     Devolve { codigo: { ativa: doc|null, inativas: [doc] } }. Código comparado
+     sem espaço nas pontas, como a célula da planilha chega (parseCSV apara). */
+  function indexarCodigos(ativas, inativas) {
+    var idx = {};
+    function slot(cod) {
+      var k = String(cod).trim();
+      if (!k) { return null; }
+      if (!Object.prototype.hasOwnProperty.call(idx, k)) { idx[k] = { ativa: null, inativas: [] }; }
+      return idx[k];
+    }
+    /* código repetido entre ATIVAS (legado): vale a última, como no índice antigo */
+    (ativas || []).forEach(function (a) { var s = a && a.codigo != null ? slot(a.codigo) : null; if (s) { s.ativa = a; } });
+    (inativas || []).forEach(function (a) { var s = a && a.codigo != null ? slot(a.codigo) : null; if (s) { s.inativas.push(a); } });
+    return idx;
+  }
+
   function montarPlano(parsed, audit) {
-    var porCodigo = {};
-    ATIV.forEach(function (a) { if (a.codigo) { porCodigo[a.codigo] = a; } });
+    var porCodigo = indexarCodigos(ATIV, INATIVAS);
     var plano = { criar: [], atualizar: [], pular: 0, rejeitar: [], avisos: [] };
     var vistos = {};
 
@@ -304,6 +340,18 @@
       if (!codigo) { plano.rejeitar.push({ linha: linha, motivo: 'codigo vazio' }); return; }
       if (vistos[codigo]) { plano.rejeitar.push({ linha: linha, motivo: 'codigo duplicado no arquivo (' + codigo + ')' }); return; }
       vistos[codigo] = true;
+      /* 16/09: código que só existe como INATIVA não cria nem reativa — quem
+         decide trazer de volta é uma pessoa, na tela, vendo o motivo. */
+      var registro = Object.prototype.hasOwnProperty.call(porCodigo, codigo) ? porCodigo[codigo] : null;
+      if (registro && !registro.ativa && registro.inativas.length) {
+        var ina = registro.inativas[0];
+        plano.rejeitar.push({ linha: linha, motivo: codigo + ' é de atividade inativa — ative em Atividades → Inativas' +
+          (ina.titulo ? ' (“' + ina.titulo + '”)' : '') + '. Nada foi criado nem reativado.' });
+        return;
+      }
+      if (registro && registro.ativa && registro.inativas.length) {
+        plano.avisos.push('linha ' + linha + ' (' + codigo + '): o código também existe numa atividade INATIVA — a atualização vai para a ativa; a inativa não é tocada');
+      }
 
       var setor = valOf(row, audit.mapa, 'setor');
       var setorNorm = setor == null ? null : normSetor(setor);
@@ -413,7 +461,7 @@
         return false;
       }
 
-      var existente = porCodigo[codigo];
+      var existente = registro ? registro.ativa : null;
       if (existente) {
         /* P2-Resp: saneamento de órfãs — doc existente SEM responsável e linha sem
            a coluna preenchida ganha o default do setor. Não é quebra da regra
@@ -506,11 +554,23 @@
   function renderPasso1() {
     bodyEl.innerHTML = '';
     var card = el('<div class="im-card"></div>');
+    /* O bloqueio de escrita só aparecia no PASSO 3, depois da pessoa montar a
+       planilha, colar até 200 linhas e rodar a auditoria. Descobrir ali que não
+       pode gravar é trabalho jogado fora. O aviso passa para cá — mesmo padrão
+       do Cockpit ("Você está vendo, não lançando"): a tela segue navegável para
+       consulta, e o limite é dito ANTES do esforço, não depois. */
+    if (!CAN_WRITE()) {
+      var av = el('<div class="im-banner nota"></div>');
+      av.setAttribute('role', 'note');
+      av.textContent = 'Você está conferindo, não importando. A auditoria roda e mostra o que a planilha faria, '
+        + 'mas a gravação é do gestor — aqui e também nas Regras do banco.';
+      card.appendChild(av);
+    }
     card.appendChild(txt('div', 'im-step', 'Passo 1 de 3'));
     card.appendChild(txt('div', 'im-card-t', 'Cole o conteúdo da planilha-modelo'));
     card.appendChild(txt('div', 'im-hint',
       'Abra a planilha no Excel/Sheets, salve como CSV (separado por ; ou ,) e cole o conteúdo aqui — ou baixe o modelo abaixo, preencha e cole. ' +
-      'A coluna "codigo" é a chave: código que JÁ existe atualiza a atividade; código novo cria. Célula vazia PRESERVA o valor atual. Teto: 200 linhas.'));
+      'A coluna "codigo" é a chave: código que JÁ existe atualiza a atividade; código novo cria. Código de atividade INATIVA não cria nem reativa: a linha é recusada e a ativação é feita em Atividades → Inativas. Célula vazia PRESERVA o valor atual. Teto: 200 linhas.'));
     var ta = document.createElement('textarea');
     ta.className = 'im-ta';
     ta.placeholder = COLS_TODAS.join(';') + '\nPED-001;Planejar aula da semana;…';
@@ -742,7 +802,11 @@
             .then(function () { mm.close(); toast(alvo.length + ' atividade(s) desativadas. ✔'); boot2(); });
         }
         var a = alvo[i]; i++;
-        return c.f.setDoc(c.f.doc(c.db, 'atividades', a.id), { ativo: false, atualizadoEm: Date.now() }, { merge: true }).then(passo);
+        /* 16/09 · mesmo registro do Inativar da tela Atividades (motivo, dia e
+           quem): a lista de inativas diz "Inativada à mão" em vez de "Sem
+           motivo registrado", e o aviso "Reversível em Atividades → Inativas"
+           agora aponta para uma lista que existe. */
+        return c.f.setDoc(c.f.doc(c.db, 'atividades', a.id), { ativo: false, motivoInativa: 'manual', inativadaEm: R.hojeISO(), inativadaPor: (USER && USER.uid) || null, atualizadoEm: Date.now() }, { merge: true }).then(passo);
       }
       return passo();
     }).catch(function (e) { mm.close(); toast('Interrompido: ' + ferr(e).message + ' Rode de novo (idempotente).', 'err'); });
@@ -1160,8 +1224,14 @@
 
   function boot2() {
     renderLoading();
-    Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), Store.listUsuariosAtivos()])
-      .then(function (r) { SETORES = r[0]; ATIV = r[1]; USUARIOS = r[2]; renderPasso1(); })
+    /* 16/09: sem a lista de inativas não há como saber se um código já existe
+       inativo — a importação criaria a duplicata. Falha na leitura = tela de
+       erro com "Tentar de novo", nunca importar às cegas. */
+    Promise.all([Store.listSetores(), Store.listAtividadesAtivas(), Store.listUsuariosAtivos(),
+      Store.listAtividadesInativas().catch(function (e) {
+        throw new Error('Não consegui ler as atividades inativas (' + ((e && e.message) || 'falha de leitura') + '). Sem elas a importação poderia duplicar um código inativo — tente de novo.');
+      })])
+      .then(function (r) { SETORES = r[0]; ATIV = r[1]; USUARIOS = r[2]; INATIVAS = r[3]; renderPasso1(); })
       .catch(renderError);
   }
 
@@ -1178,6 +1248,7 @@
       POP.innerHTML = '';
       POP.appendChild(txt('div', 'im-pop-t', 'Regras da importação'));
       [['Chave', 'Coluna "codigo" (estável): código existente ATUALIZA; novo CRIA. Duplicado no arquivo → linha rejeitada.'],
+       ['Inativas', 'Código que existe só em atividade INATIVA → linha rejeitada: a importação nunca cria outra com o mesmo código nem reativa sozinha. Ative em Atividades → Inativas e importe de novo.'],
        ['Só o que mudou', 'Só grava o que MUDOU. Célula vazia PRESERVA o valor atual. Linha idêntica é pulada. Nunca sobrescreve tudo.'],
        ['Responsável', 'Coluna "responsavel" = NOME de usuário ativo (com login). Vazia: camada GESTOR/SÓCIO recebe o líder/gestor do setor; OPERACIONAL fica em branco pro líder direcionar.'],
        ['Apelido', 'Coluna "apelido" = etiqueta VISUAL sem login (ex.: "Assis. PED 1"). Aparece no card pro líder ver a divisão planejada, mas NÃO loga e conta como "sem responsável" nos indicadores até virar pessoa real. Responsável real sempre ganha do apelido.'],

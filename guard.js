@@ -292,6 +292,55 @@
         if (!permit[label] && it.parentNode) { it.parentNode.removeChild(it); }
       });
     })();
+
+    /* ---- 16/09: papel de verdade no cartão do usuário ----
+       O ui.js escreve user.profile embaixo do nome, e profile é o TIER de
+       capacidade legado (Admin | Editor | Visualizador) que as telas checam.
+       Resultado: a líder do SEC via "Editor" e o sócio via "Admin" — nomes
+       técnicos que ninguém na escola usa. profile continua igual (as telas
+       dependem dele); só o TEXTO mostrado passa a ser o papel. Idempotente. */
+    (function papelNoCartao() {
+      var up = document.querySelector('.ui-usercard .ui-up');
+      if (!up || !user) { return; }
+      var ROTULO = { gestor: 'Gestor', lider: 'Líder', usuario: 'Usuário' };
+      up.textContent = user.socio ? 'Sócio' : (ROTULO[user.perfil] || up.textContent);
+    })();
+
+    /* ---- 16/09: tema claro/escuro no cartão do usuário, em TODA tela ----
+       Antes o tema só trocava por um botão flutuante "Tema" marcado como
+       temporário, presente em 6 telas e ausente nas outras (Reuniões,
+       Planejamento, Agenda, Cockpit, Riscos, Glossário). No computador ele
+       ficava fixo no canto inferior esquerdo, POR CIMA deste cartão, e
+       escondia o papel da pessoa. Regra do Bruno: sempre claro E escuro — a
+       troca de tema é controle permanente, não enfeite de desenvolvimento.
+       Entra ANTES do ícone de sair, que continua sendo o último filho do
+       cartão (o bloco "botão Sair" acima depende disso). O flutuante some no
+       computador pelo components.css e continua no celular (≤900px), onde
+       esta barra lateral não aparece. Idempotente. */
+    (function temaNoCartao() {
+      var card = document.querySelector('.ui-usercard');
+      if (!card || card.querySelector('.ui-tema') || !window.GrautTheme) { return; }
+      var SOL = '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>';
+      var LUA = '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ui-tema';
+      function pinta() {
+        var claro = window.GrautTheme.get() === 'light';
+        var rotulo = claro ? 'Mudar para o tema escuro' : 'Mudar para o tema claro';
+        b.setAttribute('aria-label', rotulo);
+        b.title = rotulo;
+        b.innerHTML = claro ? LUA : SOL;   /* o ícone mostra para onde vai */
+      }
+      b.addEventListener('click', function () { window.GrautTheme.toggle(); pinta(); });
+      /* o flutuante (celular) também troca o tema: o ícone daqui acompanha */
+      if (window.MutationObserver) {
+        new MutationObserver(pinta).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      }
+      pinta();
+      var sair = card.lastElementChild;
+      if (sair) { card.insertBefore(b, sair); } else { card.appendChild(b); }
+    })();
   }
 
   /* confirmação de saída — usa UI.modal se disponível (mesmo padrão
@@ -347,19 +396,39 @@
       initials: initialsOf(nome)
     };
     window.GRAUT_USER = user;
-    ready = true;
     settled = true;
 
-    /* 1) telas constroem a UI com o usuário real */
-    var cbs = queue.slice();
-    queue.length = 0;
-    cbs.forEach(function (cb) { try { cb(user); } catch (e) { /* não derruba o resto */ } });
+    /* 16/09 · CORRIDA DO PORTÃO. A decisão de acesso é assíncrona (import do
+       SDK + onAuthStateChanged + getDoc) e começa no <head>. Se ela termina
+       antes de o navegador ler o <body> — rede lenta travando um dos <script>
+       síncronos do <head>, que param a leitura do HTML —, os passos abaixo
+       rodavam sem DOM: as telas não achavam os próprios contêineres (o erro
+       era engolido pelo try), o mnav.js estourava em document.body nulo, e
+       hideGate() não achava o #graut-gate para remover. Quando o navegador
+       enfim lia o portão, ele aparecia e NUNCA MAIS saía: tela presa em
+       "Verificando acesso". Pego pela simulação dos 4 perfis (Importar, líder
+       e sócio, com 4 telas carregando ao mesmo tempo).
+       Correção: liberar só com o DOM pronto. `ready` também espera, para que
+       um onReady tardio não rode antes de existir onde pintar. */
+    function liberar() {
+      ready = true;
 
-    /* 2) liga navegação/Sair na sidebar recém-construída */
-    wireChrome();
+      /* 1) telas constroem a UI com o usuário real */
+      var cbs = queue.slice();
+      queue.length = 0;
+      cbs.forEach(function (cb) { try { cb(user); } catch (e) { /* não derruba o resto */ } });
 
-    /* 3) revela a tela */
-    hideGate();
+      /* 2) liga navegação/Sair na sidebar recém-construída */
+      wireChrome();
+
+      /* 3) revela a tela */
+      hideGate();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', liberar);
+    } else {
+      liberar();
+    }
   }
 
   function deny(titulo, texto) {

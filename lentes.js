@@ -55,8 +55,15 @@
 
   var CURRENT = null; /* { tela, user, set, id, opts, wrap, tabsEl, headEl, emptyEl } */
 
-  /* sócio-gestor: detectado pelo valor CRU do doc (sem marcador dedicado ainda) */
+  /* sócio-gestor. O marcador dedicado EXISTE: o guard publica user.socio = true
+     a partir de socio:true no doc (guard.js). A versão anterior procurava a
+     palavra "sócio" por regex em user.perfilRaw — campo que vale 'Admin',
+     'gestor', 'lider' ou 'Visualizador' e nunca contém essa palavra. O teste
+     era sempre falso, então a aba do sócio nunca virava "MINHA PAUTA" para
+     ninguém — nem para o Bruno Fellows, nem para o Tiago Reis. A regex fica
+     como reserva para doc legado que tenha o texto escrito no próprio perfil. */
   function isSocio(user) {
+    if (user && user.socio === true) { return true; }
     var raw = String((user && user.perfilRaw) || '');
     return /s[óo]cio/i.test(raw);
   }

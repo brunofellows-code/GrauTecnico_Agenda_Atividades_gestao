@@ -25,7 +25,15 @@
 .hj-top{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
 .hj-hi{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
 .hj-dd{font-size:13px;font-weight:500;color:var(--muted);margin-top:2px}
-.hj-topactions{display:flex;align-items:center;gap:12px}
+.hj-topactions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+/* frescor do dado — discreto quando recente, visível quando envelhece */
+.hj-fresc{display:flex;align-items:center;gap:8px}
+.hj-fresc-t{font-size:11.5px;font-weight:600;color:var(--muted2);font-variant-numeric:tabular-nums}
+.hj-fresc-t.velho{color:var(--amber);font-weight:700}
+.hj-fresc-b{font-size:11.5px;font-weight:700;color:var(--accentText);background:transparent;border:1px solid var(--border);border-radius:8px;padding:4px 10px;cursor:pointer;line-height:1.3}
+.hj-fresc-b:hover{background:var(--chipBg)}
+.hj-fresc-b:disabled{opacity:.6;cursor:default}
+@media(max-width:820px){.hj-fresc-t{display:none}}
 .hj-search{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:10px;background:var(--s2);border:1px solid var(--border);color:var(--muted);font-size:13px;width:230px}
 .hj-search svg{width:16px;height:16px;flex:none}
 
@@ -169,7 +177,13 @@
 .hj-xdot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
 .hj-xtit{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hj-xmeta{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted2);white-space:nowrap}
-.hj-xlink{font-size:11.5px;font-weight:800;color:var(--brand);text-decoration:none;margin-top:6px;display:inline-block}
+/* G4 · entregue hoje — mesma régua visual do progresso pessoal, para o time */
+.hj-eh-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.hj-eh-n{font-size:12.5px;font-weight:800;color:var(--text)}
+.hj-eh-n b{font-size:15px;font-variant-numeric:tabular-nums}
+.hj-eh-s{font-size:11.5px;font-weight:700;color:var(--muted2);text-align:right}
+.hj-eh-rel{font-size:11.5px;line-height:1.5;color:var(--muted);padding:0 0 8px 17px;margin-top:-2px;max-width:72ch}
+.hj-xlink{font-size:11.5px;font-weight:800;color:var(--accentText);text-decoration:none;margin-top:6px;display:inline-block}
 /* ---- R9-C: Pareto das travas. Barra proporcional em DIV, não em lib de
    gráfico: são no máximo 3 categorias e o número já está escrito ao lado —
    biblioteca aqui seria peso sem informação nova. ---- */
@@ -211,6 +225,8 @@
         <div class="hj-topactions">
           <!-- R7·B4.15: a "busca" era um <div> decorativo sem input nem handler
                (órfão) — removida até existir busca de verdade. -->
+          <!-- frescor: hora da leitura + reler. A tela lê o banco uma vez só. -->
+          <div id="hj-frescor" class="hj-fresc" role="status" aria-live="polite"></div>
           <span id="hj-cta"></span>
         </div>
       </div>
@@ -268,6 +284,7 @@
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="scores.js"></script>
+  <script src="conclusao.js"></script><!-- módulo 5 (noite 15/09): concluir exige relato de 60+ -->
   <script src="app-version.js"></script>
   <script src="fmt.js"></script>
   <script src="firestore-adapter.js"></script>
@@ -322,6 +339,8 @@
   var FCAMADA = 'todas';          /* 'todas' | 'socio' | 'gestor' | 'operacional' */
   var HJ_ABERTO = {};             /* F1-D(i): colapso por setor (memória da sessão; false = fechado) */
   var CONVOC = [];                /* F1-E · 3.1: reuniões abertas em que fui convocado */
+  var CONVOC_AVISO = '';          /* #32: '' | 'cheio' | 'erro' — a leitura das convocações pode ter vindo incompleta */
+  var CONVOC_LIMITE = 500;        /* #32: teto da leitura de convocações — o mesmo de listReunioes (projetos.html) */
   var PLANOS = [];                /* F1-I: planos de ação vivos (só líder/gestor) p/ escalonamento D-5/D-3/D-0 */
   var CELEBRADO = '';
   var CELEB80 = '';               /* F1-N: marco dos 80% — 1 toast por dia */             /* F1-I: 1 celebração por dia por sessão (Kahneman: nudge único, nunca modal) */
@@ -339,6 +358,24 @@
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
+
+  /* CORREÇÃO (noite de 15/09) · O BOARD NÃO TEM titulo NEM horario.
+     Cada item do board do kpi.js tem estas chaves e só estas: act, origData,
+     effDate, status, responsavel, semResp, uid, ov, atrasada. Esta tela lia
+     o.titulo em três lugares e o.horario em quatro. Como o txt() acima
+     transforma indefinido em string vazia, o NOME DA ATIVIDADE saía EM
+     BRANCO — na linha do tempo, no checkbox do dia e na lista de atrasadas —
+     sem nenhum erro no console. E, como o.horario era sempre indefinido, a
+     separação "com hora / sem hora" jogava TUDO em "sem hora": a faixa por
+     horário nunca enchia.
+     O nome e a hora moram em o.act; a ocorrência pode reescrever os dois
+     (tituloOverride / horarioOverride), como o quadro de Atividades já faz. */
+  function tituloDe(o) {
+    return (o && o.ov && o.ov.tituloOverride) || (o && o.act && o.act.titulo) || '(sem título)';
+  }
+  function horarioDe(o) {
+    return (o && o.ov && o.ov.horarioOverride) || (o && o.act && o.act.horario) || '';
+  }
 
   /* ---------- Firestore (mesmo padrão do atividades/kpi) ---------- */
   var _fb = null;
@@ -461,19 +498,53 @@
         });
       });
     },
+    /* #32 (16/09) · CONVOCAÇÕES SEM CORTE CEGO.
+       Era limit(20) SEM orderBy. Sem ordem, o Firestore devolve as 20 de
+       menor ID de documento — e o ID do addDoc é sorteado. Reunião nunca é
+       apagada (rules: delete false) e encerrar só grava encerradaEm, então as
+       convocações de uma pessoa só acumulam: um líder em 3 séries semanais
+       passa de 20 em umas 7 semanas. Dali em diante a reunião de AMANHÃ só
+       chegava ao Hoje se o ID dela caísse entre os 20 menores (com 25 antigas
+       ela sumia 1 vez em 4; com 100, 4 em 5). O filtro de encerrada/inativa
+       rodava DEPOIS do corte, no cliente: o card "Convocações" com Vou/Não vou
+       simplesmente não aparecia, sem aviso nenhum.
+       Sem índice composto (array-contains + orderBy('data') exigiria um, e o
+       repositório não tem firestore.indexes.json): o teto sobe para
+       CONVOC_LIMITE, o filtro e a ordem por data/hora ficam no cliente
+       (convocacoesVivas), e a leitura volta dizendo se veio CHEIA — aí a tela
+       avisa que pode faltar reunião e manda para a Agenda, que lê por data.
+       Falha de leitura também volta marcada: antes virava [] calado, e "não
+       consegui ler" aparecia para a pessoa como "você não tem convocação". */
     listMinhasConvocacoes: function (uid) {
       return fb().then(function (c) {
         var q = c.f.query(c.f.collection(c.db, 'reunioes'),
-          c.f.where('convocadosUids', 'array-contains', uid), c.f.limit(20));
+          c.f.where('convocadosUids', 'array-contains', uid), c.f.limit(CONVOC_LIMITE));
         return c.f.getDocs(q).then(function (snap) {
           var a = [];
           snap.forEach(function (d) { var r = d.data() || {}; r.id = d.id; a.push(r); });
-          return a.filter(function (r) { return r.ativo !== false && !r.encerradaEm; })
-            .sort(function (x, y) { return (x.data || '').localeCompare(y.data || ''); });
+          return convocacoesVivas(a, CONVOC_LIMITE);
         });
-      }).catch(function () { return []; });
+      }).catch(function (e) {
+        if (window.console && console.warn) { console.warn('[hoje] convocações não lidas:', (e && e.message) || e); }
+        return { itens: [], cheio: false, erro: true };
+      });
     }
   };
+
+  /* #32 · puro (testado em NOITE/harness_fix_hoje.js): das convocações LIDAS,
+     ficam as vivas (nem inativa nem encerrada), em ordem de data e, no mesmo
+     dia, de hora — sem hora vai para o fim do dia, como na Agenda. "cheio" =
+     a leitura bateu no teto, então pode existir convocação que não veio. */
+  function convocacoesVivas(docs, limite) {
+    var lidos = Array.isArray(docs) ? docs : [];
+    var vivas = lidos.filter(function (r) { return r && r.ativo !== false && !r.encerradaEm; });
+    vivas.sort(function (x, y) {
+      var kx = (x.data || '') + ' ' + (x.horaPrevista || '99:99');
+      var ky = (y.data || '') + ' ' + (y.horaPrevista || '99:99');
+      return kx < ky ? -1 : (kx > ky ? 1 : 0);
+    });
+    return { itens: vivas, cheio: lidos.length >= limite, erro: false };
+  }
 
   /* ---------- toast ---------- */
   function toast(msg, kind) {
@@ -503,15 +574,37 @@
       .then(function () { toast(msg); refresh(); return true; })
       .catch(function (e) { toast(e.message, 'err'); return false; });
   }
+  /* Módulo 5 (noite 15/09) · concluir passa a PEDIR O RELATO de 60+ pelo
+     GrautConclusao, igual ao quadro de Atividades (atividades.html:2161).
+     Antes, o Hoje gravava status sem relato nenhum: o líder recebia "feito"
+     sem saber o que foi feito, e a regra R11-2 do Firestore recusaria a
+     gravação assim que for publicada. Devolve Promise<boolean> — false faz
+     o checkbox otimista reverter (R7·B1.3). */
   function concluir(o) {
-    var patch = { status: 'concluida', concluidaEm: Date.now() };
-    /* concluída não pode continuar travada: a bandeira morre junto com o
-       impedimento. Sem isto o Pareto do líder somaria trava de coisa já
-       feita — número certo somando causa que não existe mais.
-       Só manda os 3 campos quando havia trava: patch enxuto passa por
-       menos condição na regra e não polui o histórico. */
-    if (estaTravada(o)) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
-    return mutar(o, patch, 'concluir_ocorrencia', 'Concluída. ✔');
+    if (!window.GrautConclusao) {
+      toast('Não carreguei o módulo de conclusão. Recarregue a página.', 'err');
+      return Promise.resolve(false);
+    }
+    if (!PODE_AGIR(o)) {
+      toast('Só o responsável (ou líder/gestor) mexe nesta atividade.', 'err');
+      return Promise.resolve(false);
+    }
+    var tituloOcc = (o && o.act && o.act.titulo) || (o && o.titulo) || '';
+    return GrautConclusao.pedir({
+      titulo: 'Concluir · ' + tituloOcc,
+      subtitulo: 'Conte em uma linha o que foi feito. Quem lidera lê isto, não o "ok".'
+    }).then(function (relato) {
+      if (relato == null) { return false; }   /* cancelou: nada muda */
+      var agora = Date.now();
+      var patch = { status: 'concluida', concluidaEm: agora, relato: relato, relatoEm: agora };
+      /* concluída não pode continuar travada: a bandeira morre junto com o
+         impedimento. Sem isto o Pareto do líder somaria trava de coisa já
+         feita — número certo somando causa que não existe mais.
+         Só manda os 3 campos quando havia trava: patch enxuto passa por
+         menos condição na regra e não polui o histórico. */
+      if (estaTravada(o)) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
+      return mutar(o, patch, 'concluir_ocorrencia', 'Concluída. ✔');
+    });
   }
   function reabrir(o) { return mutar(o, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia', 'Reaberta.'); }
   function iniciar(o) { return mutar(o, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia', 'Em andamento.'); }
@@ -662,10 +755,15 @@
       if (o.effDate === hoje && o.status !== 'pulada') { doHoje.push(o); }
     });
     atras.sort(function (a, b) { return a.effDate < b.effDate ? -1 : 1; });
-    var comHora = doHoje.filter(function (o) { return !!o.horario; })
-      .sort(function (a, b) { return (a.horario || '') < (b.horario || '') ? -1 : 1; });
-    var semHora = doHoje.filter(function (o) { return !o.horario; })
-      .sort(function (a, b) { return (a.act.titulo || '').localeCompare(b.act.titulo || '', 'pt-BR'); });
+    /* o FILTRO já usava horarioDe(); a ORDENAÇÃO ficou lendo a.horario, campo
+       que o board não tem (o horário mora em act.horario / ov.horarioOverride).
+       Comparar undefined com undefined devolvia sempre 1, então a linha do
+       tempo saía fora de ordem — 08:00, 14:00 e 17:00 em qualquer sequência.
+       Ficou de fora da correção de 15/09, que arrumou só as leituras. */
+    var comHora = doHoje.filter(function (o) { return !!horarioDe(o); })
+      .sort(function (a, b) { return String(horarioDe(a)).localeCompare(String(horarioDe(b))); });
+    var semHora = doHoje.filter(function (o) { return !horarioDe(o); })
+      .sort(function (a, b) { return (tituloDe(a) || '').localeCompare(tituloDe(b) || '', 'pt-BR'); });
     var feitasHoje = doHoje.filter(function (o) { return o.status === 'concluida'; }).length;
     return { doHoje: doHoje, atras: atras, comHora: comHora, semHora: semHora, feitasHoje: feitasHoje };
   }
@@ -675,7 +773,7 @@
     var state = o.status === 'concluida' ? 'done' : (o.status === 'em_andamento' ? 'now' : 'todo');
     var timeClass = state === 'now' ? 'tcol-now' : state === 'done' ? 'tcol-done' : 'tcol-todo';
     var row = el('<div class="hj-tlrow"></div>');
-    row.appendChild(txt('div', 'hj-time ' + timeClass, o.horario || ''));
+    row.appendChild(txt('div', 'hj-time ' + timeClass, horarioDe(o)));
     row.appendChild(el('<div class="hj-rail"><div class="hj-seg" style="height:14px"></div><div class="node ' + state + '"></div><div class="hj-seg" style="flex:1"></div></div>'));
     var ev = el('<div class="hj-ev"></div>');
     var card = el('<div class="hj-evcard ' + (state === 'now' ? 'now' : 'std') + '"></div>');
@@ -686,7 +784,7 @@
     if (o.status === 'em_andamento') { var em = txt('span', 'hj-evsec', 'em andamento'); em.style.color = 'var(--doing)'; meta.appendChild(em); }
     var trTl = chipTrava(o); if (trTl) { meta.appendChild(trTl); }
     card.appendChild(meta);
-    card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), o.titulo));
+    card.appendChild(txt('div', 'hj-evt ' + (state === 'done' ? 'ttl-done' : 'ttl-live'), tituloDe(o)));
     if (PODE_AGIR(o)) {
       var acts = el('<div class="hj-rowacts"></div>');
       if (state === 'done') { acts.appendChild(miniBtn('Reabrir', function () { reabrir(o); })); }
@@ -705,7 +803,7 @@
     var row = el('<div class="hj-daytask"></div>');
     var done = o.status === 'concluida';
     row.appendChild(UI.checkbox({
-      checked: done, label: o.titulo,
+      checked: done, label: tituloDe(o),
       /* R7·B1.3: devolver false/Promise → o checkbox REVERTE o visual quando
          a gravação é barrada ou falha (antes pintava ✓ e mentia). */
       onToggle: function () {
@@ -737,7 +835,7 @@
     dd.appendChild(txt('div', 'hj-late-dl', days === 1 ? 'DIA' : 'DIAS'));
     row.appendChild(dd);
     var main = el('<div class="hj-late-main"></div>');
-    main.appendChild(txt('div', 'hj-late-t', o.titulo));
+    main.appendChild(txt('div', 'hj-late-t', tituloDe(o)));
     var sigs = o.act.todosSetores ? 'Todos os setores' : KPI.setoresDe(o.act, MODELO.setores).join(' · ');
     var camTx = (o.act.camada && CAMADA_LABEL[o.act.camada]) ? ' · ' + CAMADA_LABEL[o.act.camada] : '';
     main.appendChild(txt('div', 'hj-late-s', sigs + camTx + (o.responsavel ? ' · ' + o.responsavel : '')));
@@ -1072,6 +1170,110 @@
   /* ---------- F1-N · G2: QUEM PRECISA DE AJUDA HOJE ----------
      Top-3 do escopo com atrasadas — cobrança vira conversa 1:1, sem
      ranking público (Kahneman). Líder = escopo; gestor = escola.     */
+  /* ---------- G4 · ENTREGUE HOJE (a tela do líder também mostra o que andou) --
+     A tela do líder era só problema: "Ataque agora" (5 atrasadas), "Onde está
+     travando", "Quem precisa de ajuda". Nenhum elemento dizia o que deu certo.
+     Quem só recebe má notícia perde a calibragem do que está funcionando — e
+     abre toda conversa 1:1 cobrando, porque a tela só deu munição de cobrança.
+     Este cartão vem ANTES do "Ataque agora" de propósito (Level 10 do EOS abre
+     pelo "Segue" antes dos issues; 15Five abre a visão do gestor pelos wins).
+     Números: os MESMOS do board, via KPI.entreguesHoje. Zero query nova.
+     Regra dura: nada de elogio inventado. Se ninguém entregou, o cartão diz
+     isso em voz neutra e some do caminho — culpa aqui seria mentira com
+     roupa de incentivo, e incentivo que mente uma vez nunca mais é lido. */
+  function cardEntregueHoje(m, hoje) {
+    var esc = null;
+    if (Guard.isGestor && Guard.isGestor()) {
+      esc = {};
+      m0Setores().forEach(function (s) { if (s && s.ativo !== false) { esc[s.sigla] = true; } });
+    } else { esc = escopoDoLider(); }
+    if (!esc) { return null; }
+    var e = KPI.entreguesHoje(m.board, esc, hoje, 4);
+    if (!e.previstas) { return null; }          /* dia sem nada previsto: não invento cartão */
+
+    var card = el('<div class="hj-xcard"></div>');
+    var hd = el('<div class="hj-xhead"></div>');
+    hd.appendChild(txt('div', 'hj-xtitle', 'Entregue hoje no seu escopo'));
+    hd.appendChild(infoHj('Entregue hoje no seu escopo', {
+      formula: 'ocorrências com data de HOJE e status "concluída", divididas pelas previstas para hoje (as puladas ficam fora das duas contas). É o mesmo board de "Quem precisa de ajuda" — só que olhando a entrega em vez da falha.',
+      dados: 'as mesmas ocorrências do painel, no escopo que você lidera; dia civil de Salvador.',
+      numeros: e.entregues + ' ÷ ' + e.previstas + ' = ' + (e.pct == null ? '—' : e.pct + '%')
+        + (e.pessoas.length ? ' · ' + e.pessoas.map(function (p) { return p.nome + ' ' + p.quantas; }).join(' · ') : '')
+    }));
+    card.appendChild(hd);
+
+    var lin = el('<div class="hj-eh-top"></div>');
+    lin.appendChild(el('<span class="hj-eh-n"><b>' + e.entregues + '</b> de <b>' + e.previstas + '</b></span>'));
+    lin.appendChild(txt('span', 'hj-eh-s', e.entregues === 0
+      ? 'ninguém fechou nada ainda — o dia está correndo'
+      : (e.entregues === e.previstas ? 'escopo fechado 🎯' : e.pct + '% do dia do time')));
+    card.appendChild(lin);
+    var tr = el('<div class="hj-prog-track"></div>');
+    var fill = el('<div class="hj-prog-fill"></div>');
+    fill.style.width = '0%';
+    fill.style.background = (e.pct || 0) >= 60 ? 'var(--green)' : 'var(--amber)';
+    tr.appendChild(fill); card.appendChild(tr);
+    setTimeout(function () { fill.style.width = Math.max(2, e.pct || 0) + '%'; }, 30);
+
+    e.pessoas.forEach(function (p) {
+      var row = el('<div class="hj-xrow"></div>');
+      row.style.cursor = 'pointer';
+      row.title = 'Ver as atividades de ' + p.nome;
+      row.addEventListener('click', function () { window.location.href = 'atividades.html#q=' + encodeURIComponent(p.nome); });
+      row.appendChild(el('<span class="hj-xdot" style="background:var(--green)"></span>'));
+      var t = el('<span class="hj-xtit"></span>');
+      t.textContent = p.nome;
+      row.appendChild(t);
+      var mt = el('<span class="hj-xmeta"></span>');
+      mt.textContent = p.quantas + (p.quantas === 1 ? ' entrega' : ' entregas') + ' · ver →';
+      row.appendChild(mt);
+      card.appendChild(row);
+      /* o relato é o que o líder de fato lê — e saber que é lido é o que faz a
+         pessoa escrever um relato que presta. Por isso ele aparece aqui, e não
+         escondido atrás de um clique. */
+      if (p.relato) {
+        var rl = txt('div', 'hj-eh-rel', '“' + String(p.relato).slice(0, 180) + (String(p.relato).length > 180 ? '…' : '') + '”');
+        card.appendChild(rl);
+      }
+    });
+    return card;
+  }
+
+  /* ---------- os cartões de QUEM LIDERA, num bloco só ----------------------
+     Extraído de paint() em 16/09 porque precisava ser chamado de DOIS lugares.
+     O motivo está no bug que a simulação pegou: MODO nasce 'minhas', e paint()
+     tinha um `return` para "nada atribuído a você nesta janela". Um líder sem
+     tarefa própria é o caso NORMAL — líder lidera, não executa rotina — então
+     a Antonia abria o Hoje, lia "Está tudo com o restante da equipe" e perdia
+     TODOS os cartões de liderança, com 31 atrasadas no setor dela. A saída
+     existia (trocar o seletor para "Meus setores"), mas estava escondida atrás
+     de uma descoberta que ninguém faz: a tela parecia vazia e certa.
+     Agora o estado vazio continua aparecendo — ele é honesto, a lista pessoal
+     dela está vazia mesmo — só que embaixo dele vêm os cartões do setor. */
+  function pintarCartoesDeLideranca(m, hoje, pg) {
+    /* F1-I: Você supervisiona (o campo supervisor vira valor imediato) */
+    var sup = cardSupervisiona(m, hoje); if (sup) { sup.setAttribute('data-lente', 'eucobro'); pg.appendChild(sup); }
+    /* F1-N · G1: Cockpit do líder (KPIs do MEU setor, sem trocar de tela) */
+    var g1 = cardCockpitLider(m, hoje); if (g1) { g1.setAttribute('data-lente', 'numeros'); pg.appendChild(g1); }
+    var gp = cardPlanejamentoLider(hoje); if (gp) { gp.setAttribute('data-lente', 'eufaco'); pg.appendChild(gp); } /* R4-B3 */
+    /* R7·B2.7: item do plano chega a quem executa */
+    var mpk = cardMeuPlano(hoje); if (mpk) { mpk.setAttribute('data-lente', 'eufaco'); pg.appendChild(mpk); }
+    /* F1-N · G3: Radar do gestor (pior × melhor equipe do dia → agir) */
+    var g3 = cardRadarGestor(m, hoje); if (g3) { g3.setAttribute('data-lente', 'numeros'); pg.appendChild(g3); }
+    /* G4: o que ANDOU hoje — vem antes de "quem precisa de ajuda" de propósito.
+       A ordem importa: quem abre a tela pelo problema chega na conversa 1:1 já
+       cobrando; quem vê primeiro o que foi entregue tem o que reconhecer, e
+       nome para reconhecer. É a mesma lógica do Level 10 (boa notícia antes
+       dos issues) — calibragem, não gentileza. */
+    var g4 = cardEntregueHoje(m, hoje); if (g4) { g4.setAttribute('data-lente', 'eucobro'); pg.appendChild(g4); }
+    /* F1-N · G2: Quem precisa de ajuda hoje (cobrança vira conversa 1:1) */
+    var g2 = cardAjuda(m, hoje); if (g2) { g2.setAttribute('data-lente', 'eucobro'); pg.appendChild(g2); }
+    /* R9-C: as travas do time viram 3 causas. Vem LOGO DEPOIS de "quem precisa
+       de ajuda" de propósito: ali o líder vê QUEM, aqui vê POR QUÊ — a ordem
+       inversa faria ele abrir a conversa 1:1 sem saber o que perguntar. */
+    var tv = cardTravas(m, hoje); if (tv) { tv.setAttribute('data-lente', 'eucobro'); pg.appendChild(tv); }
+  }
+
   function cardAjuda(m, hoje) {
     var esc = null;
     if (Guard.isGestor && Guard.isGestor()) {
@@ -1143,25 +1345,51 @@
     var atrasadas = abertas.filter(function (o) { return o.atrasada; }).length;
     /* denominador = o que JÁ VENCEU ou vence hoje. Cobrar pelo mês inteiro no
        dia 5 daria um número falso e desanimador. */
-    var jaVenceu = meus.filter(function (o) { return R.compareISO(o.effDate, hoje) <= 0; });
-    var pct = jaVenceu.length ? Math.round(feitas.length / jaVenceu.length * 100) : 0;
+    /* #31 (16/09) · O NUMERADOR TEM DE OLHAR A MESMA JANELA DO DENOMINADOR.
+       Antes o numerador era "feitas" — TODAS as concluídas do mês, inclusive as
+       de data futura — e o denominador só o que já venceu. Gestor e líder
+       concluem adiantado (checkbox da semana, "Concluir a próxima"), então a
+       conta estourava: 3 vencidas feitas + 2 tarefas dos dias 22 e 29
+       concluídas hoje davam "167%" e "Entregues 5 de 3". O caso pior escondia
+       atraso: 2 vencidas ABERTAS + 1 feita + 2 adiantadas davam "100%" e o
+       rodapé "Mês redondo", com "2 atrasadas" na linha de baixo.
+       Agora o percentual é concluídas que já venceram ÷ o que já venceu, e a
+       pulada sai das DUAS contas — exatamente a aderência de
+       KPI.computarPorPessoa (Performance), que o "i" promete. Nunca passa de
+       100%. A entrega adiantada não some: aparece à parte como "+N
+       adiantada(s)" e entra na conta no dia em que a tarefa vencer. Apagar esse
+       esforço seria o mesmo erro com o sinal trocado. */
+    var jaVenceu = meus.filter(function (o) { return o.status !== 'pulada' && R.compareISO(o.effDate, hoje) <= 0; });
+    var feitasVenc = jaVenceu.filter(function (o) { return o.status === 'concluida'; }).length;
+    var adiantadas = feitas.filter(function (o) { return R.compareISO(o.effDate, hoje) > 0; }).length;
+    var puladasVenc = meus.filter(function (o) { return o.status === 'pulada' && R.compareISO(o.effDate, hoje) <= 0; }).length;
+    /* nada venceu = não há base. "0%" ali seria nota inventada (e em laranja);
+       o número vira "—" e o rodapé explica — a mesma regra do null "coletando"
+       do kpi.js, que nunca mostra 0 falso. */
+    var pct = jaVenceu.length ? Math.round(feitasVenc / jaVenceu.length * 100) : null;
     var pctPrazo = feitas.length ? Math.round(noPrazo / feitas.length * 100) : 0;
+    var txtAdiant = adiantadas ? ' · +' + adiantadas + ' adiantada(s)' : '';
 
     var card = el('<div class="hj-xcard"></div>');
     var hd = el('<div class="hj-xhead"></div>');
     hd.appendChild(txt('div', 'hj-xtitle', 'Meu mês'));
     hd.appendChild(infoHj('Meu mês', {
-      formula: 'entregues ÷ o que já venceu (ou vence hoje) no mês, só das tarefas em que VOCÊ é o responsável. "No prazo" = dia da conclusão menor ou igual à data da tarefa — o mesmo critério da Inteligência e da Performance, não um cálculo paralelo. O mês inteiro NÃO entra no denominador: cobrar no dia 5 pelo dia 30 seria número falso.',
+      formula: 'entregues ÷ o que já venceu (ou vence hoje) no mês, só das tarefas em que VOCÊ é o responsável; tarefa pulada fica fora das duas contas. Entrega ADIANTADA (tarefa de data futura que você já concluiu) não entra no percentual: aparece à parte como "+N adiantada(s)" e passa a contar no dia em que a tarefa vencer — por isso o número nunca passa de 100%. "No prazo" = dia da conclusão menor ou igual à data da tarefa, sobre TODAS as entregas do mês, adiantadas inclusive — o mesmo critério da Inteligência e da Performance, não um cálculo paralelo. O mês inteiro NÃO entra no denominador: cobrar no dia 5 pelo dia 30 seria número falso. Se nada venceu ainda, não há percentual (aparece "—").',
       dados: 'as suas ocorrências do mês corrente, no mesmo board que já alimenta esta tela. Conclusão sem carimbo de data (registro antigo) não é contada como no prazo nem como atrasada — não afirmo o que não sei.',
-      numeros: feitas.length + ' entregue(s) de ' + jaVenceu.length + ' vencida(s) = ' + pct + '%'
+      numeros: feitasVenc + ' entregue(s) de ' + jaVenceu.length + ' com prazo até hoje = ' + (pct == null ? '— (nada venceu ainda)' : pct + '%')
+        + (adiantadas ? ' · +' + adiantadas + ' adiantada(s), fora do percentual' : '')
+        + (puladasVenc ? ' · ' + puladasVenc + ' pulada(s), fora das duas contas' : '')
         + ' · no prazo ' + noPrazo + '/' + feitas.length + ' = ' + pctPrazo + '%'
         + (semCarimbo ? ' · ' + semCarimbo + ' sem carimbo de conclusão' : '')
         + ' · ' + abertas.length + ' aberta(s), ' + atrasadas + ' atrasada(s)'
         + ' · janela ' + jan.ini.split('-').reverse().join('/') + ' a ' + jan.fim.split('-').reverse().join('/')
     }));
     var ct = el('<span class="hj-xcount"></span>');
-    ct.textContent = pct + '%';
-    ct.style.color = pct >= 80 ? 'var(--greenText)' : pct >= 50 ? 'var(--amber)' : 'var(--orange)';
+    ct.textContent = pct == null ? '—' : pct + '%';
+    /* "—" usa --muted2Text (token de TEXTO: 5,1:1 no claro, 6,0:1 no escuro);
+       --muted2 é token de borda e reprova como texto (theme.css, 03/08) */
+    ct.style.color = pct == null ? 'var(--muted2Text)' : pct >= 80 ? 'var(--greenText)' : pct >= 50 ? 'var(--amber)' : 'var(--orange)';
+    if (pct == null) { ct.title = 'Sem percentual: nada venceu ainda neste mês.'; }
     hd.appendChild(ct);
     card.appendChild(hd);
 
@@ -1177,9 +1405,9 @@
       var mt = el('<span class="hj-xmeta"></span>'); mt.textContent = valor; row.appendChild(mt);
       card.appendChild(row);
     }
-    linha('Entregues', feitas.length + ' de ' + jaVenceu.length, pct,
-      pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'orange',
-      'Só conta o que já venceu ou vence hoje — o resto do mês ainda é seu.');
+    linha('Entregues', feitasVenc + ' de ' + jaVenceu.length + txtAdiant, pct == null ? 0 : pct,
+      pct == null ? 'muted2' : pct >= 80 ? 'green' : pct >= 50 ? 'amber' : 'orange',
+      'Só conta o que já venceu ou vence hoje — o resto do mês ainda é seu. Entrega adiantada aparece à parte e entra na conta no dia em que a tarefa vencer.');
     if (feitas.length) {
       linha('No prazo', noPrazo + ' de ' + feitas.length, pctPrazo,
         pctPrazo >= 80 ? 'green' : pctPrazo >= 50 ? 'amber' : 'orange',
@@ -1193,12 +1421,19 @@
     /* R9-D: a tela tinha 4 expressões de cobrança para cada 1 de reconhecimento
        (contado no texto de hoje.html em 06/08). O rodapé não é enfeite — é o
        único lugar onde o executor lê algo sobre ELE que não é dívida. */
+    /* #31: as contas do rodapé usam feitasVenc, a mesma base do percentual.
+       Com "feitas" ele dizia "Mês redondo" a quem tinha 2 atrasadas e só
+       adiantou tarefa da semana que vem — e o "Fechar N a mais" podia ser
+       cumprido fechando tarefa futura, que não mexe no número. */
     var pe = txt('div', 'hj-prog-s',
-      !jaVenceu.length ? 'O mês está começando para você — nada venceu ainda.'
-        : pct >= 90 ? 'Mês redondo até aqui. ' + feitas.length + ' entregue(s) e ' + pctPrazo + '% no prazo.'
-        : pct >= 70 ? 'Mês em dia. Fechar ' + Math.max(0, Math.ceil(jaVenceu.length * 0.9) - feitas.length) + ' a mais leva você a 90%.'
-        : atrasadas ? 'Comece pela mais velha das ' + atrasadas + ' atrasadas — é a que mais pesa no seu mês.'
-        : 'Ainda dá para virar o mês: faltam ' + (jaVenceu.length - feitas.length) + ' vencida(s) em aberto.');
+      !jaVenceu.length ? 'O mês está começando para você — nada venceu ainda'
+          + (adiantadas ? ', e você já adiantou ' + adiantadas + ' tarefa(s).' : '.')
+        : pct >= 90 ? 'Mês redondo até aqui. ' + feitasVenc + ' entregue(s) e ' + pctPrazo + '% no prazo'
+          + (adiantadas ? ', mais ' + adiantadas + ' adiantada(s).' : '.')
+        : pct >= 70 ? 'Mês em dia. Fechar mais ' + Math.max(0, Math.ceil(jaVenceu.length * 0.9) - feitasVenc) + ' com prazo até hoje leva você a 90%.'
+        : atrasadas ? (atrasadas === 1 ? 'Comece pela atrasada — é a que mais pesa no seu mês.'
+          : 'Comece pela mais velha das ' + atrasadas + ' atrasadas — é a que mais pesa no seu mês.')
+        : 'Ainda dá para virar o mês: faltam ' + (jaVenceu.length - feitasVenc) + ' com prazo até hoje.');
     pe.style.marginTop = '8px';
     card.appendChild(pe);
     return card;
@@ -1378,6 +1613,18 @@
         'Está tudo com o restante da equipe. Use o seletor acima ("' + ((Guard.isGestor && Guard.isGestor()) ? 'Toda a escola' : 'Meus setores') + '") para ver o escopo inteiro.',
         CAN_WRITE() ? { label: 'Ver todas as atividades', href: 'atividades.html' } : null);
       var kp0 = document.getElementById('hj-kpis'); kp0.style.display = 'none';
+      /* Quem lidera NÃO para aqui. A lista pessoal dele estar vazia é o normal
+         — ele lidera, não executa rotina — e sair da função levava junto todos
+         os cartões do setor. A simulação pegou isto: a líder do SEC via "está
+         tudo com o restante da equipe" enquanto o setor dela tinha 31
+         atrasadas, e a única saída era descobrir sozinha um seletor no topo.
+         O usuário comum continua parando: a tela dele É a lista dele. */
+      var lidera0 = (Guard.isLider && Guard.isLider()) || (Guard.isGestor && Guard.isGestor());
+      if (lidera0) {
+        var pgv = document.getElementById('hj-prog'); pgv.innerHTML = '';
+        pintarReunioes(hoje);
+        pintarCartoesDeLideranca(m, hoje, pgv);
+      }
       return;
     }
     if (!m.board.length) {
@@ -1515,21 +1762,7 @@
     /* F1-I: Cobranças do PEF (escalonamento D-5/D-3/D-0 dos planos de ação) */
     /* R3 · lentes: cada card já existente ganha a etiqueta da sua pergunta */
     var cb = cardCobrancas(m, hoje); if (cb) { cb.setAttribute('data-lente', 'eucobro'); pg.appendChild(cb); }
-    /* F1-I: Você supervisiona (o campo supervisor vira valor imediato) */
-    var sup = cardSupervisiona(m, hoje); if (sup) { sup.setAttribute('data-lente', 'eucobro'); pg.appendChild(sup); }
-    /* F1-N · G1: Cockpit do líder (KPIs do MEU setor, sem trocar de tela) */
-    var g1 = cardCockpitLider(m, hoje); if (g1) { g1.setAttribute('data-lente', 'numeros'); pg.appendChild(g1); }
-    var gp = cardPlanejamentoLider(hoje); if (gp) { gp.setAttribute('data-lente', 'eufaco'); pg.appendChild(gp); } /* R4-B3 */
-    /* R7·B2.7: item do plano chega a quem executa */
-    var mpk = cardMeuPlano(hoje); if (mpk) { mpk.setAttribute('data-lente', 'eufaco'); pg.appendChild(mpk); }
-    /* F1-N · G3: Radar do gestor (pior × melhor equipe do dia → agir) */
-    var g3 = cardRadarGestor(m, hoje); if (g3) { g3.setAttribute('data-lente', 'numeros'); pg.appendChild(g3); }
-    /* F1-N · G2: Quem precisa de ajuda hoje (cobrança vira conversa 1:1) */
-    var g2 = cardAjuda(m, hoje); if (g2) { g2.setAttribute('data-lente', 'eucobro'); pg.appendChild(g2); }
-    /* R9-C: as travas do time viram 3 causas. Vem LOGO DEPOIS de "quem precisa
-       de ajuda" de propósito: ali o líder vê QUEM, aqui vê POR QUÊ — a ordem
-       inversa faria ele abrir a conversa 1:1 sem saber o que perguntar. */
-    var tv = cardTravas(m, hoje); if (tv) { tv.setAttribute('data-lente', 'eucobro'); pg.appendChild(tv); }
+    pintarCartoesDeLideranca(m, hoje, pg);
 
     /* KPIs do topo — R7·B3.10: cada card tem "i" REAL (onInfo) e drill
        (onClick leva à lista/tela que compõe o número). R7·B4.20: dia sem
@@ -1777,6 +2010,27 @@
       }
     });
   }
+  /* #32 (16/09) · AVISO DE LEITURA INCOMPLETA DAS CONVOCAÇÕES.
+     Quando a leitura bate no teto (ou falha), a lista abaixo pode não ter
+     todas as reuniões da pessoa. Calar isso é o defeito que existia: a
+     reunião de amanhã sumia e a tela parecia "sem convocação", que é uma
+     afirmação falsa. Aqui a tela diz o que sabe e aponta a Agenda, que lê
+     as reuniões por data e responde o convite (Vou / Não vou) do mesmo jeito.
+     O link é real e existe para os três perfis (guard.js e mnav.js). */
+  function avisoConvocacoes(tipo) {
+    if (tipo !== 'cheio' && tipo !== 'erro') { return null; }
+    var w = el('<div style="margin-top:8px"></div>');
+    var t = txt('div', 'hj-md', tipo === 'cheio'
+      ? 'Você já tem ' + CONVOC_LIMITE + ' convocações ou mais no sistema, e esta tela lê no máximo ' + CONVOC_LIMITE + ' de uma vez: alguma reunião sua pode ter ficado de fora desta lista.'
+      : 'Não consegui ler as suas convocações de reunião agora: pode haver reunião sua que não aparece aqui. Use o botão Atualizar, no topo, para tentar de novo.');
+    /* --bandaAlta, não --orange: --orange é cor de preenchimento e como texto
+       dá 3,6:1 no tema claro (reprova WCAG 1.4.3); --bandaAlta dá 7,3:1 no
+       claro e 6,6:1 no escuro — theme.css explica a calibragem */
+    t.style.color = 'var(--bandaAlta)';
+    w.appendChild(t);
+    w.appendChild(el('<a class="hj-xlink" href="eventos.html">Ver todas na Agenda →</a>'));
+    return w;
+  }
   function pintarReunioes(hoje) {
     var velho = document.getElementById('hj-reun');
     if (velho && velho.parentNode) { velho.parentNode.removeChild(velho); }
@@ -1793,7 +2047,10 @@
     CONVOC.forEach(function (r) {
       if ((r.data || '') >= hoje) { futuras.push(r); } else { atrasadas.push(r); }
     });
-    if (!futuras.length && !atrasadas.length && !comps.length) { return; }
+    /* #32: leitura cheia ou com falha pinta o bloco mesmo com a lista vazia —
+       lista vazia sem aviso era justamente o que escondia a reunião. */
+    var aviso = avisoConvocacoes(CONVOC_AVISO);
+    if (!futuras.length && !atrasadas.length && !comps.length && !aviso) { return; }
     var box = el('<div id="hj-reun" style="margin-bottom:16px"></div>');
     box.setAttribute('data-lente', 'eufaco'); /* R3 · lente */
 
@@ -1844,7 +2101,14 @@
         }
         c1.appendChild(lin);
       });
+      if (aviso) { c1.appendChild(aviso); aviso = null; }  /* #32: o aviso fica junto da lista que ele qualifica */
       box.appendChild(c1);
+    }
+    if (aviso) {
+      var cAv = el('<div class="hj-card" style="padding:14px 16px;margin-bottom:10px"></div>');
+      cAv.appendChild(txt('div', 'hj-late-t', 'Convocações de reunião'));
+      cAv.appendChild(aviso);
+      box.appendChild(cAv);
     }
 
     /* Reuniões que já passaram e ninguém encerrou. Sem RSVP (confirmar
@@ -1940,15 +2204,54 @@
   }
 
   /* ---------- carga ---------- */
+  /* FRESCOR DO DADO (16/09). Esta tela lê o banco UMA vez (getDocs) e não
+     assina mudança (não há onSnapshot em lugar nenhum do sistema). Quem deixa
+     o Hoje aberto — e é assim que ele é usado, um dia inteiro na segunda tela —
+     lia às 17h os números das 8h achando que eram de agora: alguém concluiu ao
+     meio-dia e o líder continuava vendo pendente. Número velho apresentado
+     como atual é engano, mesmo sem ninguém ter mentido.
+     A correção honesta e barata é dizer a HORA DA LEITURA e dar o botão de
+     reler. A cara (assinar o banco ao vivo) fica declarada como pendência —
+     ver NOITE/RELATORIO_MANHA.md. */
+  var LIDO_EM = null;
+  function carimboFrescor() {
+    var el0 = document.getElementById('hj-frescor');
+    if (!el0 || !LIDO_EM) { return; }
+    el0.innerHTML = '';
+    var min = Math.floor((Date.now() - LIDO_EM) / 60000);
+    var hh = new Date(LIDO_EM);
+    var quando = ('0' + hh.getHours()).slice(-2) + ':' + ('0' + hh.getMinutes()).slice(-2);
+    var s = txt('span', 'hj-fresc-t', min < 1 ? ('lido agora, ' + quando) : ('lido às ' + quando + ' · ' + min + ' min atrás'));
+    if (min >= 15) { s.classList.add('velho'); }
+    s.title = 'Esta tela lê o banco uma vez, ao abrir. Ela não se atualiza sozinha: '
+      + 'se alguém concluir algo agora, só aparece aqui depois de atualizar.';
+    el0.appendChild(s);
+    var b = txt('button', 'hj-fresc-b', 'Atualizar');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Atualizar os números desta tela');
+    b.addEventListener('click', function () { b.disabled = true; b.textContent = 'Lendo…'; refresh(); });
+    el0.appendChild(b);
+  }
   function refresh() {
     var uid = (CURRENT_USER && CURRENT_USER.uid) || null;
     Promise.all([
       KPI.carregar('band'),
       Store.listPlanosVivos ? ((Guard.isUsuario && Guard.isUsuario()) ? Promise.resolve([]) : Store.listPlanosVivos()) : Promise.resolve([]),
-      uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve([])
-    ]).then(function (r) { MODELO = r[0]; PLANOS = r[1] || []; CONVOC = r[2] || []; paint(); emitirModelo(); })
+      uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve({ itens: [], cheio: false, erro: false })
+    ]).then(function (r) {
+      MODELO = r[0]; PLANOS = r[1] || [];
+      /* #32: a leitura das convocações traz junto se veio completa */
+      var cv = r[2] || {};
+      CONVOC = cv.itens || [];
+      CONVOC_AVISO = cv.cheio ? 'cheio' : (cv.erro ? 'erro' : '');
+      LIDO_EM = Date.now();
+      paint(); emitirModelo(); carimboFrescor();
+    })
       .catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
   }
+  /* o carimbo envelhece sozinho — sem isso ele mentiria de outro jeito,
+     dizendo "lido agora" uma hora depois */
+  setInterval(function () { if (LIDO_EM) { carimboFrescor(); } }, 60000);
 
   /* ============================================================
      L3.5 (11/09/2026) · APPEND · ponte dos módulos do Lote 3

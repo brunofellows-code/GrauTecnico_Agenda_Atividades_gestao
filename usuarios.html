@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="mod-usuarios.css">
 <script src="theme.js"></script>
 <script src="guard.js"></script>
   <script src="mnav.js"></script>
@@ -40,6 +41,15 @@
 .us-list{display:flex;flex-direction:column;gap:10px}
 .us-row{display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--s1);border:1px solid var(--border);border-radius:13px}
 .us-row.inactive{opacity:.66}
+/* #40: cadastro sem o campo "ativo" (ou fora do padrão) ganha uma 2ª linha com o
+   porquê. flex-basis 100% joga a explicação para baixo da linha, e order:1 a leva
+   ao fim sem mudar a ordem de leitura (no DOM ela vem logo depois da etiqueta).
+   Cor --text de propósito: sob o opacity .66 da linha inativa, --muted cai para
+   3,7:1 (escuro) e 3,3:1 (claro), abaixo de 4,5:1; --text fica em 7,2:1 e 5,9:1. */
+.us-row.us-row-aviso{flex-wrap:wrap}
+.us-why{order:1;flex:1 1 100%;display:flex;align-items:flex-start;gap:7px;padding-left:52px;
+  font-size:12px;font-weight:600;line-height:1.45;color:var(--text)}
+.us-why svg{flex:none;margin-top:1px;color:var(--amber)}
 .us-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .us-nm{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .us-em{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -92,6 +102,7 @@
   .us-top{display:none}
   .us-mhead{display:flex}
   .us-content{padding:16px 18px 40px}
+  .us-why{padding-left:0}
 }
 </style>
 </head>
@@ -113,7 +124,7 @@
       <div class="us-top">
         <div style="line-height:1.2">
           <h1 class="us-hi">Usuários</h1>
-          <div class="us-dd">Quem acessa o sistema e com qual perfil · o login é criado no Console; aqui se define a permissão</div>
+          <div class="us-dd">Quem acessa o sistema, com qual perfil e em qual setor · o login é criado no Console do Firebase; aqui se define a permissão</div>
         </div>
       </div>
 
@@ -129,7 +140,9 @@
         <div class="us-toolbar" id="us-toolbar" hidden>
           <div class="us-count" id="us-count"></div>
           <div class="us-toolright">
+            <span id="us-groupsetor"></span>
             <span id="us-showinactive"></span>
+            <span id="us-lotebtn"></span>
             <span id="us-newbtn"></span>
           </div>
         </div>
@@ -142,9 +155,352 @@
   <div class="us-toast" id="us-toast"><span class="bar"></span><span id="us-toast-msg"></span></div>
 
   <script src="ui.js"></script>
+
+  <!-- ==========================================================
+       LOGICA PURA da tela de Usuarios (sem DOM, sem banco).
+       Fica isolada de proposito: o harness de Node
+       (NOITE/harness_usuarios.js) recorta exatamente o trecho
+       entre as duas marcas abaixo e roda os casos de teste.
+       NAO mover as marcas nem colocar DOM aqui dentro.
+       ========================================================== -->
+  <script>
+  /* == GERA:USUARIOS-LOGICA-INICIO == */
+  (function (raiz) {
+    'use strict';
+
+    var L = {};
+
+    /* ---------- perfis ----------
+       perfilEfetivo espelha guard.js:79-83 (Admin -> gestor, Editor -> lider,
+       o resto -> usuario). Serve para que um documento legado "Admin" seja
+       tratado como Gestor tambem nesta tela — inclusive na marca de socio. */
+    L.perfilEfetivo = function (bruto) {
+      var p = String(bruto == null ? '' : bruto).replace(/^\s+|\s+$/g, '');
+      if (p === 'gestor' || p === 'lider' || p === 'usuario') { return p; }
+      if (p === 'Admin') { return 'gestor'; }
+      if (p === 'Editor') { return 'lider'; }
+      return 'usuario';
+    };
+
+    /* aceita o que a pessoa digitar no lote e devolve o valor canonico ('' se nao der) */
+    L.perfilDoTexto = function (bruto) {
+      var p = L.normalizarNome(bruto);
+      if (p === 'gestor' || p === 'gestora' || p === 'admin' || p === 'administrador') { return 'gestor'; }
+      if (p === 'lider' || p === 'lideranca' || p === 'editor') { return 'lider'; }
+      if (p === 'usuario' || p === 'usuaria' || p === 'colaborador' || p === 'colaboradora' || p === 'visualizador') { return 'usuario'; }
+      return '';
+    };
+
+    /* ---------- normalizacao de texto ---------- */
+    var COM_ACENTO = 'aaaaaeeeeiiiiooooouuuucn';
+    var ACENTUADAS = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    L.tiraAcento = function (s) {
+      var t = String(s == null ? '' : s).toLowerCase();
+      var saida = '', i, pos;
+      for (i = 0; i < t.length; i++) {
+        pos = ACENTUADAS.indexOf(t.charAt(i));
+        saida += (pos >= 0) ? COM_ACENTO.charAt(pos) : t.charAt(i);
+      }
+      return saida;
+    };
+    /* nome comparavel: sem acento, sem pontuacao, minusculo, um espaco so */
+    L.normalizarNome = function (s) {
+      var t = L.tiraAcento(s).replace(/[^a-z0-9]+/g, ' ');
+      return t.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+    };
+    L.normalizarEmail = function (s) {
+      return String(s == null ? '' : s).replace(/^\s+|\s+$/g, '').toLowerCase();
+    };
+    L.partesNome = function (s) {
+      var n = L.normalizarNome(s);
+      return n ? n.split(' ') : [];
+    };
+    L.limpar = function (s) {
+      return String(s == null ? '' : s).replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+    };
+
+    /* distancia de edicao (Levenshtein), iterativa — pega erro de digitacao */
+    L.distancia = function (a, b) {
+      a = String(a == null ? '' : a); b = String(b == null ? '' : b);
+      if (a === b) { return 0; }
+      if (!a.length) { return b.length; }
+      if (!b.length) { return a.length; }
+      var linha = [], i, j, anterior, guarda, custo;
+      for (j = 0; j <= b.length; j++) { linha[j] = j; }
+      for (i = 1; i <= a.length; i++) {
+        anterior = linha[0];
+        linha[0] = i;
+        for (j = 1; j <= b.length; j++) {
+          guarda = linha[j];
+          custo = (a.charAt(i - 1) === b.charAt(j - 1)) ? 0 : 1;
+          linha[j] = Math.min(linha[j] + 1, linha[j - 1] + 1, anterior + custo);
+          anterior = guarda;
+        }
+      }
+      return linha[b.length];
+    };
+
+    /* ---------- nome parecido ----------
+       Nunca bloqueia: so avisa. Regra deliberada do GERA — "Bruno Fellows" e
+       "Bruno Bandeira" SAO pessoas diferentes, entao primeiro nome igual vira
+       aviso ('parecido'), jamais impedimento. */
+    L.compararNomes = function (novo, existente) {
+      var a = L.normalizarNome(novo), b = L.normalizarNome(existente);
+      if (!a || !b) { return null; }
+      if (a === b) { return { nivel: 'igual', motivo: 'nome escrito exatamente igual' }; }
+      var pa = a.split(' '), pb = b.split(' ');
+      if (pa.length > 1 && pb.length > 1 && pa[0] === pb[0] && pa[pa.length - 1] === pb[pb.length - 1]) {
+        return { nivel: 'igual', motivo: 'mesmo primeiro e mesmo ultimo nome' };
+      }
+      var d = L.distancia(a, b);
+      if (d > 0 && d <= 2 && Math.max(a.length, b.length) >= 6) {
+        return { nivel: 'parecido', motivo: 'escrita quase igual' };
+      }
+      if (pa[0] === pb[0]) { return { nivel: 'parecido', motivo: 'mesmo primeiro nome' }; }
+      return null;
+    };
+
+    L.avisosDeNome = function (nome, existentes) {
+      var saida = [], i, c, u;
+      existentes = existentes || [];
+      for (i = 0; i < existentes.length; i++) {
+        u = existentes[i];
+        c = L.compararNomes(nome, u && u.nome);
+        if (c) {
+          saida.push({ uid: (u && u.uid) || '', nome: (u && u.nome) || '', setor: (u && u.setor) || '',
+            nivel: c.nivel, motivo: c.motivo });
+        }
+      }
+      return saida;
+    };
+
+    /* ---------- setores ---------- */
+    L.temSetor = function (setores, sigla) {
+      var s = L.normalizarNome(sigla), i;
+      setores = setores || [];
+      for (i = 0; i < setores.length; i++) {
+        if (L.normalizarNome(setores[i] && (setores[i].sigla || setores[i])) === s) { return true; }
+      }
+      return false;
+    };
+
+    /* agrupa a lista de pessoas na ordem hierarquica dos setores.
+       Setor sem ninguem continua na tela, com o vazio "Sem equipe cadastrada". */
+    L.agruparPorSetor = function (usuarios, setores) {
+      var grupos = [], porSigla = {}, i, u, sig, g;
+      setores = setores || [];
+      usuarios = usuarios || [];
+      for (i = 0; i < setores.length; i++) {
+        g = { sigla: setores[i].sigla, nome: setores[i].nome || setores[i].sigla,
+          pai: setores[i].pai || null, cadastrado: true, usuarios: [] };
+        grupos.push(g);
+        porSigla[g.sigla] = g;
+      }
+      var semSetor = { sigla: '', nome: 'Sem setor definido', pai: null, cadastrado: false, usuarios: [] };
+      for (i = 0; i < usuarios.length; i++) {
+        u = usuarios[i];
+        sig = L.limpar(u && u.setor);
+        if (!sig) { semSetor.usuarios.push(u); continue; }
+        if (!porSigla[sig]) {
+          g = { sigla: sig, nome: sig, pai: null, cadastrado: false, usuarios: [] };
+          porSigla[sig] = g;
+          grupos.push(g);
+        }
+        porSigla[sig].usuarios.push(u);
+      }
+      if (semSetor.usuarios.length) { grupos.push(semSetor); }
+      return grupos;
+    };
+
+    /* ---------- acesso ativo (#40) ----------
+       Mesma regra do guard.js (login) e do isActive() da firestore.rules:
+       so entra quem tem ativo === true. Antes esta tela lia o campo de dois
+       jeitos na MESMA linha: a etiqueta com "ativo !== false" e a linha, o
+       botao e o clique com "u.ativo". Um cadastro criado a mao no Console do
+       Firestore, sem o campo, aparecia com a etiqueta verde "Ativo", contava
+       entre os ativos do topo e mostrava o botao "Reativar" — que abria o
+       modal de DESATIVAR —, enquanto a pessoa recebia "Acesso desativado" no
+       login. Toda leitura de "ativo" desta tela passa por estas funcoes. */
+    L.estaAtivo = function (u) {
+      return !!u && u.ativo === true;
+    };
+
+    /* texto curto do valor fora do padrao, para o gestor saber o que corrigir */
+    function descreverValorAtivo(v) {
+      if (v === null) { return 'vazio'; }
+      if (typeof v === 'string') { return '"' + v + '" em texto'; }
+      if (typeof v === 'number') { return 'o número ' + v; }
+      return 'um valor que não é sim/não';
+    }
+
+    /* o que a linha mostra: etiqueta, explicacao e o verbo do botao.
+       So ativo === false e "desativado de proposito" (botao Reativar).
+       Sem o campo, ou com valor fora do padrao — no Console o tipo padrao de
+       campo novo e texto, entao aparece ativo: "true" —, o login tambem e
+       negado, mas ninguem desativou: a etiqueta explica e o botao e Ativar. */
+    L.situacaoAcesso = function (u) {
+      if (L.estaAtivo(u)) { return { ativo: true, rotulo: 'Ativo', aviso: '', acao: 'Desativar' }; }
+      var v = u ? u.ativo : undefined;
+      if (v === false) { return { ativo: false, rotulo: 'Inativo', aviso: '', acao: 'Reativar' }; }
+      if (v === undefined) {
+        return { ativo: false, rotulo: 'Inativo', aviso: 'sem o campo ativo — o login é negado', acao: 'Ativar' };
+      }
+      return { ativo: false, rotulo: 'Inativo',
+        aviso: 'campo ativo fora do padrão (' + descreverValorAtivo(v) + ') — o login é negado', acao: 'Ativar' };
+    };
+
+    /* o "ativo" que uma gravacao deixa no banco e a acao que vai para o log.
+       Gravacao que nao mexe no campo (marcar socio, editar nome) mantem a
+       situacao REAL de acesso. Antes o valor padrao era "cur.ativo !== false":
+       num cadastro sem o campo, marcar socio gravava ativo:true calado —
+       liberava o login — e o log dizia so "editar_usuario" com antes.ativo:true. */
+    L.transicaoAtivo = function (cur, patch) {
+      var antes = L.estaAtivo(cur);
+      var depois = (patch && patch.ativo !== undefined) ? !!patch.ativo : antes;
+      var acao = (antes && !depois) ? 'inativar_usuario' : ((!antes && depois) ? 'reativar_usuario' : 'editar_usuario');
+      return { antes: antes, depois: depois, acao: acao };
+    };
+
+    /* ---------- quem pode marcar/desmarcar socio ----------
+       A2: socio = gestor (ou o legado Admin) com a marca. So gestor marca. */
+    L.podeMarcarSocio = function (ator, alvo) {
+      if (!ator || !alvo) { return { pode: false, motivo: 'Nao consegui identificar quem esta pedindo.' }; }
+      if (L.perfilEfetivo(ator.perfil) !== 'gestor') {
+        return { pode: false, motivo: 'Só o perfil Gestor marca quem é sócio.' };
+      }
+      if (L.perfilEfetivo(alvo.perfil) !== 'gestor') {
+        return { pode: false, motivo: 'Só quem tem perfil Gestor pode ser marcado como sócio. Mude o perfil antes.' };
+      }
+      /* #40: era "alvo.ativo === false". Cadastro sem o campo passava, e a
+         gravacao do socio reativava a pessoa como efeito colateral. */
+      var acesso = L.situacaoAcesso(alvo);
+      if (!acesso.ativo) {
+        return { pode: false, motivo: acesso.aviso
+          ? ('O acesso desta pessoa está inativo (' + acesso.aviso + '). Ative antes de mudar a marca de sócio.')
+          : 'Esta pessoa está desativada. Reative antes de mudar a marca de sócio.' };
+      }
+      return { pode: true, motivo: '' };
+    };
+
+    /* quem responde pelo SOC = socio · pelo GES = gestor sem a marca de socio.
+       #40: quem nao entra no sistema (ativo !== true) nao responde por setor. */
+    L.respondePeloSoc = function (u) {
+      return !!u && L.perfilEfetivo(u.perfil) === 'gestor' && u.socio === true && L.estaAtivo(u);
+    };
+    L.respondePeloGes = function (u) {
+      return !!u && L.perfilEfetivo(u.perfil) === 'gestor' && u.socio !== true && L.estaAtivo(u);
+    };
+
+    /* ---------- conta de teste ---------- */
+    L.ehContaDeTeste = function (u) {
+      if (!u) { return false; }
+      var partes = L.partesNome(u.nome), i;
+      for (i = 0; i < partes.length; i++) {
+        if (partes[i] === 'teste' || partes[i] === 'testes' || partes[i] === 'test') { return true; }
+      }
+      var local = L.normalizarEmail(u.email).split('@')[0] || '';
+      return /(^|[._+-])test(e|es)?([._+-]|$)/.test(local);
+    };
+
+    /* ---------- lote ---------- */
+    var RX_EMAIL_LOTE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    L.separarColunas = function (linha) {
+      var t = String(linha == null ? '' : linha);
+      var sep = (t.indexOf('\t') >= 0) ? '\t' : ((t.indexOf(';') >= 0) ? ';' : ',');
+      var partes = t.split(sep), saida = [], i;
+      for (i = 0; i < partes.length; i++) { saida.push(L.limpar(partes[i])); }
+      return saida;
+    };
+
+    L.ehCabecalho = function (colunas) {
+      if (!colunas || colunas.length < 2) { return false; }
+      var c0 = L.normalizarNome(colunas[0]), c1 = L.normalizarNome(colunas[1]);
+      return (c0 === 'nome' || c0 === 'nome completo') && c1.indexOf('mail') >= 0;
+    };
+
+    /* valida UMA pessoa. ctx.setores = [{sigla,nome}] (se vazio, nao cobra o setor) */
+    L.validarCadastro = function (item, ctx) {
+      ctx = ctx || {};
+      var erros = [];
+      var nome = L.limpar(item && item.nome);
+      var email = L.normalizarEmail(item && item.email);
+      var perfil = L.perfilDoTexto(item && item.perfil);
+      var setor = L.limpar(item && item.setor).toUpperCase();
+      if (nome.length < 2) { erros.push('Escreva o nome completo (2 letras ou mais).'); }
+      else if (L.partesNome(nome).length < 2) { erros.push('Escreva nome e sobrenome.'); }
+      if (!RX_EMAIL_LOTE.test(email)) { erros.push('E-mail inválido.'); }
+      if (!perfil) { erros.push('Perfil deve ser Gestor, Líder ou Usuário.'); }
+      if (!setor) { erros.push('Informe a sigla do setor.'); }
+      else if ((ctx.setores || []).length && !L.temSetor(ctx.setores, setor)) {
+        erros.push('O setor "' + setor + '" não existe no cadastro de setores.');
+      }
+      return { ok: erros.length === 0, erros: erros,
+        valor: { nome: nome, email: email, perfil: perfil, setor: setor } };
+    };
+
+    /* le o texto colado e devolve a previa, linha a linha, SEM gravar nada.
+       ctx = { setores: lista de setores, existentes: lista de quem ja esta cadastrado } */
+    L.analisarLote = function (texto, ctx) {
+      ctx = ctx || {};
+      var existentes = ctx.existentes || [];
+      var brutas = String(texto == null ? '' : texto).split(/\r\n|\r|\n/);
+      var porEmail = {}, i, j, u, e;
+      for (i = 0; i < existentes.length; i++) {
+        u = existentes[i];
+        e = L.normalizarEmail(u && u.email);
+        if (e) { porEmail[e] = u; }
+      }
+      var linhas = [], vistos = {}, crua, colunas, res, reg;
+      for (i = 0; i < brutas.length; i++) {
+        crua = L.limpar(brutas[i]);
+        if (!crua) { continue; }
+        colunas = L.separarColunas(crua);
+        if (L.ehCabecalho(colunas)) { continue; }
+        res = L.validarCadastro({ nome: colunas[0], email: colunas[1], perfil: colunas[2], setor: colunas[3] }, ctx);
+        reg = { linha: i + 1, bruta: crua, valor: res.valor, erros: res.erros.slice(),
+          avisos: [], estado: 'novo', jaExiste: null };
+        if (colunas.length < 4) {
+          reg.erros.unshift('A linha precisa de 4 partes: nome, e-mail, perfil e setor.');
+        }
+        e = res.valor.email;
+        if (e && vistos[e]) { reg.erros.push('Este e-mail já apareceu na linha ' + vistos[e] + ' deste mesmo lote.'); }
+        else if (e) { vistos[e] = i + 1; }
+        if (reg.erros.length) { reg.estado = 'erro'; }
+        else if (e && porEmail[e]) {
+          reg.estado = 'ja_existe';
+          u = porEmail[e];
+          reg.jaExiste = { uid: (u && u.uid) || '', nome: (u && u.nome) || '' };
+        } else {
+          reg.avisos = L.avisosDeNome(res.valor.nome, existentes);
+        }
+        linhas.push(reg);
+      }
+      var resumo = { total: linhas.length, prontos: 0, erros: 0, jaExistem: 0, comAviso: 0 };
+      for (j = 0; j < linhas.length; j++) {
+        if (linhas[j].estado === 'erro') { resumo.erros++; }
+        else if (linhas[j].estado === 'ja_existe') { resumo.jaExistem++; }
+        else {
+          resumo.prontos++;
+          if (linhas[j].avisos.length) { resumo.comAviso++; }
+        }
+      }
+      return { linhas: linhas, resumo: resumo };
+    };
+
+    /* UID do Authentication: mesma regra que a tela ja usava no cadastro avulso */
+    L.uidValido = function (v) { return /^[A-Za-z0-9_-]{6,128}$/.test(String(v == null ? '' : v)); };
+
+    raiz.UsuariosLogica = L;
+  })(typeof window !== 'undefined' ? window : this);
+  /* == GERA:USUARIOS-LOGICA-FIM == */
+  </script>
+
   <script>
   (function () {
     'use strict';
+
+    var L = window.UsuariosLogica;
 
     /* Placeholder até a guarda entregar a identidade real (Guard.onReady). */
     var CURRENT_USER = { uid: '', name: '', profile: 'Visualizador', initials: '' };
@@ -244,7 +600,9 @@
           var perfil = d.perfil || '';
           var setor = (d.setor || '').trim();   /* F1-C: setor de lotação (obrigatório) */
           var setoresLiderados = (perfil === 'lider' && Array.isArray(d.setoresLiderados)) ? d.setoresLiderados.slice() : [];
-          var socio = (perfil === 'gestor' && d.socio === true); /* R4-EXT: sócio = gestor marcado (assina alçada >R$200) */
+          /* R4-EXT: sócio = gestor marcado (assina alçada >R$200).
+             M6: usa o perfil EFETIVO, então o legado "Admin" também conta como gestor. */
+          var socio = (L.perfilEfetivo(perfil) === 'gestor' && d.socio === true);
           return fb().then(function (ctx) {
             return readAll(ctx).then(function (arr) {
               if (!RX_UID.test(uid)) { throw vErr('UID inválido. Cole o UID exatamente como aparece no Authentication.', 'uid'); }
@@ -269,30 +627,41 @@
             return readAll(ctx).then(function (arr) {
               var cur = arr.filter(function (u) { return u.uid === uid; })[0];
               if (!cur) { throw vErr('Usuário não encontrado.', 'geral'); }
-              var email = patch.email != null ? patch.email.trim() : cur.email;
-              var nome = patch.nome != null ? patch.nome.trim() : cur.nome;
+              var email = patch.email != null ? String(patch.email).trim() : String(cur.email || '');
+              var nome = patch.nome != null ? String(patch.nome).trim() : String(cur.nome || '');
               var perfil = patch.perfil != null ? patch.perfil : cur.perfil;
-              var setor = patch.setor != null ? patch.setor.trim() : (cur.setor || '');   /* F1-C */
-              var ativo = patch.ativo !== undefined ? !!patch.ativo : (cur.ativo !== false);
+              var setor = patch.setor != null ? String(patch.setor).trim() : String(cur.setor || '');   /* F1-C */
+              /* #40: a situação de acesso sai da mesma regra do guard.js (ativo === true) */
+              var trAtivo = L.transicaoAtivo(cur, patch);
+              var ativo = trAtivo.depois;
               var setoresLiderados;
               if (patch.setoresLiderados !== undefined) { setoresLiderados = Array.isArray(patch.setoresLiderados) ? patch.setoresLiderados.slice() : []; }
               else { setoresLiderados = Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados.slice() : []; }
-              if (perfil !== 'lider') { setoresLiderados = []; } /* só Líder guarda setores */
+              /* M6 · correção: comparar pelo perfil EFETIVO (guard.js:79-83).
+                 Antes, um documento legado — "Admin" ou "Editor" — perdia a marca de
+                 sócio (ou os setores liderados) em qualquer gravação que não mexia no
+                 perfil, como desativar/reativar. Bruno Fellows está como Admin no banco,
+                 então era ele quem perdia o "sócio" ao ser desativado e reativado. */
+              if (L.perfilEfetivo(perfil) !== 'lider') { setoresLiderados = []; } /* só Líder guarda setores */
               var socio = (patch.socio !== undefined) ? (patch.socio === true) : (cur.socio === true);
-              if (perfil !== 'gestor') { socio = false; } /* R4-EXT: só gestor pode ser sócio */
-              if (!RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
-              if (nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
-              if (PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
-              if (!setor) { throw vErr('Escolha o setor do usuário.', 'setor'); }
+              if (L.perfilEfetivo(perfil) !== 'gestor') { socio = false; } /* R4-EXT: só gestor pode ser sócio */
+              /* M6 · correção: cobra cada campo SÓ quando a gravação mexe nele.
+                 O formulário sempre manda nome, e-mail, perfil e setor — ali a
+                 exigência continua igual. Já uma gravação parcial (desativar,
+                 reativar, marcar sócio) apenas devolve ao banco o que já estava
+                 lá, e não pode ser barrada por um campo que o documento nunca
+                 teve. Era exatamente isso que impedia desativar a conta de teste
+                 "Bruno Fellows Usuário teste", que está sem setor. */
+              if (patch.email !== undefined && !RX_EMAIL.test(email)) { throw vErr('Informe um e-mail válido.', 'email'); }
+              if (patch.nome !== undefined && nome.length < 2) { throw vErr('Informe um nome com pelo menos 2 caracteres.', 'nome'); }
+              if (patch.perfil !== undefined && PERFIL_STORABLE.indexOf(perfil) < 0) { throw vErr('Selecione um perfil.', 'perfil'); }
+              if (patch.setor !== undefined && !setor) { throw vErr('Escolha o setor do usuário.', 'setor'); }
               var updated = { uid: cur.uid, email: email, nome: nome, perfil: perfil, setor: setor, setoresLiderados: setoresLiderados, socio: socio, ativo: ativo,
                 criadoEm: cur.criadoEm || Date.now(), atualizadoEm: Date.now() };
               var db = ctx.db, f = ctx.f;
               return f.setDoc(f.doc(db, COL, uid), updated).then(function () {
-                var wasAtivo = (cur.ativo !== false);
-                var acao = (wasAtivo && updated.ativo === false) ? 'inativar_usuario'
-                         : ((!wasAtivo && updated.ativo === true) ? 'reativar_usuario' : 'editar_usuario');
-                api.log({ acao: acao, entidade: 'usuario', refId: cur.uid,
-                  antes: { perfil: cur.perfil, setor: (cur.setor || ''), ativo: wasAtivo, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [], socio: cur.socio === true },
+                api.log({ acao: trAtivo.acao, entidade: 'usuario', refId: cur.uid,
+                  antes: { perfil: cur.perfil, setor: (cur.setor || ''), ativo: trAtivo.antes, setoresLiderados: Array.isArray(cur.setoresLiderados) ? cur.setoresLiderados : [], socio: cur.socio === true },
                   depois: { perfil: updated.perfil, setor: updated.setor, ativo: updated.ativo, setoresLiderados: updated.setoresLiderados, socio: updated.socio } });
                 return updated;
               });
@@ -366,7 +735,8 @@
       restore: '<path d="M3 8V3h5"></path><path d="M3.5 8a9 9 0 1 0 2.2-2.9"></path>',
       users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>',
       lock: '<rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path>',
-      alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>'
+      alert: '<path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path>',
+      socio: '<circle cx="12" cy="9" r="5"></circle><path d="M8.2 13.4 7 22l5-2.6L17 22l-1.2-8.6"></path>'
     };
     function initialsOf(name) {
       var p = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -375,7 +745,10 @@
     }
 
     var ALL = [];
+    var SETORES = [];              /* M6: setores ativos (raiz + subsetores), na ordem da hierarquia */
     var showInactive = false;
+    var porSetor = true;           /* M6: lista agrupada por setor (padrão ligado) */
+    var testeDispensada = false;   /* M6: a faixa da conta de teste foi dispensada nesta visita */
 
     var toolbar = document.getElementById('us-toolbar');
     var stage = document.getElementById('us-stage');
@@ -408,8 +781,14 @@
     function load() {
       toolbar.hidden = true;
       renderLoading();
+      /* M6: carrega pessoas e setores juntos. Se os setores falharem, a tela
+         continua: o agrupamento cai para as siglas encontradas nas pessoas. */
       Store.list().then(function (rows) {
         ALL = rows;
+        return Store.setoresTodos().then(function (arr) {
+          SETORES = arr || [];
+        }).catch(function () { SETORES = []; });
+      }).then(function () {
         renderList();
       }).catch(function (e) { renderError(e); });
     }
@@ -463,31 +842,63 @@
     }
     function row(u) {
       var isSelf = u.uid === CURRENT_USER.uid;
-      var r = txt('div', 'us-row' + (u.ativo ? '' : ' inactive'));
+      /* #40: UMA leitura do campo para a linha inteira (classe, etiqueta, botão),
+         pela regra do guard.js — ver L.situacaoAcesso. */
+      var acesso = L.situacaoAcesso(u);
+      var r = txt('div', 'us-row' + (acesso.ativo ? '' : ' inactive') + (acesso.aviso ? ' us-row-aviso' : ''));
       r.appendChild(UI.avatar({ initials: initialsOf(u.nome), size: 38 }));
 
       var meta = txt('div', 'us-meta');
       meta.appendChild(txt('div', 'us-nm', u.nome || '(sem nome)'));
       meta.appendChild(txt('div', 'us-em', u.email || ''));
+      var efetivo = L.perfilEfetivo(u.perfil);
       var lin = [];
       if (u.setor) { lin.push('Setor: ' + u.setor); }
-      if (u.perfil === 'lider' && Array.isArray(u.setoresLiderados) && u.setoresLiderados.length) { lin.push('Lidera: ' + u.setoresLiderados.join(', ')); }
-      if (u.perfil === 'gestor' && u.socio === true) { lin.push('Sócio (assina alçada >R$200)'); }
+      if (efetivo === 'lider' && Array.isArray(u.setoresLiderados) && u.setoresLiderados.length) { lin.push('Lidera: ' + u.setoresLiderados.join(', ')); }
       if (lin.length) { meta.appendChild(txt('div', 'us-em', lin.join('  ·  '))); }
       r.appendChild(meta);
 
       if (isSelf) { r.appendChild(txt('span', 'us-you', 'VOCÊ')); }
+      if (efetivo === 'gestor' && u.socio === true) { r.appendChild(txt('span', 'us-socio', 'SÓCIO')); }
       r.appendChild(badge(u.perfil));
-      r.appendChild(statusTag(u.ativo !== false));
+      r.appendChild(statusTag(acesso.ativo));
+      /* #40: cadastro sem o campo (ou com valor fora do padrão) diz POR QUE está
+         inativo — ninguém o desativou, e sem isto o gestor não entende por que
+         a pessoa não entra. Vem logo depois da etiqueta na leitura de tela e,
+         pelo CSS, ocupa a linha de baixo inteira (não espreme o nome no celular). */
+      if (acesso.aviso) {
+        var why = txt('div', 'us-why');
+        var whyIco = ico(PATH.alert, 14);
+        whyIco.setAttribute('aria-hidden', 'true'); /* decorativo: o texto ao lado já diz tudo */
+        why.appendChild(whyIco);
+        why.appendChild(txt('span', null, 'Inativo: ' + acesso.aviso + '. Use "' + acesso.acao + '" para liberar a entrada.'));
+        r.appendChild(why);
+      }
 
       var act = txt('div', 'us-actions');
+
+      /* M6 · marca de sócio direto na linha, só para quem tem perfil Gestor
+         (inclusive o legado Admin). Quem vê esta tela já é Gestor, mas a regra
+         fica na função para valer também se a tela abrir para outro perfil. */
+      if (efetivo === 'gestor') {
+        var permissao = L.podeMarcarSocio(CURRENT_USER, u);
+        var soc = txt('button', 'us-ibtn socio' + (u.socio === true ? ' on' : '') + (permissao.pode ? '' : ' off'));
+        soc.title = u.socio === true ? 'Tirar a marca de sócio' : 'Marcar como sócio';
+        soc.appendChild(ico(PATH.socio, 16));
+        soc.addEventListener('click', function () {
+          if (!permissao.pode) { toast(permissao.motivo, 'err'); return; }
+          toggleSocio(u);
+        });
+        act.appendChild(soc);
+      }
+
       var edit = txt('button', 'us-ibtn'); edit.title = 'Editar'; edit.appendChild(ico(PATH.pencil, 16));
       edit.addEventListener('click', function () { openEditor(u.uid); });
       act.appendChild(edit);
 
-      var tgl = txt('button', 'us-ibtn' + (u.ativo ? ' danger' : '') + (isSelf ? ' off' : ''));
-      tgl.title = isSelf ? 'Você não pode desativar o seu próprio acesso' : (u.ativo ? 'Desativar' : 'Reativar');
-      tgl.appendChild(ico(u.ativo ? PATH.archive : PATH.restore, 16));
+      var tgl = txt('button', 'us-ibtn' + (acesso.ativo ? ' danger' : '') + (isSelf ? ' off' : ''));
+      tgl.title = isSelf ? 'Você não pode desativar o seu próprio acesso' : acesso.acao;
+      tgl.appendChild(ico(acesso.ativo ? PATH.archive : PATH.restore, 16));
       tgl.addEventListener('click', function () { if (isSelf) { toast('Você não pode desativar o seu próprio acesso.', 'err'); return; } toggleAtivo(u); });
       act.appendChild(tgl);
 
@@ -495,9 +906,47 @@
       return r;
     }
 
+    /* M6: faixa que oferece desativar a conta de teste que ainda está ativa
+       (ex.: "Bruno Fellows Usuário teste"). Nunca apaga — só desativa. */
+    function faixaTeste() {
+      if (testeDispensada) { return null; }
+      var alvo = null, i;
+      for (i = 0; i < ALL.length; i++) {
+        /* #40: "ainda ativa" = entra no sistema (ativo === true), como no guard.js */
+        if (L.estaAtivo(ALL[i]) && L.ehContaDeTeste(ALL[i])) { alvo = ALL[i]; break; }
+      }
+      if (!alvo) { return null; }
+      var f = txt('div', 'us-faixa');
+      var ic = txt('span', 'ic'); ic.appendChild(ico(PATH.alert, 20)); f.appendChild(ic);
+      var tx = txt('div', 'tx', 'Conta de teste ainda ativa: "' + (alvo.nome || alvo.email || alvo.uid) + '"');
+      tx.appendChild(txt('span', null, 'Conta de teste entra na contagem e pode virar dono de tarefa por engano. Desativar guarda o registro inteiro: nada é apagado e dá para reativar depois.'));
+      f.appendChild(tx);
+      f.appendChild(UI.button({ label: 'Desativar esta conta', icon: 'check', onClick: function () { pedirDesativar(alvo); } }));
+      f.appendChild(UI.button({ label: 'Agora não', variant: 'ghost', onClick: function () { testeDispensada = true; renderList(); } }));
+      return f;
+    }
+
+    function cabecalhoGrupo(g) {
+      var h = txt('div', 'us-ghead');
+      h.appendChild(txt('span', 'us-gnome', g.nome));
+      if (g.sigla) { h.appendChild(txt('span', 'us-gsigla', g.sigla)); }
+      var sub = txt('div', 'us-gsub');
+      if (g.usuarios.length) {
+        sub.appendChild(txt('b', null, String(g.usuarios.length)));
+        sub.appendChild(document.createTextNode(' ' + (g.usuarios.length === 1 ? 'pessoa' : 'pessoas')));
+      } else {
+        sub.appendChild(document.createTextNode('nenhuma pessoa'));
+      }
+      h.appendChild(sub);
+      return h;
+    }
+
     function renderList() {
-      var vis = showInactive ? ALL : ALL.filter(function (u) { return u.ativo !== false; });
-      var inativos = ALL.filter(function (u) { return u.ativo === false; }).length;
+      /* #40: a lista e a contagem do topo usavam "!== false" e "=== false", e o
+         cadastro sem o campo contava como ativo sem conseguir entrar. Agora os
+         dois lados saem da mesma regra, e ativos + inativos = total de cadastros. */
+      var vis = showInactive ? ALL : ALL.filter(function (u) { return L.estaAtivo(u); });
+      var inativos = ALL.filter(function (u) { return !L.estaAtivo(u); }).length;
 
       toolbar.hidden = false;
       var count = document.getElementById('us-count');
@@ -508,27 +957,115 @@
       var sw = document.getElementById('us-showinactive'); sw.innerHTML = '';
       sw.appendChild(UI.checkbox({ checked: showInactive, label: 'Mostrar inativos', onToggle: function (v) { showInactive = v; renderList(); } }));
 
+      var gp = document.getElementById('us-groupsetor'); gp.innerHTML = '';
+      gp.appendChild(UI.checkbox({ checked: porSetor, label: 'Separar por setor', onToggle: function (v) { porSetor = v; renderList(); } }));
+
+      var lb = document.getElementById('us-lotebtn'); lb.innerHTML = '';
+      lb.appendChild(UI.button({ label: 'Cadastrar em lote', variant: 'ghost', icon: 'upload', onClick: function () { openLote(); } }));
+
       var nb = document.getElementById('us-newbtn'); nb.innerHTML = '';
       nb.appendChild(UI.button({ label: 'Adicionar usuário', icon: 'plus', onClick: function () { openEditor(null); } }));
 
       stage.innerHTML = '';
-      if (!vis.length) {
+      var faixa = faixaTeste();
+      if (faixa) { stage.appendChild(faixa); }
+
+      if (!ALL.length) {
         var box = txt('div', 'us-msg');
         var ic = txt('div', 'us-msg-ic'); ic.appendChild(ico(PATH.users, 22)); box.appendChild(ic);
-        box.appendChild(txt('div', 'us-msg-t', 'Nenhum usuário para mostrar'));
-        box.appendChild(txt('div', 'us-msg-p', inativos ? 'Há usuários inativos. Marque "Mostrar inativos" para vê-los.' : 'Clique em "Adicionar usuário" para liberar o primeiro acesso.'));
+        box.appendChild(txt('div', 'us-msg-t', 'Ninguém cadastrado ainda'));
+        box.appendChild(txt('div', 'us-msg-p', 'Use "Adicionar usuário" para liberar o primeiro acesso, ou "Cadastrar em lote" para conferir uma equipe inteira de uma vez.'));
         stage.appendChild(box);
         return;
       }
-      var list = txt('div', 'us-list');
-      vis.forEach(function (u) { list.appendChild(row(u)); });
-      stage.appendChild(list);
+      if (!vis.length) {
+        var box2 = txt('div', 'us-msg');
+        var ic2 = txt('div', 'us-msg-ic'); ic2.appendChild(ico(PATH.users, 22)); box2.appendChild(ic2);
+        box2.appendChild(txt('div', 'us-msg-t', 'Nenhum usuário para mostrar'));
+        box2.appendChild(txt('div', 'us-msg-p', 'Todos os cadastros estão inativos. Marque "Mostrar inativos" para vê-los.'));
+        stage.appendChild(box2);
+        return;
+      }
+
+      if (!porSetor) {
+        var list = txt('div', 'us-list');
+        vis.forEach(function (u) { list.appendChild(row(u)); });
+        stage.appendChild(list);
+        return;
+      }
+
+      /* agrupado: o setor sem ninguém continua na tela, com o vazio da regra */
+      var grupos = L.agruparPorSetor(vis, SETORES);
+      grupos.forEach(function (g) {
+        var bloco = txt('div', 'us-grupo' + (g.pai ? ' us-gfilho' : ''));
+        bloco.appendChild(cabecalhoGrupo(g));
+        if (!g.usuarios.length) {
+          var vazio = txt('div', 'us-gvazio');
+          vazio.appendChild(txt('b', null, 'Sem equipe cadastrada'));
+          vazio.appendChild(document.createTextNode(' · Ninguém neste setor ainda. Use "Adicionar usuário" ou "Cadastrar em lote".'));
+          bloco.appendChild(vazio);
+        } else {
+          var lista = txt('div', 'us-list');
+          g.usuarios.forEach(function (u) { lista.appendChild(row(u)); });
+          bloco.appendChild(lista);
+        }
+        stage.appendChild(bloco);
+      });
+    }
+
+    /* M6: desativar sempre passa por confirmação e explica que nada é apagado. */
+    function pedirDesativar(u) {
+      if (!CAN_VIEW) { return; }
+      if (u.uid === CURRENT_USER.uid) { toast('Você não pode desativar o seu próprio acesso.', 'err'); return; }
+      var m = UI.modal({
+        title: 'Desativar ' + (u.nome || 'usuário'),
+        width: 420,
+        body: function () {
+          var p = txt('div', 'us-passo');
+          p.appendChild(txt('div', null, 'Quem está desativado não consegue mais entrar no sistema.'));
+          var ol = document.createElement('ol');
+          ol.appendChild(txt('li', null, 'O cadastro continua guardado — nada é apagado.'));
+          ol.appendChild(txt('li', null, 'O histórico do que a pessoa fez continua no lugar.'));
+          ol.appendChild(txt('li', null, 'Dá para reativar a qualquer momento, aqui mesmo.'));
+          p.appendChild(ol);
+          return p;
+        },
+        footer: function (close) {
+          var cancelar = UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close });
+          var ok = UI.button({ label: 'Desativar', icon: 'check', onClick: function () { close(); aplicarAtivo(u, false); } });
+          return [cancelar, ok];
+        }
+      });
+      return m;
+    }
+
+    function aplicarAtivo(u, ativo) {
+      /* #40: quem nunca teve o campo ativo não foi "reativado": foi ativado agora */
+      var verbo = L.situacaoAcesso(u).acao === 'Reativar' ? 'reativado' : 'ativado';
+      Store.setAtivo(u.uid, ativo).then(function () {
+        toast(ativo ? ('Acesso de "' + u.nome + '" ' + verbo + '.') : ('Acesso de "' + u.nome + '" desativado. O cadastro continua guardado.'));
+        refresh();
+      }).catch(function (e) { toast((e && e.message) || 'Erro ao alterar.', 'err'); });
     }
 
     function toggleAtivo(u) {
       if (!CAN_VIEW) { return; }
-      Store.setAtivo(u.uid, !u.ativo).then(function () {
-        toast(u.ativo ? ('Acesso de "' + u.nome + '" desativado.') : ('Acesso de "' + u.nome + '" reativado.'));
+      /* #40: era "u.ativo === false". No cadastro sem o campo, o botão dizia
+         "Reativar" e o clique abria o modal de DESATIVAR. */
+      if (!L.estaAtivo(u)) { aplicarAtivo(u, true); return; }
+      pedirDesativar(u);
+    }
+
+    /* M6: marcar/desmarcar sócio — só gestor, só sobre quem tem perfil Gestor. */
+    function toggleSocio(u) {
+      if (!CAN_VIEW) { return; }
+      var permissao = L.podeMarcarSocio(CURRENT_USER, u);
+      if (!permissao.pode) { toast(permissao.motivo, 'err'); return; }
+      var virando = !(u.socio === true);
+      Store.update(u.uid, { socio: virando }).then(function () {
+        toast(virando
+          ? ('"' + u.nome + '" agora assina como sócio.')
+          : ('"' + u.nome + '" não assina mais como sócio.'));
         refresh();
       }).catch(function (e) { toast((e && e.message) || 'Erro ao alterar.', 'err'); });
     }
@@ -541,9 +1078,10 @@
       if (editing && !cur) { return; }
       var isSelf = editing && cur.uid === CURRENT_USER.uid;
 
-      var uidInput = UI.input({ value: editing ? cur.uid : '', placeholder: 'Cole o UID do Authentication', disabled: editing });
-      var uidField = UI.field({ label: 'UID (Authentication)', required: !editing, control: uidInput,
-        hint: editing ? 'O UID identifica a conta e não muda.' : 'No Console → Authentication, copie o UID da conta já criada. É a chave que liga o login a este perfil.' });
+      var uidInput = UI.input({ value: editing ? cur.uid : '', placeholder: 'Cole o código do login (UID)', disabled: editing });
+      var uidField = UI.field({ label: 'Código do login (UID)', required: !editing, control: uidInput,
+        hint: editing ? 'É o código que liga o login a este cadastro. Não muda.'
+          : 'Crie o login antes, no Console do Firebase (Authentication → Users → Add user), com o e-mail e uma senha provisória. Depois copie o código (UID) da conta criada e cole aqui. O sistema não cria login pelo navegador.' });
 
       var emailInput = UI.input({ value: editing ? cur.email : '', placeholder: 'pessoa@grautecnico.com.br' });
       var emailField = UI.field({ label: 'E-mail', required: true, control: emailInput, hint: 'Use o mesmo e-mail da conta no Authentication.' });
@@ -563,7 +1101,7 @@
       var socioState = editing ? (cur.socio === true) : false;
       var socioChk = UI.checkbox({ checked: socioState, label: 'É sócio', onToggle: function (v) { socioState = v; } });
       var socioField = UI.field({ label: 'Alçada', control: socioChk,
-        hint: 'Sócio assina a 2ª aprovação de itens de planejamento acima de R$ 200 (gestor + sócio). Sócio-gestor não é um perfil novo: é o Gestor com esta marca.' });
+        hint: 'Sócio assina a 2ª aprovação de itens de planejamento acima de R$ 200 (gestor + sócio) e é quem responde pelo setor SOC. Gestor sem esta marca é quem responde pelo GES. Sócio não é um perfil novo: é o Gestor com esta marca.' });
       socioField.style.display = 'none';
       function updateSocioVisibility(perfilVal) {
         socioField.style.display = (perfilVal === 'gestor') ? '' : 'none';
@@ -638,11 +1176,18 @@
       }
       renderSetorSelect(); /* F1-C: campo Setor visível para todo perfil, desde a abertura */
 
-      var ativoState = editing ? (cur.ativo !== false) : true;
+      /* #40: a caixa abre como a lista mostra (ativo === true). Com "!== false",
+         o cadastro sem o campo abria MARCADO e um simples Salvar gravava ativo:true
+         calado — liberava o login de quem a lista mostrava como Inativo. */
+      var acessoAtual = editing ? L.situacaoAcesso(cur) : null;
+      var ativoState = editing ? acessoAtual.ativo : true;
       var ativoField = null;
       if (editing && !isSelf) {
-        var chk = UI.checkbox({ checked: cur.ativo !== false, label: 'Usuário ativo', onToggle: function (v) { ativoState = v; } });
-        ativoField = UI.field({ label: 'Situação', control: chk, hint: 'Inativos não conseguem entrar; o registro é preservado.' });
+        var chk = UI.checkbox({ checked: acessoAtual.ativo, label: 'Usuário ativo', onToggle: function (v) { ativoState = v; } });
+        ativoField = UI.field({ label: 'Situação', control: chk,
+          hint: acessoAtual.aviso
+            ? ('Hoje está inativo: ' + acessoAtual.aviso + '. Marque e salve para liberar a entrada.')
+            : 'Inativos não conseguem entrar; o registro é preservado.' });
       }
 
       var bodyFields = [uidField, nomeField, emailField, perfilField, socioField, setorField, liderField]; if (ativoField) { bodyFields.push(ativoField); }
@@ -673,8 +1218,10 @@
         var nome = nomeInput.value.trim();
         var perfil = isSelf ? cur.perfil : (perfilSelect.value || '');
         var setorVal = setorSel ? (setorSel.value || '') : '';
-        var setoresLid = (perfil === 'lider') ? liderState.slice() : [];
-        var socioVal = (perfil === 'gestor') ? socioState : false;
+        /* M6: perfil EFETIVO — quem está no banco como "Admin"/"Editor" não pode
+           perder a marca de sócio nem os setores liderados ao salvar. */
+        var setoresLid = (L.perfilEfetivo(perfil) === 'lider') ? liderState.slice() : [];
+        var socioVal = (L.perfilEfetivo(perfil) === 'gestor') ? socioState : false;
         var ok = true;
         if (!editing && !RX_UID.test(uidVal)) { setErr(uidField, 'Cole um UID válido (sem espaços).'); ok = false; }
         if (!RX_EMAIL.test(email)) { setErr(emailField, 'Informe um e-mail válido.'); ok = false; }
@@ -703,6 +1250,204 @@
           else { toast((e && e.message) || 'Erro ao salvar.', 'err'); }
         });
       }
+    }
+
+    /* ===================== cadastro em lote ===================== */
+    function copiarTexto(t) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(t).then(function () { toast('Copiado.'); },
+          function () { toast('Não consegui copiar. Selecione o texto e copie na mão.', 'err'); });
+        return;
+      }
+      var a = document.createElement('textarea');
+      a.value = t; a.setAttribute('style', 'position:fixed;left:-9999px;top:0');
+      document.body.appendChild(a); a.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(a);
+      toast(ok ? 'Copiado.' : 'Não consegui copiar. Selecione o texto e copie na mão.', ok ? '' : 'err');
+    }
+
+    function openLote() {
+      if (!CAN_VIEW) { return; }
+      var analise = null;        /* resultado de L.analisarLote */
+      var campos = [];           /* [{ reg, input }] das linhas prontas */
+      var gravarBtn = null;
+
+      var ta = document.createElement('textarea');
+      ta.className = 'us-ta';
+      ta.setAttribute('spellcheck', 'false');
+      ta.placeholder = 'Antonia Souza; antonia@grautecnico.com.br; lider; SEC\nKamile Lima; kamile@grautecnico.com.br; lider; CRA\nJoao Pereira; joao@grautecnico.com.br; usuario; SEC';
+
+      var passo = txt('div', 'us-passo');
+      passo.appendChild(txt('div', null, 'Uma pessoa por linha, com quatro partes separadas por ponto e vírgula: nome, e-mail, perfil (gestor, lider ou usuario) e sigla do setor.'));
+      var ol = document.createElement('ol');
+      ol.appendChild(txt('li', null, 'Cole a lista e clique em "Conferir a lista". Nada é gravado nesta etapa.'));
+      ol.appendChild(txt('li', null, 'Crie o login de cada pessoa no Console do Firebase (Authentication → Users → Add user, com e-mail e uma senha provisória). O sistema não cria login pelo navegador.'));
+      ol.appendChild(txt('li', null, 'Copie o código do login (UID) de cada pessoa e cole no campo da linha correspondente.'));
+      ol.appendChild(txt('li', null, 'Clique em "Gravar os prontos". Só as linhas com código de login preenchido são gravadas; o resto continua aqui esperando.'));
+      passo.appendChild(ol);
+
+      var previa = document.createElement('div');
+
+      function atualizarBotao() {
+        if (!gravarBtn) { return; }
+        var n = 0, i;
+        for (i = 0; i < campos.length; i++) {
+          if (campos[i].reg.estado === 'novo' && L.uidValido(campos[i].input.value)) { n++; }
+        }
+        var rot = gravarBtn.querySelector('span:last-child');
+        if (rot) { rot.textContent = n ? ('Gravar os prontos (' + n + ')') : 'Gravar os prontos'; }
+        gravarBtn.disabled = (n === 0);
+      }
+
+      function linhaPreview(reg) {
+        var estadoCls = reg.estado === 'erro' ? ' erro' : (reg.estado === 'ja_existe' ? ' ja' : ' pronto');
+        var el = txt('div', 'us-pl' + estadoCls);
+        var cab = txt('div', 'us-plh');
+        cab.appendChild(txt('span', 'us-pn', 'linha ' + reg.linha));
+        cab.appendChild(txt('span', 'us-pnome', reg.valor.nome || '(sem nome)'));
+        cab.appendChild(txt('span', 'us-pmail', reg.valor.email || ''));
+        if (reg.valor.perfil) { cab.appendChild(txt('span', 'us-pchip', perfilLabel(reg.valor.perfil))); }
+        if (reg.valor.setor) { cab.appendChild(txt('span', 'us-pchip', reg.valor.setor)); }
+        if (reg.estado === 'erro') { cab.appendChild(txt('span', 'us-pchip bad', 'CORRIGIR')); }
+        else if (reg.estado === 'ja_existe') { cab.appendChild(txt('span', 'us-pchip', 'JÁ CADASTRADO')); }
+        else if (reg.estado === 'gravado') { cab.appendChild(txt('span', 'us-pchip ok', 'GRAVADO')); }
+        else if (reg.avisos.length) { cab.appendChild(txt('span', 'us-pchip warn', 'CONFERIR')); }
+        else { cab.appendChild(txt('span', 'us-pchip ok', 'PRONTO')); }
+        el.appendChild(cab);
+
+        var i;
+        for (i = 0; i < reg.erros.length; i++) { el.appendChild(txt('div', 'us-pmsg', reg.erros[i])); }
+        if (reg.estado === 'ja_existe' && reg.jaExiste) {
+          el.appendChild(txt('div', 'us-pnota', 'Este e-mail já é de "' + reg.jaExiste.nome + '". A linha é ignorada para não criar cadastro duplicado.'));
+        }
+        for (i = 0; i < reg.avisos.length; i++) {
+          el.appendChild(txt('div', 'us-pwarn',
+            'Parecido com "' + reg.avisos[i].nome + '"' + (reg.avisos[i].setor ? ' (' + reg.avisos[i].setor + ')' : '') +
+            ' — ' + reg.avisos[i].motivo + '. Confira se não é a mesma pessoa; se forem pessoas diferentes, siga em frente.'));
+        }
+        if (reg.estado === 'novo' && reg.valor.perfil === 'lider') {
+          el.appendChild(txt('div', 'us-pnota', 'Depois de gravar, abra esta pessoa e marque quais setores ela lidera.'));
+        }
+        if (reg.estado === 'novo') {
+          var box = txt('div', 'us-puid');
+          box.appendChild(txt('span', 'rot', 'Código do login (UID):'));
+          var inp = UI.input({ placeholder: 'cole aqui o UID do Console', onInput: function () { atualizarBotao(); } });
+          box.appendChild(inp);
+          el.appendChild(box);
+          campos.push({ reg: reg, input: inp });
+        }
+        return el;
+      }
+
+      function renderPrevia() {
+        campos = [];
+        previa.innerHTML = '';
+        if (!analise) { return; }
+        if (!analise.linhas.length) {
+          var vazio = txt('div', 'us-gvazio');
+          vazio.appendChild(txt('b', null, 'Nada para conferir'));
+          vazio.appendChild(document.createTextNode('Cole pelo menos uma linha com nome, e-mail, perfil e setor.'));
+          previa.appendChild(vazio);
+          atualizarBotao();
+          return;
+        }
+        /* recontagem a cada desenho: depois de gravar, os estados mudam */
+        var r = { prontos: 0, comAviso: 0, erros: 0, jaExistem: 0, gravados: 0 }, k;
+        for (k = 0; k < analise.linhas.length; k++) {
+          var est = analise.linhas[k].estado;
+          if (est === 'erro') { r.erros++; }
+          else if (est === 'ja_existe') { r.jaExistem++; }
+          else if (est === 'gravado') { r.gravados++; }
+          else { r.prontos++; if (analise.linhas[k].avisos.length) { r.comAviso++; } }
+        }
+        var res = txt('div', 'us-resumo');
+        var b1 = txt('span', 'ok'); b1.appendChild(txt('b', null, String(r.prontos))); b1.appendChild(document.createTextNode(' pronto(s)')); res.appendChild(b1);
+        var b2 = txt('span', 'warn'); b2.appendChild(txt('b', null, String(r.comAviso))); b2.appendChild(document.createTextNode(' para conferir')); res.appendChild(b2);
+        var b3 = txt('span', 'bad'); b3.appendChild(txt('b', null, String(r.erros))); b3.appendChild(document.createTextNode(' para corrigir')); res.appendChild(b3);
+        var b4 = txt('span'); b4.appendChild(txt('b', null, String(r.jaExistem))); b4.appendChild(document.createTextNode(' já cadastrado(s)')); res.appendChild(b4);
+        if (r.gravados) {
+          var b5 = txt('span', 'ok'); b5.appendChild(txt('b', null, String(r.gravados))); b5.appendChild(document.createTextNode(' gravado(s)')); res.appendChild(b5);
+        }
+        previa.appendChild(res);
+
+        var lista = txt('div', 'us-prev');
+        analise.linhas.forEach(function (reg) { lista.appendChild(linhaPreview(reg)); });
+        previa.appendChild(lista);
+
+        if (r.prontos) {
+          var acts = txt('div', 'us-loteacts');
+          acts.appendChild(UI.button({ label: 'Copiar os e-mails para criar o login', variant: 'ghost', onClick: function () {
+            var mails = [], i;
+            for (i = 0; i < analise.linhas.length; i++) {
+              if (analise.linhas[i].estado === 'novo') { mails.push(analise.linhas[i].valor.email); }
+            }
+            copiarTexto(mails.join('\n'));
+          } }));
+          previa.appendChild(acts);
+        }
+        atualizarBotao();
+      }
+
+      function conferir() {
+        analise = L.analisarLote(ta.value, { setores: SETORES, existentes: ALL });
+        renderPrevia();
+      }
+
+      function gravar() {
+        var fila = [], i;
+        for (i = 0; i < campos.length; i++) {
+          if (campos[i].reg.estado === 'novo' && L.uidValido(campos[i].input.value)) {
+            fila.push({ reg: campos[i].reg, uid: L.limpar(campos[i].input.value) });
+          }
+        }
+        if (!fila.length) { return; }
+        gravarBtn.disabled = true;
+        var gravados = 0, comProblema = 0;
+        var p = Promise.resolve();
+        fila.forEach(function (item) {
+          p = p.then(function () {
+            return Store.create({
+              uid: item.uid, email: item.reg.valor.email, nome: item.reg.valor.nome,
+              perfil: item.reg.valor.perfil, setor: item.reg.valor.setor,
+              setoresLiderados: [], socio: false
+            }).then(function () {
+              gravados++;
+              item.reg.estado = 'gravado';
+              item.reg.avisos = [];
+            }).catch(function (e) {
+              comProblema++;
+              item.reg.estado = 'erro';
+              item.reg.erros = [(e && e.message) || 'Não consegui gravar esta linha.'];
+            });
+          });
+        });
+        p.then(function () {
+          refresh();
+          if (comProblema) {
+            renderPrevia();
+            toast(gravados + ' gravado(s) · ' + comProblema + ' com problema. Veja as linhas em vermelho.', 'err');
+          } else {
+            m.close();
+            toast(gravados === 1 ? '1 pessoa cadastrada.' : (gravados + ' pessoas cadastradas.'));
+          }
+        });
+      }
+
+      var m = UI.modal({
+        title: 'Cadastrar em lote',
+        width: 720,
+        body: [passo, ta, previa],
+        footer: function (close) {
+          var cancelar = UI.button({ label: 'Fechar', variant: 'ghost', onClick: close });
+          var conf = UI.button({ label: 'Conferir a lista', icon: 'search', onClick: conferir });
+          gravarBtn = UI.button({ label: 'Gravar os prontos', icon: 'check', onClick: gravar });
+          gravarBtn.disabled = true;
+          return [cancelar, conf, gravarBtn];
+        }
+      });
+      return m;
     }
 
     /* ===================== identidade real ===================== */

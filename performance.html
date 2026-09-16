@@ -222,6 +222,8 @@
   var LOG = [];           /* atividade_log recente (query global única) */
   var BOARD = [];         /* C4: board expandido retido p/ o drill-down (zero query extra) */
   var HOJE = null;        /* C4: dia civil LOCAL da última carga */
+  var CTX = null;         /* 16/09 · #35: contexto inteiro da última carga (board + ativ) — base do recorte por setor */
+  var SIGLAS = [];        /* 16/09 · #34/#35: siglas de POSSE presentes na janela = os chips */
 
   function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
   function txt(tag, cls, text) { var e = document.createElement(tag); if (cls) { e.className = cls; } e.textContent = text == null ? '' : text; return e; }
@@ -250,11 +252,19 @@
   }
   function openPop(ev, d) {
     POP.innerHTML = '';
-    POP.appendChild(el('<div class="pf-pop-t">' + d.title + '</div>'));
+    /* 16/09 · #42: título e valores do "i" entram por textContent, nunca
+       concatenados em HTML (mesmo padrão RAIO-X da Inteligência). O título
+       do ranking é 'Nota de ' + b.nome, e o nome vem cru de
+       atividades.responsavelNome (lente Usuário) ou é a própria sigla gravada
+       na atividade (lente Setor) — as Regras não validam nenhum dos dois.
+       Com innerHTML, 'M&A <Silva>' perdia o sobrenome (virava tag) e um
+       '<img src=x onerror=...>' gravado por um líder rodava script na sessão
+       do gestor no clique do "i". */
+    POP.appendChild(txt('div', 'pf-pop-t', d.title));
     [['FÓRMULA', d.formula], ['DADOS / COLUNAS', d.dados], ['NÚMEROS DESTE CÁLCULO', d.numeros]].forEach(function (r) {
       var row = el('<div class="pf-pop-row"></div>');
-      row.appendChild(el('<div class="pf-pop-k">' + r[0] + '</div>'));
-      row.appendChild(el('<div class="pf-pop-v">' + r[1] + '</div>'));
+      row.appendChild(txt('div', 'pf-pop-k', r[0]));
+      row.appendChild(txt('div', 'pf-pop-v', r[1]));
       POP.appendChild(row);
     });
     BACK.classList.add('on'); POP.classList.add('on');
@@ -282,41 +292,129 @@
   };
   function acaoLabel(a) { return ACOES[a] || (a || 'ação'); }
 
-  /* ---------- "i" das colunas (fórmula + dados + agregado do recorte) ---------- */
-  function colInfos(lista) {
+  /* ---------- "i" das colunas (fórmula + dados + agregado do recorte) ----------
+     16/09 · #14/#35: rec = descreverRecorte(FILTRO). O "i" diz qual recorte
+     alimentou o número — sem isso o gestor não tinha como saber que, com o
+     chip aceso, a conta é só do setor. */
+  function colInfos(lista, rec) {
     var tPrev = 0, tConcl = 0, tCT = 0, tNP = 0, tPar = 0, tCarga = 0, tRe = 0, tTot = 0;
     lista.forEach(function (p) {
       tPrev += p.previstas; tConcl += p.concluidasAteHoje; tCT += p.concluidasTotal;
       tNP += p.noPrazo; tPar += p.pares; tCarga += p.carga; tRe += p.reprogramadas; tTot += p.total;
     });
+    var sufixo = ' · ' + rec.texto;
     return {
-      score: { title: 'Nota da pessoa (0–100)', formula: 'nota = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − atraso médio×12,5). Pesos declarados: aderência 50 · atrasadas 30 · atraso 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho. Sem previstas na janela → sem nota (—).', dados: 'ocorrências da pessoa na janela (mesmo motor da Inteligência)', numeros: lista.length + ' pessoa(s) no recorte; ordenado do pior para o melhor (onde agir primeiro)' },
-      ader: { title: 'Aderência à rotina', formula: 'concluídas até hoje ÷ previstas até hoje × 100 (previstas exclui puladas)', dados: 'ocorrências da pessoa com data efetiva ≤ hoje', numeros: 'recorte: ' + tConcl + ' ÷ ' + tPrev + ' previstas' },
-      prazo: { title: 'Conclusão no prazo', formula: 'concluídas com DIA CIVIL LOCAL (Salvador) da conclusão ≤ data efetiva ÷ concluídas × 100', dados: 'ocorrências concluídas: concluidaEm (carimbo real) × data efetiva', numeros: 'recorte: ' + tNP + ' no prazo de ' + tCT + ' concluída(s)' },
-      ciclo: { title: 'Tempo de ciclo', formula: 'média(concluidaEm − iniciadaEm) em dias — SÓ quando os dois carimbos existem; sem o par → "—" (nunca inventa)', dados: 'ocorrências com iniciadaEm E concluidaEm', numeros: 'recorte: ' + tPar + ' par(es) medido(s)' },
-      carga: { title: 'Carga (WIP)', formula: 'ocorrências abertas (pendente + em andamento + reprogramada) atribuídas à pessoa na janela', dados: 'status das ocorrências', numeros: 'recorte: ' + tCarga + ' aberta(s)' },
-      reprog: { title: 'Reprogramação', formula: 'reprogramadas ÷ total de ocorrências da pessoa × 100', dados: 'status das ocorrências da janela', numeros: 'recorte: ' + tRe + ' ÷ ' + tTot }
+      score: { title: 'Nota da pessoa (0–100)', formula: 'nota = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − atraso médio×12,5). Pesos declarados: aderência 50 · atrasadas 30 · atraso 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho. Sem previstas na janela → sem nota (—).', dados: 'ocorrências da pessoa na janela (mesmo motor da Inteligência)' + sufixo, numeros: lista.length + ' pessoa(s) no recorte (' + rec.rotulo + '); ordenado do pior para o melhor (onde agir primeiro)' },
+      ader: { title: 'Aderência à rotina', formula: 'concluídas até hoje ÷ previstas até hoje × 100 (previstas exclui puladas)', dados: 'ocorrências com data efetiva ≤ hoje' + sufixo, numeros: rec.rotulo + ': ' + tConcl + ' ÷ ' + tPrev + ' previstas' },
+      prazo: { title: 'Conclusão no prazo', formula: 'concluídas com DIA CIVIL LOCAL (Salvador) da conclusão ≤ data efetiva ÷ concluídas × 100', dados: 'ocorrências concluídas: concluidaEm (carimbo real) × data efetiva' + sufixo, numeros: rec.rotulo + ': ' + tNP + ' no prazo de ' + tCT + ' concluída(s)' },
+      ciclo: { title: 'Tempo de ciclo', formula: 'média(concluidaEm − iniciadaEm) em dias — SÓ quando os dois carimbos existem; sem o par → "—" (nunca inventa)', dados: 'ocorrências com iniciadaEm E concluidaEm' + sufixo, numeros: rec.rotulo + ': ' + tPar + ' par(es) medido(s)' },
+      carga: { title: 'Carga (WIP)', formula: 'ocorrências abertas (pendente + em andamento + reprogramada) atribuídas à pessoa na janela', dados: 'status das ocorrências' + sufixo, numeros: rec.rotulo + ': ' + tCarga + ' aberta(s)' },
+      reprog: { title: 'Reprogramação', formula: 'reprogramadas ÷ total de ocorrências da pessoa × 100', dados: 'status das ocorrências da janela' + sufixo, numeros: rec.rotulo + ': ' + tRe + ' ÷ ' + tTot }
     };
   }
 
-  /* ---------- filtro por setor ---------- */
-  function chipsSetores(pp) {
+  /* ---------- filtro por setor: recorte por POSSE da ocorrência ----------
+     16/09 · #35 — o chip de setor significa "desempenho DENTRO do setor".
+     Antes ele filtrava PESSOAS: bastava a sigla aparecer em alguma ocorrência
+     da pessoa para ela entrar com TODOS os números dela. Cenário do defeito:
+     Ana, com 1 ocorrência do PED concluída no prazo, 30 do ADM atrasadas e 10
+     do ADM concluídas fora do prazo, aparecia no grupo Crítico do PED com
+     "● 30", e o herói "Conclusão no prazo" do PED caía de 100% (5 de 5) para
+     33% (5 de 15). Agora o chip recorta OCORRÊNCIAS pela POSSE da atividade —
+     setorSigla (o setor dono, que o editor exige) ou subsetorSigla —, a régua
+     que o dono decidiu em 16/09 para o recorte da Inteligência e da
+     Performance. setorSiglas ("aparece em") e todosSetores são VITRINE: dizem
+     onde a atividade é vista, não de quem ela é, e não puxam a ocorrência
+     para o chip de outro setor. Chip de setor raiz leva junto os subsetores
+     dele (mesma expansão do escopo do líder, KPI.escopoLider). */
+  function siglasDePosse(act) {
+    var out = [];
+    if (act && act.setorSigla) { out.push(String(act.setorSigla)); }
+    if (act && act.subsetorSigla && out.indexOf(String(act.subsetorSigla)) < 0) { out.push(String(act.subsetorSigla)); }
+    return out;
+  }
+  function ehDoSetor(act, esc) {
+    var ps = siglasDePosse(act);
+    for (var i = 0; i < ps.length; i++) { if (esc[ps[i]]) { return true; } }
+    return false;
+  }
+  /* Os chips são as siglas de posse presentes no board da janela (já recortado
+     ao escopo do papel): mesmo universo do filtro, então chip que existe tem
+     ocorrência para mostrar. Subsetor vem logo depois do setor pai. */
+  function siglasDoRecorte(board, setores) {
     var set = {};
-    pp.pessoas.forEach(function (p) { p.setores.forEach(function (s) { if (s !== '—') { set[s] = true; } }); });
-    if (pp.semResp) { pp.semResp.setores.forEach(function (s) { if (s !== '—') { set[s] = true; } }); }
-    var sigs = Object.keys(set).sort();
-    var wrap = el('<div class="pf-chips"></div>');
-    function chip(sig, label) {
-      var b = el('<button type="button" class="pf-chip' + (FILTRO === sig ? ' on' : '') + '"></button>');
+    (board || []).forEach(function (o) { siglasDePosse(o.act).forEach(function (s) { set[s] = true; }); });
+    function raiz(sig) {
+      var s = (setores || []).filter(function (x) { return x.sigla === sig; })[0];
+      return (s && s.setorPaiSigla) || sig;
+    }
+    return Object.keys(set).sort(function (a, b) {
+      var ra = raiz(a), rb = raiz(b);
+      if (ra !== rb) { return ra < rb ? -1 : 1; }
+      if (a === ra) { return -1; }
+      if (b === rb) { return 1; }
+      return a < b ? -1 : (a > b ? 1 : 0);
+    });
+  }
+  /* 16/09 · #34 — o FILTRO é variável de módulo e sobrevivia à troca de período
+     e ao Atualizar. Cenário: chip BIB aceso em "Atrasadas + 30d", cuja única
+     ocorrência do BIB é 05/10; na "Semana" a sigla some dos chips, nenhum chip
+     fica aceso (nem "Toda a escola"), a lista cai em "Nenhuma pessoa com
+     ocorrências neste recorte" e o return antecipado leva junto o ranking e o
+     "Meu desempenho". Sigla que não existe no recorte novo volta para "Toda a
+     escola"; sigla que continua existindo mantém o filtro. */
+  function filtroValido(filtro, siglas) {
+    return (filtro === 'TODOS' || siglas.indexOf(filtro) >= 0) ? filtro : 'TODOS';
+  }
+  /* subcontexto do setor: board E ativ pelo mesmo predicado (igual ao
+     KPI.recortarContexto), para computar/computarPorPessoa saírem coerentes */
+  function contextoDoSetor(ctx, sig) {
+    var esc = KPI.escopoLider([sig], ctx.setores);
+    function dele(act) { return ehDoSetor(act, esc); }
+    return {
+      board: ctx.board.filter(function (o) { return dele(o.act); }),
+      ativ: (ctx.ativ || []).filter(dele),
+      setores: ctx.setores, janela: ctx.janela, hoje: ctx.hoje, periodo: ctx.periodo
+    };
+  }
+  /* o que o "i" diz sobre o recorte (rótulo curto + explicação da régua) */
+  function descreverRecorte(sig, setores) {
+    if (sig === 'TODOS') {
+      return { rotulo: 'toda a escola', texto: 'Recorte: toda a escola — todas as ocorrências da janela no seu escopo.' };
+    }
+    var filhos = (setores || []).filter(function (s) { return s.setorPaiSigla === sig; }).map(function (s) { return s.sigla; });
+    return {
+      rotulo: 'setor ' + sig,
+      texto: 'Recorte: setor ' + sig + ' — desempenho DENTRO do setor. Só contam ocorrências de atividades cujo setor dono (setorSigla) ou subsetor é ' + sig +
+        (filhos.length ? ' (inclui os subsetores ' + filhos.join(', ') + ')' : '') +
+        '. Atividade de outro setor que só “aparece em” ' + sig + ' ou é de “todos os setores” conta no setor dono dela, não aqui. Nota e contagens de cada pessoa são só deste setor.'
+    };
+  }
+  function chipsSetores(siglas, setores) {
+    var wrap = el('<div class="pf-chips" role="group" aria-label="Filtrar por setor"></div>');
+    function chip(sig, label, dica) {
+      var on = FILTRO === sig;
+      var b = el('<button type="button" class="pf-chip' + (on ? ' on' : '') + '"></button>');
       b.textContent = label;
-      b.addEventListener('click', function () { FILTRO = sig; render(); });
+      b.setAttribute('data-sig', sig);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');   /* aceso também para leitor de tela, não só pela cor */
+      if (dica) { b.title = dica; }
+      b.addEventListener('click', function () {
+        FILTRO = sig; render();
+        /* o render redesenha a barra inteira: o foco volta ao chip clicado,
+           senão quem navega por teclado é jogado para o topo da página */
+        var novos = document.querySelectorAll('.pf-chip');
+        for (var i = 0; i < novos.length; i++) { if (novos[i].getAttribute('data-sig') === sig) { novos[i].focus(); break; } }
+      });
       return b;
     }
-    wrap.appendChild(chip('TODOS', 'Toda a escola'));
-    sigs.forEach(function (s) { wrap.appendChild(chip(s, s)); });
+    wrap.appendChild(chip('TODOS', 'Toda a escola', ''));
+    siglas.forEach(function (s) {
+      var info = (setores || []).filter(function (x) { return x.sigla === s; })[0];
+      wrap.appendChild(chip(s, s, info ? (info.nome || s) + (info.setorPaiSigla ? ' — subsetor de ' + info.setorPaiSigla : '') : ''));
+    });
     return wrap;
   }
-  function passaFiltro(p) { return FILTRO === 'TODOS' || p.setores.indexOf(FILTRO) >= 0; }
 
   /* ============================================================
      C4 · DRILL-DOWN — filtro client-side do BOARD retido em
@@ -351,13 +449,15 @@
     var dt = el('<span class="dd-meta' + (o.atrasada ? ' dd-late' : '') + '"></span>');
     dt.textContent = brData(o.effDate) + (o.atrasada ? ' · ' + ddDias(o.effDate, HOJE) + 'd' : '');
     r.appendChild(dt);
-    r.appendChild(el('<span class="dd-meta">' + st.l + '</span>'));
+    /* 16/09 · #42: status fora da tabela cai no o.status CRU do documento da
+       ocorrência (as Regras não validam o campo) — texto, nunca HTML */
+    r.appendChild(txt('span', 'dd-meta', st.l));
     return r;
   }
   function ddPintar(wrap, itens, rotulo) {
     wrap.innerHTML = '';
-    wrap.appendChild(el('<div class="dd-count">' + rotulo + ' · ' + itens.length + ' item(ns)' +
-      (itens.length > DD_TETO ? ' · mostrando os ' + DD_TETO + ' primeiros' : '') + '</div>'));
+    wrap.appendChild(txt('div', 'dd-count', rotulo + ' · ' + itens.length + ' item(ns)' +
+      (itens.length > DD_TETO ? ' · mostrando os ' + DD_TETO + ' primeiros' : '')));
     if (!itens.length) {
       wrap.appendChild(el('<div class="dd-empty">Nenhum item neste recorte.</div>'));
       return;
@@ -366,7 +466,7 @@
     itens.slice(0, DD_TETO).forEach(function (o) { list.appendChild(ddRow(o)); });
     wrap.appendChild(list);
     if (itens.length > DD_TETO) {
-      wrap.appendChild(el('<div class="dd-more">+ ' + (itens.length - DD_TETO) + ' item(ns) — refine na tela de Atividades.</div>'));
+      wrap.appendChild(txt('div', 'dd-more', '+ ' + (itens.length - DD_TETO) + ' item(ns) — refine na tela de Atividades.'));
     }
   }
   /* drill de setor (linhas do Score por setor) */
@@ -387,16 +487,28 @@
     });
   }
 
-  /* ---------- painel da pessoa (modal padrão) ---------- */
-  function abrirPessoa(p) {
+  /* ---------- painel da pessoa (modal padrão) ----------
+     16/09 · #35: sig = sigla do chip quando o cartão veio da lista recortada
+     (as métricas de p já são só daquele setor, e a lista de ocorrências tem de
+     ter a mesma base); null quando veio do "Meu desempenho", que mostra a
+     pessoa inteira. Ler o FILTRO global aqui quebraria esse cartão (reproduzido
+     na verificação): com o chip PED aceso, o "Meu desempenho" da Ana mostraria
+     carga 52 e 6 atrasadas e o modal listaria só as 23 abertas do PED, com 0
+     atrasadas. */
+  function abrirPessoa(p, sig) {
+    var esc = sig ? KPI.escopoLider([sig], MODELO.setores) : null;
     UI.modal({
-      title: p.nome,
+      title: sig ? p.nome + ' · setor ' + sig : p.nome,
       width: 520,
       body: function () {
         var box = document.createElement('div');
         var grid = el('<div class="pf-pgrid"></div>');
-        /* C4: ocorrências da PESSOA (mesma chave do computarPorPessoa: uid ou bucket sem-uid) */
-        var occ = BOARD.filter(function (o) { return p.uid ? o.uid === p.uid : !o.uid; });
+        /* C4: ocorrências da PESSOA (mesma chave do computarPorPessoa: uid ou bucket sem-uid);
+           com sig, só as de posse do setor (mesma régua do cartão) */
+        var occ = BOARD.filter(function (o) {
+          if (p.uid ? o.uid !== p.uid : !!o.uid) { return false; }
+          return !esc || ehDoSetor(o.act, esc);
+        });
         var ddWrap = el('<div></div>');
         var FILTROS = {
           abertas:       { r: 'Abertas (carga)',            f: function (o) { return ddAberta(o); } },
@@ -418,9 +530,9 @@
         }
         function pm(k, v, f, chave) {
           var d = el('<div class="pf-pm"></div>');
-          d.appendChild(el('<div class="k">' + k + '</div>'));
-          d.appendChild(el('<div class="v">' + v + '</div>'));
-          d.appendChild(el('<div class="f">' + f + '</div>'));
+          d.appendChild(txt('div', 'k', k));   /* 16/09 · #42: texto, não HTML */
+          d.appendChild(txt('div', 'v', v));
+          d.appendChild(txt('div', 'f', f));
           if (chave) {                       /* C4: métrica clicável filtra a lista abaixo */
             d.classList.add('dd-click');
             d.title = 'Clique para ver os itens desta métrica';
@@ -437,10 +549,11 @@
         grid.appendChild(pm('Atrasadas', String(p.atrasadas), p.atrasadas ? 'atraso médio ' + fmtNum(p.agingMedio) + ' d' : 'nenhuma agora', 'atrasadas'));
         grid.appendChild(pm('Ritmo (feitas/semana)', fmtNum(p.thr4) + '/sem', p.thr4n + ' concluída(s) nos últimos 28 dias ÷ 4', 'concluidas'));
         box.appendChild(grid);
-        box.appendChild(el('<div class="pf-acoes-t">Ocorrências da pessoa — clique numa métrica acima para trocar o recorte</div>'));
+        box.appendChild(txt('div', 'pf-acoes-t', 'Ocorrências da pessoa' + (sig ? ' no setor ' + sig : '') + ' — clique numa métrica acima para trocar o recorte'));
         box.appendChild(ddWrap);
         aplicar('abertas', null);            /* recorte inicial: o mais acionável */
-        box.appendChild(el('<div class="pf-acoes-t">Últimas ações</div>'));
+        /* o log não guarda setor: as ações são sempre da pessoa inteira, e o título diz */
+        box.appendChild(txt('div', 'pf-acoes-t', 'Últimas ações' + (sig ? ' — de todos os setores (o log não separa por setor)' : '')));
         if (!p.uid) {
           box.appendChild(el('<div class="pf-acoes-note">Sem pessoa vinculada — atribua um responsável às atividades.</div>'));
         } else {
@@ -451,7 +564,7 @@
             acoes.forEach(function (r) {
               var row = el('<div class="pf-acao"></div>');
               var a = el('<span class="a"></span>'); a.textContent = acaoLabel(r.acao); row.appendChild(a);
-              row.appendChild(el('<span class="d">' + (r.ts ? brDataHora(r.ts) : '—') + '</span>'));
+              row.appendChild(txt('span', 'd', r.ts ? brDataHora(r.ts) : '—'));
               box.appendChild(row);
             });
           }
@@ -480,7 +593,7 @@
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
     h.appendChild(el('<div class="pf-card-t">Nota por setor (0–100)</div>'));
-    h.appendChild(infoBtn({ title: 'Nota composta por setor', formula: 'nota = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − atraso médio×12,5). Pesos: aderência 50 · atrasadas 30 · atraso 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.', dados: 'mesmos números da Inteligência (ocorrências por setor até hoje + abertas por setor)', numeros: nums }));
+    h.appendChild(infoBtn({ title: 'Nota composta por setor', formula: 'nota = 0,5×aderência + 0,3×(100 − %atrasadas) + 0,2×(100 − atraso médio×12,5). Pesos: aderência 50 · atrasadas 30 · atraso 20. Semáforo: ≥80 verde · 60–79 âmbar · <60 vermelho.', dados: 'mesmos números da Inteligência (ocorrências por setor até hoje + abertas por setor). Compara os setores entre si, por isso não segue o chip de setor.', numeros: nums }));
     card.appendChild(h);
     calc.forEach(function (x) {
       var tok = tomToken(x.sc.tom);
@@ -518,15 +631,33 @@
   function render() {
     var body = document.getElementById('pf-body');
     body.innerHTML = '';
-    var lista = PP.pessoas.filter(passaFiltro);
-    var semResp = (PP.semResp && passaFiltro(PP.semResp)) ? PP.semResp : null;
+    /* 16/09 · #35 + #14: com chip de setor aceso, cartões, contagens, heróis e
+       os "i" deles saem de UM subcontexto só com as ocorrências de posse do
+       setor, pelo MESMO motor (KPI.computar e computarPorPessoa). Antes dois
+       dos três heróis liam o MODELO da escola inteira enquanto o "i" lia a
+       lista filtrada: no chip PED a tela dizia "Aderência à rotina 45%"
+       (escola), o "i" do mesmo cartão dizia 15 ÷ 46 (33%, pessoas inteiras) e
+       o gráfico logo abaixo dizia PED 83% — três números para a mesma
+       pergunta. Ficam na escola inteira, de propósito e dito no "i" de cada
+       um: o gráfico e a nota por setor (comparam setores), o ranking e o
+       "Meu desempenho". */
+    var sigAtual = FILTRO === 'TODOS' ? null : FILTRO;
+    var VM = MODELO, VP = PP;
+    if (sigAtual) {
+      var sub = contextoDoSetor(CTX, sigAtual);
+      VM = KPI.computar(sub);
+      VP = KPI.computarPorPessoa(sub);
+    }
+    var lista = VP.pessoas;
+    var semResp = VP.semResp;
+    var rec = descreverRecorte(FILTRO, MODELO.setores);
 
-    body.appendChild(chipsSetores(PP));
+    body.appendChild(chipsSetores(SIGLAS, MODELO.setores));
 
-    var infos = colInfos(lista.concat(semResp ? [semResp] : []));
+    var infos = colInfos(lista.concat(semResp ? [semResp] : []), rec);
 
     /* ===== 3 HERÓIS (REGRA GLOBAL: abre calma; vermelho = ponto + número) ===== */
-    var T = (MODELO && MODELO.totais) || {};
+    var T = (VM && VM.totais) || {};
     /* conclusão no prazo global do recorte: Σ noPrazo ÷ Σ concluídas (mesma base do colInfos) */
     var gNP = 0, gCT = 0;
     lista.concat(semResp ? [semResp] : []).forEach(function (p) { gNP += p.noPrazo; gCT += p.concluidasTotal; });
@@ -546,20 +677,21 @@
       return h;
     }
     var heroes = el('<div class="pf-heroes"></div>');
-    var aderG = (MODELO && MODELO.aderencia != null) ? MODELO.aderencia : null;
+    var aderG = (VM && VM.aderencia != null) ? VM.aderencia : null;
     var tA = heroTom(aderG, 80, 60);
     heroes.appendChild(hero('Aderência à rotina', infos.ader,
       '<span class="pf-hdot" style="background:var(--' + tA + ')"></span><span style="color:var(--' + tA + ')">' + (aderG == null ? '—' : aderG + '%') + '</span>',
-      aderG == null ? 'Coletando — nada previsto venceu ainda nesta janela.' : 'Concluídas ÷ previstas até hoje, no recorte da janela.'));
+      aderG == null ? 'Coletando — nada previsto venceu ainda nesta janela.' : (sigAtual ? 'Concluídas ÷ previstas até hoje, só das atividades do setor ' + sigAtual + '.' : 'Concluídas ÷ previstas até hoje, no recorte da janela.')));
     var tP = heroTom(pctNoPrazoG, 80, 60);
     heroes.appendChild(hero('Conclusão no prazo', infos.prazo,
       '<span class="pf-hdot" style="background:var(--' + tP + ')"></span><span style="color:var(--' + tP + ')">' + (pctNoPrazoG == null ? '—' : pctNoPrazoG + '%') + '</span>',
       pctNoPrazoG == null ? 'Sem concluídas no recorte ainda.' : gNP + ' de ' + gCT + ' concluída(s) dentro do prazo.'));
     var nAtr = T.atrasadas || 0;
+    var agG = VM ? Math.round((VM.agingMedio || 0) * 10) / 10 : 0;
     var tR = nAtr ? 'red' : 'green';
-    heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela', numeros: nAtr + ' atrasada(s) · atraso médio ' + (MODELO ? (Math.round((MODELO.agingMedio || 0) * 10) / 10) : 0) + ' dia(s)' },
+    heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela · ' + rec.texto, numeros: rec.rotulo + ': ' + nAtr + ' atrasada(s) · atraso médio ' + fmtNum(agG) + ' dia(s)' },
       '<span class="pf-hdot" style="background:var(--' + tR + ')"></span><span style="color:var(--' + tR + ')">' + nAtr + '</span>',
-      nAtr ? ('Atraso médio: ' + (Math.round((MODELO.agingMedio || 0) * 10) / 10) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
+      nAtr ? ('Atraso médio: ' + fmtNum(agG) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
     heroes.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     body.appendChild(heroes);
 
@@ -569,7 +701,7 @@
       hyg.appendChild(el('<span class="pf-hygdot"></span>'));
       hyg.appendChild(txt('span', 'pf-hygt', 'Sem responsável: ' + semResp.total + ' ocorrência(s)'));
       hyg.appendChild(txt('span', 'pf-hygs', '— importe com a coluna "responsavel" ou edite as atividades. Clique para ver.'));
-      hyg.addEventListener('click', function () { abrirPessoa(semResp); });
+      hyg.addEventListener('click', function () { abrirPessoa(semResp, sigAtual); });
       hyg.setAttribute('data-lente', 'eucobro'); /* R3 · lente */
       body.appendChild(hyg);
     }
@@ -579,7 +711,7 @@
       var gc = el('<div class="pf-card"></div>');
       var gh = el('<div class="pf-card-h"></div>');
       gh.appendChild(el('<div class="pf-card-t">Aderência por setor</div>'));
-      gh.appendChild(infoBtn({ title: 'Aderência por setor', formula: 'concluídas ÷ previstas até hoje × 100, por setor (multi-homing conta em cada setor onde a atividade aparece)', dados: 'MODELO.porSetor — mesmo motor da Inteligência', numeros: MODELO.porSetor.length + ' setor(es) na janela' }));
+      gh.appendChild(infoBtn({ title: 'Aderência por setor', formula: 'concluídas ÷ previstas até hoje × 100, por setor (multi-homing conta em cada setor onde a atividade aparece)', dados: 'MODELO.porSetor — mesmo motor da Inteligência. Compara os setores entre si, por isso não segue o chip de setor. Aqui a atividade conta em cada setor onde APARECE; o chip conta só no setor DONO — com atividade “aparece em” ou “todos os setores”, o número de um setor aqui pode diferir do herói do chip.', numeros: MODELO.porSetor.length + ' setor(es) na janela' }));
       gc.appendChild(gh);
       var bars = el('<div class="pf-bars"></div>');
       MODELO.porSetor.forEach(function (s) {
@@ -607,7 +739,7 @@
     var card = el('<div class="pf-card"></div>');
     var h = el('<div class="pf-card-h"></div>');
     h.appendChild(el('<div class="pf-card-t">Pessoas por severidade — clique para o detalhe individual</div>'));
-    h.appendChild(infoBtn({ title: 'Pessoas por severidade', formula: 'grupo = semáforo da nota (≥80 verde · 60–79 âmbar · <60 vermelho · sem dado = coletando). ' + (infos.score.formula), dados: infos.score.dados, numeros: lista.length + ' pessoa(s) no recorte' }));
+    h.appendChild(infoBtn({ title: 'Pessoas por severidade', formula: 'grupo = semáforo da nota (≥80 verde · 60–79 âmbar · <60 vermelho · sem dado = coletando). ' + (infos.score.formula), dados: infos.score.dados, numeros: lista.length + ' pessoa(s) no recorte (' + rec.rotulo + ')' }));
     card.appendChild(h);
     card.setAttribute('data-lente', 'eucobro'); /* R3 · lente */
 
@@ -626,7 +758,8 @@
       { id: 'ok',   label: 'Ok',        tok: 'green' },
       { id: 'flat', label: 'Coletando', tok: 'muted2' }
     ];
-    function pcard(p) {
+    /* sig: recorte com que p foi calculado (null = pessoa inteira) — vai para o modal */
+    function pcard(p, sig) {
       var c = el('<div class="pf-pcard" role="button" tabindex="0"></div>');
       c.appendChild(txt('div', 'pf-pcn', p.nome));
       c.appendChild(txt('div', 'pf-pcs', p.setores.join(' · ') || '—'));
@@ -639,7 +772,7 @@
       m.appendChild(document.createTextNode('ader. ' + fmtPct(p.ader)));
       if (p.atrasadas) { var lt = el('<span class="lt"></span>'); lt.textContent = '● ' + p.atrasadas; lt.title = p.atrasadas + ' atrasada(s)'; m.appendChild(lt); }
       c.appendChild(m);
-      c.addEventListener('click', function () { abrirPessoa(p); });
+      c.addEventListener('click', function () { abrirPessoa(p, sig); });
       return c;
     }
     var grid = el('<div class="pf-groups"></div>');
@@ -653,7 +786,7 @@
       hd.appendChild(el('<span class="pf-grpsp"></span>'));
       hd.appendChild(txt('span', 'pf-grpcount', String(arr.length)));
       col.appendChild(hd);
-      arr.forEach(function (p) { col.appendChild(pcard(p)); });
+      arr.forEach(function (p) { col.appendChild(pcard(p, sigAtual)); });
       grid.appendChild(col);
     });
     card.appendChild(grid);
@@ -676,8 +809,16 @@
     mh.appendChild(el('<div class="pf-card-t">Meu desempenho — o mesmo cartão que o líder vê</div>'));
     meu.appendChild(mh);
     if (minha) {
+      /* 16/09 · #35: com chip aceso, o cartão da lista é só do setor e este é
+         a pessoa inteira — "o mesmo cartão" só vale em "Toda a escola", e a
+         tela avisa em vez de deixar dois números diferentes sem explicação */
+      if (sigAtual) {
+        var aviso = txt('div', 'pf-hsub', 'Seus números de toda a janela: o chip ' + sigAtual + ' não se aplica a este cartão.');
+        aviso.style.margin = '-6px 0 10px';
+        meu.appendChild(aviso);
+      }
       var mgrid = el('<div style="max-width:360px"></div>');
-      mgrid.appendChild(pcard(minha));
+      mgrid.appendChild(pcard(minha, null));
       meu.appendChild(mgrid);
     } else {
       meu.appendChild(el('<div class="pf-empty2">Sem ocorrências suas neste recorte — seus números nascem do uso em Hoje e Atividades.</div>'));
@@ -702,7 +843,7 @@
     h.appendChild(infoBtn({
       title: 'Nota 50/30/20',
       formula: 'nota = 50% × aderência + 30% × conclusão no prazo + 20% × (100 − atraso residual). Atraso residual = atrasadas ÷ previstas VENCIDAS × 100 (do que já venceu, quanto segue aberto). Componente sem dado sai do cálculo e os pesos são renormalizados sobre os presentes — nunca inventa 0 nem 100. Sem previstas → sem nota. Nada venceu ainda → “coletando” (partida fria, não pune). Pesos calibráveis pelo gestor.',
-      dados: 'mesmas ocorrências reais da janela (board), agregadas por setor (atividade multi-setor conta em CADA setor), por líder (ocorrência conta se o setor está no escopo raiz→filhos do líder) e por responsável (responsavelUid)',
+      dados: 'mesmas ocorrências reais da janela (board), agregadas por setor (atividade multi-setor conta em CADA setor), por líder (ocorrência conta se o setor está no escopo raiz→filhos do líder) e por responsável (responsavelUid). O ranking compara setores, líderes e usuários da janela inteira, por isso não segue o chip de setor.',
       numeros: rkNums()
     }));
     card.appendChild(h);
@@ -732,12 +873,19 @@
     function exportarCSV() {
       var lst = (RANK && RANK[LENTE]) || [];
       if (!lst.length) { return; }
-      var linhas = ['posicao;nome;nota;aderencia_pct;no_prazo_pct;atraso_residual_pct;previstas;prev_vencidas;concluidas_ate_hoje;concluidas_total;no_prazo;atrasadas'];
+      /* defeito 17 (revisão, 16/09) — coluna "situacao" no FIM (as anteriores
+         não mudam de lugar). Com a partida fria sem nota (kpi.js), a linha
+         "coletando" sai com a nota vazia, igual à linha sem previstas; na
+         planilha não dava para saber se a pessoa ainda não tinha nada vencido
+         ou se não tinha nada previsto. No período Semana isso vale para todas
+         as linhas. */
+      var linhas = ['posicao;nome;nota;aderencia_pct;no_prazo_pct;atraso_residual_pct;previstas;prev_vencidas;concluidas_ate_hoje;concluidas_total;no_prazo;atrasadas;situacao'];
       lst.forEach(function (b, ix) {
         linhas.push([ix + 1, b.nome, b.score == null ? '' : b.score,
           b.ader == null ? '' : b.ader, b.pctNoPrazo == null ? '' : b.pctNoPrazo,
           b.residual == null ? '' : b.residual,
-          b.previstas, b.prevVencidas, b.concluidasAteHoje, b.concluidasTotal, b.noPrazo, b.atrasadas
+          b.previstas, b.prevVencidas, b.concluidasAteHoje, b.concluidasTotal, b.noPrazo, b.atrasadas,
+          b.score != null ? 'com nota' : (b.coletando ? 'coletando' : 'sem previstas')
         ].map(csvEscape).join(';'));
       });
       var blob = new Blob(['\uFEFF' + linhas.join('\r\n')], { type: 'text/csv;charset=utf-8' });
@@ -764,6 +912,21 @@
       }
       var wrap2 = el('<div class="pf-tblwrap"></div>');
       var tbl2 = el('<table class="pf-tbl"></table>');
+      /* defeito 17 (revisão, 16/09) — TABELA INTEIRA SEM NOTA precisa dizer por
+         quê. No período Semana a janela começa hoje: nada nela venceu antes de
+         hoje, então toda linha fica "— · coletando" (ou sem previstas), todo
+         dia, e a ordem passa a ser por número de previstas. Sem este aviso, a
+         lista parecia um ranking de desempenho quebrado. Texto por textContent;
+         a tabela aponta para o aviso (aria-describedby) para o leitor de tela. */
+      if (lst.every(function (b) { return b.score == null; }) && lst.some(function (b) { return b.coletando; })) {
+        var avisoSemNota = txt('div', 'pf-empty2', 'Ninguém tem nota nesta lente: nada do que estava previsto na janela venceu antes de hoje (partida fria, não pune). Sem nota, a ordem abaixo é por número de previstas, não por desempenho.' +
+          (PERIODO === 'semana' ? ' Na “Semana” a janela começa hoje, então o que está nela ainda não venceu: para comparar notas, use “Atrasadas + 30d” ou “Mês”.' : ''));
+        avisoSemNota.id = 'pf-rk-semnota';
+        avisoSemNota.style.padding = '6px 4px 12px';
+        avisoSemNota.style.lineHeight = '1.45';
+        holder.appendChild(avisoSemNota);
+        tbl2.setAttribute('aria-describedby', 'pf-rk-semnota');
+      }
       tbl2.appendChild(el('<thead><tr><th>#</th><th>Nome</th><th>Nota</th><th>Aderência (50%)</th><th>No prazo (30%)</th><th>Atraso residual (20%)</th></tr></thead>'));
       var tb2 = document.createElement('tbody');
       lst.forEach(function (b, ix) {
@@ -774,14 +937,29 @@
         tr.appendChild(td1);
         var td2 = document.createElement('td');
         var tok = tomToken(b.tom);
+        /* defeito 17 (revisão, 16/09) — COR DO TEXTO ≠ COR DA BOLINHA. Linha sem
+           nota (tom 'flat') tem bolinha --muted2, mas --muted2 como TEXTO dá
+           3,69:1 sobre --s1 no tema escuro (3,45:1 no hover, --s2) e reprova a
+           WCAG 1.4.3, que pede 4,5:1 para texto de 13px. Antes só a linha "sem
+           previstas" caía aqui. Com a partida fria sem nota (kpi.js), toda linha
+           "coletando" também cai, e no período Semana isso é a tabela inteira,
+           todo dia. O texto usa --muted2Text (theme.css), o par legível do
+           mesmo cinza: 6,44:1 no escuro e 5,82:1 no claro (6,01 e 5,14 no hover). */
+        var tokTxt = tok === 'muted2' ? 'muted2Text' : tok;
         var sc = el('<span class="pf-scorecell"></span>');
         sc.appendChild(el('<span class="pf-scoredot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok === 'muted2' ? 'green' : tok) + ')"></span>'));
-        sc.appendChild(el('<span style="color:var(--' + tok + ')">' + (b.score == null ? (b.previstas ? '—' : '—') : b.score) + (b.coletando ? ' · coletando' : '') + '</span>'));
+        sc.appendChild(el('<span style="color:var(--' + tokTxt + ')">' + (b.score == null ? (b.previstas ? '—' : '—') : b.score) + (b.coletando ? ' · coletando' : '') + '</span>'));
         var ib = infoBtn({
           title: 'Nota de ' + b.nome,
-          formula: 'componentes usados: ' + (b.usados.length ? b.usados.join(' + ') : 'nenhum (sem previstas)') + ' — pesos renormalizados sobre eles',
+          /* defeito 17 (revisão) — a linha "coletando" TEM previstas. Sem este
+             ramo, o "i" dizia "nenhum (sem previstas)" logo acima de "previstas
+             até hoje: 4 · vencidas: 0", e o texto contradizia o próprio dado. */
+          formula: 'componentes usados: ' + (b.coletando
+            ? 'nenhum ainda — nada do que estava previsto na janela venceu antes de hoje (partida fria, não pune). A nota aparece quando houver prevista vencida na janela.' +
+              (PERIODO === 'semana' ? ' Na “Semana” a janela começa hoje, então o que está nela ainda não venceu: para comparar notas, use “Atrasadas + 30d” ou “Mês”.' : '')
+            : (b.usados.length ? b.usados.join(' + ') + ' — pesos renormalizados sobre eles' : 'nenhum (sem previstas)')),
           dados: 'previstas até hoje: ' + b.previstas + ' · vencidas: ' + b.prevVencidas + ' · concluídas até hoje: ' + b.concluidasAteHoje + ' · concluídas (total): ' + b.concluidasTotal + ' · no prazo: ' + b.noPrazo + ' · atrasadas: ' + b.atrasadas,
-          numeros: 'aderência ' + fmtPct(b.ader) + ' · no prazo ' + fmtPct(b.pctNoPrazo) + ' · residual ' + fmtPct(b.residual) + ' → nota ' + (b.score == null ? '—' : b.score)
+          numeros: 'aderência ' + fmtPct(b.ader) + ' · no prazo ' + fmtPct(b.pctNoPrazo) + ' · residual ' + fmtPct(b.residual) + ' → nota ' + (b.score == null ? (b.coletando ? '— (coletando)' : '— (sem previstas)') : b.score)
         });
         sc.appendChild(ib);
         td2.appendChild(sc); tr.appendChild(td2);
@@ -842,7 +1020,12 @@
       PP = KPI.computarPorPessoa(ctx);
       RANK = KPI.computarRanking(ctx, USUARIOS);    /* F1-G: mesmas ocorrências, 3 lentes */
       BOARD = ctx.board;                    /* C4: retido p/ drill-down */
+      CTX = ctx;                            /* 16/09 · #35: base do recorte por setor */
       HOJE = MODELO.hoje;
+      /* 16/09 · #34: chips da janela NOVA e filtro que sumiu dela volta para
+         "Toda a escola" (vale para a troca de período e para o Atualizar) */
+      SIGLAS = siglasDoRecorte(ctx.board, ctx.setores);
+      FILTRO = filtroValido(FILTRO, SIGLAS);
       document.getElementById('pf-stamp').textContent =
         'Janela: ' + rotuloPeriodo(PERIODO) + ' (' + brData(ctx.janela.jIni) + ' a ' + brData(ctx.janela.jFim) + ') · ' +
         PP.pessoas.length + ' pessoa(s) com ocorrências · ' + ctx.board.length + ' ocorrências.';

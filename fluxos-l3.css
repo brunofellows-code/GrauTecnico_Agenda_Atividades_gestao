@@ -101,13 +101,14 @@
 
 .qa-submit {
   background: var(--brand);
-  color: white;
+  color: var(--onBrand); /* 16/09: branco sobre o verde da marca dava 1,70:1 */
 }
 
 .qa-submit:hover {
   background: var(--cta); /* L3.5: número mágico #1e40af → token */
+  color: var(--ctaText); /* 16/09: no fundo --cta a tinta é --ctaText (no claro, branco 5,02:1) */
   filter: brightness(0.92);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px var(--activeBg); /* 16/09: era sombra azul fixa */
 }
 
 /* ---- UNDO-TOAST ---- */
@@ -157,7 +158,7 @@
 .undo-btn {
   padding: 6px 12px;
   background: var(--brand);
-  color: white;
+  color: var(--onBrand);
   border: none;
   border-radius: 6px;
   font-size: 12px;

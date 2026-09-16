@@ -407,3 +407,26 @@ button.et-prow{cursor:pointer}
 .et-fhint{font-size:var(--fs-xs);color:var(--muted2)}
 .et-next{font-size:var(--fs-xs);font-weight:700;color:var(--muted);margin:-2px 0 6px}
 .et-done{font-size:var(--fs-xs);font-weight:800;color:var(--green);margin:-2px 0 6px}
+
+/* ---------------- 16/09 · tema no cartão do usuário ----------------
+   Botão injetado pelo guard.js (temaNoCartao) antes do ícone de sair.
+   A regra `.ui-usercard svg:hover{color:var(--red)}` acima pinta de
+   vermelho qualquer ícone do cartão — certo para "sair", errado para o
+   tema (vermelho lê como perigo). A regra abaixo é mais específica. */
+.ui-tema{flex:none;display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;margin-right:2px;border:0;border-radius:8px;background:transparent;cursor:pointer}
+.ui-usercard .ui-tema svg{color:var(--muted)}
+.ui-usercard .ui-tema:hover{background:var(--s2)}
+.ui-usercard .ui-tema:hover svg{color:var(--accentText)}
+.ui-tema:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+/* O botão flutuante "Tema" de 6 telas ficava por cima deste cartão no
+   computador. Com o controle no cartão, ele só vale no celular (≤900px,
+   onde a barra lateral dá lugar ao menu do mnav.js). */
+/* 16/09 (correção da correção): a 1ª versão usava só .hj-dev etc. e PERDIA
+   para o CSS inline de cada tela, que declara .hj-dev{display:inline-flex}
+   com a mesma especificidade e vem DEPOIS na cascata. A captura de tela de
+   Atividades pegou o botão ainda por cima do cartão. html body sobe a
+   especificidade para (0,1,2) e vence sem !important. */
+@media (min-width:901px){
+  html body .hj-dev, html body .pf-dev, html body .at-dev, html body .us-dev, html body .st-dev{display:none}
+}
