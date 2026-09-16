@@ -168,7 +168,6 @@ h3.pl-sname{font-size:13px;font-weight:800}
   <script src="riscos-catalogo.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
-  <script src="planejamento-motor.js"></script><!-- módulo 3: janela 25-28, acompanhamento, resgate -->
   <script type="module">
   (function () {
   'use strict';
@@ -2212,19 +2211,18 @@ h3.pl-sname{font-size:13px;font-weight:800}
       actionsEl.appendChild(nb);
     }
     bodyEl.innerHTML = '';
-    /* Módulo 3 (noite 15/09) · a janela do planejamento fica à vista. A tela
-       nunca some fora do período: ela diz QUANDO abre. O gestor pode abrir
-       fora da janela, e a tela avisa que a passagem fica registrada. */
-    if (window.PlanejamentoMotor) {
-      var jn = PlanejamentoMotor.janela(R.hojeISO());
-      var ehGestorJ = !!(window.Guard && Guard.isGestor && Guard.isGestor());
-      var banner = txt('div', 'pl-janela' + (jn.aberta ? ' aberta' : ''), jn.mensagem);
-      if (!jn.aberta && ehGestorJ) {
-        banner.textContent = jn.mensagem + ' · Como gestor, você pode abrir fora da janela — fica registrado.';
-      }
-      banner.setAttribute('role', 'status');
-      bodyEl.appendChild(banner);
-    }
+    /* A FAIXA DA JANELA FOI RETIRADA (noite de 15/09, depois da auditoria).
+       Ela dizia "Planejamento do próximo mês abre dia 25". Esta tela cobra o
+       oposto, e cobra desde sempre: o dia 25 é o PRAZO DE ENTREGA, não a
+       abertura — está no rodapé desde a R4 ("Entrega até o dia 25 do mês
+       anterior"), no farol D-5/D-3/D-0 (kpi.js, planejamentoPrazo) e no "i"
+       do cartão ("vence no dia 25 do mês ANTERIOR"). As duas frases juntas,
+       na mesma tela, no mesmo segundo, fariam o líder duvidar das duas —
+       e no dia 26 a faixa ficaria VERDE, dizendo "aberto", em cima de um
+       selo vermelho de "não conforme".
+       O motor (janela, semana do acompanhamento, validações, resgate) está
+       pronto e testado; só esta faixa ficou de fora, esperando o Bruno
+       decidir qual das duas regras vale. Detalhe em NOITE/DUVIDAS.md. */
     /* itens 5 e 12 — além do aviso de leitura truncada (AVISOS, nasce na carga),
        entram os avisos DERIVADOS do dado: plano órfão, catálogo de risco que não
        carregou e setor raiz sem mapeamento de risco. Nada falha em silêncio. */
