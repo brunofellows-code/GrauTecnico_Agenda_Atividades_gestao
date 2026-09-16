@@ -106,10 +106,10 @@
 
   /* seta ‹ / › · semana anda 7 dias; mês anda 1 mês com corte no
      último dia (31/01 -> 28/02, não 03/03) */
-  A.navegar = function (escopoTempo, ancora, delta) {
+  A.navegar = function (escopoTempo, ancora, passos) {
     var p = parseISO(ancora);
     if (!p) { return null; }
-    var passo = Number(delta) || 0;
+    var passo = Number(passos) || 0;
     if (escopoTempo === 'semana') { return somaDias(ancora, passo * 7); }
     var total = (p.y * 12) + (p.m - 1) + passo;
     var y = Math.floor(total / 12), m = (total % 12) + 1;
@@ -459,14 +459,20 @@
     return patch;
   };
 
-  A.patchNaoVou = function (item, uid, motivo, detalhe, agoraMs) {
+  /* "nome" é opcional: quando vem, a entrada também leva "nome" e "em",
+     que é o formato que a tela de Reuniões já lê hoje. O contrato da D1
+     ({ motivo, detalhe, ts }) continua inteiro dentro dela. */
+  A.patchNaoVou = function (item, uid, motivo, detalhe, agoraMs, nome) {
     var v = A.motivoValido(motivo, detalhe);
     if (!v.ok) { return { erro: v.erro, patch: null }; }
     var conf = [], i, antes = arr(item && item.confirmadosUids);
     for (i = 0; i < antes.length; i++) { if (antes[i] !== uid) { conf.push(antes[i]); } }
     var rec = {}, k, orig = (item && item.recusas) || {};
     for (k in orig) { if (Object.prototype.hasOwnProperty.call(orig, k)) { rec[k] = orig[k]; } }
-    rec[uid] = { motivo: motivo, detalhe: v.detalhe, ts: Number(agoraMs) || 0 };
+    var ts = Number(agoraMs) || 0;
+    var entrada = { motivo: motivo, detalhe: v.detalhe, ts: ts };
+    if (nome) { entrada.nome = String(nome); entrada.em = ts; }
+    rec[uid] = entrada;
     return { erro: null, patch: { confirmadosUids: conf, recusas: rec } };
   };
 
