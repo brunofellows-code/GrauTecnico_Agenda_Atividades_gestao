@@ -9,6 +9,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#090B10">
 <link rel="stylesheet" href="components.css">
+<link rel="stylesheet" href="mod-reunioes.css"><!-- módulo 2 (noite 15/09): convite, trilha de seções, fechamento -->
 <script src="theme.js"></script>
 <script src="guard.js"></script>
   <script src="mnav.js"></script>
@@ -119,6 +120,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="pautas-modelo.js"></script>
+  <script src="reunioes-motor.js"></script><!-- módulo 2: seções/tempo, rolagem, ata, nota -->
   <script src="kpi.js"></script>
   <script type="module">
   (function () {
@@ -468,6 +470,9 @@
      do Hoje; 'Outro' exige detalhe. */
   var MOTIVOS_FALTA = ['Conflito de agenda', 'Atendimento urgente', 'Ausência justificada', 'Esquecimento/não vi', 'Outro'];
   var VIEW_TIPO = 'todas'; /* F1-F · chip ativo da lista de reuniões */
+  /* Módulo 2 (noite 15/09): a lista abre nas PRÓXIMAS. Reunião passada é
+     histórico; o que a pessoa faz na tela é se preparar para a que vem. */
+  var VIEW_QUANDO = 'proximas'; /* 'proximas' | 'passadas' | 'todas' */
   var MODO_REUN = 'lista'; /* F1-F · 'lista' | 'kanban' */
   var DEC_VIEW = 'lista';  /* F1-F · decisões: 'lista' | 'tabela' (5W2H) */
   var OLD_OCC = null;      /* F1-F · cache da varredura de únicas antigas (1×/sessão) */
@@ -785,6 +790,11 @@
     var head = el('<div class="pj-rrow-h"></div>');
     head.appendChild(txt('div', 'pj-rrow-t', (r.titulo || 'Reunião') + ' — ' + fmtBR(r.data)));
     var metaEl = txt('div', 'pj-rrow-meta', '');
+    /* Módulo 2 · resposta ao convite em 1 olhada e selo de ata pendente.
+       Os dois saem do reunioes-motor.js (função pura, testada no harness). */
+    var rsvpEl = txt('div', 'pj-rsvp', '');
+    var seloAta = txt('span', 'pj-semata', 'Sem ata');
+    seloAta.style.display = 'none';
     function atualizaMeta() {
       var conv = (r.convocados || []).length + (r.convidadosExternos || []).length;
       var pres = (r.presentes || []).length;
@@ -792,9 +802,20 @@
       var m = (TIPO_LABEL[r.tipo] || 'Reunião') + ' · ' + conv + ' convocado(s) · ' + pres + ' presente(s) · ' + aus + ' ausente(s) · ' + (r.decisoes || []).length + ' decisão(ões)';
       if (r.encerradaEm) { m += ' · ENCERRADA'; }
       metaEl.textContent = m;
+      if (window.ReunioesMotor) {
+        var c = ReunioesMotor.contagemConvites(r);
+        rsvpEl.textContent = '✓ ' + c.vou + '  ✗ ' + c.naoVou + '  ? ' + c.semResposta;
+        rsvpEl.title = c.total + ' convocado(s): ' + c.vou + ' vão, ' + c.naoVou + ' não vão, ' + c.semResposta + ' sem resposta.';
+        var dur = ReunioesMotor.duracaoDe(r.tipo);
+        if (dur) { rsvpEl.title += ' Roteiro de ' + dur + ' min.'; }
+        seloAta.style.display = ReunioesMotor.semAta(r, R.hojeISO()) ? '' : 'none';
+        seloAta.title = 'A reunião passou e a ata não foi fechada. Quem conduziu fecha em 1 clique dentro da reunião.';
+      }
     }
     atualizaMeta();
     head.appendChild(metaEl);
+    head.appendChild(rsvpEl);
+    head.appendChild(seloAta);
     row.appendChild(head);
 
     var open = false;
@@ -2046,7 +2067,35 @@
     Object.keys(contTipo).sort(function (a, b) { return rotuloTipo(a).localeCompare(rotuloTipo(b), 'pt-BR'); })
       .forEach(function (t) { chipsBar.appendChild(chip(t, rotuloTipo(t), contTipo[t])); });
     bodyEl.appendChild(chipsBar);
+
+    /* Módulo 2 · Próximas | Passadas (padrão Fellow/Ninety: a série vive em
+       duas metades). A tela abre nas próximas: reunião passada é histórico,
+       o que a pessoa faz aqui é se preparar para a que vem. */
+    var nProx = 0, nPass = 0;
+    REUN.forEach(function (r) { if ((r.data || '') >= hoje) { nProx += 1; } else { nPass += 1; } });
+    var quandoBar = el('<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"></div>');
+    function chipQuando(valor, rotulo, n) {
+      var on = VIEW_QUANDO === valor;
+      var b = txt('button', 'pj-status', rotulo + ' (' + n + ')');
+      b.type = 'button'; b.style.cursor = 'pointer'; b.style.whiteSpace = 'nowrap';
+      b.style.color = on ? 'var(--greenText)' : 'var(--muted)';
+      b.style.background = on ? 'var(--activeBg)' : 'transparent';
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.addEventListener('click', function () { VIEW_QUANDO = valor; rerender(); });
+      return b;
+    }
+    quandoBar.appendChild(chipQuando('proximas', 'Próximas', nProx));
+    quandoBar.appendChild(chipQuando('passadas', 'Passadas', nPass));
+    quandoBar.appendChild(chipQuando('todas', 'Todas', REUN.length));
+    bodyEl.appendChild(quandoBar);
+
     var REUNV = VIEW_TIPO === 'todas' ? REUN : REUN.filter(function (r) { return (r.tipo || 'sem_tipo') === VIEW_TIPO; });
+    if (VIEW_QUANDO !== 'todas') {
+      REUNV = REUNV.filter(function (r) {
+        var futura = (r.data || '') >= hoje;
+        return VIEW_QUANDO === 'proximas' ? futura : !futura;
+      });
+    }
 
     /* painel do ciclo de decisões (F1-E · 4.3) — status DERIVADO, nunca gravado.
        F1-F: respeita a visão ativa (mesmos números da lista embaixo).       */

@@ -1,0 +1,116 @@
+/* ============================================================
+   mod-reunioes.css — só o que a aba Reuniões acrescenta.
+   Regras da casa: zero hex (só token do theme.css), desktop-first
+   ≥1280px sem quebrar em tela menor, cor nunca é a única informação
+   (todo sinal tem rótulo ou símbolo junto).
+   ============================================================ */
+
+/* Resposta ao convite na linha da reunião: ✓ vou · ✗ não vou · ? sem resposta.
+   Tabular para os números não dançarem quando a contagem muda.            */
+.pj-rsvp {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+/* Ata pendente. É dívida de quem conduziu, então aparece na linha da
+   reunião e não numa caixa de aviso separada. */
+.pj-semata {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--orange);
+  border-radius: 999px;
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* Trilha de seções do roteiro (Abertura · Ritmo · Planos · Ações ·
+   Assuntos · Fechamento). O tempo é informativo: nunca bloqueia. */
+.pj-trilha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.pj-trilha-s {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--chipBg);
+  font-size: 12px;
+  color: var(--text);
+}
+.pj-trilha-s[data-atual="1"] {
+  border-color: var(--doing);
+  box-shadow: inset 2px 0 0 var(--doing);
+}
+.pj-trilha-min {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fechamento: nota de 1 a 10 e o campo "o que faria ser 10". */
+.pj-fecha {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--chipBg);
+}
+.pj-fecha-notas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0;
+}
+.pj-fecha-n {
+  min-width: 34px;
+  padding: 5px 0;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.pj-fecha-n:hover { border-color: var(--doing); }
+.pj-fecha-n[aria-pressed="true"] {
+  border-color: var(--green);
+  color: var(--greenText);
+  background: var(--activeBg);
+  font-weight: 700;
+}
+.pj-fecha-n:focus-visible { outline: 2px solid var(--doing); outline-offset: 2px; }
+
+/* Item que rolou da reunião anterior. O contador é texto, não só cor. */
+.pj-rolou {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+}
+.pj-rolou[data-virou="1"] {
+  border-color: var(--red);
+  color: var(--red);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .pj-trilha-s { font-size: 11px; padding: 3px 8px; }
+  .pj-rsvp { letter-spacing: 0; }
+}
