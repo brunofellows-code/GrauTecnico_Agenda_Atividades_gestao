@@ -3,6 +3,9 @@ rules_version = '2';
 // ============================================================
 // Sistema A - Grau Tecnico FSA - Regras do Firestore
 // Fase 1 (base) + Bloco 2 (ocorrencias, solicitacoes) + F1-D
+// + R10 (02/09) - GERA L2: dominios, reuniao_series, feedback,
+//   previsto x realizado no planejamento (2 edicoes cirurgicas,
+//   marcadas com "R10"; todo o resto e o arquivo vigente intacto)
 // ============================================================
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -152,7 +155,17 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
     function planoSoConteudo() {
-      return planoMudou().hasOnly(['itens', 'dispensas', 'entregueEm', 'atualizadoEm']);
+      // R10 (02/09): chaves do previsto x realizado (CALIBRACAO_PLANILHAS §3)
+      // entram no MESMO guarda-chuva de conteudo: escreve quem ja escrevia
+      // conteudo (gestor em qualquer setor; lider so no escopo dele).
+      // 'previstoOriginal' fica FORA de proposito: nasce no create e nunca
+      // mais muda (baseline congelada) - mesma doutrina de setorSigla.
+      // 'revisoes' e append de historico com motivo; 'previstoVigente' e o
+      // numero corrente; roll-ups (custoRealAcum etc.) sao pre-computados
+      // no mesmo write do check-in.
+      return planoMudou().hasOnly(['itens', 'dispensas', 'entregueEm', 'atualizadoEm',
+        'checkins', 'revisoes', 'previstoVigente', 'limiarVerde', 'limiarAmbar',
+        'custoRealAcum', 'horasRealAcum', 'itensFeitos', 'itensTotal']);
     }
     function planoSoCienciaGestor() {
       return planoMudou().hasOnly(['aprovGestor', 'atualizadoEm']);
@@ -342,7 +355,7 @@ service cloud.firestore {
     //
     // Leitura aberta a qualquer ativo: o numero que vai ao grupo dos socios
     // nao e segredo dos socios; esconder resultado de quem executa e o
-    // oposito do que a rotina pretende.
+    // oposto do que a rotina pretende.
     //
     // Anti-forja: quem grava tem de assinar com o proprio uid (mesma
     // doutrina do atividade_log). Sem delete — historico de KPI nao se apaga;
@@ -358,6 +371,37 @@ service cloud.firestore {
     match /kpi_snapshots/{dia} {
       allow read: if isActive();
       allow create: if canWrite();
+      allow update, delete: if false;
+    }
+
+    // ---------- R10 (02/09) - dominios (listas fechadas da casa) ----------
+    // Cursos, turmas, turnos, tiposAtividade (CALIBRACAO §5). Setores JA tem
+    // colecao propria e ficam la. Leitura por qualquer ativo (alimenta os
+    // selects); escrita so gestor - dominio e vocabulario oficial, nao adere
+    // typo (CAPTÇAO/COODENADORES morrem aqui).
+    match /dominios/{doc} {
+      allow read: if isActive();
+      allow write: if isAdmin();
+    }
+
+    // ---------- R10 (02/09) - reuniao_series (Fellow: serie navegavel) ----
+    // A serie agrupa reunioes recorrentes (Integrada, Setor, Lideres).
+    // Carry-over, decisao e action item vivem DENTRO de reunioes.pautaItens
+    // - a regra existente de reunioes ja cobre; a serie e so o agrupador
+    // (nome, recorrencia, participantes, taxa de resolucao pre-computada).
+    match /reuniao_series/{id} {
+      allow read: if isActive();
+      allow create, update: if canWrite();
+      allow delete: if false; // soft-delete sempre (ativo:false)
+    }
+
+    // ---------- R10 (02/09) - feedback (botao "sugerir melhoria") --------
+    // Qualquer ativo cria, assinando com o proprio uid (anti-spoof, mesma
+    // doutrina do atividade_log). Leitura so gestor: e canal de sugestao,
+    // nao mural publico. Imutavel depois de criado (e um registro).
+    match /feedback/{id} {
+      allow read: if isAdmin();
+      allow create: if isActive() && request.resource.data.uid == request.auth.uid;
       allow update, delete: if false;
     }
 
