@@ -21,35 +21,102 @@
   var MIN_LINHAS = 3;
   var MAX_LINHAS = 10;
 
-  /* Ordem de precedência do motivo. Pulada é decisão explícita de não
-     fazer; trava é impedimento declarado; atraso é o resto. */
+  /* ---------- normalizador de forma ----------
+     A lição mais cara desta noite: este motor nasceu esperando o documento
+     de ocorrência cru (o.data, o.travadoMotivo), mas quem chama é o board
+     do kpi.js, onde a mesma informação mora em outro lugar (o.origData,
+     o.ov.travadoMotivo). Do jeito antigo o Pareto contaria zero travas e
+     zero ocorrências — em silêncio, que é o pior jeito de errar. Agora as
+     duas formas entram, e o teste prova as duas.                          */
+  function dataPlanejada(o) {
+    return (o && (o.origData || o.data)) || null;
+  }
+  function dataEfetiva(o) {
+    if (!o) { return null; }
+    return o.effDate || (o.ov && o.ov.dataOverride) || dataPlanejada(o);
+  }
+  function travaDe(o) {
+    if (!o) { return ''; }
+    if (o.travadoMotivo) { return o.travadoMotivo; }
+    return (o.ov && o.ov.travadoMotivo) || '';
+  }
+  function concluidaEmDe(o) {
+    if (!o) { return null; }
+    if (typeof o.concluidaEm === 'number') { return o.concluidaEm; }
+    return (o.ov && typeof o.ov.concluidaEm === 'number') ? o.ov.concluidaEm : null;
+  }
+  /* Dia civil local de um carimbo em ms — mesma receita do kpi.js. */
+  function diaCivil(ms) {
+    var d = new Date(ms);
+    var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate());
+  }
+
+  /* Ordem de precedência. Uma ocorrência conta UMA vez:
+       pulada        — decisão explícita de não fazer;
+       trava         — impedimento declarado, com motivo de lista fechada;
+       fora do prazo — entregou, mas depois do dia combinado;
+       atraso        — venceu e continua aberta.
+     "Fora do prazo" entrou porque sem ele a rotina que SEMPRE entrega três
+     dias tarde aparecia com zero falhas — e era justamente a rotina que
+     precisa ir para a reunião de terça. */
   function motivoFalha(o) {
     if (!o) { return null; }
     if (o.status === 'pulada') { return 'pulada'; }
-    if (o.travadoMotivo) { return 'trava'; }
+    if (travaDe(o)) { return 'trava'; }
+    if (o.status === 'concluida') {
+      var ms = concluidaEmDe(o);
+      var prazo = dataEfetiva(o);
+      return (ms && prazo && diaCivil(ms) > prazo) ? 'fora_do_prazo' : null;
+    }
     if (o.atrasada) { return 'atraso'; }
     return null;
   }
   function ehFalha(o) { return motivoFalha(o) !== null; }
-  function contaNaMedicao(o, marco) {
+
+  /* Entra na medição a ocorrência que (a) foi planejada do marco zero em
+     diante e (b) JÁ VENCEU. Sem o (b) a conta sai diluída: o board traz 30
+     dias de futuro, e ocorrência que nem chegou não pode contar como
+     "prevista" no denominador. */
+  function contaNaMedicao(o, marco, hojeISO) {
     var m = marco || MARCO_ZERO;
-    return !!(o && o.data && o.data >= m);
+    var plan = dataPlanejada(o);
+    if (!plan || plan < m) { return false; }
+    if (!hojeISO) { return true; }
+    return (dataEfetiva(o) || plan) <= hojeISO;
+  }
+
+  function maisRepetido(mapa) {
+    var melhor = null, n = 0, k;
+    for (k in mapa) {
+      if (Object.prototype.hasOwnProperty.call(mapa, k) && mapa[k] > n) { n = mapa[k]; melhor = k; }
+    }
+    return melhor ? { motivo: melhor, vezes: n } : null;
   }
 
   /* Resumo de UMA atividade a partir das ocorrências dela. */
-  function resumoAtividade(ocorrencias, marco) {
-    var out = { previstas: 0, falhas: 0, atrasos: 0, travas: 0, puladas: 0, taxa: null };
+  function resumoAtividade(ocorrencias, marco, hojeISO) {
+    var out = {
+      previstas: 0, falhas: 0,
+      atrasos: 0, travas: 0, puladas: 0, foraDoPrazo: 0,
+      taxa: null, motivos: {}, motivoQueMaisRepete: null
+    };
     (ocorrencias || []).forEach(function (o) {
-      if (!contaNaMedicao(o, marco)) { return; }
+      if (!contaNaMedicao(o, marco, hojeISO)) { return; }
       out.previstas += 1;
       var mot = motivoFalha(o);
       if (!mot) { return; }
       out.falhas += 1;
       if (mot === 'pulada') { out.puladas += 1; }
-      else if (mot === 'trava') { out.travas += 1; }
+      else if (mot === 'trava') {
+        out.travas += 1;
+        var t = travaDe(o);
+        out.motivos[t] = (out.motivos[t] || 0) + 1;
+      } else if (mot === 'fora_do_prazo') { out.foraDoPrazo += 1; }
       else { out.atrasos += 1; }
     });
     out.taxa = out.previstas ? Math.round((out.falhas / out.previstas) * 100) / 100 : null;
+    out.motivoQueMaisRepete = maisRepetido(out.motivos);
     return out;
   }
 
@@ -69,7 +136,15 @@
         rotulo: i.rotulo || i.chave,
         falhas: i.falhas,
         previstas: prev,
-        taxa: prev ? Math.round((i.falhas / prev) * 100) / 100 : null
+        taxa: prev ? Math.round((i.falhas / prev) * 100) / 100 : null,
+        /* a divisão do que falhou segue junto: é ela que diz se a rotina
+           está parando por impedimento, por esquecimento ou por entrega
+           fora do dia — três problemas com três remédios diferentes */
+        atrasos: i.atrasos || 0,
+        travas: i.travas || 0,
+        puladas: i.puladas || 0,
+        foraDoPrazo: i.foraDoPrazo || 0,
+        motivoQueMaisRepete: i.motivoQueMaisRepete || null
       };
     });
     lista.sort(function (a, b) {
@@ -127,6 +202,7 @@
      reunioes-motor.js: jaTemAberta). */
   function itemDePauta(linha, setorSigla) {
     if (!linha) { return null; }
+    var motivo = linha.motivoQueMaisRepete;
     return {
       secao: 'ritmo',
       refTipo: 'ocorrencia',
@@ -134,8 +210,24 @@
       texto: (setorSigla ? (setorSigla + ' · ') : '') + linha.rotulo +
         ': ' + linha.falhas + ' falha' + (linha.falhas === 1 ? '' : 's') +
         ' em ' + linha.previstas + ' previstas' +
-        (linha.taxa != null ? (' (' + Math.round(linha.taxa * 100) + '%)') : '')
+        (linha.taxa != null ? (' (' + Math.round(linha.taxa * 100) + '%)') : '') +
+        (motivo ? ('. O que mais travou: ' + rotuloMotivo(motivo.motivo).toLowerCase() + ', ' + motivo.vezes + '×') : '')
     };
+  }
+
+  /* Rótulo com acento na tela, valor sem acento no banco. A tela nunca
+     inventa o texto do motivo: pede aqui. Motivo fora da lista volta como
+     veio, para uma trava antiga não sumir da contagem. */
+  var ROTULO_MOTIVO = {
+    dependencia: 'Dependência de outra pessoa',
+    informacao: 'Falta de informação',
+    prioridade: 'Outra prioridade entrou na frente',
+    tempo: 'Faltou tempo',
+    ferramenta: 'Ferramenta ou material',
+    outro: 'Outro'
+  };
+  function rotuloMotivo(valor) {
+    return ROTULO_MOTIVO[valor] || String(valor || '');
   }
 
   root.ParetoMotor = {
@@ -148,6 +240,12 @@
     contaNaMedicao: contaNaMedicao,
     resumoAtividade: resumoAtividade,
     pareto: pareto,
-    itemDePauta: itemDePauta
+    itemDePauta: itemDePauta,
+    rotuloMotivo: rotuloMotivo,
+    /* expostos porque a tela precisa ler o board com o mesmo critério do
+       motor — se ela reimplementar isso, os dois divergem em silêncio */
+    dataPlanejada: dataPlanejada,
+    dataEfetiva: dataEfetiva,
+    travaDe: travaDe
   };
 }(typeof window !== 'undefined' ? window : this));
