@@ -268,6 +268,7 @@
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="scores.js"></script>
+  <script src="conclusao.js"></script><!-- módulo 5 (noite 15/09): concluir exige relato de 60+ -->
   <script src="app-version.js"></script>
   <script src="fmt.js"></script>
   <script src="firestore-adapter.js"></script>
@@ -503,15 +504,37 @@
       .then(function () { toast(msg); refresh(); return true; })
       .catch(function (e) { toast(e.message, 'err'); return false; });
   }
+  /* Módulo 5 (noite 15/09) · concluir passa a PEDIR O RELATO de 60+ pelo
+     GrautConclusao, igual ao quadro de Atividades (atividades.html:2161).
+     Antes, o Hoje gravava status sem relato nenhum: o líder recebia "feito"
+     sem saber o que foi feito, e a regra R11-2 do Firestore recusaria a
+     gravação assim que for publicada. Devolve Promise<boolean> — false faz
+     o checkbox otimista reverter (R7·B1.3). */
   function concluir(o) {
-    var patch = { status: 'concluida', concluidaEm: Date.now() };
-    /* concluída não pode continuar travada: a bandeira morre junto com o
-       impedimento. Sem isto o Pareto do líder somaria trava de coisa já
-       feita — número certo somando causa que não existe mais.
-       Só manda os 3 campos quando havia trava: patch enxuto passa por
-       menos condição na regra e não polui o histórico. */
-    if (estaTravada(o)) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
-    return mutar(o, patch, 'concluir_ocorrencia', 'Concluída. ✔');
+    if (!window.GrautConclusao) {
+      toast('Não carreguei o módulo de conclusão. Recarregue a página.', 'err');
+      return Promise.resolve(false);
+    }
+    if (!PODE_AGIR(o)) {
+      toast('Só o responsável (ou líder/gestor) mexe nesta atividade.', 'err');
+      return Promise.resolve(false);
+    }
+    var tituloOcc = (o && o.act && o.act.titulo) || (o && o.titulo) || '';
+    return GrautConclusao.pedir({
+      titulo: 'Concluir · ' + tituloOcc,
+      subtitulo: 'Conte em uma linha o que foi feito. Quem lidera lê isto, não o "ok".'
+    }).then(function (relato) {
+      if (relato == null) { return false; }   /* cancelou: nada muda */
+      var agora = Date.now();
+      var patch = { status: 'concluida', concluidaEm: agora, relato: relato, relatoEm: agora };
+      /* concluída não pode continuar travada: a bandeira morre junto com o
+         impedimento. Sem isto o Pareto do líder somaria trava de coisa já
+         feita — número certo somando causa que não existe mais.
+         Só manda os 3 campos quando havia trava: patch enxuto passa por
+         menos condição na regra e não polui o histórico. */
+      if (estaTravada(o)) { patch.travadoMotivo = ''; patch.travadoDetalhe = ''; patch.travadoEm = null; }
+      return mutar(o, patch, 'concluir_ocorrencia', 'Concluída. ✔');
+    });
   }
   function reabrir(o) { return mutar(o, { status: 'pendente', concluidaEm: null }, 'reabrir_ocorrencia', 'Reaberta.'); }
   function iniciar(o) { return mutar(o, { status: 'em_andamento', iniciadaEm: Date.now() }, 'iniciar_ocorrencia', 'Em andamento.'); }
