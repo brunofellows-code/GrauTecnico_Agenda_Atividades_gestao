@@ -427,3 +427,12 @@ Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada
 - Testado no simulador: menu Nova, linha "verificado ✓", remover/não feito desativam a atividade, concluir grava a ocorrência, manual nos 3 perfis; auditoria estática 17 telas OK.
 
 - **08h20 — sentido inverso feito:** editar uma atividade nascida do plano (quem, data, título) em Atividades atualiza o item do plano; editar um evento nascido do plano (data → início, hora, título, local → onde) em Eventos atualiza o item. Transação no doc do plano; nunca bloqueia a edição; erro só no console. **Cadastro:** Usuários avisa "N usuário(s) sem setor de lotação" com os nomes.
+
+- **PUBLICADO 17/09 08h25:** Bruno enviou `publicar/2026-09-16` → `main` (61d6bd0..acfb8c9). Netlify: deploy 6aabe9ab9025490008b4ac4c `ready`. Conferido no ar: manual.html 200, kpis-setor.js 200, hoje.html com avisos animados, planejamento.html com "Setor convidado", guard.js com Manual no menu.
+
+## 30. Retorno do Bruno no primeiro uso (17/09, 09h) — correções
+
+- **Telas "sem tamanho total":** os contêineres tinham teto de 1040–1180 px; em monitor grande sobrava vazio e parecia aplicativo. Teto passou a 1600 px (Hoje, Planejamento, Reuniões). Atividades e Agenda já eram fluidos.
+- **Planejamento do mês seguinte sempre aberto:** a janela 25–28 deixou de bloquear a criação; só fica registrado `foraDaJanela`. Testado: gestor cria out/26 fora da janela.
+- **Item recorrente:** no detalhe do item, "Repetir nos próximos meses" (1 · 2 · 3 · 5 · 11). Cria o plano de cada mês se não existir, copia o item (prazo no mesmo dia do mês), liga a atividade do membro, marca ↻ na origem e "↻ recorrente" nas cópias. Testado: 2 meses → plano de nov/26 criado.
+- **Atividades:** contagem "N vitais · N importantes · N rotina" no cabeçalho do painel (escopo e setor). A classificação em produção só aparece depois de aplicar `ARQUIVOS PARETTO/2026-09-16_DELTA_CONSOLIDADO_v1.json` na Importar (pendente do Bruno).

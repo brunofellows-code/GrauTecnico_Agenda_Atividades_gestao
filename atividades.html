@@ -2308,6 +2308,8 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
         ops.forEach(function (s) { var p = semDonoDoSetor(s.sigla); tot += p.length; if (p.length) { linhas.push({ s: s, n: p.length }); } });
         head.appendChild(txt('span', 'nm', CURRENT_USER.perfil === 'lider' ? 'Meu escopo' : 'Toda a escola'));
         head.appendChild(el('<span class="sp"></span>'));
+        var todas = (ATIV || []).filter(function (a) { return a && a.ativo !== false; }); var tV = todas.filter(function (a) { return a.peso === 'vital'; }).length, tI = todas.filter(function (a) { return a.peso === 'importante'; }).length;
+        var clsT = txt('span', 'et-pcount zero', tV + ' vitais · ' + tI + ' importantes · ' + (todas.length - tV - tI) + ' rotina'); clsT.title = 'Classificação do Pareto: VITAL = alimenta uma das 5 alavancas; IMPORTANTE = sustenta a operação; sem selo = rotina. Use Filtros › Classificação para ver só uma delas.'; head.appendChild(clsT);
         head.appendChild(txt('span', 'et-pcount' + (tot ? '' : ' zero'), tot ? (tot + ' esperam dono') : 'tudo com dono'));
         head.appendChild(infoAt('Esperam dono', function () {
           return { formula: 'Atividades ativas visíveis para você, sem responsável com login (responsavelUid vazio), contadas pelo setor principal.',
@@ -2351,6 +2353,9 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
       }
       head.appendChild(resp);
       head.appendChild(el('<span class="sp"></span>'));
+      var doSetor = (ATIV || []).filter(function (a) { return a && a.ativo !== false && (a.setorSigla === sig || (a.setorSiglas || []).indexOf(sig) >= 0); });
+      var cV = doSetor.filter(function (a) { return a.peso === 'vital'; }).length, cI = doSetor.filter(function (a) { return a.peso === 'importante'; }).length, cR = doSetor.length - cV - cI;
+      var cls = txt('span', 'et-pcount zero', cV + ' vitais · ' + cI + ' importantes · ' + cR + ' rotina'); cls.title = 'Classificação do Pareto: VITAL = alimenta uma das 5 alavancas; IMPORTANTE = sustenta a operação; sem selo = rotina. Use Filtros › Classificação para ver só uma delas.'; head.appendChild(cls);
       head.appendChild(txt('span', 'et-pcount' + (pend.length ? '' : ' zero'), pend.length ? (pend.length + ' esperam dono') : 'tudo com dono'));
       head.appendChild(infoAt('Esperam dono · ' + sig, function () {
         return { formula: 'Atividades ativas deste setor (setor principal) sem responsável com login.',

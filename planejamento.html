@@ -33,7 +33,7 @@
 .pl-topactions{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;justify-content:flex-end}
 .pl-mhead{display:none;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--s1);border-bottom:1px solid var(--border)}
 .pl-mhead h1{font-size:var(--fs-xl);font-weight:800;margin:0}
-.pl-wrap{padding:var(--sp-5) var(--sp-6) var(--sp-7);max-width:1180px}
+.pl-wrap{padding:var(--sp-5) var(--sp-6) var(--sp-7);max-width:1600px}
 .pl-sec{font-size:var(--fs-xs);font-weight:800;letter-spacing:.12em;color:var(--accentText);margin:var(--sp-5) 0 var(--sp-3);display:flex;align-items:center;gap:var(--sp-2);text-transform:uppercase;flex-wrap:wrap}
 .pl-sec:first-child{margin-top:0}
 .pl-sec .n{color:var(--muted)}
@@ -320,6 +320,7 @@
     concluirOcorrenciaDoItem: function (pl, it, relato, dia) {
       return fb().then(function (c) { var data = it.quandoPrevisto || ultimoDia(pl.competencia); var id = R.docIdOcorrencia ? R.docIdOcorrencia(it.atividadeId, data) : (it.atividadeId + '_' + data); var now = Date.now(); return c.f.setDoc(c.f.doc(c.db, 'ocorrencias', id), { atividadeId: it.atividadeId, data: data, prazoOriginal: data, responsavelUid: it.quemUid || null, setorSigla: pl.setorSigla, status: 'concluida', concluidaEm: dia ? new Date(dia + 'T12:00:00').getTime() : now, relato: relato || null, relatoEm: now, concluidaPorUid: USER.uid, origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id } }, { merge: true }); }).catch(function (e) { throw ferr(e); });
     },
+    buscarPlano: function (sig, comp) { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'planejamentos'), c.f.where('setorSigla', '==', sig), c.f.where('competencia', '==', comp), c.f.limit(3)); return c.f.getDocs(q).then(function (sn) { return mapDocs(sn).filter(function (x) { return x.ativo !== false; })[0] || null; }); }).catch(function (e) { throw ferr(e); }); },
     atualizarAtividade: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'atividades', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     atualizarEvento: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'eventos', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     log: function (entry) { return fb().then(function (c) { return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry)); }).catch(function (e) { if (window.console && console.warn) { console.warn('[planejamento] log falhou', e); } }); }
@@ -457,7 +458,7 @@
   function criarPlano(sig, comp) {
     var anterior = planoDe(sig, M.compShift(comp, -1));
     var pode = M.podeAbrir(HOJE, ehGestor());
-    if (!pode.pode && comp > COMPS[1]) { toast(pode.mensagem + '.', 'err'); return; }
+    /* 17/09 (Bruno): o plano do mês seguinte fica SEMPRE aberto para criar; a janela 25–28 só marca foraDaJanela no registro */
     function criar(itens) {
       Store.criarPlanejamento({ setorSigla: sig, competencia: comp, itens: itens, entregueEm: null, aprovGestor: null, aprovSocio: null, dispensas: [], foraDaJanela: pode.forcado || false })
         .then(function () { toast('Plano de ' + sig + ' · ' + compLabel(comp) + ' criado.'); return reload(); })
@@ -470,7 +471,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null, indicador: o.indicador || null, turmas: o.turmas || null, comQuem: o.comQuem || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null }, base || {});
+    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null, repetir: null, origemRecorrencia: null }, base || {});
   }
 
   /* ============================================================
@@ -644,7 +645,8 @@
     var editavel = podeEd && st === 'aberto';
     /* ação primeiro (Asana/Linear): o quê · indicador · quem · com quem · prazo · status · semana; detalhe (como · onde · quando · quanto) à direita */
     var tdC = document.createElement('td'); tdC.className = 'chv'; var chev = el('<button type="button" class="pl-chev" aria-label="Detalhes do item" aria-expanded="' + (ABERTOS[it.id] ? 'true' : 'false') + '">' + (ABERTOS[it.id] ? '▾' : '▸') + '</button>'); chev.addEventListener('click', function () { ABERTOS[it.id] = !ABERTOS[it.id]; render(); }); tdC.appendChild(chev); tr.appendChild(tdC);
-    var tdO = celula(pl, it, 'oque', 'texto', editavel); if (it.divulgar) { var pd = pill('📣 ' + (it.divulgar === 'unidade' ? 'agenda da unidade' : 'agenda do setor'), 'ok'); pd.title = it.divulgar === 'unidade' ? 'Na agenda da unidade — todos veem no dia' : 'Na agenda do setor — a equipe e os convidados veem no dia'; pd.style.marginTop = '3px'; tdO.appendChild(pd); } tr.appendChild(tdO);
+    var tdO = celula(pl, it, 'oque', 'texto', editavel); if (it.repetir && it.repetir.ate) { var pr = pill('↻ até ' + compLabel(it.repetir.ate), ''); pr.style.marginTop = '3px'; tdO.appendChild(pr); } else if (it.origemRecorrencia) { var pr2 = pill('↻ recorrente', ''); pr2.title = 'Copiado do plano de ' + compLabel(it.origemRecorrencia.competencia); pr2.style.marginTop = '3px'; tdO.appendChild(pr2); }
+    if (it.divulgar) { var pd = pill('📣 ' + (it.divulgar === 'unidade' ? 'agenda da unidade' : 'agenda do setor'), 'ok'); pd.title = it.divulgar === 'unidade' ? 'Na agenda da unidade — todos veem no dia' : 'Na agenda do setor — a equipe e os convidados veem no dia'; pd.style.marginTop = '3px'; tdO.appendChild(pd); } tr.appendChild(tdO);
     tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
     tr.appendChild(celula(pl, it, 'quemUid', 'quem', editavel));
     tr.appendChild(celulaParceiros(pl, it, editavel));
@@ -699,6 +701,7 @@
     g.appendChild(campoDet(pl, it, 'valorFinalCentavos', 'brl', podeEd && fechado, 'Custo realizado'));
     g.appendChild(campoDet(pl, it, 'obs', 'texto', editavel || (podeEd && fechado), 'Observações', 'wide'));
     g.appendChild(campoDivulgar(pl, it, editavel));
+    g.appendChild(campoRepetir(pl, it, editavel));
     if (it.relato) { var fr = el('<div class="f wide"></div>'); fr.appendChild(txt('label', '', 'Relato do fechamento' + (it.evidencia ? ' · evidência: ' + it.evidencia : ''))); var hv = el('<div class="h"></div>'); hv.appendChild(txt('span', 'v', it.relato)); fr.appendChild(hv); g.appendChild(fr); }
     else if (it.motivoDetalhe) { var fm = el('<div class="f wide"></div>'); fm.appendChild(txt('label', '', 'Por que não foi feito')); var hm = el('<div class="h"></div>'); hm.appendChild(txt('span', 'v', it.motivoDetalhe)); fm.appendChild(hm); g.appendChild(fm); }
     tr.firstChild.appendChild(g); return tr;
@@ -723,6 +726,41 @@
     else if (it.eventoId) { var ev = eventoDoItem(pl, it, v); p0 = Store.atualizarEvento(it.eventoId, { siglaSetor: ev.siglaSetor, convocadosUids: ev.convocadosUids, ativo: true }).then(function () { return grava({ divulgar: v }, v === 'unidade' ? 'Agora na agenda da unidade — todos veem no dia ' + quando + '.' : 'Agora na agenda do setor — a equipe vê no dia ' + quando + '.'); }); }
     else { p0 = Store.criarEvento(eventoDoItem(pl, it, v)).then(function (id) { return grava({ divulgar: v, eventoId: id }, v === 'unidade' ? 'Na agenda da unidade — todos veem no dia ' + quando + ' e são avisados no Hoje.' : 'Na agenda do setor — a equipe e os convidados veem no dia ' + quando + '.'); }); }
     p0.catch(function (e) { toast(e.message, 'err'); render(); });
+  }
+  /* ---------- repetir o item nos próximos meses (Bruno, 17/09): cria/abre o plano de cada mês e copia o item ---------- */
+  function diaNoMes(iso, comp) { if (!iso) { return null; } var d = parseInt(iso.slice(8, 10), 10), ult = parseInt(ultimoDia(comp).slice(8, 10), 10); return comp + '-' + ('0' + Math.min(d, ult)).slice(-2); }
+  function copiaParaMes(pl, it, comp) { return novoItem({ oque: it.oque, como: it.como || null, onde: it.onde || null, turmas: it.turmas || null, comQuem: it.comQuem || null, hora: it.hora || null, indicador: it.indicador || null, quemUid: it.quemUid, quemNome: it.quemNome, quandoPrevisto: diaNoMes(it.quandoPrevisto, comp) || ultimoDia(comp), inicio: diaNoMes(it.inicio, comp), valorPrevistoCentavos: it.valorPrevistoCentavos == null ? null : it.valorPrevistoCentavos, subsetorSigla: it.subsetorSigla || null, setoresEnvolvidos: (it.setoresEnvolvidos || []).map(function (z) { return { sigla: z.sigla, em: Date.now() }; }), origemRecorrencia: { itemId: it.id, planejamentoId: pl.id, competencia: pl.competencia } }); }
+  function repetirItem(pl, it, n) {
+    var comps = [], feitos = []; for (var m = 1; m <= n; m++) { comps.push(M.compShift(pl.competencia, m)); }
+    function passo(i) {
+      if (i >= comps.length) { return Promise.resolve(); }
+      var comp = comps[i];
+      return Store.buscarPlano(pl.setorSigla, comp)
+        .then(function (plM) { if (plM) { return plM; } return Store.criarPlanejamento({ setorSigla: pl.setorSigla, competencia: comp, itens: [], entregueEm: null, aprovGestor: null, aprovSocio: null, dispensas: [], foraDaJanela: false }).then(function () { return Store.buscarPlano(pl.setorSigla, comp); }); })
+        .then(function (plM) {
+          if (!plM) { throw new Error('Não consegui abrir o plano de ' + compLabel(comp) + '.'); }
+          var ja = (plM.itens || []).some(function (o) { return o && !o.removido && o.origemRecorrencia && o.origemRecorrencia.itemId === it.id; });
+          if (ja) { feitos.push(comp); return; }
+          var copia = copiaParaMes(pl, it, comp);
+          return salvarItens(plM, (plM.itens || []).concat([copia]), 'planejamento_item_repetido', { de: pl.id, itemId: it.id, comp: comp }).then(function () { feitos.push(comp); return garantirAtividade(plM, copia).catch(function () { /* sem atividade; o líder usa → agenda depois */ }); });
+        })
+        .then(function () { return passo(i + 1); });
+    }
+    return passo(0).then(function () {
+      var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { repetir: { meses: n, ate: comps[comps.length - 1], em: Date.now() } }) : o; });
+      return salvarItens(pl, lista, 'planejamento_item_repetir', { itemId: it.id, meses: n });
+    }).then(function () { toast('Repetido em ' + feitos.length + ' mês(es): ' + compLabel(comps[0]) + ' a ' + compLabel(comps[comps.length - 1]) + '. Os meses fora da grade aparecem quando chegar a vez deles.'); return reload().then(render); });
+  }
+  function campoRepetir(pl, it, editavel) {
+    var f = el('<div class="f"></div>'); f.appendChild(txt('label', '', 'Repetir nos próximos meses'));
+    var h = el('<div class="h"></div>');
+    if (it.repetir && it.repetir.ate) { h.appendChild(txt('span', 'v', '↻ até ' + compLabel(it.repetir.ate) + ' (' + it.repetir.meses + ' mês/meses)')); f.appendChild(h); return f; }
+    if (it.origemRecorrencia && it.origemRecorrencia.competencia) { h.appendChild(txt('span', 'v', '↻ vem do plano de ' + compLabel(it.origemRecorrencia.competencia))); f.appendChild(h); return f; }
+    if (!editavel) { h.appendChild(txt('span', 'v vazio', 'não')); f.appendChild(h); return f; }
+    var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Repetir nos próximos meses');
+    [['', 'não'], ['1', '1 mês'], ['2', '2 meses'], ['3', '3 meses'], ['5', '5 meses'], ['11', '11 meses (um ano)']].forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; sel.appendChild(op); });
+    sel.addEventListener('change', function () { var nM = parseInt(sel.value, 10); if (!nM) { return; } if (!window.confirm('Copiar "' + it.oque + '" para os próximos ' + nM + ' mês(es)? O plano de cada mês é criado se ainda não existir.')) { sel.value = ''; return; } sel.disabled = true; repetirItem(pl, it, nM).catch(function (e) { toast(e.message, 'err'); render(); }); });
+    h.appendChild(sel); f.appendChild(h); return f;
   }
   function campoDivulgar(pl, it, editavel) {
     var f = el('<div class="f"></div>'); f.appendChild(txt('label', '', 'Divulgar na agenda'));
