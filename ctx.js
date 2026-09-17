@@ -83,7 +83,7 @@
 
     var wrap = document.createElement('label');
     wrap.className = 'gctx';
-    wrap.style.cssText = 'display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2)';
+    wrap.style.cssText = 'display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted2Text,var(--muted2))';
     var tag = document.createElement('span');
     tag.textContent = 'Setor';
     wrap.appendChild(tag);

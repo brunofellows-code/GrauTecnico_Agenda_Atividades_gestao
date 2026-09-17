@@ -393,6 +393,13 @@ body {
   --ctaText:    #06140C;               /* tinta escura sobre o verde (11,07:1) */
   --onBrand:    #06140C;               /* texto sobre --brand (11,07:1) */
   --activeBg:   rgba(52,226,126,.13);
+  /* SEMÁFORO COMO TEXTO (auditoria 17/09): --green/--red/--amber/--orange/--doing são PREENCHIMENTO
+     (ponto, barra, borda). Letra pequena usa estes, medidos no pior caso — pílula tingida sobre --s2. */
+  --greenText:  #22C55E;               /* 5,02:1 no pior caso */
+  --redText:    #F87171;               /* 4,90:1 */
+  --amberText:  #F59E0B;               /* 5,29:1 */
+  --orangeText: #FB923C;               /* 5,48:1 */
+  --doingText:  #38BDF8;               /* 5,17:1 */
 }
 [data-theme="light"] {
   --brand:      #16A34A;
@@ -401,4 +408,12 @@ body {
   --ctaText:    #FFFFFF;               /* 5,02:1 */
   --onBrand:    #06140C;               /* 5,72:1 sobre #16A34A */
   --activeBg:   rgba(22,163,74,.10);
+  --greenText:  #166534;               /* 5,21:1 no pior caso (o #15803D caía a 3,66 sobre pílula) */
+  --redText:    #991B1B;               /* 5,46:1 */
+  --amberText:  #92400E;               /* 5,22:1 */
+  --orangeText: #9A3412;               /* 5,19:1 */
+  --doingText:  #075985;               /* 5,33:1 */
+  /* cor do SETOR como letra sobre a própria tinta (10%): 6 das 8 ficavam abaixo de 4,5:1 no claro */
+  --setor1Text: #6D28D9; --setor2Text: #1D4ED8; --setor3Text: #155E75; --setor4Text: #475569;
+  --setor5Text: #9D174D; --setor6Text: #4338CA; --setor7Text: #854D0E; --setor8Text: #115E59;
 }

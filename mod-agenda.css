@@ -92,16 +92,17 @@
 .ag-inbox-b { display: inline-flex; gap: 7px; flex: none; }
 
 /* ---------- visão SEMANA ---------- */
-.ag-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+/* minmax(0,1fr): sem o 0, um chip com texto longo (nowrap) alarga a coluna e a semana estoura a tela */
+.ag-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .ag-wcol {
   background: var(--s1); border: 1px solid var(--border); border-radius: 11px;
-  padding: 7px; min-height: 260px; display: flex; flex-direction: column; gap: 5px;
+  padding: 7px; min-height: 260px; display: flex; flex-direction: column; gap: 5px; min-width: 0;
 }
 .ag-wcol.fds { background: var(--s2); }
 .ag-wh {
   display: flex; align-items: flex-end; gap: 6px;
   font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
-  color: var(--muted2); text-transform: uppercase; padding-bottom: 5px;
+  color:var(--muted2Text,var(--muted2)); text-transform: uppercase; padding-bottom: 5px;
   border-bottom: 1px solid var(--border); margin-bottom: 2px;
 }
 .ag-wh-d { font-size: 15px; font-weight: 900; color: var(--text); letter-spacing: -.02em; }
@@ -111,12 +112,12 @@
   width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
   font-size: 12.5px;
 }
-.ag-wempty { font-size: 11px; font-weight: 600; color: var(--muted2); padding: 6px 2px; }
+.ag-wempty { font-size: 11px; font-weight: 600; color:var(--muted2Text,var(--muted2)); padding: 6px 2px; }
 
 /* ---------- visão MÊS ---------- */
-.ag-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.ag-month { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
 .ag-dow {
-  font-size: 10px; font-weight: 800; letter-spacing: .05em; color: var(--muted2);
+  font-size: 10px; font-weight: 800; letter-spacing: .05em; color:var(--muted2Text,var(--muted2));
   text-align: center; padding: 4px 0; text-transform: uppercase;
 }
 .ag-day {
@@ -135,11 +136,11 @@
   border-radius: 50%; flex: none;
 }
 .ag-day.hoje .ag-dn { background: var(--cta); color: var(--ctaText); }
-.ag-more { font-size: 9.5px; font-weight: 800; color: var(--muted2); padding-left: 2px; }
+.ag-more { font-size: 9.5px; font-weight: 800; color:var(--muted2Text,var(--muted2)); padding-left: 2px; }
 
 /* ---------- chip do item (a cor sai do agenda-motor.js) ---------- */
 .ag-chip {
-  display: flex; align-items: center; gap: 6px; width: 100%;
+  display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0;
   font-family: inherit; font-size: 11px; font-weight: 700; line-height: 1.3;
   text-align: left; color: var(--text);
   background: var(--chipBg); border: 1.5px solid var(--border);
@@ -153,16 +154,16 @@
 
 /* 🔴 convite sem resposta — CONTORNO (padrão Google Agenda) */
 .ag-chip.ag-red { background: transparent; border-color: var(--red); border-style: dashed; }
-.ag-chip.ag-red .ag-mark { color: var(--red); }
+.ag-chip.ag-red .ag-mark { color:var(--redText,var(--red)); }
 /* 🔵 convite com "vou" — SÓLIDO */
 .ag-chip.ag-doing { background: var(--haloDoing); border-color: var(--doing); }
-.ag-chip.ag-doing .ag-mark { color: var(--doing); }
+.ag-chip.ag-doing .ag-mark { color:var(--doingText,var(--doing)); }
 /* 🟢 plano do próprio setor — SÓLIDO */
 .ag-chip.ag-green { background: var(--haloGreen); border-color: var(--green); }
 .ag-chip.ag-green .ag-mark { color: var(--greenText); }
 /* ⚪ evento da unidade — sólido cinza claro */
 .ag-chip.ag-muted2 { background: var(--chipBg); border-color: var(--border); }
-.ag-chip.ag-muted2 .ag-mark { color: var(--muted2); }
+.ag-chip.ag-muted2 .ag-mark { color:var(--muted2Text,var(--muted2)); }
 /* recusado, só quando pedem para ver */
 .ag-chip.ag-riscado { opacity: .6; }
 .ag-chip.ag-riscado .ag-chip-t { text-decoration: line-through; }
@@ -172,10 +173,10 @@
 .ag-lgs.ag-doing { border-color: var(--doing); background: var(--haloDoing); }
 .ag-lgs.ag-green { border-color: var(--green); background: var(--haloGreen); }
 .ag-lgs.ag-muted2 { border-color: var(--border); background: var(--chipBg); }
-.ag-lg.ag-red .ag-lgm { color: var(--red); }
-.ag-lg.ag-doing .ag-lgm { color: var(--doing); }
+.ag-lg.ag-red .ag-lgm { color:var(--redText,var(--red)); }
+.ag-lg.ag-doing .ag-lgm { color:var(--doingText,var(--doing)); }
 .ag-lg.ag-green .ag-lgm { color: var(--greenText); }
-.ag-lg.ag-muted2 .ag-lgm { color: var(--muted2); }
+.ag-lg.ag-muted2 .ag-lgm { color:var(--muted2Text,var(--muted2)); }
 
 /* ---------- popup do item ---------- */
 .ag-resp {

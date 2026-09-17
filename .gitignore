@@ -1,0 +1,16 @@
+# sistema operacional e editores
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+# segredos nunca entram
+.env
+.env.*
+*.pem
+*.key
+serviceAccount*.json
+# sobras de teste local
+node_modules/
+chrome_prof_*/
+*.log

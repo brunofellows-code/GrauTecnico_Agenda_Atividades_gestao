@@ -23,7 +23,7 @@
 .ev-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin:0}
 .ev-top-r{display:flex;align-items:center;gap:12px}
 .ev-body{padding:18px 32px 32px}
-.ev-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.ev-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2Text,var(--muted2));display:inline-flex;flex:none}
 .ev-i:hover{color:var(--greenText)}
 /* a grade, os chips e a legenda moram no mod-agenda.css (namespace ag-) */
 /* bottom sheet */
@@ -34,7 +34,7 @@
 .ev-sheet.on{transform:translateY(0)}
 .ev-sh-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .ev-sh-t{font-size:14.5px;font-weight:800}
-.ev-sh-x{appearance:none;border:0;background:transparent;color:var(--muted2);cursor:pointer;padding:2px;display:inline-flex}
+.ev-sh-x{appearance:none;border:0;background:transparent;color:var(--muted2Text,var(--muted2));cursor:pointer;padding:2px;display:inline-flex}
 .ev-item{border-top:1px solid var(--border);padding:12px 0}
 .ev-item:first-of-type{border-top:0}
 .ev-it-m{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:5px;line-height:1.5}
@@ -46,7 +46,7 @@
 .ev-pop.on{display:block}
 .ev-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
 .ev-pop-row{margin-bottom:8px}
-.ev-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.ev-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2Text,var(--muted2));margin-bottom:2px}
 .ev-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
 @media (max-width:900px){
   /* celular: a barra lateral some (o menu vem pelo botão flutuante do mnav.js); topo compacto; barra da agenda em linhas */
@@ -129,6 +129,7 @@
   function ferr(e) {
     var code = (e && e.code) || '';
     if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'), { code: code }); }
+    if (code === 'resource-exhausted') { return Object.assign(new Error('A cota gratuita de leituras do banco acabou por hoje (plano Spark do Firebase: 50 mil por dia). Volta sozinha de madrugada. Avise o gestor: é o sinal para passar o Firebase ao plano Blaze.'), { code: code }); }
     if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
     return Object.assign(new Error((e && e.message) || 'Erro ao acessar os eventos.'), { code: code });
   }

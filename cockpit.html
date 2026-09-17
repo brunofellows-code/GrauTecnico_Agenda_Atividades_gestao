@@ -22,7 +22,7 @@
 .ck-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin:0}
 .ck-top-r{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .ck-body{padding:18px 32px 40px}
-.ck-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.ck-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2Text,var(--muted2));display:inline-flex;flex:none}
 .ck-i:hover{color:var(--greenText)}
 
 /* popover do "i" */
@@ -32,7 +32,7 @@
 .ck-pop.on{display:block}
 .ck-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
 .ck-pop-row{margin-bottom:8px}
-.ck-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.ck-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2Text,var(--muted2));margin-bottom:2px}
 .ck-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.4}
 
 /* abas de ciclo */
@@ -52,14 +52,14 @@
 .ck-bar-s{font-size:11.5px;font-weight:600;color:var(--muted)}
 .ck-chip{font-size:10.5px;font-weight:800;padding:4px 10px;border-radius:11px;border:1px solid var(--border);color:var(--muted)}
 .ck-chip.verde{border-color:var(--green);color:var(--greenText)}
-.ck-chip.ambar{border-color:var(--amber);color:var(--amber)}
-.ck-chip.vermelho{border-color:var(--red);color:var(--red)}
+.ck-chip.ambar{border-color:var(--amber);color:var(--amberText,var(--amber))}
+.ck-chip.vermelho{border-color:var(--red);color:var(--redText,var(--red))}
 /* aviso de gravação: "salvando…" / "ainda não salvo" / "não salvo".
    Âmbar NÃO serve aqui: no tema claro --amber dá ~3,2:1 em texto
    pequeno. Pendente usa --text em negrito; erro usa --red (~4,8:1
    nos dois temas). A cor só reforça: o texto já diz o estado. */
 .ck-grav.pend{color:var(--text);font-weight:800}
-.ck-grav.err{color:var(--red);font-weight:800}
+.ck-grav.err{color:var(--redText,var(--red));font-weight:800}
 .ck-bar .ui-btn[hidden]{display:none}
 .ck-bar:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
@@ -69,7 +69,7 @@
 .ck-card.verde{border-left-color:var(--green)}
 .ck-card.ambar{border-left-color:var(--amber)}
 .ck-card.vermelho{border-left-color:var(--red)}
-.ck-card.nd{border-left-color:var(--muted2)}
+.ck-card.nd{border-left-color:var(--muted2Text,var(--muted2))}
 .ck-card-h{display:flex;align-items:center;gap:7px}
 .ck-card-l{flex:1;min-width:0;font-size:12px;font-weight:800;line-height:1.25}
 .ck-card-in{display:flex;align-items:baseline;gap:6px}
@@ -79,20 +79,20 @@
 .ck-sn{display:flex;gap:6px}
 .ck-snb{flex:1;appearance:none;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:800;padding:9px 0;border-radius:9px;cursor:pointer}
 .ck-snb.on-sim{background:var(--activeBg);border-color:var(--green);color:var(--greenText)}
-.ck-snb.on-nao{background:var(--activeBg);border-color:var(--red);color:var(--red)}
-.ck-snb.on-nd{background:var(--chipBg);border-color:var(--muted2);color:var(--muted)}
+.ck-snb.on-nao{background:var(--activeBg);border-color:var(--red);color:var(--redText,var(--red))}
+.ck-snb.on-nd{background:var(--chipBg);border-color:var(--muted2Text,var(--muted2));color:var(--muted)}
 .ck-card-f{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.ck-meta{font-size:10.5px;font-weight:800;color:var(--muted2)}
-.ck-sem{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border);color:var(--muted2)}
+.ck-meta{font-size:10.5px;font-weight:800;color:var(--muted2Text,var(--muted2))}
+.ck-sem{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:10px;border:1px solid var(--border);color:var(--muted2Text,var(--muted2))}
 .ck-sem.verde{border-color:var(--green);color:var(--greenText)}
-.ck-sem.ambar{border-color:var(--amber);color:var(--amber)}
-.ck-sem.vermelho{border-color:var(--red);color:var(--red)}
+.ck-sem.ambar{border-color:var(--amber);color:var(--amberText,var(--amber))}
+.ck-sem.vermelho{border-color:var(--red);color:var(--redText,var(--red))}
 .ck-hist{display:flex;align-items:center;gap:4px;margin-top:1px}
 .ck-hdot{width:9px;height:9px;border-radius:50%;background:var(--s2);border:1px solid var(--border);flex:none}
 .ck-hdot.verde{background:var(--green);border-color:var(--green)}
 .ck-hdot.ambar{background:var(--s2);border:2px solid var(--amber)}
 .ck-hdot.vermelho{background:var(--red);border-color:var(--red)}
-.ck-hl{font-size:9.5px;font-weight:700;color:var(--muted2);margin-right:2px}
+.ck-hl{font-size:9.5px;font-weight:700;color:var(--muted2Text,var(--muted2));margin-right:2px}
 
 /* rodapé: mensagem do grupo */
 .ck-foot{margin-top:16px;background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:15px 16px}
@@ -200,6 +200,7 @@
   function ferr(e) {
     var code = (e && e.code) || '';
     if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão para lançar no Cockpit. Só o gestor lança.'), { code: code }); }
+    if (code === 'resource-exhausted') { return Object.assign(new Error('A cota gratuita de leituras do banco acabou por hoje (plano Spark do Firebase: 50 mil por dia). Volta sozinha de madrugada. Avise o gestor: é o sinal para passar o Firebase ao plano Blaze.'), { code: code }); }
     if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
     return Object.assign(new Error((e && e.message) || 'Erro ao acessar o Cockpit.'), { code: code });
   }

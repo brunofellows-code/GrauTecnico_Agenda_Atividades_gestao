@@ -28,14 +28,14 @@
 .pf-seg-b.on{background:var(--cta);color:var(--ctaText)}
 .pf-mhead .pf-seg{display:flex;width:100%}
 .pf-mhead .pf-seg-b{flex:1;text-align:center;padding:8px 0}
-.pf-stamp{font-size:11px;font-weight:600;color:var(--muted2);padding:12px 32px 0}
+.pf-stamp{font-size:11px;font-weight:600;color:var(--muted2Text,var(--muted2));padding:12px 32px 0}
 .pf-banner{margin:12px 32px 0;padding:10px 14px;border-radius:11px;background:var(--chipBg);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:9px}
 .pf-banner .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);flex:none}
 .pf-body{padding:18px 32px 32px}
 .pf-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:13px}
 .pf-card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .pf-card-t{font-size:14px;font-weight:800}
-.pf-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.pf-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2Text,var(--muted2));display:inline-flex;flex:none}
 .pf-i:hover{color:var(--greenText)}
 .pf-i svg{display:block}
 .pf-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;min-height:340px;padding:40px 20px}
@@ -49,7 +49,7 @@
 .pf-pop.on{display:block}
 .pf-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
 .pf-pop-row{margin-bottom:8px}
-.pf-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.pf-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2Text,var(--muted2));margin-bottom:2px}
 .pf-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
 /* filtro de setor (chips) */
 .pf-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:13px}
@@ -71,23 +71,23 @@
 .pf-btrack{flex:1;height:14px;background:var(--chipBg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .pf-bfill{height:100%;border-radius:7px;min-width:2px}
 .pf-bval{width:84px;flex:none;font-size:11.5px;font-weight:700;color:var(--muted);text-align:right}
-.pf-bval .lt{color:var(--red);font-weight:800}
+.pf-bval .lt{color:var(--redText,var(--red));font-weight:800}
 .pf-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:13px;align-items:start;margin-bottom:13px}
 .pf-grp{background:var(--sideBg);border:1px solid var(--border);border-radius:14px;padding:11px}
 .pf-grphd{display:flex;align-items:center;gap:8px;padding:3px 4px 10px}
 .pf-grpdot{width:9px;height:9px;border-radius:50%;flex:none}
 .pf-grpname{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--text)}
 .pf-grpsp{flex:1}
-.pf-grpcount{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px}
+.pf-grpcount{font-size:11px;font-weight:800;color:var(--muted2Text,var(--muted2));background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px}
 .pf-pcard{display:flex;flex-direction:column;gap:5px;background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:11px 12px;cursor:pointer;margin-bottom:8px}
 .pf-pcard:hover{background:var(--s2)}
 .pf-pcard:last-child{margin-bottom:0}
 .pf-pcn{font-size:13px;font-weight:700;color:var(--text)}
-.pf-pcs{font-size:10.5px;font-weight:700;color:var(--muted2)}
+.pf-pcs{font-size:10.5px;font-weight:700;color:var(--muted2Text,var(--muted2))}
 .pf-pcm{display:flex;align-items:center;gap:10px;font-size:11.5px;font-weight:700;color:var(--muted)}
 .pf-pcm .sc{display:inline-flex;align-items:center;gap:5px}
 .pf-pcm .sc .d{width:8px;height:8px;border-radius:50%;display:inline-block}
-.pf-pcm .lt{color:var(--red);font-weight:800}
+.pf-pcm .lt{color:var(--redText,var(--red));font-weight:800}
 .pf-hyg{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin-bottom:13px;cursor:pointer}
 .pf-hyg:hover{background:var(--s2)}
 .pf-hygdot{width:9px;height:9px;border-radius:50%;background:var(--amber);flex:none}
@@ -101,11 +101,11 @@
 .pf-tbl tbody tr:hover td{background:var(--s2)}
 .pf-tbl tr:last-child td{border-bottom:0}
 .pf-nome{font-weight:800}
-.pf-sigs{font-size:10.5px;font-weight:700;color:var(--muted2)}
+.pf-sigs{font-size:10.5px;font-weight:700;color:var(--muted2Text,var(--muted2))}
 .pf-scorecell{display:inline-flex;align-items:center;gap:8px;font-weight:800}
 .pf-scoredot{width:9px;height:9px;border-radius:50%;flex:none}
 .pf-semresp td{background:var(--haloRed)}
-.pf-semresp .pf-nome{color:var(--red)}
+.pf-semresp .pf-nome{color:var(--redText,var(--red))}
 /* score por setor (mesma renderização do N2) */
 .pf-ss-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--border)}
 .pf-ss-row:first-child{border-top:0}
@@ -124,8 +124,8 @@
 .pf-acao{display:flex;justify-content:space-between;gap:10px;padding:7px 2px;border-top:1px solid var(--border);font-size:12px}
 .pf-acao:first-of-type{border-top:0}
 .pf-acao .a{font-weight:700;color:var(--text)}
-.pf-acao .d{font-weight:600;color:var(--muted2);flex:none}
-.pf-acoes-note{font-size:11px;color:var(--muted2);padding:8px 2px}
+.pf-acao .d{font-weight:600;color:var(--muted2Text,var(--muted2));flex:none}
+.pf-acoes-note{font-size:11px;color:var(--muted2Text,var(--muted2));padding:8px 2px}
 .pf-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;font-family:inherit;font-size:12px;font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--cardShadow)}
 .pf-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
 @media (max-width:900px){
@@ -150,8 +150,8 @@
 .dd-tit{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dd-sig{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 6px;white-space:nowrap}
 .dd-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}
-.dd-late{color:var(--red);font-weight:700}
-.dd-more,.dd-empty{font-size:12px;color:var(--muted2);text-align:center;padding:8px}
+.dd-late{color:var(--redText,var(--red));font-weight:700}
+.dd-more,.dd-empty{font-size:12px;color:var(--muted2Text,var(--muted2));text-align:center;padding:8px}
 @media(max-width:700px){.dd-row{flex-wrap:wrap}.dd-tit{flex-basis:100%;white-space:normal}}
 </style>
 </head>
@@ -608,7 +608,7 @@
       var tr = el('<div class="pf-ss-track"></div>');
       tr.appendChild(el('<div class="pf-ss-fill" style="width:' + x.sc.score + '%;background:var(--' + tok + ')"></div>'));
       row.appendChild(tr);
-      row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + ')">' + x.sc.score + '</span>'));
+      row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + 'Text,var(--' + tok + '))">' + x.sc.score + '</span>'));
       card.appendChild(row);
     });
     /* F1-D: setores em partida — neutro, nunca vermelho */
@@ -619,7 +619,7 @@
       row.appendChild(nome);
       row.appendChild(el('<span class="pf-ss-track"></span>'));
       var tg = el('<span></span>');
-      tg.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 9px';
+      tg.style.cssText = 'font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2Text,var(--muted2));background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 9px';
       tg.textContent = '— coletando';
       card.appendChild(row);
       row.appendChild(tg);
@@ -680,17 +680,17 @@
     var aderG = (VM && VM.aderencia != null) ? VM.aderencia : null;
     var tA = heroTom(aderG, 80, 60);
     heroes.appendChild(hero('Aderência à rotina', infos.ader,
-      '<span class="pf-hdot" style="background:var(--' + tA + ')"></span><span style="color:var(--' + tA + ')">' + (aderG == null ? '—' : aderG + '%') + '</span>',
+      '<span class="pf-hdot" style="background:var(--' + tA + ')"></span><span style="color:var(--' + tA + 'Text,var(--' + tA + '))">' + (aderG == null ? '—' : aderG + '%') + '</span>',
       aderG == null ? 'Coletando — nada previsto venceu ainda nesta janela.' : (sigAtual ? 'Concluídas ÷ previstas até hoje, só das atividades do setor ' + sigAtual + '.' : 'Concluídas ÷ previstas até hoje, no recorte da janela.')));
     var tP = heroTom(pctNoPrazoG, 80, 60);
     heroes.appendChild(hero('Conclusão no prazo', infos.prazo,
-      '<span class="pf-hdot" style="background:var(--' + tP + ')"></span><span style="color:var(--' + tP + ')">' + (pctNoPrazoG == null ? '—' : pctNoPrazoG + '%') + '</span>',
+      '<span class="pf-hdot" style="background:var(--' + tP + ')"></span><span style="color:var(--' + tP + 'Text,var(--' + tP + '))">' + (pctNoPrazoG == null ? '—' : pctNoPrazoG + '%') + '</span>',
       pctNoPrazoG == null ? 'Sem concluídas no recorte ainda.' : gNP + ' de ' + gCT + ' concluída(s) dentro do prazo.'));
     var nAtr = T.atrasadas || 0;
     var agG = VM ? Math.round((VM.agingMedio || 0) * 10) / 10 : 0;
     var tR = nAtr ? 'red' : 'green';
     heroes.appendChild(hero('Atrasadas agora', { title: 'Atrasadas', formula: 'ocorrências abertas com data efetiva < hoje (dia civil de Salvador)', dados: 'board da janela · ' + rec.texto, numeros: rec.rotulo + ': ' + nAtr + ' atrasada(s) · atraso médio ' + fmtNum(agG) + ' dia(s)' },
-      '<span class="pf-hdot" style="background:var(--' + tR + ')"></span><span style="color:var(--' + tR + ')">' + nAtr + '</span>',
+      '<span class="pf-hdot" style="background:var(--' + tR + ')"></span><span style="color:var(--' + tR + 'Text,var(--' + tR + '))">' + nAtr + '</span>',
       nAtr ? ('Atraso médio: ' + fmtNum(agG) + ' dia(s). Clique nas pessoas abaixo para o detalhe.') : 'Nenhuma ocorrência vencida em aberto. '));
     heroes.setAttribute('data-lente', 'numeros'); /* R3 · lente */
     body.appendChild(heroes);
@@ -948,7 +948,7 @@
         var tokTxt = tok === 'muted2' ? 'muted2Text' : tok;
         var sc = el('<span class="pf-scorecell"></span>');
         sc.appendChild(el('<span class="pf-scoredot" style="background:var(--' + tok + ');box-shadow:0 0 0 3px var(--' + haloOf(tok === 'muted2' ? 'green' : tok) + ')"></span>'));
-        sc.appendChild(el('<span style="color:var(--' + tokTxt + ')">' + (b.score == null ? (b.previstas ? '—' : '—') : b.score) + (b.coletando ? ' · coletando' : '') + '</span>'));
+        sc.appendChild(el('<span style="color:var(--' + tokTxt + 'Text,var(--' + tokTxt + '))">' + (b.score == null ? (b.previstas ? '—' : '—') : b.score) + (b.coletando ? ' · coletando' : '') + '</span>'));
         var ib = infoBtn({
           title: 'Nota de ' + b.nome,
           /* defeito 17 (revisão) — a linha "coletando" TEM previstas. Sem este

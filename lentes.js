@@ -103,7 +103,7 @@
     CSS_OK = true;
     var css = ''
       + '.glen-wrap{margin:0 0 14px}'
-      + '.glen-leg{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--muted2);'
+      + '.glen-leg{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--muted2Text,var(--muted2));'
       + 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:8px}'
       + '.glen-leg .glen-dot{width:8px;height:8px}'
       + '.glen-bar{display:flex;gap:8px;flex-wrap:wrap}'
@@ -117,7 +117,7 @@
       + 'border-radius:0 10px 10px 0}'
       + '.glen-head b{font-size:12px;letter-spacing:.05em;color:var(--text)}'
       + '.glen-head .q{font-size:12.5px;font-weight:700;color:var(--muted)}'
-      + '.glen-head .f{font-size:12px;color:var(--muted2)}'
+      + '.glen-head .f{font-size:12px;color:var(--muted2Text,var(--muted2))}'
       + '.glen-empty{margin-top:12px;padding:16px;border:1px dashed var(--border);border-radius:12px;'
       + 'color:var(--muted);font-size:13px;line-height:1.5}'
       + '@media(max-width:900px){.glen-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}'

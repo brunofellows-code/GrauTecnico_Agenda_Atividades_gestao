@@ -25,7 +25,7 @@
 .im-step{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--accentText);text-transform:uppercase}
 .im-hint{font-size:12px;color:var(--muted);line-height:1.55}
 .im-ta{width:100%;min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.5;background:var(--s2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px}
-.im-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex}
+.im-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2Text,var(--muted2));display:inline-flex}
 .im-i:hover{color:var(--greenText)}
 .im-row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
 /* de-para */
@@ -33,13 +33,13 @@
 .im-tbl th{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accentText);text-align:left;padding:7px 8px;border-bottom:1px solid var(--border)}
 .im-tbl td{font-size:12px;font-weight:600;padding:8px;border-bottom:1px solid var(--border)}
 .im-tbl tr:last-child td{border-bottom:0}
-.im-ok{color:var(--green);font-weight:800}
-.im-warn{color:var(--orange);font-weight:800}
-.im-crit{color:var(--red);font-weight:800}
+.im-ok{color:var(--greenText,var(--green));font-weight:800}
+.im-warn{color:var(--orangeText,var(--orange));font-weight:800}
+.im-crit{color:var(--redText,var(--red));font-weight:800}
 .im-banner{margin-top:12px;padding:11px 14px;border-radius:12px;border:1px solid var(--border);font-size:12.5px;font-weight:700;line-height:1.5}
-.im-banner.crit{background:var(--haloRed);color:var(--red)}
-.im-banner.warn{background:var(--haloOrange);color:var(--orange)}
-.im-banner.ok{background:var(--haloGreen);color:var(--green)}
+.im-banner.crit{background:var(--haloRed);color:var(--redText,var(--red))}
+.im-banner.warn{background:var(--haloOrange);color:var(--orangeText,var(--orange))}
+.im-banner.ok{background:var(--haloGreen);color:var(--greenText,var(--green))}
 /* aviso de limite, não de erro: peso normal e cor de texto secundário — quem
    só consulta não fez nada errado para receber um banner vermelho */
 .im-banner.nota{margin-top:0;margin-bottom:12px;background:var(--chipBg);color:var(--muted);font-weight:500}
@@ -47,7 +47,7 @@
 .im-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:10px}
 .im-sm{background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;text-align:center}
 .im-sm-v{font-size:22px;font-weight:800}
-.im-sm-k{font-size:10.5px;font-weight:700;color:var(--muted2);margin-top:2px}
+.im-sm-k{font-size:10.5px;font-weight:700;color:var(--muted2Text,var(--muted2));margin-top:2px}
 .im-diff{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.6;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;max-height:320px;overflow:auto;white-space:pre-wrap}
 .im-state{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:30px 20px}
 .im-state-t{font-size:15px;font-weight:800}
@@ -80,7 +80,7 @@
   <div class="im-pop" id="im-pop" role="dialog" aria-label="Como funciona"></div>
 
   <script src="ui.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><!-- F1-D: leitura de .xlsx/.xls no navegador -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- F1-D: leitura de .xlsx/.xls no navegador -->
   <script src="recorrencia.js"></script>
   <script type="module">
   (function () {
@@ -118,6 +118,7 @@
   }
   function ferr(e) {
     var code = (e && e.code) || '';
+    if (code === 'resource-exhausted') { return Object.assign(new Error('A cota gratuita de leituras do banco acabou por hoje (plano Spark do Firebase: 50 mil por dia). Volta sozinha de madrugada. Avise o gestor: é o sinal para passar o Firebase ao plano Blaze.'), { code: code }); }
     if (code === 'permission-denied') { return new Error('Sem permissão para esta ação. Confirme seu perfil com o gestor.'); }
     return new Error((e && e.message) || 'Erro ao falar com o banco.');
   }
@@ -634,6 +635,7 @@
     var opInput = document.createElement('input');
     opInput.type = 'date';
     opInput.id = 'im-dataoper';
+    opInput.setAttribute('aria-label', 'Data de início da operação');
     opInput.value = R.hojeISO();
     opInput.style.cssText = 'background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:8px 10px;font:inherit;font-size:13px;margin-top:6px;display:block';
     card.appendChild(opInput);
@@ -689,6 +691,7 @@
     r1.appendChild(txt('span', 'im-hint', 'Zerar checks de teste no período:'));
     var d1 = document.createElement('input'); d1.type = 'date';
     var d2 = document.createElement('input'); d2.type = 'date';
+    d1.setAttribute('aria-label', 'Zerar checks de teste: data inicial'); d2.setAttribute('aria-label', 'Zerar checks de teste: data final');
     d1.style.cssText = d2.style.cssText = 'background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 9px;font:inherit;font-size:12.5px';
     d2.value = R.hojeISO(); d1.value = R.addDias(R.hojeISO(), -45);
     r1.appendChild(d1); r1.appendChild(d2);
@@ -701,6 +704,7 @@
     var r2 = el('<div class="im-row" style="align-items:center;flex-wrap:wrap;margin-top:8px"></div>');
     r2.appendChild(txt('span', 'im-hint', 'Desativar atividades de teste da sigla:'));
     var sel = document.createElement('select');
+    sel.setAttribute('aria-label', 'Sigla das atividades de teste a desativar');
     sel.style.cssText = 'background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 9px;font:inherit;font-size:12.5px';
     var vistos = {}, ativasSig = {};
     SETORES.forEach(function (s) { if (s && s.ativo) { ativasSig[s.sigla] = true; } });
@@ -725,7 +729,7 @@
     linhas.slice(0, 20).forEach(function (l) { box.appendChild(txt('div', 'im-hint', '• ' + l)); });
     if (linhas.length > 20) { box.appendChild(txt('div', 'im-hint', '… e mais ' + (linhas.length - 20) + ' item(ns).')); }
     body.push(box);
-    var av = txt('div', 'im-hint', aviso); av.style.color = 'var(--red)'; av.style.fontWeight = '700'; av.style.marginTop = '8px';
+    var av = txt('div', 'im-hint', aviso); av.style.color = 'var(--redText,var(--red))'; av.style.fontWeight = '700'; av.style.marginTop = '8px';
     body.push(av);
     var okBtn = null;
     var mm = UI.modal({
@@ -1054,6 +1058,7 @@
     var row = el('<div class="im-row" style="align-items:center;flex-wrap:wrap"></div>');
     var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
     inp.className = 'dl-file';
+    inp.setAttribute('aria-label', 'Arquivo de saneamento (.json)');
     row.appendChild(inp);
     var st = txt('span', 'im-hint', 'Escritas desta tela hoje neste aparelho: ' + dlUsadasHoje() + ' / ' + DL_TETO_DIA);
     row.appendChild(st);
@@ -1285,7 +1290,7 @@
     if (!top) { return; }
     var bx = el('<div style="display:flex;align-items:center;gap:10px;margin-left:auto"></div>');
     var st = txt('span', 'im-pop-v', '');
-    st.style.cssText = 'font-size:11.5px;font-weight:700;color:var(--muted2)';
+    st.style.cssText = 'font-size:11.5px;font-weight:700;color:var(--muted2Text,var(--muted2))';
     var bt = UI.button({ label: 'Backup (exportar JSON)', icon: 'upload', variant: 'ghost' });
     bt.title = 'Baixa uma cópia completa do banco (todas as coleções) em JSON. Guarde num lugar seguro — é a sua recuperação de desastre.';
     bt.addEventListener('click', function () {

@@ -39,7 +39,7 @@
 .pf-mhead .pf-seg-b{flex:1;text-align:center;padding:8px 0}
 
 /* carimbo (não-retroativo) */
-.pf-stamp{font-size:11px;font-weight:600;color:var(--muted2);padding:12px 32px 0}
+.pf-stamp{font-size:11px;font-weight:600;color:var(--muted2Text,var(--muted2));padding:12px 32px 0}
 
 .pf-body{padding:18px 32px 32px}
 
@@ -64,7 +64,7 @@
 .pf-spark i{flex:1;border-radius:2px 2px 0 0;min-height:3px;opacity:.85}
 
 /* botão "i" */
-.pf-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;flex:none}
+.pf-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2Text,var(--muted2));display:inline-flex;flex:none}
 .pf-i:hover{color:var(--greenText)}
 .pf-i svg{display:block}
 
@@ -86,14 +86,14 @@
 .pf-bh-track{height:14px;background:var(--track);border-radius:7px;overflow:hidden}
 .pf-bh-fill{height:100%;border-radius:7px}
 .pf-bh-meta{position:absolute;top:0;bottom:18px;width:2px;border-radius:2px;background:var(--muted2);z-index:2}
-.pf-bh-meta b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--muted2);white-space:nowrap}
+.pf-bh-meta b{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--muted2Text,var(--muted2));white-space:nowrap}
 
 /* barras verticais */
 .pf-bv{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:20px}
 .pf-bv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
 .pf-bv-bar{width:100%;max-width:46px;border-radius:7px 7px 0 0;position:relative;min-height:4px}
 .pf-bv-val{position:absolute;top:-17px;left:0;right:0;text-align:center;font-size:11px;font-weight:800;color:var(--text)}
-.pf-bv-label{margin-top:7px;font-size:10.5px;font-weight:600;color:var(--muted2);text-align:center;line-height:1.1}
+.pf-bv-label{margin-top:7px;font-size:10.5px;font-weight:600;color:var(--muted2Text,var(--muted2));text-align:center;line-height:1.1}
 
 /* popover do "i" */
 .pf-backdrop{position:fixed;inset:0;z-index:40;display:none}
@@ -102,9 +102,9 @@
 .pf-pop.on{display:block}
 .pf-pop-t{font-size:12.5px;font-weight:800;margin-bottom:9px}
 .pf-pop-row{margin-bottom:8px}
-.pf-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
+.pf-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2Text,var(--muted2));margin-bottom:2px}
 .pf-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
-.pf-pop-note{margin-top:4px;font-size:11px;font-weight:700;color:var(--orange);line-height:1.3}
+.pf-pop-note{margin-top:4px;font-size:11px;font-weight:700;color:var(--orangeText,var(--orange));line-height:1.3}
 
 /* tab bar mobile */
 .pf-tabbar{display:none}
@@ -148,7 +148,7 @@
 .pf-pg-dot{width:9px;height:9px;border-radius:50%;flex:none}
 .pf-pg-t{font-size:13px;font-weight:800;color:var(--text)}
 .pf-pg-sp{flex:1}
-.pf-pg-n{font-size:11px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px;flex:none}
+.pf-pg-n{font-size:11px;font-weight:800;color:var(--muted2Text,var(--muted2));background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:1px 8px;flex:none}
 .pf-pg-car{display:inline-flex;color:var(--muted);transition:transform .15s;flex:none}
 .pf-pg.open .pf-pg-car{transform:rotate(180deg)}
 .pf-pg-body{display:none;padding:0 14px 6px}
@@ -158,15 +158,15 @@
 .pf-plano-c{flex:1;min-width:0}
 .pf-plano-txt{font-size:13.5px;font-weight:700;color:var(--text)}
 .pf-plano-act{font-size:12px;color:var(--muted);margin-top:2px}
-.pf-plano-ok{font-size:13.5px;font-weight:700;color:var(--green);padding:14px 2px}
+.pf-plano-ok{font-size:13.5px;font-weight:700;color:var(--greenText,var(--green));padding:14px 2px}
 
 /* ---- N2: tendência (Δ7d + sparkline) e score por setor ---- */
 .pf-delta{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;margin-top:8px}
-.pf-delta .lbl{color:var(--muted2);font-weight:700}
-.pf-delta.ok{color:var(--green)}
-.pf-delta.bad{color:var(--red)}
-.pf-delta.flat{color:var(--muted2)}
-.pf-colet{display:inline-block;font-size:10px;font-weight:800;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);padding:2px 8px;border-radius:20px;margin-top:9px}
+.pf-delta .lbl{color:var(--muted2Text,var(--muted2));font-weight:700}
+.pf-delta.ok{color:var(--greenText,var(--green))}
+.pf-delta.bad{color:var(--redText,var(--red))}
+.pf-delta.flat{color:var(--muted2Text,var(--muted2))}
+.pf-colet{display:inline-block;font-size:10px;font-weight:800;color:var(--muted2Text,var(--muted2));background:var(--chipBg);border:1px solid var(--border);padding:2px 8px;border-radius:20px;margin-top:9px}
 .pf-sparkwrap{margin-top:9px;height:26px}
 .pf-sparkwrap svg{display:block;width:100%;height:26px;overflow:visible}
 .pf-ss-row{display:flex;align-items:center;gap:12px;padding:10px 2px;border-top:1px solid var(--border)}
@@ -187,13 +187,13 @@
 .dd-tit{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dd-sig{font-size:10.5px;font-weight:800;letter-spacing:.4px;color:var(--muted);background:var(--chipBg);border:1px solid var(--border);border-radius:6px;padding:2px 6px;white-space:nowrap}
 .dd-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}
-.dd-late{color:var(--red);font-weight:700}
+.dd-late{color:var(--redText,var(--red));font-weight:700}
 /* #37: o motivo da falha entra no lugar do status, numa segunda linha inteira
    (alinhada ao título, depois do ponto). No fim da linha, com largura fixa, ele
    espremia o título da atividade até "Conf…" no desktop e cortava o motivo. */
 .dd-row-motivo{flex-wrap:wrap}
 .dd-motivo{flex-basis:100%;padding-left:19px;color:var(--text);font-weight:700;white-space:normal}
-.dd-more,.dd-empty{font-size:12px;color:var(--muted2);text-align:center;padding:10px}
+.dd-more,.dd-empty{font-size:12px;color:var(--muted2Text,var(--muted2));text-align:center;padding:10px}
 .dd-go{font-size:12.5px;font-weight:700;color:var(--greenText);text-decoration:none;margin-right:auto;align-self:center}
 .dd-go:hover{text-decoration:underline}
 @media(max-width:700px){.dd-row{flex-wrap:wrap}.dd-tit{flex-basis:100%;white-space:normal}}
@@ -202,10 +202,10 @@
 .pf-banner{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--brand);border-radius:12px;padding:12px 16px;margin-bottom:13px;font-size:12.5px;color:var(--muted);font-weight:600}
 .pf-banner b{color:var(--text)}
 .pf-colet-row{opacity:.85}
-.pf-colet-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2);background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 9px}
-.pf-orfa{font-size:12px;color:var(--muted2);border-top:1px dashed var(--border);margin-top:10px;padding-top:9px}
+.pf-colet-tag{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2Text,var(--muted2));background:var(--chipBg);border:1px solid var(--border);border-radius:20px;padding:2px 9px}
+.pf-orfa{font-size:12px;color:var(--muted2Text,var(--muted2));border-top:1px dashed var(--border);margin-top:10px;padding-top:9px}
 .pf-backlog{display:flex;align-items:center;gap:14px;background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:15px;padding:14px 18px;margin-bottom:13px;flex-wrap:wrap}
-.pf-backlog-n{font-size:24px;font-weight:800;color:var(--amber);line-height:1}
+.pf-backlog-n{font-size:24px;font-weight:800;color:var(--amberText,var(--amber));line-height:1}
 .pf-backlog-t{font-size:13px;font-weight:700;color:var(--text)}
 .pf-backlog-s{font-size:12px;color:var(--muted);font-weight:600}
 .pf-backlog a{color:var(--greenText);font-weight:800;font-size:12.5px;text-decoration:none;margin-left:auto}
@@ -283,6 +283,7 @@
   var MODELO = null;      /* último retorno de KPI.computar */
   var BOARD = [];         /* M2: board expandido retido p/ agrupar gargalos multi-setor */
   var ATIV = [];          /* F1-G: atividades ativas retidas p/ vincular a planos */
+  var OCC_BASE = null, JANELA_BASE = null; /* 17/09: ocorrências já lidas na carga — o cartão das rotinas reaproveita em vez de reler o banco */
   var DATA_OPER_MIN = null; /* F1-D: menor dataInicio recorrente — âncora do banner de partida */
   var SNAPSHOTS = [];     /* N2: fotos diárias (kpi_snapshots) p/ Δ7d + sparkline */
   var SNAP_TENTADO = false; /* N2: gravação idempotente — 1 tentativa por sessão */
@@ -370,7 +371,7 @@
       var serie = SNAPSHOTS.map(function (s) { return s[k.trendKey]; }).filter(function (v) { return v != null; });
       var pts = KPI._sparkPoints(serie, 100, 24);
       if (pts) {
-        var sw = el('<div class="pf-sparkwrap" style="color:var(--' + k.tone + ')"></div>');
+        var sw = el('<div class="pf-sparkwrap" style="color:var(--' + k.tone + 'Text,var(--' + k.tone + '))"></div>');
         sw.innerHTML = '<svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>';
         c.appendChild(sw);
       }
@@ -608,15 +609,20 @@
     card.appendChild(corpo);
 
     var meu = ++ROTINAS_TOKEN;
-    fbi().then(function (c) {
-      var q = c.f.query(c.f.collection(c.db, 'ocorrencias'),
-        c.f.where('data', '>=', MARCO), c.f.where('data', '<=', HOJE), c.f.limit(3000));
-      return c.f.getDocs(q);
-    }).then(function (snap) {
+    /* 17/09 (auditoria de leituras): enquanto o marco zero cair DENTRO da janela já carregada (hoje−45 … hoje+30), as
+       ocorrências de que este cartão precisa já estão na memória — reler custava uma segunda rodada inteira de leituras
+       a cada abertura da Inteligência. Fora desse caso (marco mais antigo que a janela), lê do banco como antes. */
+    var reuso = !!(OCC_BASE && JANELA_BASE && MARCO >= JANELA_BASE.jIni && HOJE <= JANELA_BASE.jFim);
+    (reuso
+      ? Promise.resolve(OCC_BASE.filter(function (d) { return d && d.data >= MARCO && d.data <= HOJE; }))
+      : fbi().then(function (c) {
+          var q = c.f.query(c.f.collection(c.db, 'ocorrencias'),
+            c.f.where('data', '>=', MARCO), c.f.where('data', '<=', HOJE), c.f.limit(3000));
+          return c.f.getDocs(q);
+        }).then(function (snap) { var lidos = []; snap.forEach(function (d) { lidos.push(Object.assign({ id: d.id }, d.data())); }); return lidos; })
+    ).then(function (docs) {
       if (meu !== ROTINAS_TOKEN) { return; }
-      var docs = [];
-      snap.forEach(function (d) { docs.push(Object.assign({ id: d.id }, d.data())); });
-      var noTeto = docs.length >= 3000;
+      var noTeto = !reuso && docs.length >= 3000; /* no reaproveitamento a carga já vem paginada: não há corte a avisar */
       var board = KPI._buildBoard(ATIV, docs, { jIni: MARCO, jFim: HOJE }, HOJE);
       var porAtiv = {};
       board.forEach(function (o) {
@@ -678,7 +684,7 @@
         var tr = el('<div class="pf-ss-track"></div>');
         tr.appendChild(el('<div class="pf-ss-fill" style="width:' + Math.round(x.falhas / max * 100) + '%;background:var(--' + tok + ')"></div>'));
         row.appendChild(tr);
-        var num = el('<span class="pf-ss-num" style="color:var(--' + tok + ')"></span>');
+        var num = el('<span class="pf-ss-num" style="color:var(--' + tok + 'Text,var(--' + tok + '))"></span>');
         num.textContent = x.falhas + ' · Σ' + x.pctAcumulado + '%';
         row.appendChild(num);
         (function (id, rotulo, falhas, previstas) {
@@ -944,7 +950,7 @@
       var tr = el('<div class="pf-ss-track"></div>');
       tr.appendChild(el('<div class="pf-ss-fill" style="width:' + x.sc.score + '%;background:var(--' + tok + ')"></div>'));
       row.appendChild(tr);
-      row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + ')">' + x.sc.score + '</span>'));
+      row.appendChild(el('<span class="pf-ss-num" style="color:var(--' + tok + 'Text,var(--' + tok + '))">' + x.sc.score + '</span>'));
       list.appendChild(row);
     });
     /* F1-D(e): setores em partida — tom NEUTRO, nunca vermelho */
@@ -1154,7 +1160,7 @@
       if (tR && tR.suficiente) {
         var dfR = KPI._deltaFmt(tR.delta7, true);
         var corR = dfR.tom === 'ok' ? 'green' : dfR.tom === 'bad' ? 'red' : 'muted2';
-        var chipR = el('<span class="pf-colet" style="color:var(--' + corR + ')"></span>');
+        var chipR = el('<span class="pf-colet" style="color:var(--' + corR + 'Text,var(--' + corR + '))"></span>');
         chipR.textContent = 'Críticos ' + nCrit + ' · Δ7d ' + dfR.texto;
         chipR.title = 'Variação do nº de atividades CRÍTICAS da escola inteira vs 7 dias atrás (fotos diárias). Menor é melhor.';
         h.appendChild(chipR);
@@ -1235,7 +1241,7 @@
       var tr = el('<div class="pf-ss-track"></div>');
       tr.appendChild(el('<div class="pf-ss-fill" style="width:' + Math.round(x.atrasadas / max * 100) + '%;background:var(--' + tok + ')"></div>'));
       row.appendChild(tr);
-      var num = el('<span class="pf-ss-num" style="color:var(--' + tok + ')"></span>');
+      var num = el('<span class="pf-ss-num" style="color:var(--' + tok + 'Text,var(--' + tok + '))"></span>');
       num.textContent = x.atrasadas + ' · Σ' + x.acumPct + '%';
       row.appendChild(num);
       list.appendChild(row);
@@ -1557,7 +1563,7 @@
        agrupamento — zero mudança em qualquer cálculo. */
     function secHead(t, subEl) {
       var h2 = el('<div style="display:flex;align-items:center;gap:10px;margin:4px 0 10px"></div>');
-      var tt = el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)"></div>');
+      var tt = el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2Text,var(--muted2))"></div>');
       tt.textContent = t; h2.appendChild(tt);
       h2.appendChild(el('<div style="flex:1;height:1px;background:var(--border)"></div>'));
       if (subEl) { h2.appendChild(subEl); }
@@ -1749,6 +1755,7 @@
     ]).then(function (r) {
       if (meu !== CARREGAR_TOKEN) { return; } /* chegou leitura mais nova: esta não pinta nem grava */
       var m = r[0].m;
+      OCC_BASE = r[0].ctx.occ || null; JANELA_BASE = r[0].ctx.janela || null;
       BOARD = r[0].ctx.board; ATIV = r[0].ctx.ativ; DATA_OPER_MIN = KPI.minDataInicio(r[0].ctx.ativ);
       SNAPSHOTS = r[1] || [];
       HOJE = m.hoje;

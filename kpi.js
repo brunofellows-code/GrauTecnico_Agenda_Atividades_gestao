@@ -36,6 +36,7 @@
   function ferr(e) {
     var code = (e && e.code) || '';
     if (code === 'permission-denied') { return Object.assign(new Error('Sem permissão para ler os indicadores. Confirme seu perfil e que as Regras do Firestore foram publicadas.'), { code: code }); }
+    if (code === 'resource-exhausted') { return Object.assign(new Error('A cota gratuita de leituras do banco acabou por hoje (plano Spark do Firebase: 50 mil por dia). Volta sozinha de madrugada. Avise o gestor: é o sinal para passar o Firebase ao plano Blaze.'), { code: code }); }
     if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') { return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { code: code }); }
     return Object.assign(new Error((e && e.message) || 'Erro ao ler os indicadores.'), { code: code });
   }
@@ -71,8 +72,24 @@
   }
   function listOcorrencias(jIni, jFim) {
     return fb().then(function (c) {
-      var f = c.f, q = f.query(f.collection(c.db, 'ocorrencias'), f.where('data', '>=', jIni), f.where('data', '<=', jFim), f.limit(3000));
-      return f.getDocs(q).then(function (s) { var a = []; s.forEach(function (d) { a.push(d.data()); }); return a; });
+      /* 17/09 (auditoria): a consulta vem em ordem de data CRESCENTE; com limit(3000) seco, quando a janela de 75 dias
+         passasse de 3000 registros o banco devolvia os 3000 MAIS ANTIGOS e as conclusões de hoje sumiam da tela, em
+         silêncio. Agora lê em páginas até acabar (teto de 5 páginas = 15 mil) e avisa no console se bater no teto. */
+      var f = c.f, PAG = 3000, MAXPAG = 5, saida = [];
+      function pagina(cursor, n) {
+        var cons = [f.collection(c.db, 'ocorrencias'), f.where('data', '>=', jIni), f.where('data', '<=', jFim), f.orderBy('data', 'desc')];   /* do mais NOVO para o mais antigo: se bater no teto, quem fica de fora é o passado */
+        if (cursor) { cons.push(f.startAfter(cursor)); }
+        cons.push(f.limit(PAG));
+        return f.getDocs(f.query.apply(null, cons)).then(function (s) {
+          var ultimo = null; s.forEach(function (d) { saida.push(d.data()); ultimo = d; });
+          if (s.size === PAG && ultimo) {
+            if (n < MAXPAG) { return pagina(ultimo, n + 1); }
+            try { console.warn('[kpi] janela de ocorrências bateu no teto de ' + (PAG * MAXPAG) + ' registros; os mais ANTIGOS da janela ficaram de fora.'); } catch (e0) {}
+          }
+          return saida.reverse();   /* devolve em ordem crescente de data, como sempre foi */
+        });
+      }
+      return pagina(null, 1);
     }).catch(function (e) { throw ferr(e); });
   }
 
@@ -157,9 +174,13 @@
   function recortarContexto(ctx, user) {
     if (!ctx || !user || user.perfil === 'gestor') { return ctx; }
     var setores = ctx.setores;
+    var ativVis = (ctx.ativ || []).filter(function (a) { return visivelPara(a, user, setores); });
+    var idsVis = {}; ativVis.forEach(function (a) { idsVis[a.id] = true; });
     return {
       board: (ctx.board || []).filter(function (o) { return visivelPara(o.act, user, setores); }),
-      ativ: (ctx.ativ || []).filter(function (a) { return visivelPara(a, user, setores); }),
+      ativ: ativVis,
+      /* 17/09: as ocorrências cruas acompanham o recorte — só as das atividades que este perfil enxerga */
+      occ: (ctx.occ || []).filter(function (o) { return o && idsVis[o.atividadeId] === true; }),
       setores: ctx.setores, janela: ctx.janela, hoje: ctx.hoje, periodo: ctx.periodo
     };
   }
@@ -315,7 +336,7 @@
         .then(function (r) {
           var setores = r[0], ativ = r[1], occ = r[2];
           var board = buildBoard(ativ, occ, w, hoje);
-          return { board: board, setores: setores, ativ: ativ, janela: w, hoje: hoje, periodo: periodo };
+          return { board: board, setores: setores, ativ: ativ, occ: occ, janela: w, hoje: hoje, periodo: periodo };
         });
     }
   };

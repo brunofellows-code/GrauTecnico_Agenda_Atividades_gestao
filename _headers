@@ -1,0 +1,15 @@
+# Cabeçalhos de segurança do site (Netlify). Auditoria de 17/09/2026.
+# - X-Frame-Options / frame-ancestors: ninguém embute o GERA em outra página (clickjacking).
+# - nosniff: o navegador não "adivinha" tipo de arquivo.
+# - Referrer-Policy: o endereço interno não vaza para sites de fora (ex.: link do WhatsApp).
+# - Permissions-Policy: o site não usa câmera, microfone, localização nem pagamento.
+# - CSP em modo SÓ-RELATÓRIO: ainda não bloqueia nada; só registra no console o que fugiria da
+#   lista. Depois de uma semana sem aviso, troca-se o nome do cabeçalho para
+#   Content-Security-Policy e ela passa a valer.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://www.googleapis.com https://www.gstatic.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+

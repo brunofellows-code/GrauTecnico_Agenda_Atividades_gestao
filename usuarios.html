@@ -49,7 +49,7 @@
 .us-row.us-row-aviso{flex-wrap:wrap}
 .us-why{order:1;flex:1 1 100%;display:flex;align-items:flex-start;gap:7px;padding-left:52px;
   font-size:12px;font-weight:600;line-height:1.45;color:var(--text)}
-.us-why svg{flex:none;margin-top:1px;color:var(--amber)}
+.us-why svg{flex:none;margin-top:1px;color:var(--amberText,var(--amber))}
 .us-meta{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .us-nm{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .us-em{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -60,12 +60,12 @@
 .us-tag .dot{width:7px;height:7px;border-radius:50%;background:var(--muted2)}
 .us-tag.on{color:var(--greenText)}
 .us-tag.on .dot{background:var(--green)}
-.us-you{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2);border:1px dashed var(--border);border-radius:6px;padding:2px 7px;flex:none}
+.us-you{font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--muted2Text,var(--muted2));border:1px dashed var(--border);border-radius:6px;padding:2px 7px;flex:none}
 .us-actions{display:flex;align-items:center;gap:6px;flex:none}
 .us-ibtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--border);
   border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
 .us-ibtn:hover{background:var(--s3);color:var(--text)}
-.us-ibtn.danger:hover{color:var(--red);border-color:var(--red)}
+.us-ibtn.danger:hover{color:var(--redText,var(--red));border-color:var(--red)}
 .us-ibtn.off{opacity:.4;cursor:not-allowed}
 
 /* skeleton / msg / sem-acesso */
@@ -75,7 +75,7 @@
 @keyframes ussk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 .us-msg{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:34px 30px;max-width:560px;text-align:center;margin:8px auto 0}
 .us-msg-ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:var(--chipBg);color:var(--muted)}
-.us-msg-ic.err{color:var(--red)}
+.us-msg-ic.err{color:var(--redText,var(--red))}
 .us-msg-t{font-size:16px;font-weight:800}
 .us-msg-p{font-size:13px;font-weight:500;color:var(--muted);line-height:1.5;margin-top:7px}
 .us-msg-actions{display:flex;justify-content:center;margin-top:18px}
@@ -563,6 +563,7 @@
         if (code === 'permission-denied') {
           return Object.assign(new Error('Sem permissão. Só o gestor gerencia usuários.'), { field: 'geral' });
         }
+        if (code === 'resource-exhausted') { return Object.assign(new Error('A cota gratuita de leituras do banco acabou por hoje (plano Spark do Firebase: 50 mil por dia). Volta sozinha de madrugada. Avise o gestor: é o sinal para passar o Firebase ao plano Blaze.'), { code: code }); }
         if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
           return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });
         }

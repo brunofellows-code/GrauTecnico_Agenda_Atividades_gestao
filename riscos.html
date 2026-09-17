@@ -53,7 +53,7 @@
 .rk-sub{font-size:14px;color:var(--muted);line-height:1.5;max-width:700px;margin:4px 0 20px}
 /* 24×24 na regra BASE (WCAG 2.5.8): antes só os "i" dos cards de número tinham
    alvo mínimo; os três "i" de cabeçalho ficavam em 15–17px. */
-.rk-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2);display:inline-flex;min-width:24px;min-height:24px;align-items:center;justify-content:center;flex:none}
+.rk-i{appearance:none;border:0;background:transparent;padding:0;cursor:pointer;color:var(--muted2Text,var(--muted2));display:inline-flex;min-width:24px;min-height:24px;align-items:center;justify-content:center;flex:none}
 .rk-i:hover{color:var(--greenText)}
 .rk-cell:focus-visible,.rk-hcell:focus-visible,.rk-i:focus-visible,.rk-x:focus-visible,.rk-go:focus-visible,.rk-skip:focus{outline:2px solid var(--greenText);outline-offset:2px}
 /* Só para leitor de tela: nome acessível da tabela sem duplicar texto na tela. */
@@ -73,7 +73,7 @@
    número no vazio. É <a> de verdade porque navega de verdade. */
 .rk-stat .k a{color:var(--greenText);text-decoration:underline;text-underline-offset:2px}
 .rk-stat .k a:focus-visible{outline:2px solid var(--greenText);outline-offset:2px;border-radius:4px}
-.rk-stat.red .n{color:var(--red)}.rk-stat.orange .n{color:var(--orange)}
+.rk-stat.red .n{color:var(--redText,var(--red))}.rk-stat.orange .n{color:var(--orangeText,var(--orange))}
 .rk-grid2{display:grid;grid-template-columns:minmax(0,460px) 1fr;gap:14px;align-items:start}
 @media(max-width:860px){.rk-grid2{grid-template-columns:1fr}}
 .rk-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
@@ -157,7 +157,7 @@
    a classe: só ganha borda/fundo quando há erro (a regra :empty não bastaria,
    porque o box recebe tabindex e foco). */
 .rk-erro{background:var(--s1);border:1px solid var(--red);border-radius:14px;padding:18px 20px;margin:0 0 18px;font-size:14px;line-height:1.55;color:var(--text)}
-.rk-erro b{color:var(--red)}
+.rk-erro b{color:var(--redText,var(--red))}
 .rk-erro:focus-visible{outline:2px solid var(--red);outline-offset:2px}
 .rk-erro-tec{font-size:11px;color:var(--muted)}
 .rk-pop{position:fixed;z-index:70;width:330px;max-width:calc(100vw - 28px);max-height:calc(100vh - 24px);overflow:auto;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:14px 15px;box-shadow:var(--cardShadow);display:none}

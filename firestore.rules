@@ -365,7 +365,13 @@ service cloud.firestore {
     // ---------- eventos (soft-delete por campo ativo) ----------
     match /eventos/{id} {
       allow read: if isActive();
-      allow create, update: if canWrite();
+      allow create: if canWrite();
+      // 17/09 (auditoria): o CONVIDADO responde ao proprio convite (Vou / Nao vou) tambem em
+      // EVENTO, igual ja era em reunioes. Sem este ramo, o perfil 'usuario' recebia
+      // permission-denied ao responder um evento da agenda. So os dois campos de resposta.
+      allow update: if canWrite()
+                    || (isActive()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmadosUids', 'recusas']));
       allow delete: if false;
     }
 

@@ -42,19 +42,19 @@
 .st-node.inactive{opacity:.72}
 .st-rowhead{display:flex;align-items:center;gap:13px;padding:14px 16px;cursor:pointer;user-select:none}
 .st-rowhead:hover{background:var(--s2)}
-.st-caret{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted2);transition:transform .18s}
+.st-caret{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted2Text,var(--muted2));transition:transform .18s}
 .st-node.open .st-caret{transform:rotate(180deg)}
 .st-caret.empty{visibility:hidden}
 .st-sigla{font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--greenText);background:var(--activeBg);
   border:1px solid var(--border);border-radius:7px;padding:4px 9px;flex:none;min-width:56px;text-align:center}
 .st-name{font-size:14.5px;font-weight:700;color:var(--text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-node.inactive .st-name{color:var(--muted)}
-.st-sub{font-size:11.5px;font-weight:700;color:var(--muted2);flex:none}
+.st-sub{font-size:11.5px;font-weight:700;color:var(--muted2Text,var(--muted2));flex:none}
 .st-actions{display:flex;align-items:center;gap:6px;flex:none}
 .st-ibtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border:1px solid var(--border);
   border-radius:8px;background:var(--s2);color:var(--muted);cursor:pointer;transition:color .15s,background .15s,border-color .15s}
 .st-ibtn:hover{background:var(--s3);color:var(--text)}
-.st-ibtn.danger:hover{color:var(--red);border-color:var(--red)}
+.st-ibtn.danger:hover{color:var(--redText,var(--red));border-color:var(--red)}
 
 /* filhos (subsetores) */
 .st-kids{border-top:1px solid var(--border);background:var(--s1);padding:8px 14px 12px;display:flex;flex-direction:column;gap:8px}
@@ -64,7 +64,7 @@
 .st-addkid{display:inline-flex;align-items:center;gap:8px;margin-left:33px;padding:9px 12px;border:1px dashed var(--border);
   border-radius:10px;background:transparent;color:var(--muted);font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;width:max-content}
 .st-addkid:hover{color:var(--greenText);border-color:var(--brand)}
-.st-kidempty{margin-left:33px;font-size:12px;font-weight:500;color:var(--muted2);padding:2px 2px 4px}
+.st-kidempty{margin-left:33px;font-size:12px;font-weight:500;color:var(--muted2Text,var(--muted2));padding:2px 2px 4px}
 
 /* onboarding (first-run) */
 .st-onb{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:30px 30px 28px;max-width:720px}
@@ -79,8 +79,9 @@
 .st-sw{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;outline:none;transition:transform .12s}
 .st-sw:hover{transform:scale(1.14)}
 .st-sw.on{box-shadow:0 0 0 2px var(--s1),0 0 0 4px var(--text)}
+.st-sw:focus-visible{box-shadow:0 0 0 2px var(--s1),0 0 0 4px var(--brand)} /* foco pelo teclado: a amostra de cor não tinha anel nenhum */
 .st-onb-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px}
-.st-onb-note{font-size:12.5px;font-weight:500;color:var(--muted2);margin-top:18px}
+.st-onb-note{font-size:12.5px;font-weight:500;color:var(--muted2Text,var(--muted2));margin-top:18px}
 
 /* skeleton / erro / sem-acesso */
 .st-skel{display:flex;flex-direction:column;gap:10px}
@@ -90,7 +91,7 @@
 .st-msg{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:34px 30px;max-width:560px;text-align:center;margin:8px auto 0}
 .st-msg-ic{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;
   background:var(--chipBg);color:var(--muted)}
-.st-msg-ic.err{color:var(--red)}
+.st-msg-ic.err{color:var(--redText,var(--red))}
 .st-msg-t{font-size:16px;font-weight:800}
 .st-msg-p{font-size:13px;font-weight:500;color:var(--muted);line-height:1.5;margin-top:7px}
 .st-msg-actions{display:flex;justify-content:center;margin-top:18px}
@@ -245,6 +246,7 @@
         if (code === 'permission-denied') {
           return Object.assign(new Error('Sem permissão para esta ação. Só o gestor altera setores.'), { field: 'geral' });
         }
+        if (code === 'resource-exhausted') { return Object.assign(new Error('A cota gratuita de leituras do banco acabou por hoje (plano Spark do Firebase: 50 mil por dia). Volta sozinha de madrugada. Avise o gestor: é o sinal para passar o Firebase ao plano Blaze.'), { code: code }); }
         if (code === 'unavailable' || code === 'failed-precondition' || code === 'deadline-exceeded') {
           return Object.assign(new Error('Não consegui falar com o banco agora. Verifique a conexão e tente de novo.'), { field: 'geral' });
         }
@@ -605,7 +607,7 @@
       if (s && s.setorPaiSigla) { var p = ALL.filter(function (x) { return x.sigla === s.setorPaiSigla; })[0]; if (p) { return corKey(p); } }
       var o = (s && s.ordem) ? s.ordem : 1; return 'setor' + (((o - 1) % 8) + 1);
     }
-    function sigTag(s) { var t = txt('span', 'st-sigla', s.sigla); var c = corKey(s); t.style.color = 'var(--' + c + ')'; t.style.background = 'var(--' + c + 'Bg)'; return t; }
+    function sigTag(s) { var t = txt('span', 'st-sigla', s.sigla); var c = corKey(s); t.style.color = 'var(--' + c + 'Text,var(--' + c + '))'; t.style.background = 'var(--' + c + 'Bg)'; return t; }
 
     function renderToolbar() {
       var roots = rootsOf();
