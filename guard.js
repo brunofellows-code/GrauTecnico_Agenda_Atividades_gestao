@@ -38,7 +38,7 @@
 
   /* destinos LIVE (telas que já existem no repo do Grau).
      Qualquer item da sidebar fora desta lista mostra "em breve". */
-  var LIVE = { 'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Cockpit': 'cockpit.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' };
+  var LIVE = { 'Hoje': 'hoje.html', 'Reuniões': 'projetos.html', 'Planejamento': 'planejamento.html', 'Eventos': 'eventos.html', 'Atividades': 'atividades.html', 'Cockpit': 'cockpit.html', 'Importar': 'importacao.html', 'Inteligência': 'inteligencia.html', 'Performance': 'performance.html', 'Glossário': 'glossario.html', 'Riscos': 'riscos.html', 'Setores': 'setores.html', 'Usuários': 'usuarios.html' , 'Manual': 'manual.html' };
 
   /* Fase 1 RBAC — nav visível por PERFIL (papel novo). Rótulos = data-nav (iguais
      ao LIVE). 'gestor' NÃO entra no mapa => vê tudo. Recorte é por EXIBIÇÃO
@@ -54,8 +54,8 @@
      pessoal do gestor às 17h30. Como o gestor não entra no mapa, ele vê;
      líder e usuário não. A borda real de escrita está nas Regras. */
   var NAV_BY_PERFIL = {
-    lider:   { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Riscos': 1, 'Glossário': 1 },
-    usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Eventos': 1, 'Glossário': 1 }
+    lider:   { 'Hoje': 1, 'Atividades': 1, 'Reuniões': 1, 'Planejamento': 1, 'Eventos': 1, 'Inteligência': 1, 'Performance': 1, 'Riscos': 1, 'Glossário': 1, 'Manual': 1 },
+    usuario: { 'Hoje': 1, 'Atividades': 1, 'Planejamento': 1, 'Eventos': 1, 'Glossário': 1, 'Manual': 1 }
   };
 
   /* ---------- iniciais a partir do nome ---------- */
@@ -204,6 +204,7 @@
       if (!ref || !ref.parentNode) { return; }
       var defs = [
         /* 17/09: Cockpit e Riscos saíram da navegação (plano aprovado 16/09) — as páginas continuam por URL. */
+        ['Manual', '<circle cx="12" cy="12" r="9"></circle><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"></path><path d="M12 17h.01"></path>'],
         ['Glossário', '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>'],
       ];
       var after = ref;

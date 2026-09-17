@@ -1081,7 +1081,8 @@
   }
   function blocoPlano(hoje) {
     var frag = document.createDocumentFragment(), meus = itensDoPlanoMeus(hoje), amanha = R.addDias(hoje, 1);
-    if (!meus.length) { return frag; }
+    var temVerif = PLANEJ.some(function (pl) { return (pl.itens || []).some(function (it) { return it && !it.removido && it.quemUid === CURRENT_USER.uid && it.verificadoPor && it.verificadoPor.em && Date.now() - it.verificadoPor.em < 86400000; }); });
+    if (!meus.length && !temVerif) { return frag; }
     var hojeN = meus.filter(function (x) { return x.prazo === hoje; }).length, amN = meus.filter(function (x) { return x.prazo === amanha; }).length, venc = meus.filter(function (x) { return x.dias != null && x.dias > 0; }).length;
     frag.appendChild(secao('sec-plano', 'Do plano do setor', { formula: 'itens do plano mensal do seu setor em que você é o QUEM, ainda abertos, por prazo. Vencido = prazo passou. O item que virou atividade está também na sua agenda — conclua lá; o líder verifica no plano.', dados: 'planejamentos da competência (itens vivos).', numeros: meus.length + ' item(ns) · ' + hojeN + ' vence(m) hoje · ' + amN + ' amanhã · ' + venc + ' vencido(s)', serve: 'prepare-se: o que é seu no plano do mês, antes de virar atraso.' }, meus.length, { label: 'Plano do setor', href: 'planejamento.html' }));
     meus.slice(0, 6).forEach(function (x) {
@@ -1097,6 +1098,10 @@
       frag.appendChild(r);
     });
     if (meus.length > 6) { var ln = txt('div', 'hj-info-v', '+ ' + (meus.length - 6) + ' outro(s) no plano.'); ln.style.cssText = 'color:var(--muted2);font-size:var(--fs-xs);margin-top:4px'; frag.appendChild(ln); }
+    /* fecho do ciclo: o que o líder verificou nas últimas 24 h aparece uma vez, com o nome de quem verificou */
+    var agora = Date.now(), verif = [];
+    PLANEJ.forEach(function (pl) { (pl.itens || []).forEach(function (it) { if (it && !it.removido && it.quemUid === CURRENT_USER.uid && it.verificadoPor && it.verificadoPor.em && agora - it.verificadoPor.em < 86400000) { verif.push({ pl: pl, it: it }); } }); });
+    verif.forEach(function (x) { var r = el('<div class="hj-row done"></div>'); r.appendChild(txt('span', 'hj-time', '✓')); var tt = el('<div class="tt"></div>'); tt.appendChild(txt('div', 't', x.it.oque || '')); tt.appendChild(txt('div', 'm', 'verificado por ' + (x.it.verificadoPor.nome || 'líder') + ' · plano de ' + x.pl.setorSigla + ' · bom trabalho')); r.appendChild(tt); r.appendChild(txt('span', 'hj-tag ok', 'verificado ✓')); frag.appendChild(r); });
     return frag;
   }
 
@@ -1333,8 +1338,14 @@
     if (stk && stk.hojeFechado && stk.hojePrev > 0 && CELEBRADO !== hoje) { CELEBRADO = hoje; toast('Dia fechado! 🎯' + (stk.dias >= 2 ? ' Sequência de ' + stk.dias + ' dias. 🔥' : '')); }
   }
 
+  /* ---------- atualização automática (10 min): dado não congela na tela; custo = 1 rodada de leituras por 10 min de aba aberta ---------- */
+  var ULTIMA_CARGA = 0, AUTO_MS = 10 * 60 * 1000;
+  function autoAtualizar() { if (document.hidden) { return; } if (!ULTIMA_CARGA || Date.now() - ULTIMA_CARGA < AUTO_MS) { return; } if (document.querySelector('.ui-modal, .ui-moverlay:not(.hidden), .hj-modal')) { return; } refresh(); }
+  try { setInterval(autoAtualizar, 60 * 1000); document.addEventListener('visibilitychange', autoAtualizar); } catch (e0) { /* sem timer */ }
+
   /* ---------- carga ---------- */
   function refresh() {
+    ULTIMA_CARGA = Date.now();
     var uid = (CURRENT_USER && CURRENT_USER.uid) || null;
     var hoje = R.hojeISO();
     var ehUsuario = !!(Guard.isUsuario && Guard.isUsuario());

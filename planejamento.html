@@ -317,6 +317,9 @@
     },
     /* agenda (coleção eventos, contrato do eventos.html/agenda-motor: siglaSetor · hora · local · categoria · planoId) */
     criarEvento: function (doc) { return fb().then(function (c) { var now = Date.now(); var body = Object.assign({}, doc, { realizado: false, custoRealizado: null, ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now }); return c.f.addDoc(c.f.collection(c.db, 'eventos'), body).then(function (ref) { Store.log({ acao: 'planejamento_item_na_agenda', entidade: 'evento', refId: ref.id, antes: null, depois: { titulo: body.titulo, data: body.data, siglaSetor: body.siglaSetor } }); return ref.id; }); }).catch(function (e) { throw ferr(e); }); },
+    concluirOcorrenciaDoItem: function (pl, it, relato, dia) {
+      return fb().then(function (c) { var data = it.quandoPrevisto || ultimoDia(pl.competencia); var id = R.docIdOcorrencia ? R.docIdOcorrencia(it.atividadeId, data) : (it.atividadeId + '_' + data); var now = Date.now(); return c.f.setDoc(c.f.doc(c.db, 'ocorrencias', id), { atividadeId: it.atividadeId, data: data, prazoOriginal: data, responsavelUid: it.quemUid || null, setorSigla: pl.setorSigla, status: 'concluida', concluidaEm: dia ? new Date(dia + 'T12:00:00').getTime() : now, relato: relato || null, relatoEm: now, concluidaPorUid: USER.uid, origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id } }, { merge: true }); }).catch(function (e) { throw ferr(e); });
+    },
     atualizarAtividade: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'atividades', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     atualizarEvento: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'eventos', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     log: function (entry) { return fb().then(function (c) { return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry)); }).catch(function (e) { if (window.console && console.warn) { console.warn('[planejamento] log falhou', e); } }); }
@@ -464,7 +467,7 @@
     if (!anterior || !vivos(anterior).length) { criar([]); return; }
     UI.modal({ title: 'Plano de ' + sig + ' · ' + compLabel(comp), width: 440,
       body: [txt('div', 'pl-info-v', 'Começar do zero, ou copiar os ' + vivos(anterior).length + ' itens de ' + compLabel(anterior.competencia) + '? Na cópia as datas viram o fim do mês e realizados, faróis e assinaturas zeram.')],
-      footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null }); })); } })]; } });
+      footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null, indicador: o.indicador || null, turmas: o.turmas || null, comQuem: o.comQuem || null }); })); } })]; } });
   }
   function novoItem(base) {
     return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null }, base || {});
@@ -614,7 +617,7 @@
     var dia = occ.concluidaEm ? R.toISO(new Date(Number(occ.concluidaEm))) : HOJE;
     var patch = { quandoRealizado: dia, status: 'concluido', relato: occ.relato || null, evidencia: occ.relato ? 'relato na atividade' : null, naoFeito: false, verificadoPor: { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() } };
     var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
-    salvarItens(pl, lista, 'planejamento_item_verificado', { itemId: it.id }).then(function () { toast('Verificado — item concluído no plano.'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+    salvarItens(pl, lista, 'planejamento_item_verificado', { itemId: it.id }).then(function () { if (it.eventoId) { return Store.atualizarEvento(it.eventoId, { realizado: true }).catch(function () { }); } }).then(function () { toast('Verificado — item concluído no plano.'); render(); }).catch(function (e) { toast(e.message, 'err'); });
   }
   function coberturaKpis(pl) {
     var lista = kpisDo(pl.setorSigla).filter(function (k) { return k.chave !== 'outro'; }); if (!lista.length) { return null; }
@@ -668,7 +671,7 @@
     var tdF = document.createElement('td'); var ult = M.ultimoAcompanhamento(it); var fa = el('<span class="pl-farol"><i class="' + (ult ? ult.farol : '') + '"></i></span>'); fa.appendChild(document.createTextNode(ult ? ('W' + Object.keys(it.acompanhamentos || {}).sort().pop().slice(6)) : '—')); if (ult) { fa.title = ult.fez + (ult.motivo ? ' · ' + motivoLabel(ult.motivo) : ''); } tdF.appendChild(fa); tr.appendChild(tdF);
     /* remover */
     var tdX = document.createElement('td');
-    if (podeEd && st === 'aberto') { var x = el('<button type="button" class="pl-x" title="Remover item" aria-label="Remover item">×</button>'); x.addEventListener('click', function () { if (!window.confirm('Remover "' + it.oque + '" do plano?')) { return; } var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { removido: true }) : o; }); salvarItens(pl, lista, 'planejamento_item_removido', { itemId: it.id }).then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); }); }); tdX.appendChild(x); }
+    if (podeEd && st === 'aberto') { var x = el('<button type="button" class="pl-x" title="Remover item" aria-label="Remover item">×</button>'); x.addEventListener('click', function () { if (!window.confirm('Remover "' + it.oque + '" do plano?')) { return; } var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { removido: true }) : o; }); encerrarVinculos(it); salvarItens(pl, lista, 'planejamento_item_removido', { itemId: it.id }).then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); }); }); tdX.appendChild(x); }
     tr.appendChild(tdX);
     if (!ABERTOS[it.id]) { return tr; }
     var frag = document.createDocumentFragment(); frag.appendChild(tr); frag.appendChild(linhaDetalhe(pl, it, editavel, podeEd)); return frag;
@@ -708,6 +711,8 @@
   }
   /* item ligado a uma atividade única: trocar quem/prazo/título no plano muda a atividade na agenda da pessoa */
   function sincronizarAtividade(pl, it) { if (!it.atividadeId) { return Promise.resolve(); } return Store.atualizarAtividade(it.atividadeId, { responsavelUid: it.quemUid || null, responsavelNome: it.quemNome || nomeUser(it.quemUid) || '', data: it.quandoPrevisto || ultimoDia(pl.competencia), titulo: it.oque }).catch(function (e) { toast('O item foi salvo, mas a atividade ligada não acompanhou: ' + e.message, 'err'); }); }
+  /* item removido ou não feito: a atividade ligada e o evento na agenda são desativados (não somem do histórico) */
+  function encerrarVinculos(it) { var ps = []; if (it.atividadeId) { ps.push(Store.atualizarAtividade(it.atividadeId, { ativo: false }).catch(function () { })); } if (it.eventoId) { ps.push(Store.atualizarEvento(it.eventoId, { ativo: false }).catch(function () { })); } return Promise.all(ps); }
   function sincronizarEvento(pl, it) { if (!it.eventoId) { return Promise.resolve(); } var ev = eventoDoItem(pl, it, it.divulgar); return Store.atualizarEvento(it.eventoId, { titulo: ev.titulo, data: ev.data, hora: ev.hora, local: ev.local, convocadosUids: ev.convocadosUids, custoPrevisto: ev.custoPrevisto }).catch(function (e) { toast('O item foi salvo, mas a agenda não acompanhou: ' + e.message, 'err'); }); }
   function divulgarItem(pl, it, v) {
     v = v || null; if (v === (it.divulgar || null)) { return; }
@@ -810,7 +815,7 @@
         if (!R.isISO(dt.value) || R.compareISO(dt.value, HOJE) > 0) { toast('A data de realização não pode ser futura.', 'err'); return; }
         var patch = { quandoRealizado: dt.value, status: 'concluido', relato: ta.value.trim(), evidencia: ev.value.trim(), valorFinalCentavos: parseBRL(fin.value), naoFeito: false };
         var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
-        salvarItens(pl, lista, 'planejamento_item_realizado', { itemId: it.id }).then(function () { if (it.eventoId) { return Store.atualizarEvento(it.eventoId, { realizado: true, custoRealizado: patch.valorFinalCentavos }).catch(function () { /* o item já está concluído; a agenda acompanha na próxima edição */ }); } }).then(function () { close(); toast('Concluído. ✔'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+        salvarItens(pl, lista, 'planejamento_item_realizado', { itemId: it.id }).then(function () { var ps = []; if (it.eventoId) { ps.push(Store.atualizarEvento(it.eventoId, { realizado: true, custoRealizado: patch.valorFinalCentavos }).catch(function () { /* a agenda acompanha na próxima edição */ })); } var occ = it.atividadeId ? OCC[it.atividadeId] : null; if (it.atividadeId && !(occ && occ.status === 'concluida')) { ps.push(Store.concluirOcorrenciaDoItem(pl, it, patch.relato, patch.quandoRealizado).catch(function () { toast('Item concluído; a atividade na agenda da pessoa não fechou sozinha.', 'err'); })); } return Promise.all(ps); }).then(function () { close(); toast('Concluído. ✔'); render(); }).catch(function (e) { toast(e.message, 'err'); });
       } })]; } });
   }
   function modalNaoFeito(pl, it) {
@@ -822,7 +827,7 @@
         if (sel.value === 'outro' && !det.value.trim()) { toast('Detalhe o motivo "Outro".', 'err'); return; }
         var patch = { naoFeito: true, status: 'nao_feito', motivo: sel.value, motivoDetalhe: det.value.trim() || null, naoFeitoEm: Date.now() };
         var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
-        salvarItens(pl, lista, 'planejamento_item_nao_realizado', { itemId: it.id, motivo: sel.value }).then(function () { close(); toast('Registrado como não feito.'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+        salvarItens(pl, lista, 'planejamento_item_nao_realizado', { itemId: it.id, motivo: sel.value }).then(function () { return encerrarVinculos(it); }).then(function () { close(); toast('Registrado como não feito.' + (it.atividadeId ? ' A atividade ligada saiu da agenda.' : '')); render(); }).catch(function (e) { toast(e.message, 'err'); });
       } })]; } });
   }
   function entregarPlano(pl) {

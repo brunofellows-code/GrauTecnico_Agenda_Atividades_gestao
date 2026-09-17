@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual — GERA</title>
+
+<link rel="stylesheet" href="theme.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#090B10">
+<link rel="stylesheet" href="components.css">
+<script src="theme.js"></script>
+<script src="guard.js"></script>
+  <script src="mnav.js"></script>
+
+<style>
+/* Manual de uso dentro do sistema (17/09): abre na seção do perfil de quem entrou;
+   as outras seções ficam a um clique. Mesmo DNA das outras telas: tokens, 2 temas,
+   cabeçalhos em verde (--accentText), "i" nos números não se aplica aqui — é texto. */
+.mn-app{display:flex;min-height:100vh;background:var(--bg)}
+.mn-app>.ui-side{position:sticky;top:0;height:100vh}
+.mn-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.mn-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:20px 32px;border-bottom:1px solid var(--border);background:var(--s1)}
+.mn-h1{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
+.mn-sub{font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin-top:3px}
+.mn-body{padding:18px 32px 48px;max-width:900px}
+.mn-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.mn-tab{font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:var(--muted);background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:8px 13px;cursor:pointer}
+.mn-tab.on{color:var(--accentText);border-color:var(--brand);background:var(--activeBg)}
+.mn-tab:hover{color:var(--text)}
+.mn-lead{font-size:var(--fs-md);font-weight:600;line-height:1.5;color:var(--text);margin:0 0 16px;max-width:70ch}
+.mn-sec{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin-bottom:12px}
+.mn-sec-t{font-size:var(--fs-xs);font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accentText);margin:0 0 8px}
+.mn-sec p{font-size:var(--fs-base);line-height:1.55;margin:0 0 8px;max-width:72ch}
+.mn-sec ol,.mn-sec ul{margin:0;padding-left:20px}
+.mn-sec li{font-size:var(--fs-base);line-height:1.55;margin:0 0 6px;max-width:70ch}
+.mn-sec li b,.mn-sec p b{font-weight:800}
+.mn-k{display:inline-block;font-size:var(--fs-xs);font-weight:800;padding:1px 7px;border-radius:6px;background:var(--chipBg);border:1px solid var(--border);color:var(--text);white-space:nowrap}
+.mn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.mn-card{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--s2)}
+.mn-card .t{font-size:var(--fs-base);font-weight:800;margin-bottom:4px}
+.mn-card .d{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}
+.mn-card .d b{color:var(--text)}
+.mn-note{font-size:var(--fs-sm);color:var(--muted2);line-height:1.5;margin-top:14px}
+@media (max-width:760px){.mn-top{padding:14px 16px}.mn-body{padding:14px 16px 28px}}
+</style>
+</head>
+<body>
+  <div id="graut-gate" class="graut-gate">
+    <div class="graut-gate__box">
+      <div class="graut-gate__spin" aria-hidden="true"></div>
+      <p class="graut-gate__msg">Verificando acesso…</p>
+    </div>
+  </div>
+
+  <div class="mn-app" id="app">
+    <main class="mn-main">
+      <div class="mn-top"><div><h1 class="mn-h1">Manual de uso</h1><div class="mn-sub" id="mn-sub">como o GERA funciona para você</div></div></div>
+      <div class="mn-body" id="mn-body"></div>
+    </main>
+  </div>
+
+  <script src="ui.js"></script>
+  <script>
+  (function () {
+  'use strict';
+  var USER = null, ABA = null;
+
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function sec(titulo, htmlCorpo) { var s = el('<div class="mn-sec"></div>'); s.appendChild(el('<div class="mn-sec-t"></div>')).textContent = titulo; s.appendChild(el('<div>' + htmlCorpo + '</div>')); return s; }
+  function k(t) { return '<span class="mn-k">' + t + '</span>'; }
+
+  /* ---------- conteúdo (o mesmo do manual em PDF e da apresentação) ---------- */
+  var LEAD = 'O GERA reúne a rotina da unidade em um só lugar: o que cada pessoa faz hoje, o plano do mês de cada setor, as reuniões e a agenda. Cada perfil vê só a própria tela — gestor e sócios veem a unidade inteira, o líder vê o setor dele e o membro vê o que é dele.';
+
+  var GESTOR = [
+    ['Ao abrir o Hoje', '<p>Primeiro a faixa ' + k('Exige você') + ': convocações sem resposta, atas por fechar, setores sem plano do próximo mês (a partir de D-10), planos de ação escalando. Depois os números da unidade (no ritmo, atrasadas, esperam dono, reuniões a responder), a sua equipe de líderes, a rotina por onde começar, a agenda do dia e as reuniões.</p>'],
+    ['Todo dia (5 minutos)', '<ol><li>Responda convocações e feche atas pendentes pela faixa.</li><li>Olhe ' + k('Sua equipe') + ': quem tem rotina atrasada ou travada.</li><li>Faça a sua rotina pelo ' + k('✓ Fazer agora') + ' com relato.</li></ol>'],
+    ['Toda semana', '<ul><li><b>Reunião de Líderes</b> (terça) e <b>Reunião Integrada</b> (sexta) conduzidas pelo GERA: Iniciar, presença, "o que ficou da anterior", placar da semana, temas, decisões com dono e prazo, nota e encerrar. Toda decisão vira compromisso na agenda de alguém.</li><li>Check-in dos líderes de sexta a segunda: farol 🟡🔴 vira pauta da Reunião de Líderes sozinho.</li></ul>'],
+    ['Todo mês', '<ul><li>Até o dia 25, cada setor entrega o plano do mês seguinte. O Hoje avisa quem falta.</li><li>Itens acima de R$ 200 ficam travados até gestor <b>e</b> sócio assinarem no Planejamento.</li><li>Inteligência e Performance mostram os indicadores e a aderência da unidade e de cada setor.</li></ul>'],
+    ['Regras', '<ul><li>Gestor e sócios veem e editam tudo, criam e ativam atividades para qualquer pessoa.</li><li>Riscos e Cockpit continuam por endereço direto (riscos.html · cockpit.html), fora do menu.</li><li>Cadastro (Setores · Usuários · Importar) é só do gestor. Membro precisa ter o <b>setor de lotação</b> no cadastro para ver o plano do setor dele.</li></ul>']
+  ];
+
+  var LIDER = [
+    ['Ao abrir o Hoje', '<p>Só o seu setor. A faixa ' + k('Exige você') + ' traz: pedidos de outro setor esperando o seu aceite, itens do plano vencidos (com nome e dias), convocações e atas. Depois os números do setor, ' + k('Sua equipe') + ', a rotina por onde começar, a agenda do dia (rotinas, reuniões e eventos) e "Do plano do setor".</p>'],
+    ['Todo dia', '<ol><li>Faça as suas rotinas: ' + k('✓ Fazer agora') + ' (relato de 60 caracteres), ' + k('▶ Iniciar') + ', ' + k('» Adiar') + ' (motivo), ' + k('⚑ Travei') + ' (motivo).</li><li>Olhe a equipe: rotina atrasada, travada, quem precisa de ajuda.</li><li>Responda pedidos de outro setor: Aceitar ou Não posso, com motivo.</li></ol>'],
+    ['Toda semana (sexta a segunda)', '<ul><li>No Planejamento, ' + k('Acompanhar esta semana') + ': para cada item aberto, <b>fez o quê · vai cumprir? 🟢🟡🔴 · o que trava</b>. Sessenta segundos por item.</li><li>Amarelo ou vermelho vira assunto na Reunião de Líderes automaticamente.</li><li>Reunião de departamento com a sua equipe pelo GERA: convoca todos do setor.</li></ul>'],
+    ['Todo mês, até o dia 25: o plano do setor', '<ol><li>No Planejamento, clique em ' + k('+ criar plano') + ' no mês seguinte (copie o mês atual ou comece do zero).</li><li>Clique num <b>indicador do setor</b> sem item e escreva o que vai ser feito. Enter salva.</li><li>Abra o detalhe (▸): como, onde, turmas, com quem, início, hora, custo previsto, observações.</li><li><b>Quem</b>: se for um membro, o item vai para a agenda dele. Ele conclui no Hoje; você ' + k('Verificar ✓') + ' no plano.</li><li><b>Setor convidado</b>: chame outro setor; o líder de lá aceita ou diz que não pode.</li><li><b>Divulgar na agenda</b>: unidade (todos veem no dia) ou setor (sua equipe e convidados). O Hoje avisa de forma animada.</li><li>' + k('Entregar plano') + '. Custo acima de R$ 200 espera gestor e sócio.</li></ol>'],
+    ['Regras', '<ul><li>Você vê e edita só o(s) setor(es) que lidera. Para outro setor, chame e espere o aceite.</li><li>Concluir exige relato de 60 caracteres e evidência. Não feito exige motivo.</li><li>Remover um item ou marcar não feito tira a atividade ligada da agenda da pessoa.</li></ul>']
+  ];
+
+  var MEMBRO = [
+    ['Ao abrir o Hoje', '<p>Só o que é seu: avisos da agenda do dia, ' + k('Comece por esta') + ' (a rotina mais urgente), a agenda de hoje (rotinas, reuniões e eventos em que você foi convocado), "Do plano do setor" (itens do plano em que você é o responsável) e as suas atrasadas.</p>'],
+    ['Todo dia', '<ol><li>' + k('✓ Fazer agora') + ': conclua com um relato curto (60 caracteres) do que fez.</li><li>' + k('▶ Iniciar') + ' quando começar algo longo; ' + k('» Adiar') + ' com motivo; ' + k('⚑ Travei') + ' quando algo impede — o líder vê e ajuda.</li><li>Convites de reunião ou evento: responda <b>Vou / Não vou</b>.</li></ol>'],
+    ['Plano do setor', '<ul><li>Os itens do plano em que você é o responsável aparecem no Hoje com o prazo ("vence amanhã", "vencido há N dias") e em "abrir →".</li><li>Você conclui a atividade no Hoje; o líder verifica no plano e você vê "verificado ✓" no dia seguinte.</li><li>No Planejamento você lê o plano do seu setor; só o líder edita.</li></ul>'],
+    ['Regras', '<ul><li>Você vê só as suas atividades, o plano do seu setor (leitura) e as reuniões e eventos em que foi convocado.</li><li>Se uma rotina sua está atrasada, ela conta contra você; se está sem dono, conta contra o líder.</li></ul>']
+  ];
+
+  var TELAS = [
+    ['Hoje', 'o seu dia: o que fazer, por onde começar, avisos e compromissos.'],
+    ['Atividades', 'as rotinas do setor em quadro (a fazer · fazendo · atrasadas · feitas). Líder dá dono; gestor cria e ativa.'],
+    ['Reuniões', 'convocação, condução por blocos com minutos, decisões que viram compromissos, ata e nota.'],
+    ['Planejamento', 'o plano 5W2H do mês por setor, nascido dos indicadores; check-in semanal; aceite entre setores.'],
+    ['Eventos (Agenda)', 'agenda da unidade (todos) e do setor (equipe). É a única tela feita também para o celular.'],
+    ['Inteligência', 'os indicadores da unidade ou do seu setor, com o "i" que explica a conta.'],
+    ['Performance', 'aderência por pessoa e por setor; quem precisa de ajuda.'],
+    ['Glossário', 'toda sigla e termo do sistema, em linguagem simples.'],
+    ['Cadastro', 'setores, usuários e importação (só gestor).']
+  ];
+
+  /* ---------- pintura ---------- */
+  function perfilDe(u) { if (!u) { return 'usuario'; } if (u.perfil === 'gestor' || u.socio) { return 'gestor'; } return u.perfil === 'lider' ? 'lider' : 'usuario'; }
+  var ROTULO = { gestor: 'Gestor e sócios', lider: 'Líder de setor', usuario: 'Membro da equipe', telas: 'As telas' };
+
+  function render() {
+    var body = document.getElementById('mn-body'); body.innerHTML = '';
+    var meu = perfilDe(USER);
+    var tabs = el('<div class="mn-tabs" role="tablist"></div>');
+    ['gestor', 'lider', 'usuario', 'telas'].forEach(function (id) {
+      var b = el('<button type="button" class="mn-tab' + (ABA === id ? ' on' : '') + '" role="tab"></button>');
+      b.textContent = ROTULO[id] + (id === meu ? ' · você' : '');
+      b.setAttribute('aria-selected', ABA === id ? 'true' : 'false');
+      b.addEventListener('click', function () { ABA = id; render(); });
+      tabs.appendChild(b);
+    });
+    body.appendChild(tabs);
+    var lead = el('<p class="mn-lead"></p>'); lead.textContent = LEAD; body.appendChild(lead);
+    if (ABA === 'telas') {
+      var g = el('<div class="mn-grid"></div>');
+      TELAS.forEach(function (t) { var c = el('<div class="mn-card"></div>'); c.appendChild(el('<div class="t"></div>')).textContent = t[0]; c.appendChild(el('<div class="d"></div>')).textContent = t[1]; g.appendChild(c); });
+      body.appendChild(g);
+    } else {
+      var lista = ABA === 'gestor' ? GESTOR : (ABA === 'lider' ? LIDER : MEMBRO);
+      lista.forEach(function (s) { body.appendChild(sec(s[0], s[1])); });
+    }
+    var nota = el('<div class="mn-note"></div>');
+    nota.textContent = 'Dicas: o "i" ao lado de todo número mostra a conta; o sol/lua no rodapé da barra troca claro e escuro; no celular use a Agenda. Dúvida de palavra: Glossário.';
+    body.appendChild(nota);
+  }
+
+  function boot(user) {
+    USER = user || null;
+    var app = document.getElementById('app');
+    app.insertBefore(UI.sidebar({ active: 'Manual', user: USER }), app.firstChild);
+    ABA = perfilDe(USER);
+    document.getElementById('mn-sub').textContent = 'como o GERA funciona para ' + (ROTULO[ABA] === 'Gestor e sócios' ? 'quem gere a unidade' : (ABA === 'lider' ? 'quem lidera um setor' : 'você'));
+    render();
+  }
+  Guard.onReady(boot);
+  })();
+  </script>
+<script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
+</body>
+</html>

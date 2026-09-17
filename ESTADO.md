@@ -417,3 +417,11 @@ Seis entraram na mesma noite (pequenas, testadas no simulador nos 3 perfis, 0 er
 6. **Hora no item do plano:** campo "Hora (agenda)" no detalhe; vai para o evento (agenda) e para o aviso do Hoje.
 
 Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada 10 min (custo de leitura no plano Spark a medir com uso real); 8. Inteligência e Performance em cartões sem "lentes" (rodada própria, plano aprovado); 9. Atividades com um só botão "Nova"; 10. "✓ verificado pelo líder" visível ao membro por um dia.
+
+## 29. Conclusão da madrugada: sincronizações, melhorias 7·9·10, manual por perfil, PDF e PowerPoint (17/09, 03h–08h)
+
+- **Sincronizações que faltavam (auditoria pedida pelo Bruno):** copiar o mês anterior leva indicador, turmas e "com quem"; remover item ou marcar "não feito" desativa a atividade ligada e o evento da agenda; concluir no plano fecha a ocorrência da atividade ligada (se ainda aberta) e marca o evento como realizado; verificar marca o evento realizado. **Não sincronizado (declarado):** editar a atividade em Atividades ou o evento em Eventos não volta para o item do plano (sentido inverso) — fica para a próxima rodada.
+- **Melhorias 7, 9 e 10 entregues:** Hoje se atualiza sozinho a cada 10 min com a aba visível e sem modal aberto (e ao voltar para a aba); Atividades com um só botão "Nova ▾" (catálogo · do zero · inativas); membro vê "verificado ✓ por <líder>" no Hoje por 24 h. **8 (Inteligência/Performance em cartões) fica declarada** — é redesenho, não cabia antes da publicação.
+- **Manual dentro do sistema (`manual.html`)**, no menu de todos os perfis, abre na aba do perfil de quem entrou (Gestor e sócios · Líder · Membro · As telas). Mesmo conteúdo do PDF e da apresentação.
+- **Entregáveis:** `GERA_Manual_do_Lider.pdf` (A4, frente e verso) e `GERA_Apresentacao.pptx` (12 slides, 16:9, com capturas do simulador), gerados em `scratchpad/entrega/` e enviados ao Bruno. python-pptx 1.0.2 instalado em venv isolado no scratchpad (não no sistema).
+- Testado no simulador: menu Nova, linha "verificado ✓", remover/não feito desativam a atividade, concluir grava a ocorrência, manual nos 3 perfis; auditoria estática 17 telas OK.

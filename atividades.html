@@ -339,6 +339,11 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
 @media (max-width:640px){.at-fsep{display:none}} /* quebrando em várias linhas, o traço ficava solto no começo de uma */
 /* lista de inativas */
 .at-inbtn{white-space:nowrap}
+/* menu Nova (17/09) */
+.at-nova{position:relative}
+.at-nova-menu{display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--s1);border:1px solid var(--border);border-radius:11px;padding:6px;min-width:210px;box-shadow:var(--shadowSoft);z-index:30;flex-direction:column;gap:4px;align-items:stretch}
+.at-nova.on .at-nova-menu{display:flex}
+.at-nova-menu .ui-btn,.at-nova-menu button{justify-content:flex-start;width:100%}
 /* com o botão Inativas a barra passa da largura em telas até ~1440px: o que quebra de linha fica sob os
    outros botões de ação (à direita), e não solto sob o seletor de visão */
 @media (min-width:901px){.at-toolright{justify-content:flex-end}}
@@ -1305,9 +1310,15 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
 
       /* nova atividade */
       if (CAN_WRITE) {
-        right.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', onClick: abrirCatalogo }));
-        right.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { openEditor(null); } }));
-        right.appendChild(botaoInativas()); /* 16/09 · D: sempre na barra de quem escreve */
+        /* 17/09: um só botão 'Nova' (catálogo · do zero · inativas) — menos controles acima da dobra */
+        var nova = el('<div class="at-nova"></div>');
+        nova.appendChild(UI.button({ label: 'Nova ▾', icon: 'plus', onClick: function () { nova.classList.toggle('on'); } }));
+        var menu = el('<div class="at-nova-menu" role="menu"></div>');
+        menu.appendChild(UI.button({ label: 'Usar do catálogo', icon: 'list', variant: 'ghost', onClick: function () { nova.classList.remove('on'); abrirCatalogo(); } }));
+        menu.appendChild(UI.button({ label: 'Criar do zero', icon: 'plus', variant: 'ghost', onClick: function () { nova.classList.remove('on'); openEditor(null); } }));
+        menu.appendChild(botaoInativas()); /* 16/09 · D: sempre disponível a quem escreve */
+        nova.appendChild(menu); right.appendChild(nova);
+        if (!window.__atNovaFecha) { window.__atNovaFecha = true; document.addEventListener('click', function (ev) { var ab = document.querySelector('.at-nova.on'); if (ab && !ab.contains(ev.target)) { ab.classList.remove('on'); } }); }
       }
 
       bar.appendChild(right);
