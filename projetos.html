@@ -515,7 +515,7 @@
       tw.appendChild(txt('div', 'ttl', semAta.length === 1 ? '1 reunião passou e a ata não foi fechada' : semAta.length + ' reuniões passaram e a ata não foi fechada'));
       tw.appendChild(txt('div', 'meta', semAta.map(function (r) { return (TIPO_LABEL[r.tipo] || 'Reunião') + ' de ' + fmtBR(r.data); }).join(' · ') + ' — sem ata, as decisões não viram compromisso de ninguém.'));
       w.appendChild(tw);
-      var aw = el('<div class="acts"></div>'); aw.appendChild(btn(CAN_WRITE() ? 'Fechar ata' : 'Ver', CAN_WRITE() ? 'p' : '', function () { abrir(semAta[0].id); })); w.appendChild(aw);
+      var aw = el('<div class="acts"></div>'); aw.appendChild(btn(CAN_WRITE() ? 'Fechar ata' : 'Ver', CAN_WRITE() ? 'p' : '', function () { abrir(semAta[0].id, 99); })); w.appendChild(aw);
       body.appendChild(w);
     }
 
@@ -648,7 +648,7 @@
   /* ============================================================
      CONDUÇÃO
      ============================================================ */
-  function abrir(id) { ABERTA = id; BLOCO = 0; CLOCK.gastoBloco = {}; try { history.replaceState(null, '', location.pathname + '?r=' + encodeURIComponent(id)); } catch (e) { /* sem histórico */ } renderReuniao(); }
+  function abrir(id, bloco) { ABERTA = id; BLOCO = bloco || 0; CLOCK.gastoBloco = {}; try { history.replaceState(null, '', location.pathname + '?r=' + encodeURIComponent(id)); } catch (e) { /* sem histórico */ } renderReuniao(); }
   function reuniaoAberta() { for (var i = 0; i < REUN.length; i++) { if (REUN[i].id === ABERTA) { return REUN[i]; } } return null; }
   function pararRelogio() { if (CLOCK.relogio) { clearInterval(CLOCK.relogio); CLOCK.relogio = null; } }
   function renderReuniao() {
@@ -1048,6 +1048,9 @@
     document.getElementById('rn-mav').appendChild(UI.avatar({ initials: USER.initials, size: 40 }));
     var m = String(location.search || '').match(/[?&]r=([^&]+)/);
     if (m) { ABERTA = decodeURIComponent(m[1]); }
+    /* ?bloco=N abre direto no bloco (o Hoje manda "Fechar ata" para o fechamento; 'fim' = último) */
+    var mb = String(location.search || '').match(/[?&]bloco=(\d+|fim)/);
+    if (mb) { BLOCO = mb[1] === 'fim' ? 99 : Math.max(0, parseInt(mb[1], 10) - 1); }
     reload();
   });
   }());

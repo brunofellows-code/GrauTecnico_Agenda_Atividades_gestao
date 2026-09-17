@@ -839,7 +839,7 @@
     var reun = reunioesAResponder(hoje);
     if (reun.length) { itens.push({ t: reun.length + (reun.length === 1 ? ' convocação sem resposta' : ' convocações sem resposta'), label: 'Responder', fn: function () { rolaAte('sec-reunioes'); } }); }
     var semAta = CAN_WRITE() ? reunioesSemAta(hoje) : [];
-    if (semAta.length) { itens.push({ t: semAta.length + (semAta.length === 1 ? ' reunião sem ata' : ' reuniões sem ata'), label: 'Fechar ata', fn: function () { window.location.href = 'projetos.html?r=' + encodeURIComponent(semAta[0].id); } }); }
+    if (semAta.length) { itens.push({ t: semAta.length + (semAta.length === 1 ? ' reunião sem ata' : ' reuniões sem ata'), label: 'Fechar ata', fn: function () { window.location.href = 'projetos.html?r=' + encodeURIComponent(semAta[0].id) + '&bloco=fim; } }); }
     var semDono = ativ.filter(function (a) { return !a.responsavelUid; });
     if (semDono.length) {
       var por = {}; semDono.forEach(function (a) { var s = raizDe(KPI.setoresDe(a, m0Setores())[0] || '—'); por[s] = (por[s] || 0) + 1; });
@@ -1023,7 +1023,7 @@
       tt.appendChild(txt('div', 'm bad', 'passou ' + diasTxt(dias) + ' e a ata não foi fechada — as decisões não viram compromisso de ninguém até encerrar'));
       row.appendChild(tt);
       var rs = el('<div class="hj-rsvp"></div>');
-      if (CAN_WRITE()) { rs.appendChild(el('<a class="hj-gb p" href="projetos.html?r=' + encodeURIComponent(r.id) + '">Fechar ata</a>')); }
+      if (CAN_WRITE()) { rs.appendChild(el('<a class="hj-gb p" href="projetos.html?r=' + encodeURIComponent(r.id) + '&bloco=fim">Fechar ata</a>')); }
       else { rs.appendChild(txt('span', 'hj-tag', r.criadoPorNome ? 'aguardando ' + primeiroNome(r.criadoPorNome) : 'aguardando quem convocou')); }
       row.appendChild(rs);
       frag.appendChild(row);
