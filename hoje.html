@@ -1154,7 +1154,11 @@
     var pendMinhas = KPI.pendenciasPorRotina(pessoal, hoje);
     var px = null;
     if (pendMinhas.total) { var p0 = pendMinhas.itens[0]; px = { occ: p0.occ, motivo: 'atrasada', dias: p0.dias, perdidas: p0.perdidas }; }
-    else { px = KPI.proximaAcao ? KPI.proximaAcao(m.board, uid, hoje) : null; if (px && px.motivo === 'atrasada') { px = null; } }
+    else {
+      /* sem atraso: a primeira aberta de hoje — com horário mais cedo, senão por nome (mesma ordem da agenda) */
+      var abertasHoje = d.comHora.concat(d.semHora).filter(function (o) { return o.status !== 'concluida' && o.status !== 'pulada'; });
+      if (abertasHoje.length) { px = { occ: abertasHoje[0], motivo: horarioDe(abertasHoje[0]) ? 'hora' : 'hoje', hora: horarioDe(abertasHoje[0]) }; }
+    }
     if (px) { w.appendChild(secao('sec-comece', 'Comece por esta', { formula: 'uma única sugestão, sempre pela mesma regra: (1º) sua rotina atrasada mais crítica — vital primeiro, depois há mais dias sem fazer — pela ocorrência mais recente · senão (2º) a de hoje com horário mais cedo · senão (3º) a primeira de hoje.', dados: 'suas ocorrências abertas.', numeros: px.motivo === 'atrasada' ? 'atrasada ' + diasTxt(px.dias) : px.motivo === 'hora' ? 'horário ' + px.hora : 'de hoje, sem horário', serve: 'tirar o custo de decidir por onde começar.' })); w.appendChild(heroi(px)); }
 
     /* 4 · agenda de hoje */
