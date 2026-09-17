@@ -1083,7 +1083,7 @@
         hint: editing ? 'É o código que liga o login a este cadastro. Não muda.'
           : 'Crie o login antes, no Console do Firebase (Authentication → Users → Add user), com o e-mail e uma senha provisória. Depois copie o código (UID) da conta criada e cole aqui. O sistema não cria login pelo navegador.' });
 
-      var emailInput = UI.input({ value: editing ? cur.email : '', placeholder: 'pessoa@grautecnico.com.br' });
+      var emailInput = UI.input({ value: editing ? cur.email : '', placeholder: 'nome@escola.com.br' });
       var emailField = UI.field({ label: 'E-mail', required: true, control: emailInput, hint: 'Use o mesmo e-mail da conta no Authentication.' });
 
       var nomeInput = UI.input({ value: editing ? cur.nome : '', placeholder: 'Ex: Maria Silva' });
@@ -1277,7 +1277,7 @@
       var ta = document.createElement('textarea');
       ta.className = 'us-ta';
       ta.setAttribute('spellcheck', 'false');
-      ta.placeholder = 'Antonia Souza; antonia@grautecnico.com.br; lider; SEC\nKamile Lima; kamile@grautecnico.com.br; lider; CRA\nJoao Pereira; joao@grautecnico.com.br; usuario; SEC';
+      ta.placeholder = 'Ana Lima; ana@escola.com.br; lider; SEC\nBeatriz Costa; beatriz@escola.com.br; lider; CRA\nCarlos Souza; carlos@escola.com.br; usuario; SEC';
 
       var passo = txt('div', 'us-passo');
       passo.appendChild(txt('div', null, 'Uma pessoa por linha, com quatro partes separadas por ponto e vírgula: nome, e-mail, perfil (gestor, lider ou usuario) e sigla do setor.'));
