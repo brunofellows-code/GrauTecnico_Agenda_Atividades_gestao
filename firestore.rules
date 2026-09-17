@@ -111,6 +111,32 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // ---------- solicitacoes_acesso (17/09 - cadastro por pedido) ----------
+    // A pessoa cria a PROPRIA conta no Authentication (login.html) e grava UM
+    // pedido, com o proprio uid e o proprio e-mail, sempre 'pendente'. O pedido
+    // NAO da acesso a nada: quem libera e o gestor, criando o doc em /usuarios
+    // (perfil e setor). Ler: o dono do pedido e o gestor. Listar e decidir: gestor.
+    match /solicitacoes_acesso/{uid} {
+      allow create: if signedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'setorInformado', 'status', 'criadoEm'])
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.email == request.auth.token.email
+                    && request.resource.data.status == 'pendente'
+                    && request.resource.data.nome is string
+                    && request.resource.data.nome.size() >= 3
+                    && request.resource.data.nome.size() <= 120
+                    && request.resource.data.setorInformado is string
+                    && request.resource.data.setorInformado.size() <= 120
+                    && request.resource.data.criadoEm is number;
+      allow get: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow list: if isAdmin();
+      allow update: if isAdmin()
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.status in ['pendente', 'aprovado', 'recusado'];
+      allow delete: if false;
+    }
+
     // ---------- setores ----------
     match /setores/{sigla} {
       allow read: if isActive();

@@ -509,7 +509,7 @@
             deny('Acesso desativado', 'Sua conta existe, mas está desativada. Procure um administrador para reativá-la.');
           }
         } else {
-          deny('Acesso não liberado', 'Você ainda não tem acesso a este sistema. Peça a um administrador para cadastrar seu usuário.');
+          deny('Acesso não liberado', 'Você ainda não tem acesso a este sistema. Se você já pediu acesso, aguarde o gestor liberar. Se não pediu, use "Primeiro acesso? Pedir acesso" na tela de entrada.');
         }
       }).catch(function (e) {
         /* permission-denied (regras ainda não publicadas) ou rede */

@@ -597,6 +597,13 @@
             });
           }).catch(function (e) { throw ferr(e); });
         },
+        /* 17/09 · pedidos de acesso: login.html grava; só o gestor lista e decide (regra solicitacoes_acesso) */
+        listPedidos: function () {
+          return fb().then(function (ctx) { var db = ctx.db, f = ctx.f; var q = f.query(f.collection(db, 'solicitacoes_acesso'), f.where('status', '==', 'pendente'), f.limit(50)); return f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.uid = o.uid || d.id; a.push(o); }); a.sort(function (x, y) { return (x.criadoEm || 0) - (y.criadoEm || 0); }); return a; }); }).catch(function () { return []; });
+        },
+        atualizarPedido: function (uid, patch) {
+          return fb().then(function (ctx) { var db = ctx.db, f = ctx.f; return f.updateDoc(f.doc(db, 'solicitacoes_acesso', uid), patch); }).catch(function (e) { throw ferr(e); });
+        },
         create: function (d) {
           var uid = (d.uid || '').trim();
           var email = (d.email || '').trim();
@@ -749,6 +756,7 @@
     }
 
     var ALL = [];
+    var PEDIDOS = [];              /* 17/09: pedidos de acesso pendentes (só o gestor lê) */
     var SETORES = [];              /* M6: setores ativos (raiz + subsetores), na ordem da hierarquia */
     var showInactive = false;
     var porSetor = true;           /* M6: lista agrupada por setor (padrão ligado) */
@@ -793,12 +801,16 @@
           SETORES = arr || [];
         }).catch(function () { SETORES = []; });
       }).then(function () {
+        return Store.listPedidos().then(function (pp) { PEDIDOS = pp || []; });
+      }).then(function () {
         renderList();
       }).catch(function (e) { renderError(e); });
     }
     function refresh() {
       Store.list().then(function (rows) {
         ALL = rows;
+        return Store.listPedidos().then(function (pp) { PEDIDOS = pp || []; });
+      }).then(function () {
         renderList();
       }).catch(function (e) { renderError(e); });
     }
@@ -930,6 +942,24 @@
       return f;
     }
 
+    /* 17/09 · pedidos de acesso: "Liberar" abre o cadastro já preenchido — o gestor só escolhe perfil e setor */
+    function blocoPedidos() {
+      var bloco = txt('div', 'us-grupo'), h = txt('div', 'us-ghead');
+      h.appendChild(txt('span', 'us-gnome', 'Pedidos de acesso'));
+      var sub = txt('div', 'us-gsub'); sub.appendChild(txt('b', null, String(PEDIDOS.length))); sub.appendChild(document.createTextNode(' esperando você')); h.appendChild(sub); bloco.appendChild(h);
+      PEDIDOS.forEach(function (pd) {
+        var r = txt('div', 'us-gvazio'); r.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-style:solid;border-color:var(--orange);margin-bottom:8px';
+        var tx = document.createElement('div'); tx.style.cssText = 'flex:1 1 260px;min-width:0';
+        tx.appendChild(txt('b', null, pd.nome || '(sem nome)'));
+        tx.appendChild(document.createTextNode(' · ' + (pd.email || '') + (pd.setorInformado ? ' · diz ser de: ' + pd.setorInformado : '') + (pd.criadoEm ? ' · pediu em ' + new Date(pd.criadoEm).toLocaleDateString('pt-BR') : '')));
+        r.appendChild(tx);
+        r.appendChild(UI.button({ label: 'Liberar acesso', icon: 'check', onClick: function () { openEditor(null, pd); } }));
+        r.appendChild(UI.button({ label: 'Recusar', variant: 'ghost', onClick: function () { if (!window.confirm('Recusar o pedido de ' + (pd.nome || pd.email) + '? A pessoa continua sem acesso.')) { return; } Store.atualizarPedido(pd.uid, { uid: pd.uid, status: 'recusado', recusadoPorUid: CURRENT_USER.uid, recusadoEm: Date.now() }).then(function () { toast('Pedido recusado.'); refresh(); }).catch(function (e) { toast(e.message, 'err'); }); } }));
+        bloco.appendChild(r);
+      });
+      return bloco;
+    }
+
     function cabecalhoGrupo(g) {
       var h = txt('div', 'us-ghead');
       h.appendChild(txt('span', 'us-gnome', g.nome));
@@ -996,6 +1026,7 @@
         return;
       }
 
+      if (PEDIDOS.length) { stage.appendChild(blocoPedidos()); }
       if (!porSetor) {
         var list = txt('div', 'us-list');
         vis.forEach(function (u) { list.appendChild(row(u)); });
@@ -1091,22 +1122,22 @@
     }
 
     /* ===================== editor (modal) ===================== */
-    function openEditor(uid) {
+    function openEditor(uid, pre) { /* pre = pedido de acesso (uid · nome · email) quando o gestor clica em "Liberar acesso" */
       if (!CAN_VIEW) { return; }
       var editing = !!uid;
       var cur = editing ? ALL.filter(function (u) { return u.uid === uid; })[0] : null;
       if (editing && !cur) { return; }
       var isSelf = editing && cur.uid === CURRENT_USER.uid;
 
-      var uidInput = UI.input({ value: editing ? cur.uid : '', placeholder: 'Cole o código do login (UID)', disabled: editing });
+      var uidInput = UI.input({ value: editing ? cur.uid : (pre ? (pre.uid || '') : ''), placeholder: 'Cole o código do login (UID)', disabled: editing || !!pre });
       var uidField = UI.field({ label: 'Código do login (UID)', required: !editing, control: uidInput,
         hint: editing ? 'É o código que liga o login a este cadastro. Não muda.'
           : 'Crie o login antes, no Console do Firebase (Authentication → Users → Add user), com o e-mail e uma senha provisória. Depois copie o código (UID) da conta criada e cole aqui. O sistema não cria login pelo navegador.' });
 
-      var emailInput = UI.input({ value: editing ? cur.email : '', placeholder: 'nome@escola.com.br' });
+      var emailInput = UI.input({ value: editing ? cur.email : (pre ? (pre.email || '') : ''), placeholder: 'nome@escola.com.br' });
       var emailField = UI.field({ label: 'E-mail', required: true, control: emailInput, hint: 'Use o mesmo e-mail da conta no Authentication.' });
 
-      var nomeInput = UI.input({ value: editing ? cur.nome : '', placeholder: 'Ex: Maria Silva' });
+      var nomeInput = UI.input({ value: editing ? cur.nome : (pre ? (pre.nome || '') : ''), placeholder: 'Ex: Maria Silva' });
       var nomeField = UI.field({ label: 'Nome', required: true, control: nomeInput });
 
       var perfilOpts = PERFIS.map(function (p) { return { value: p.value, label: p.label }; });
@@ -1255,7 +1286,7 @@
           ? Store.update(uidVal, { email: email, nome: nome, perfil: perfil, setor: setorVal, ativo: isSelf ? true : ativoState, setoresLiderados: setoresLid, socio: socioVal })
           : Store.create({ uid: uidVal, email: email, nome: nome, perfil: perfil, setor: setorVal, setoresLiderados: setoresLid, socio: socioVal });
 
-        op.then(function () {
+        op.then(function () { if (!editing && pre) { return Store.atualizarPedido(pre.uid, { uid: pre.uid, status: 'aprovado', aprovadoPorUid: CURRENT_USER.uid, aprovadoEm: Date.now() }).catch(function () { /* o cadastro foi criado; o pedido sai da fila na próxima leitura */ }); } }).then(function () {
           m.close();
           toast(editing ? ('Usuário "' + nome + '" atualizado.') : ('Usuário "' + nome + '" adicionado.'));
           refresh();

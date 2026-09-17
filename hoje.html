@@ -330,6 +330,7 @@
   var PLANEJ = [];              /* planos da competência atual (itens meus · pedidos de outros setores) */
   var SOLIC_PARC = [];          /* respostas de aceite entre setores (solicitacoes tipo parceiro_plano) */
   var EVENTOS = [];             /* agenda (eventos) de hoje e de amanhã: avisos animados + compromissos */
+  var PEDIDOS_ACESSO = [];      /* 17/09: pedidos de acesso pendentes (só o gestor lê) */
   var LIDO_EM = null;
   var CELEBRADO = '', CELEB80 = '';
   var R = window.GrautRecorrencia;
@@ -437,6 +438,9 @@
     /* agenda: eventos de hoje e de amanhã (1 leitura) — unidade para todos; do setor para a equipe e convidados */
     listEventosProximos: function (hoje, amanha) {
       return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'eventos'), c.f.where('data', 'in', [hoje, amanha]), c.f.limit(60)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; if (o.ativo !== false && o.cancelado !== true) { a.push(o); } }); return a; }); }).catch(function () { return []; });
+    },
+    listPedidosAcesso: function () {
+      return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes_acesso'), c.f.where('status', '==', 'pendente'), c.f.limit(20)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.uid = o.uid || d.id; a.push(o); }); return a; }); }).catch(function () { return []; });
     },
     confirmarPresenca: function (reuniaoId, atuais, uid, recusas) {
       return fb().then(function (c) {
@@ -897,6 +901,7 @@
       venc.sort(function (a, b) { return b.dias - a.dias; });
       if (venc.length) { itens.push({ t: venc.length + (venc.length === 1 ? ' item do plano vencido' : ' itens do plano vencidos'), small: venc[0].it.oque + ' · ' + (venc[0].it.quemNome || '—') + ' · há ' + venc[0].dias + ' dia(s)', label: 'Ver no plano', fn: function () { window.location.href = 'planejamento.html?setor=' + encodeURIComponent(venc[0].pl.setorSigla) + '&comp=' + venc[0].pl.competencia + '&item=' + encodeURIComponent(venc[0].it.id); } }); }
     }
+    if (PEDIDOS_ACESSO.length) { itens.push({ t: PEDIDOS_ACESSO.length + (PEDIDOS_ACESSO.length === 1 ? ' pedido de acesso espera você' : ' pedidos de acesso esperam você'), small: (PEDIDOS_ACESSO[0].nome || '') + ' · ' + (PEDIDOS_ACESSO[0].email || ''), label: 'Liberar', fn: function () { window.location.href = 'usuarios.html'; } }); }
     if (Guard.isGestor && Guard.isGestor()) {
       var lideres = {}; USUARIOS.forEach(function (u) { if (u.perfil === 'lider') { (u.setoresLiderados || []).forEach(function (sg) { lideres[sg] = true; }); } });
       var semPlano = (MODELO.setores || []).filter(function (s) { return s && s.ativo !== false && !s.setorPaiSigla && lideres[s.sigla]; }).filter(function (s) { return !PLANEJ.some(function (pl) { return pl.setorSigla === s.sigla && pl.competencia === proxComp && pl.entregueEm; }); }).map(function (s) { return s.sigla; });
@@ -1432,11 +1437,12 @@
       ehUsuario ? Promise.resolve([]) : Store.listUsuarios(),
       Store.listPlanejamentosComp(hoje.slice(0, 7)),
       ehUsuario ? Promise.resolve([]) : Store.listSolicParceiro(),
-      Store.listEventosProximos(hoje, R.addDias(hoje, 1))
+      Store.listEventosProximos(hoje, R.addDias(hoje, 1)),
+      (Guard.isGestor && Guard.isGestor()) ? Store.listPedidosAcesso() : Promise.resolve([])
     ]).then(function (r) {
       MODELO = r[0]; PLANOS = r[1] || [];
       var cv = r[2] || {}; CONVOC = cv.itens || []; CONVOC_AVISO = cv.cheio ? 'cheio' : (cv.erro ? 'erro' : '');
-      SNAPS = r[3] || []; USUARIOS = r[4] || []; PLANEJ = r[5] || []; SOLIC_PARC = r[6] || []; EVENTOS = r[7] || [];
+      SNAPS = r[3] || []; USUARIOS = r[4] || []; PLANEJ = r[5] || []; SOLIC_PARC = r[6] || []; EVENTOS = r[7] || []; PEDIDOS_ACESSO = r[8] || [];
       LIDO_EM = Date.now();
       paint();
     }).catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });

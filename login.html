@@ -70,16 +70,34 @@
 
       <button id="entrar" class="lg-btn" type="button">Entrar</button>
       <button id="reset" class="lg-link" type="button">Esqueci minha senha</button>
+      <button id="pedir" class="lg-link" type="button">Primeiro acesso? Pedir acesso ao gestor</button>
+
+      <!-- 17/09 · cadastro por pedido: a pessoa cria a própria conta e registra UM pedido; só o gestor libera (perfil e setor) -->
+      <div id="pedido" hidden>
+        <div class="lg-field">
+          <label for="pnome">Seu nome completo</label>
+          <input id="pnome" type="text" autocomplete="name" placeholder="Nome e sobrenome">
+        </div>
+        <div class="lg-field">
+          <label for="psetor">Setor ou função</label>
+          <input id="psetor" type="text" placeholder="Ex.: Secretaria · atendimento">
+        </div>
+        <button id="enviarPedido" class="lg-btn" type="button">Pedir acesso</button>
+        <button id="voltarLogin" class="lg-link" type="button">Já tenho acesso · voltar</button>
+      </div>
     </div>
   </main>
 
   <script type="module">
-    import { auth } from "./firebase.js";
+    import { auth, db } from "./firebase.js";
     import {
       signInWithEmailAndPassword,
       sendPasswordResetEmail,
-      onAuthStateChanged
+      onAuthStateChanged,
+      createUserWithEmailAndPassword,
+      signOut
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import { doc, setDoc } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     var $ = function (id) { return document.getElementById(id); };
     var msg = $('msg');
@@ -131,6 +149,52 @@
         });
     }
 
+    /* ---------- 17/09 · pedir acesso ----------
+       Cria a conta no Authentication e grava solicitacoes_acesso/{uid} com status 'pendente'.
+       A conta NÃO entra no sistema: sem cadastro em /usuarios o guard nega. O gestor libera em Usuários. */
+    var PEDINDO = false;
+    function modoPedido(on) {
+      clearMsg();
+      $('pedido').hidden = !on; $('entrar').hidden = on; $('reset').hidden = on; $('pedir').hidden = on;
+      $('senha').setAttribute('autocomplete', on ? 'new-password' : 'current-password');
+      $('senha').placeholder = on ? 'Crie uma senha (mínimo 8 caracteres)' : 'Sua senha';
+      var t = document.querySelector('.lg-title'), sb = document.querySelector('.lg-sub');
+      if (t) { t.textContent = on ? 'Pedir acesso' : 'Entrar'; }
+      if (sb) { sb.textContent = on ? 'Preencha e envie. O gestor libera o seu acesso e define o seu perfil.' : 'Acesse com seu e-mail e senha.'; }
+    }
+    function msgPedido(code) {
+      switch (code) {
+        case 'auth/email-already-in-use': return 'Este e-mail já tem conta. Use "Entrar" ou "Esqueci minha senha". Se o acesso ainda não foi liberado, fale com o gestor.';
+        case 'auth/weak-password': return 'Senha fraca: use pelo menos 8 caracteres.';
+        case 'auth/invalid-email': return 'E-mail inválido.';
+        case 'auth/operation-not-allowed': return 'O cadastro por pedido ainda não está habilitado. Fale com o gestor.';
+        case 'auth/network-request-failed': return 'Sem conexão. Verifique sua internet.';
+        default: return 'Não consegui enviar o pedido agora. Tente de novo em instantes.';
+      }
+    }
+    function pedirAcesso() {
+      clearMsg();
+      var nome = $('pnome').value.trim(), setor = $('psetor').value.trim(), email = $('email').value.trim(), senha = $('senha').value;
+      if (nome.length < 3) { showErr('Informe o seu nome completo.'); return; }
+      if (!email) { showErr('Informe o seu e-mail.'); return; }
+      if (senha.length < 8) { showErr('Crie uma senha com pelo menos 8 caracteres.'); return; }
+      var b = $('enviarPedido'); b.disabled = true; var lbl = b.textContent; b.textContent = 'Enviando…';
+      PEDINDO = true;
+      createUserWithEmailAndPassword(auth, email, senha)
+        .then(function (cred) {
+          var uid = cred.user.uid;
+          return setDoc(doc(db, 'solicitacoes_acesso', uid), { uid: uid, nome: nome.slice(0, 120), email: cred.user.email || email, setorInformado: setor.slice(0, 120), status: 'pendente', criadoEm: Date.now() })
+            .then(function () { return signOut(auth); })
+            .then(function () { PEDINDO = false; modoPedido(false); showInfo('Pedido enviado. Quando o gestor liberar, entre com este e-mail e a senha que você criou.'); })
+            .catch(function (e) { return signOut(auth).then(function () { PEDINDO = false; showErr(e && e.code === 'permission-denied' ? 'A sua conta foi criada, mas o pedido não pôde ser registrado. Avise o gestor para liberar o seu acesso.' : 'A sua conta foi criada, mas o pedido não foi registrado. Avise o gestor.'); }); });
+        })
+        .catch(function (e) { PEDINDO = false; showErr(msgPedido(e && e.code)); })
+        .then(function () { b.disabled = false; b.textContent = lbl; });
+    }
+    $('pedir').addEventListener('click', function () { modoPedido(true); });
+    $('voltarLogin').addEventListener('click', function () { modoPedido(false); });
+    $('enviarPedido').addEventListener('click', pedirAcesso);
+
     $('entrar').addEventListener('click', entrar);
     $('reset').addEventListener('click', resetar);
     ['email', 'senha'].forEach(function (id) {
@@ -138,7 +202,7 @@
     });
 
     /* Já está logado? Pula a tela de login e vai pro app. */
-    onAuthStateChanged(auth, function (u) { if (u) { window.location.replace('hoje.html'); } });
+    onAuthStateChanged(auth, function (u) { if (u && !PEDINDO) { window.location.replace('hoje.html'); } });
   </script>
 <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}</script>
 </body>
