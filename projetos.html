@@ -457,6 +457,7 @@
   function textoPauta(r) {
     var L = [], hoje = hojeISO();
     L.push('PAUTA — ' + tituloReuniao(r) + ' · ' + fmtBR(r.data) + (r.horaPrevista ? ' às ' + r.horaPrevista : ''));
+    if (r.pautaTexto) { L.push(''); L.push('O QUE SERÁ TRATADO:'); L.push(r.pautaTexto); }
     L.push('');
     L.push('ROTEIRO (' + duracaoDe(r) + ' min):');
     blocosDe(r).forEach(function (b, i) { L.push((i + 1) + ') ' + b.rotulo + ' — ' + b.min + ' min' + (b.modelo && b.modelo.pauta ? ' · ' + b.modelo.pauta : '')); });
@@ -762,6 +763,13 @@
   /* 1 · presença */
   function blocoPresenca(r, podeEditar) {
     var box = el('<div></div>');
+    /* resumo do que será tratado: texto livre, salvo ao sair do campo; sai no topo da pauta copiada */
+    box.appendChild(secao('O que será tratado (resumo)', null));
+    if (podeEditar) {
+      var ta = el('<textarea class="ui-input" rows="3" aria-label="Resumo do que será tratado" style="width:100%;margin-bottom:var(--sp-4)"></textarea>'); ta.placeholder = 'Em duas ou três linhas: os temas desta reunião e o que precisa sair decidido. Os assuntos detalhados ficam no bloco Assuntos.'; ta.value = r.pautaTexto || '';
+      ta.addEventListener('blur', function () { var v = ta.value.trim(); if (v === (r.pautaTexto || '')) { return; } Store.atualizarReuniao(r.id, { pautaTexto: v || null }).then(function () { r.pautaTexto = v || null; toast('Resumo salvo — entra no topo da pauta.'); }).catch(function (e) { toast(e.message, 'err'); }); });
+      box.appendChild(ta);
+    } else if (r.pautaTexto) { var pr = el('<div class="rn-ata" style="margin-bottom:var(--sp-4)"></div>'); pr.textContent = r.pautaTexto; box.appendChild(pr); }
     var linhas = [];
     (r.convocados || []).forEach(function (c) { if (c && c.uid) { linhas.push({ chave: c.uid, nome: c.nome || nomeUser(c.uid) || c.uid, interno: true }); } });
     (r.convidadosExternos || []).forEach(function (x) { if (x && x.nome) { linhas.push({ chave: x.nome + ' (externo)', nome: x.nome + ' (externo)', interno: false }); } });
