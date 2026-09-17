@@ -482,7 +482,7 @@
     /* grade 5W2H */
     card.appendChild(secao('Plano de ação 5W2H', { formula: 'as colunas da planilha: O quê · Onde · Como · Quem · Quando (início) · Quanto (R$ previsto) · Prazo · Status. Clique numa célula para editar; Enter salva, Esc cancela. Concluir pede relato de 60+ e evidência; Não feito pede o motivo.', dados: 'planejamentos.itens[] — gravado inteiro com trava: se outra pessoa salvou antes, nada seu é gravado e você é avisado.', serve: 'um plano por setor, subsetores como seções, editável no lugar.' }, r.n));
     var wrap = el('<div class="pl-tblwrap" tabindex="0" role="region" aria-label="Plano de ação de ' + sig + '"></div>');
-    var tb = el('<table class="pl-tbl"><thead><tr><th>O quê</th><th>Indicador</th><th>Onde</th><th>Como</th><th>Quem</th><th>Com quem</th><th>Quando</th><th>Quanto</th><th>Prazo</th><th>Status</th><th>Semana</th><th></th></tr></thead></table>');
+    var tb = el('<table class="pl-tbl"><thead><tr><th>O quê</th><th>Indicador</th><th>Quem</th><th>Com quem</th><th>Prazo</th><th>Status</th><th>Semana</th><th>Como</th><th>Onde</th><th>Quando</th><th>Quanto</th><th></th></tr></thead></table>');
     var tbody = document.createElement('tbody');
     var grupos = [{ sig: null, nome: nomeSetor(sig) }].concat(subsDe(sig).map(function (s) { return { sig: s.sigla, nome: s.nome || s.sigla }; }));
     var itens = vivos(pl).slice().sort(function (a, b) { return (a.quandoPrevisto || '9999').localeCompare(b.quandoPrevisto || '9999'); });
@@ -600,14 +600,11 @@
   function linhaItem(pl, it, podeEd) {
     var st = statusItem(it), tr = el('<tr' + (st !== 'aberto' ? ' class="done"' : (it.quemUid === USER.uid ? ' class="mine"' : '')) + '></tr>');
     var editavel = podeEd && st === 'aberto';
+    /* ação primeiro (Asana/Linear): o quê · indicador · quem · com quem · prazo · status · semana; detalhe (como · onde · quando · quanto) à direita */
     tr.appendChild(celula(pl, it, 'oque', 'texto', editavel));
     tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
-    tr.appendChild(celula(pl, it, 'onde', 'texto', editavel));
-    tr.appendChild(celula(pl, it, 'como', 'texto', editavel));
     tr.appendChild(celula(pl, it, 'quemUid', 'quem', editavel));
     tr.appendChild(celulaParceiros(pl, it, editavel));
-    tr.appendChild(celula(pl, it, 'inicio', 'data', editavel));
-    tr.appendChild(celula(pl, it, 'valorPrevistoCentavos', 'brl', editavel));
     tr.appendChild(celula(pl, it, 'quandoPrevisto', 'data', editavel));
     /* status */
     var tdS = document.createElement('td'); tdS.className = 'num';
@@ -628,6 +625,11 @@
     tr.appendChild(tdS);
     /* farol da semana */
     var tdF = document.createElement('td'); var ult = M.ultimoAcompanhamento(it); var fa = el('<span class="pl-farol"><i class="' + (ult ? ult.farol : '') + '"></i></span>'); fa.appendChild(document.createTextNode(ult ? ('W' + Object.keys(it.acompanhamentos || {}).sort().pop().slice(6)) : '—')); if (ult) { fa.title = ult.fez + (ult.motivo ? ' · ' + motivoLabel(ult.motivo) : ''); } tdF.appendChild(fa); tr.appendChild(tdF);
+    /* detalhe */
+    tr.appendChild(celula(pl, it, 'como', 'texto', editavel));
+    tr.appendChild(celula(pl, it, 'onde', 'texto', editavel));
+    tr.appendChild(celula(pl, it, 'inicio', 'data', editavel));
+    tr.appendChild(celula(pl, it, 'valorPrevistoCentavos', 'brl', editavel));
     /* remover */
     var tdX = document.createElement('td');
     if (podeEd && st === 'aberto') { var x = el('<button type="button" class="pl-x" title="Remover item" aria-label="Remover item">×</button>'); x.addEventListener('click', function () { if (!window.confirm('Remover "' + it.oque + '" do plano?')) { return; } var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { removido: true }) : o; }); salvarItens(pl, lista, 'planejamento_item_removido', { itemId: it.id }).then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); }); }); tdX.appendChild(x); }
@@ -677,9 +679,9 @@
   }
   function linhaAdicionar(pl, grupos) {
     var tr = el('<tr class="add"></tr>');
-    var td1 = document.createElement('td'); td1.colSpan = 4;
+    var td1 = document.createElement('td'); td1.colSpan = 6;
     var inp = el('<input type="text" placeholder="＋ Novo item: o que vai ser feito? (Enter salva; quem = líder, prazo = fim do mês)" aria-label="Novo item">'); td1.appendChild(inp); tr.appendChild(td1);
-    var td2 = document.createElement('td'); td2.colSpan = 7;
+    var td2 = document.createElement('td'); td2.colSpan = 5;
     var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Seção');
     grupos.forEach(function (g) { var o = document.createElement('option'); o.value = g.sig || ''; o.textContent = g.sig ? (g.nome + ' (subsetor)') : g.nome; sel.appendChild(o); });
     if (grupos.length > 1) { td2.appendChild(sel); }
