@@ -317,6 +317,7 @@
     },
     /* agenda (coleção eventos, contrato do eventos.html/agenda-motor: siglaSetor · hora · local · categoria · planoId) */
     criarEvento: function (doc) { return fb().then(function (c) { var now = Date.now(); var body = Object.assign({}, doc, { realizado: false, custoRealizado: null, ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now }); return c.f.addDoc(c.f.collection(c.db, 'eventos'), body).then(function (ref) { Store.log({ acao: 'planejamento_item_na_agenda', entidade: 'evento', refId: ref.id, antes: null, depois: { titulo: body.titulo, data: body.data, siglaSetor: body.siglaSetor } }); return ref.id; }); }).catch(function (e) { throw ferr(e); }); },
+    atualizarAtividade: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'atividades', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     atualizarEvento: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'eventos', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     log: function (entry) { return fb().then(function (c) { return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry)); }).catch(function (e) { if (window.console && console.warn) { console.warn('[planejamento] log falhou', e); } }); }
   };
@@ -366,7 +367,7 @@
       var valP = !plP ? 'sem plano' : (!plP.entregueEm ? 'rascunho' : (KPI.planejamentoStatus(plP) === 'aprovado' ? 'aprovado' : 'entregue'));
       var corP = (plP && plP.entregueEm) ? 'green' : (diasP < 0 ? 'red' : (diasP <= 5 ? 'amber' : (plP ? 'amber' : 'flat')));
       var subP = plP && plP.entregueEm ? 'entregue em ' + fmtBR(R.toISO(new Date(Number(plP.entregueEm)))) + ' · ' + nItP + ' item(ns)' : ((diasP >= 0 ? 'entregar até ' + fmtBR(dlP) + ' · D-' + diasP : 'prazo era ' + fmtBR(dlP) + ' · ' + (-diasP) + ' dia(s) atrasado') + (plP ? ' · ' + nItP + ' item(ns)' : ''));
-      g.appendChild(kpi('Plano de ' + compLabel(prox), valP, corP, subP, { formula: 'estado do plano do seu setor para o próximo mês: sem plano → rascunho → entregue → aprovado. Prazo de entrega: dia 25 do mês anterior (D-5 aviso, D-3 gestão avisada, D-0 não conforme).', dados: 'planejamentos do setor ' + (sigP || '—') + ' · competência ' + prox + '.', numeros: valP + (plP ? ' · ' + nItP + ' item(ns)' : '') + ' · ' + (diasP >= 0 ? 'D-' + diasP : 'atrasado ' + (-diasP) + 'd'), serve: 'não chegar no dia 25 sem plano: clique na célula do próximo mês para criar (ou copiar o mês atual).' }));
+      g.appendChild(kpi('Plano de ' + compLabel(prox), valP, corP, subP + (sigP ? ' · clique para abrir' : ''), { formula: 'estado do plano do seu setor para o próximo mês: sem plano → rascunho → entregue → aprovado. Prazo de entrega: dia 25 do mês anterior (D-5 aviso, D-3 gestão avisada, D-0 não conforme).', dados: 'planejamentos do setor ' + (sigP || '—') + ' · competência ' + prox + '.', numeros: valP + (plP ? ' · ' + nItP + ' item(ns)' : '') + ' · ' + (diasP >= 0 ? 'D-' + diasP : 'atrasado ' + (-diasP) + 'd'), serve: 'não chegar no dia 25 sem plano: clique na célula do próximo mês para criar (ou copiar o mês atual).' }, sigP ? function (ev) { if (ev && ev.target && ev.target.closest && ev.target.closest('.pl-i')) { return; } if (plP) { FOCO = { sig: sigP, comp: prox }; MODO_CHECKIN = false; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 50); } else if (escreve(sigP)) { criarPlano(sigP, prox); } else { toast('O líder do setor cria o plano.', 'err'); } } : null));
     } else
     g.appendChild(kpi('Setores sem plano', String(tot.semPlano.length), tot.semPlano.length ? 'amber' : 'green', tot.semPlano.length ? tot.semPlano.join(' · ') : 'todos entregaram', { formula: 'setores-raiz COM LÍDER sem plano ENTREGUE para a competência (rascunho conta como sem plano). Setor sem líder no cadastro não é cobrado — o plano dele é opcional. Prazo de entrega: dia 25 do mês anterior (D-5 · D-3 · D-0 nas células).', dados: 'planejamentos.entregueEm + usuarios.setoresLiderados.', numeros: tot.semPlano.length + ' de ' + obrig.length + ' obrigado(s)', serve: 'cobrar antes do dia 25, não depois.' }, function () { var alvo = document.getElementById('pl-grade'); if (alvo) { alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
     var cta = el('<div class="pl-cta"></div>');
@@ -466,7 +467,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, divulgar: null, eventoId: null }, base || {});
+    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null }, base || {});
   }
 
   /* ============================================================
@@ -689,6 +690,7 @@
     g.appendChild(campoDet(pl, it, 'turmas', 'texto', editavel, 'Turmas'));
     g.appendChild(campoDet(pl, it, 'comQuem', 'texto', editavel, 'Com quem (pessoas)'));
     g.appendChild(campoDet(pl, it, 'inicio', 'data', editavel, 'Início previsto'));
+    g.appendChild(campoDet(pl, it, 'hora', 'hora', editavel, 'Hora (agenda)'));
     g.appendChild(campoDet(pl, it, 'valorPrevistoCentavos', 'brl', editavel, 'Custo previsto'));
     g.appendChild(campoDet(pl, it, 'quandoRealizado', 'data', podeEd && fechado, 'Realizado em'));
     g.appendChild(campoDet(pl, it, 'valorFinalCentavos', 'brl', podeEd && fechado, 'Custo realizado'));
@@ -702,9 +704,11 @@
   function equipeDoSetor(sig) { return USERS.filter(function (u) { if (u.perfil === 'gestor') { return false; } if (u.perfil === 'lider') { var esc = KPI.escopoLider(u.setoresLiderados || [], SETORES); return !!esc[sig] || (u.setoresLiderados || []).some(function (s0) { return raizDe(s0) === sig; }); } return !!(u.setor && raizDe(u.setor) === sig); }).map(function (u) { return u.uid; }); }
   function convidadosDoItem(it) { var out = []; (it.setoresEnvolvidos || []).forEach(function (se) { var l = se && se.sigla ? liderDe(se.sigla) : null; if (l && out.indexOf(l.uid) < 0) { out.push(l.uid); } }); return out; }
   function eventoDoItem(pl, it, escopo) {
-    return { titulo: it.oque, data: it.inicio || it.quandoPrevisto || ultimoDia(pl.competencia), hora: null, local: it.onde || null, categoria: 'evento', siglaSetor: escopo === 'setor' ? pl.setorSigla : null, setorOrigem: pl.setorSigla, planoId: pl.id, itemId: it.id, origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id }, convocadosUids: convidadosDoItem(it), confirmadosUids: [], recusas: {}, custoPrevisto: it.valorPrevistoCentavos != null ? it.valorPrevistoCentavos : null };
+    return { titulo: it.oque, data: it.inicio || it.quandoPrevisto || ultimoDia(pl.competencia), hora: it.hora || null, local: it.onde || null, categoria: 'evento', siglaSetor: escopo === 'setor' ? pl.setorSigla : null, setorOrigem: pl.setorSigla, planoId: pl.id, itemId: it.id, origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id }, convocadosUids: convidadosDoItem(it), confirmadosUids: [], recusas: {}, custoPrevisto: it.valorPrevistoCentavos != null ? it.valorPrevistoCentavos : null };
   }
-  function sincronizarEvento(pl, it) { if (!it.eventoId) { return Promise.resolve(); } var ev = eventoDoItem(pl, it, it.divulgar); return Store.atualizarEvento(it.eventoId, { titulo: ev.titulo, data: ev.data, local: ev.local, convocadosUids: ev.convocadosUids, custoPrevisto: ev.custoPrevisto }).catch(function (e) { toast('O item foi salvo, mas a agenda não acompanhou: ' + e.message, 'err'); }); }
+  /* item ligado a uma atividade única: trocar quem/prazo/título no plano muda a atividade na agenda da pessoa */
+  function sincronizarAtividade(pl, it) { if (!it.atividadeId) { return Promise.resolve(); } return Store.atualizarAtividade(it.atividadeId, { responsavelUid: it.quemUid || null, responsavelNome: it.quemNome || nomeUser(it.quemUid) || '', data: it.quandoPrevisto || ultimoDia(pl.competencia), titulo: it.oque }).catch(function (e) { toast('O item foi salvo, mas a atividade ligada não acompanhou: ' + e.message, 'err'); }); }
+  function sincronizarEvento(pl, it) { if (!it.eventoId) { return Promise.resolve(); } var ev = eventoDoItem(pl, it, it.divulgar); return Store.atualizarEvento(it.eventoId, { titulo: ev.titulo, data: ev.data, hora: ev.hora, local: ev.local, convocadosUids: ev.convocadosUids, custoPrevisto: ev.custoPrevisto }).catch(function (e) { toast('O item foi salvo, mas a agenda não acompanhou: ' + e.message, 'err'); }); }
   function divulgarItem(pl, it, v) {
     v = v || null; if (v === (it.divulgar || null)) { return; }
     var quando = fmtBR(it.inicio || it.quandoPrevisto || ultimoDia(pl.competencia));
@@ -738,7 +742,7 @@
       var inp;
       if (tipo === 'quem') { inp = document.createElement('select'); USERS.forEach(function (u) { var o = document.createElement('option'); o.value = u.uid; o.textContent = u.nome + (ehMembro(u.uid) ? '' : ' · líder'); if (u.uid === it.quemUid) { o.selected = true; } inp.appendChild(o); }); }
       else if (tipo === 'kpi') { inp = document.createElement('select'); var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '— qual indicador este item move? —'; inp.appendChild(o0); kpisDo(pl.setorSigla).forEach(function (k) { var o = document.createElement('option'); o.value = k.chave; o.textContent = k.nome + (k.meta ? ' · meta ' + k.meta : ''); if (k.chave === it.indicador) { o.selected = true; } inp.appendChild(o); }); }
-      else { inp = document.createElement('input'); inp.type = tipo === 'data' ? 'date' : 'text'; inp.value = tipo === 'brl' ? (val == null ? '' : (Number(val) / 100).toFixed(2).replace('.', ',')) : (val || ''); if (tipo === 'brl') { inp.placeholder = '0,00'; inp.style.width = '110px'; } }
+      else { inp = document.createElement('input'); inp.type = tipo === 'data' ? 'date' : (tipo === 'hora' ? 'time' : 'text'); inp.value = tipo === 'brl' ? (val == null ? '' : (Number(val) / 100).toFixed(2).replace('.', ',')) : (val || ''); if (tipo === 'brl') { inp.placeholder = '0,00'; inp.style.width = '110px'; } }
       td.innerHTML = ''; td.appendChild(inp); inp.focus(); if (inp.select) { try { inp.select(); } catch (e) { /* select em date */ } }
       var fechado = false;
       function cancela() { if (fechado) { return; } fechado = true; EDITANDO = null; render(); }
@@ -748,13 +752,14 @@
         if (tipo === 'quem' || tipo === 'kpi') { novoVal = inp.value || null; }
         else if (tipo === 'brl') { novoVal = parseBRL(inp.value); }
         else if (tipo === 'data') { novoVal = inp.value && R.isISO(inp.value) ? inp.value : null; }
+        else if (tipo === 'hora') { novoVal = /^\d{2}:\d{2}$/.test(inp.value) ? inp.value : null; }
         else { novoVal = inp.value.trim() || null; }
         if (campo === 'oque' && !novoVal) { toast('O item precisa de um "o quê".', 'err'); render(); return; }
         if (JSON.stringify(novoVal) === JSON.stringify(val == null ? null : val)) { render(); return; }
         var patch = {}; patch[campo] = novoVal; if (tipo === 'quem') { patch.quemNome = nomeUser(novoVal); }
         var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
         salvarItens(pl, lista, 'planejamento_item_editado', { itemId: it.id, campo: campo })
-          .then(function () { var itAtual = lista.filter(function (o) { return o.id === it.id; })[0]; if (itAtual && itAtual.eventoId && ['oque', 'quandoPrevisto', 'inicio', 'onde'].indexOf(campo) >= 0) { return sincronizarEvento(pl, itAtual); } })
+          .then(function () { var itAtual = lista.filter(function (o) { return o.id === it.id; })[0]; var p1 = (itAtual && itAtual.eventoId && ['oque', 'quandoPrevisto', 'inicio', 'onde', 'hora'].indexOf(campo) >= 0) ? sincronizarEvento(pl, itAtual) : Promise.resolve(); var p2 = (itAtual && itAtual.atividadeId && ['oque', 'quandoPrevisto', 'quemUid'].indexOf(campo) >= 0) ? sincronizarAtividade(pl, itAtual) : Promise.resolve(); return Promise.all([p1, p2]); })
           .then(function () { if (tipo === 'quem') { var novoIt = lista.filter(function (o) { return o.id === it.id; })[0]; return garantirAtividade(pl, novoIt).then(function (criou) { if (criou) { toast('Item na agenda de ' + primeiroNome(novoIt.quemNome) + '.'); return reload(); } }); } })
           .then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); render(); });
       }

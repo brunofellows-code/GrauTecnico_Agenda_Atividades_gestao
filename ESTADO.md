@@ -405,3 +405,15 @@ Relatório para o celular: artefato "Virada do GERA".
 - **Auditoria de console (headless Chrome, 13 telas × 4 perfis):** ver linha abaixo, preenchida ao fim da varredura.
 - **Auditoria de console concluída (17/09, 02h05):** navegador embutido, 13 telas × 4 perfis (usuário, líder, gestor, sócio), temas claro e escuro = **52 carregamentos, 0 erros de console**. Recorte por perfil conferido: Performance e Inteligência do líder só com o setor dele; Atividades "Meu escopo"; Planejamento e Reuniões conforme §25.
 - **Publicação:** `tela/hoje-v2` levada por fast-forward para `publicar/2026-09-16` (worktree `~/GERA_publicar`) e enviada ao GitHub. `origin/main` estava em 61d6bd0 (= a publicação de 16/09); a Netlify publica a partir do `main` (conferir no painel) — o passo final de levar `publicar/2026-09-16` ao `main` é do Bruno (regra do projeto: eu não faço deploy de produção).
+
+## 28. Desafio "5 a 10 melhorias" (17/09, 02h30–03h) — branch `tela/hoje-v2`
+
+Seis entraram na mesma noite (pequenas, testadas no simulador nos 3 perfis, 0 erros de console):
+1. **Item ↔ atividade sincronizados:** trocar quem, prazo ou título de um item ligado a uma atividade única atualiza a atividade na agenda da pessoa (antes ficava desatualizada).
+2. **Faixa do líder:** "N item(ns) do plano vencido(s) · nome · há N dias → Ver no plano" (abre direto no item).
+3. **Faixa do gestor:** "N setores sem plano entregue de MM/AA · entrega até 25 · D-N" a partir de D-10 (o Hoje passou a ler os planos do mês atual e do próximo: 1 leitura).
+4. **Cartão "Plano de <próximo mês>" clicável:** abre o plano ou cria (líder); o "i" continua só informativo.
+5. **"Do plano do setor" no Hoje:** "abrir →" leva ao item no plano (`?setor=&comp=&item=`).
+6. **Hora no item do plano:** campo "Hora (agenda)" no detalhe; vai para o evento (agenda) e para o aviso do Hoje.
+
+Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada 10 min (custo de leitura no plano Spark a medir com uso real); 8. Inteligência e Performance em cartões sem "lentes" (rodada própria, plano aprovado); 9. Atividades com um só botão "Nova"; 10. "✓ verificado pelo líder" visível ao membro por um dia.

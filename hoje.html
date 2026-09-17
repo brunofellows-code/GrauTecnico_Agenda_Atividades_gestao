@@ -414,7 +414,8 @@
     },
     /* planos do mês (itens que são meus; pedidos de outros setores ao meu) — 1 leitura, ≤ 100 docs */
     listPlanejamentosComp: function (comp) {
-      return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'planejamentos'), c.f.where('competencia', '==', comp), c.f.limit(100)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; if (o.ativo !== false) { a.push(o); } }); return a; }); }).catch(function () { return []; });
+      var prox = comp.slice(0, 4) + '-' + ('0' + (parseInt(comp.slice(5, 7), 10) % 12 + 1)).slice(-2); if (comp.slice(5, 7) === '12') { prox = (parseInt(comp.slice(0, 4), 10) + 1) + '-01'; }
+      return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'planejamentos'), c.f.where('competencia', 'in', [comp, prox]), c.f.limit(100)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; if (o.ativo !== false) { a.push(o); } }); return a; }); }).catch(function () { return []; });
     },
     listSolicParceiro: function () {
       return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes'), c.f.where('status', '==', 'pendente'), c.f.limit(300)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; if (o.tipo === 'parceiro_plano') { o.id = d.id; a.push(o); } }); return a; }); }).catch(function () { return []; });
@@ -875,6 +876,19 @@
       var top = Object.keys(por).sort(function (a, b) { return por[b] - por[a]; })[0];
       itens.push({ t: semDono.length + (semDono.length === 1 ? ' atividade sem dono' : ' atividades sem dono'), small: top && top !== '—' ? (KPI.nomeSetor(top, m0Setores()) + ' concentra ' + por[top] + '.') : '', label: 'Dar dono', fn: function () { irParaSetor(top && top !== '—' ? top : ''); } });
     }
+    var compAtual = hoje.slice(0, 7), proxComp = compAtual.slice(5, 7) === '12' ? (parseInt(compAtual.slice(0, 4), 10) + 1) + '-01' : compAtual.slice(0, 4) + '-' + ('0' + (parseInt(compAtual.slice(5, 7), 10) + 1)).slice(-2);
+    if (Guard.isLider && Guard.isLider()) {
+      var escV = escopoLider() || {}, venc = [];
+      PLANEJ.forEach(function (pl) { if (!escV[pl.setorSigla]) { return; } (pl.itens || []).forEach(function (it) { if (!it || it.removido || it.quandoRealizado || it.naoFeito || !it.quandoPrevisto) { return; } if (R.compareISO(it.quandoPrevisto, hoje) < 0) { venc.push({ pl: pl, it: it, dias: R.diasEntre(it.quandoPrevisto, hoje) }); } }); });
+      venc.sort(function (a, b) { return b.dias - a.dias; });
+      if (venc.length) { itens.push({ t: venc.length + (venc.length === 1 ? ' item do plano vencido' : ' itens do plano vencidos'), small: venc[0].it.oque + ' · ' + (venc[0].it.quemNome || '—') + ' · há ' + venc[0].dias + ' dia(s)', label: 'Ver no plano', fn: function () { window.location.href = 'planejamento.html?setor=' + encodeURIComponent(venc[0].pl.setorSigla) + '&comp=' + venc[0].pl.competencia + '&item=' + encodeURIComponent(venc[0].it.id); } }); }
+    }
+    if (Guard.isGestor && Guard.isGestor()) {
+      var lideres = {}; USUARIOS.forEach(function (u) { if (u.perfil === 'lider') { (u.setoresLiderados || []).forEach(function (sg) { lideres[sg] = true; }); } });
+      var semPlano = (MODELO.setores || []).filter(function (s) { return s && s.ativo !== false && !s.setorPaiSigla && lideres[s.sigla]; }).filter(function (s) { return !PLANEJ.some(function (pl) { return pl.setorSigla === s.sigla && pl.competencia === proxComp && pl.entregueEm; }); }).map(function (s) { return s.sigla; });
+      var dl = compAtual + '-25', dDl = R.diasEntre(hoje, dl);
+      if (semPlano.length && dDl <= 10) { itens.push({ t: semPlano.length + (semPlano.length === 1 ? ' setor sem plano entregue de ' : ' setores sem plano entregue de ') + proxComp.slice(5, 7) + '/' + proxComp.slice(2, 4), small: semPlano.join(' · ') + ' · entrega até ' + fmtBR(dl) + (dDl >= 0 ? ' · D-' + dDl : ' · ' + (-dDl) + ' dia(s) de atraso'), label: 'Ver planos', fn: function () { window.location.href = 'planejamento.html'; } }); }
+    }
     var pedSet = pedidosDeSetorParaMim();
     if (pedSet.length) { itens.push({ t: pedSet.length + (pedSet.length === 1 ? ' pedido de outro setor espera sua resposta' : ' pedidos de outros setores esperam sua resposta'), small: pedSet[0].pl.setorSigla + ' chamou ' + pedSet[0].sig + ' em "' + pedSet[0].it.oque + '".', label: 'Responder', fn: function () { window.location.href = 'planejamento.html'; } }); }
     var esc = [];
@@ -1079,6 +1093,7 @@
       r.appendChild(tt);
       var occ = x.it.atividadeId ? MODELO.board.filter(function (o) { return o.act && o.act.id === x.it.atividadeId && o.status !== 'pulada'; })[0] : null;
       if (occ && occ.status !== 'concluida' && PODE_AGIR(occ)) { r.appendChild(miniActs(occ)); } else if (occ && occ.status === 'concluida') { r.appendChild(txt('span', 'hj-tag ok', 'feito · aguarda o líder verificar')); }
+      r.appendChild(el('<a class="hj-gb" href="planejamento.html?setor=' + encodeURIComponent(x.pl.setorSigla) + '&comp=' + x.pl.competencia + '&item=' + encodeURIComponent(x.it.id) + '" title="Abrir este item no plano">abrir →</a>'));
       frag.appendChild(r);
     });
     if (meus.length > 6) { var ln = txt('div', 'hj-info-v', '+ ' + (meus.length - 6) + ' outro(s) no plano.'); ln.style.cssText = 'color:var(--muted2);font-size:var(--fs-xs);margin-top:4px'; frag.appendChild(ln); }
