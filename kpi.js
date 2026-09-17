@@ -1964,4 +1964,68 @@
     });
     return out;
   };
+  /* ============================================================
+     16/09 (noite) · UMA PENDÊNCIA POR ROTINA
+     ------------------------------------------------------------
+     Benchmark (Todoist "recurring due dates", Asana, EOS Scorecard): uma
+     rotina recorrente que não foi feita mostra UMA pendência — a ocorrência
+     mais recente —, e os dias perdidos viram histórico (contam na aderência,
+     não empilham cartão). Sem isto, "fechar o caixa" 11 dias sem fazer
+     virava 11 cartões "atrasou", e o banco de produção chegou a 3.098
+     cartões de atraso com 213 atividades (medido em 16/09).
+     Entra o board de buildBoard; sai o que é ACIONÁVEL:
+       recorrente → 1 item por atividade (occ = a atrasada mais recente),
+                    perdidas = quantas ficaram para trás, desde = a mais antiga;
+       única      → 1 item por ocorrência (cada uma é um compromisso).
+     Não grava nada. As ocorrências antigas continuam no board: a aderência
+     (concluídas ÷ previstas) segue contando cada falha.
+     Ordem: vitais primeiro, depois mais dias sem fazer, depois título.
+     PURO — casos em NOITE/harness_pendencias.js.
+     ============================================================ */
+  K.pendenciasPorRotina = function (board, hoje) {
+    var R = window.GrautRecorrencia; /* este bloco (R12) não tem R no escopo */
+    var por = {}, ordem = [];
+    (Array.isArray(board) ? board : []).forEach(function (o) {
+      if (!o || !o.act || !o.atrasada) { return; }
+      var unica = o.act.recorrencia === "unico";
+      var k = unica ? (o.act.id + "_" + (o.origData || o.effDate)) : o.act.id;
+      var b = por[k];
+      if (!b) {
+        b = por[k] = { act: o.act, occ: o, desde: o.effDate, ate: o.effDate, perdidas: 0, unica: unica };
+        ordem.push(k);
+      }
+      b.perdidas++;
+      if (R.compareISO(o.effDate, b.desde) < 0) { b.desde = o.effDate; }
+      if (R.compareISO(o.effDate, b.ate) > 0) { b.ate = o.effDate; b.occ = o; }
+    });
+    var itens = ordem.map(function (k) {
+      var b = por[k];
+      b.dias = R.diasEntre(b.desde, hoje);       /* há quantos dias está sem fazer */
+      b.diasUltima = R.diasEntre(b.ate, hoje);   /* idade da ocorrência acionável */
+      return b;
+    });
+    itens.sort(function (a, b) {
+      var pa = a.act.peso === "vital" ? 0 : 1, pb = b.act.peso === "vital" ? 0 : 1;
+      return (pa - pb) || (b.dias - a.dias) || String(a.act.titulo || "").localeCompare(String(b.act.titulo || ""), "pt-BR");
+    });
+    var perdidas = 0; itens.forEach(function (i) { perdidas += i.perdidas; });
+    return { itens: itens, total: itens.length, ocorrencias: perdidas };
+  };
+
+  /* Faixas de idade das pendências (Upflow "aging balance"): 1–2 dias ·
+     3–7 · 8 ou mais. Entra a lista de pendenciasPorRotina; sai o número por
+     faixa, na mesma ordem, com os itens de cada uma (clique abre a lista). */
+  K.faixasDePendencia = function (itens) {
+    var f = [
+      { chave: "f12", rotulo: "1–2 dias", min: 1, max: 2, itens: [] },
+      { chave: "f37", rotulo: "3–7 dias", min: 3, max: 7, itens: [] },
+      { chave: "f8", rotulo: "8+ dias", min: 8, max: Infinity, itens: [] }
+    ];
+    (Array.isArray(itens) ? itens : []).forEach(function (i) {
+      var d = Math.max(1, i.dias || 1);
+      for (var k = 0; k < f.length; k++) { if (d >= f[k].min && d <= f[k].max) { f[k].itens.push(i); break; } }
+    });
+    f.forEach(function (x) { x.n = x.itens.length; });
+    return f;
+  };
 })();
