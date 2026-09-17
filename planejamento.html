@@ -334,7 +334,7 @@
   function render() {
     var body = document.getElementById('pl-body'); body.innerHTML = ''; setState(null);
     var compFoco = COMPS[1];
-    document.getElementById('pl-sub').textContent = compLabel(compFoco) + ' · ' + (ehGestor() ? 'visão da unidade' : (Guard.isLider && Guard.isLider() ? ((USER.setoresLiderados || []).join(', ') || 'seu setor') : 'leitura'));
+    document.getElementById('pl-sub').textContent = FOCO ? compLabel(FOCO.comp) + ' · ' + nomeSetor(FOCO.sig) + (escreve(FOCO.sig) ? '' : ' · leitura') : compLabel(compFoco) + ' · ' + (ehGestor() ? 'visão da unidade' : (Guard.isLider && Guard.isLider() ? ((USER.setoresLiderados || []).join(', ') || 'seu setor') : 'leitura'));
     var acts = document.getElementById('pl-actions'); acts.innerHTML = '';
     var jan = M.janela(HOJE); if (jan.aberta) { acts.appendChild(pill('Planejamento de ' + compLabel(jan.competencia) + ' aberto até dia ' + jan.fecha, 'ok')); }
 
@@ -509,7 +509,7 @@
       if (grupos.length > 1) { var hr = el('<tr class="sub-h"><td colspan="10"></td></tr>'); hr.firstChild.textContent = gp.nome + (gp.sig ? ' · subsetor' : ''); tbody.appendChild(hr); }
       doGrupo.forEach(function (it) { tbody.appendChild(linhaItem(pl, it, podeEd)); });
     });
-    if (!itens.length) { var tr0 = el('<tr><td colspan="10"></td></tr>'); tr0.firstChild.appendChild(txt('span', 'v vazio', podeEd ? 'Nenhum item ainda — clique num indicador do setor (acima) e escreva o que vai ser feito, ou use a linha abaixo.' : 'Nenhum item ainda — o líder monta o plano.')); tbody.appendChild(tr0); }
+    if (!itens.length) { var tr0 = el('<tr><td colspan="10"></td></tr>'); tr0.firstChild.style.maxWidth = 'none'; tr0.firstChild.appendChild(txt('span', 'v vazio', podeEd ? 'Nenhum item ainda — clique num indicador do setor (acima) e escreva o que vai ser feito, ou use a linha abaixo.' : 'Nenhum item ainda — o líder monta o plano.')); tr0.firstChild.firstChild.style.cssText = 'max-width:none;white-space:normal'; tbody.appendChild(tr0); }
     if (podeEd) { tbody.appendChild(linhaAdicionar(pl, grupos)); }
     tb.appendChild(tbody); wrap.appendChild(tb); card.appendChild(wrap);
     if (r.n > M.TETO_ITENS_SEM_AVISO) { var av = txt('div', 'pl-info-v', M.avisoExcesso(r.n)); av.style.cssText = 'color:var(--bandaAlta,var(--orange));font-size:var(--fs-xs);margin-top:8px'; card.appendChild(av); }
@@ -724,7 +724,7 @@
     var td2 = document.createElement('td'); td2.colSpan = 4;
     var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Seção');
     grupos.forEach(function (g) { var o = document.createElement('option'); o.value = g.sig || ''; o.textContent = g.sig ? (g.nome + ' (subsetor)') : g.nome; sel.appendChild(o); });
-    if (grupos.length > 1) { td2.appendChild(sel); }
+    if (grupos.length > 1) { sel.style.width = 'auto'; sel.style.maxWidth = '240px'; td2.appendChild(sel); }
     var b = btn('Adicionar', 'p sm', function () {
       var t = inp.value.trim(); if (t.length < 3) { toast('Escreva o que vai ser feito.', 'err'); inp.focus(); return; }
       var lid = liderDe(pl.setorSigla);
