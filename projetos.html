@@ -248,6 +248,8 @@
   ];
   var TIPO_LABEL = {}; TIPOS_REUNIAO.forEach(function (t) { TIPO_LABEL[t[0]] = t[1]; });
   /* regra §9-b (Bruno, 16/09): quem não é gestor vê só as reuniões com interseção com ele — convocado, participante, presente, criador — ou do setor que lidera */
+  /* título na tela: tipo · título; externa e alinhamento já carregam o tipo no título (sem repetir 'Externa · Externa') */
+  function tituloReuniao(r) { if (!r) { return 'Reunião'; } if (r.tipo === 'externa' || r.tipo === 'alinhamento') { return r.titulo || TIPO_LABEL[r.tipo] || 'Reunião'; } return (TIPO_LABEL[r.tipo] || 'Reunião') + (r.titulo && r.titulo !== TIPO_LABEL[r.tipo] ? ' · ' + r.titulo : ''); }
   function visivelReuniao(r) {
     if (!r) { return false; } if (Guard.isGestor && Guard.isGestor()) { return true; }
     var uid = USER.uid;
@@ -454,7 +456,7 @@
   /* ---------- textos: pauta e ata ---------- */
   function textoPauta(r) {
     var L = [], hoje = hojeISO();
-    L.push('PAUTA — ' + (TIPO_LABEL[r.tipo] || 'Reunião') + (r.titulo && r.titulo !== TIPO_LABEL[r.tipo] ? ' · ' + r.titulo : '') + ' · ' + fmtBR(r.data) + (r.horaPrevista ? ' às ' + r.horaPrevista : ''));
+    L.push('PAUTA — ' + tituloReuniao(r) + ' · ' + fmtBR(r.data) + (r.horaPrevista ? ' às ' + r.horaPrevista : ''));
     L.push('');
     L.push('ROTEIRO (' + duracaoDe(r) + ' min):');
     blocosDe(r).forEach(function (b, i) { L.push((i + 1) + ') ' + b.rotulo + ' — ' + b.min + ' min' + (b.modelo && b.modelo.pauta ? ' · ' + b.modelo.pauta : '')); });
@@ -514,7 +516,7 @@
       var h = el('<div class="rn-hero"></div>');
       var tx = el('<div class="tx"></div>');
       tx.appendChild(txt('span', 'lab', prox.data === hoje ? (emAndamento(prox) ? 'EM ANDAMENTO' : 'HOJE') : 'PRÓXIMA'));
-      tx.appendChild(txt('div', 'ttl', (TIPO_LABEL[prox.tipo] || 'Reunião') + (prox.titulo && prox.titulo !== TIPO_LABEL[prox.tipo] ? ' · ' + prox.titulo : '')));
+      tx.appendChild(txt('div', 'ttl', tituloReuniao(prox)));
       var cc = motorTem('contagemConvites') ? M.contagemConvites(prox) : { vou: 0, naoVou: 0, semResposta: 0, total: 0 };
       tx.appendChild(txt('div', 'meta', diaSem(prox.data) + ' ' + fmtBR(prox.data) + (prox.horaPrevista ? ' às ' + prox.horaPrevista : '') + ' · ' + duracaoDe(prox) + ' min · ' + cc.vou + ' de ' + cc.total + ' confirmaram' + (cc.semResposta ? ' · ' + cc.semResposta + ' sem resposta' : '') + (rolados(prox).length ? ' · ' + rolados(prox).length + ' pendência(s) da anterior' : '')));
       h.appendChild(tx);
@@ -568,7 +570,7 @@
     lst.forEach(function (r) {
       var row = el('<button type="button" class="rn-row"></button>');
       var dt = el('<div class="dt"></div>'); dt.appendChild(el('<b>' + fmtBR(r.data).slice(0, 2) + '</b>')); dt.appendChild(txt('span', '', diaSem(r.data) + ' ' + fmtBR(r.data).slice(3))); row.appendChild(dt);
-      var tt = el('<div class="tt"></div>'); tt.appendChild(txt('div', 't', (TIPO_LABEL[r.tipo] || 'Reunião') + (r.titulo && r.titulo !== TIPO_LABEL[r.tipo] ? ' · ' + r.titulo : '') + (r.setorSigla ? ' · ' + r.setorSigla : '')));
+      var tt = el('<div class="tt"></div>'); tt.appendChild(txt('div', 't', tituloReuniao(r) + (r.setorSigla ? ' · ' + r.setorSigla : '')));
       var cc = motorTem('contagemConvites') ? M.contagemConvites(r) : { vou: 0, total: 0 };
       var m = (r.horaPrevista ? r.horaPrevista + ' · ' : '') + duracaoDe(r) + ' min · ' + cc.vou + '/' + cc.total + ' confirmaram';
       if (r.encerradaEm) { m = (r.horaInicioReal ? 'começou ' + r.horaInicioReal + ' · ' : '') + (r.presentes || []).length + ' presente(s) · ' + (r.decisoes || []).length + ' demanda(s)' + (r.notaReuniao ? ' · nota ' + r.notaReuniao : ''); }
@@ -674,7 +676,7 @@
     var r = reuniaoAberta(); if (!r) { renderLista(); return; }
     var hoje = hojeISO(), blocos = blocosDe(r), podeEditar = CAN_WRITE() && !r.encerradaEm;
     if (BLOCO >= blocos.length) { BLOCO = blocos.length - 1; }
-    document.getElementById('rn-title').textContent = (TIPO_LABEL[r.tipo] || 'Reunião') + (r.titulo && r.titulo !== TIPO_LABEL[r.tipo] ? ' · ' + r.titulo : '') + (r.setorSigla ? ' · ' + r.setorSigla : '');
+    document.getElementById('rn-title').textContent = tituloReuniao(r) + (r.setorSigla ? ' · ' + r.setorSigla : '');
     document.getElementById('rn-mtitle').textContent = TIPO_LABEL[r.tipo] || 'Reunião';
     var sub = document.getElementById('rn-sub'); sub.innerHTML = '';
     var volta = el('<a class="rn-link" href="projetos.html">← Reuniões</a>'); volta.addEventListener('click', function (ev) { ev.preventDefault(); renderLista(); }); sub.appendChild(volta);
