@@ -912,7 +912,7 @@
     /* estado inicial: o que o usuário escolheu da última vez neste
        aparelho; senão, semana no desktop e a agenda do próprio setor
        (gestor não tem setor próprio, então abre na unidade). */
-    VISAO = lembrado('graut_agenda_visao', AG.escopoTempoPadrao(window.innerWidth));
+    VISAO = lembrado('graut_agenda_visao', window.innerWidth < 760 ? 'semana' : AG.escopoTempoPadrao(window.innerWidth)); /* celular abre na semana (dias empilhados); o mês fica a um toque */
     if (VISAO !== 'semana' && VISAO !== 'mes') { VISAO = 'mes'; }
     ESCOPO = lembrado('graut_agenda_escopo', '');
     if (ESCOPO !== 'unidade' && ESCOPO !== 'setor') {
