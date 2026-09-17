@@ -33,7 +33,12 @@
     resultado_mensal: 'fechamento_mensal',
     departamento: 'equipe_quinzenal',
     instrutor: 'turma_instrutores_mensal',
-    lideres_turma: 'turma_instrutores_mensal'
+    lideres_turma: 'turma_instrutores_mensal',
+    /* 16/09 (noite): a Reunião Integrada semanal ganha série própria — os 6
+       blocos temáticos do 00-CHECKLIST-REUNIAO-INTEGRADA.md (donos por bloco),
+       com o roteiro Level 10 em volta: abertura, o que ficou da anterior,
+       placar, temas, fechamento. 80 min. Antes caía em 'avulsa'. */
+    integrada: 'integrada_semanal'
   };
 
   var SECOES = {
@@ -67,6 +72,18 @@
       { chave: 'assunto', rotulo: 'Assuntos', min: 25 },
       { chave: 'fechamento', rotulo: 'Fechamento', min: 5 }
     ],
+    integrada_semanal: [
+      { chave: 'abertura', rotulo: 'Abertura e presença', min: 5 },
+      { chave: 'acoes', rotulo: 'O que ficou da anterior', min: 5 },
+      { chave: 'ritmo', rotulo: 'Placar da semana', min: 5 },
+      { chave: 'evasao', rotulo: 'Evasão', min: 10, tema: true, donos: 'Pedagógico · CRA · CSA · Agência' },
+      { chave: 'inadimplencia', rotulo: 'Inadimplência e recebimento', min: 10, tema: true, donos: 'CRA · ADM/Financeiro' },
+      { chave: 'comercial', rotulo: 'Comercial e entrada de receita', min: 10, tema: true, donos: 'Gestor · Comercial · CSA' },
+      { chave: 'conformidade', rotulo: 'Conformidade e risco legal', min: 10, tema: true, donos: 'ADM/Financeiro · Pedagógico · Gestor' },
+      { chave: 'empregabilidade', rotulo: 'Empregabilidade e satisfação', min: 10, tema: true, donos: 'Agência · Pedagógico · CSA' },
+      { chave: 'integracao', rotulo: 'Integração e gestão', min: 10, tema: true, donos: 'Gestor Operacional' },
+      { chave: 'fechamento', rotulo: 'Fechamento', min: 5 }
+    ],
     /* Avulsa e as três de sócios: quem manda são os blocos escritos em
        pautas-modelo.js. Aqui fica só o mínimo para a tela não nascer muda. */
     avulsa: [
@@ -75,6 +92,74 @@
       { chave: 'fechamento', rotulo: 'Fechamento', min: 5 }
     ]
   };
+
+  /* Perguntas de cada bloco temático da Integrada — transcrição condensada do
+     checklist (metas incluídas). Marcar ✅/⚠️/❌ é da tela; item fora da meta
+     vira decisão com dono e prazo. */
+  var PERGUNTAS = {
+    evasao: [
+      'Evasão da semana e tendência (meta GT 4,8% / GP 5%) — perdas ofensoras: NC, LFR, LFI, CAN, CAC, LAC',
+      'Turmas nos 2 primeiros meses com ligação a cada falta',
+      '100% das faltas lançadas em até 2 dias e conferidas pelo ADM',
+      'Cancelamentos: quantos entraram, quantos passaram pela Coordenação, % de reversão',
+      'CSA: matriculados da semana com contatos D+1, D+5 e D+10',
+      'NC revertidos com o Pedagógico antes de virar CAC',
+      'Turmas iniciando na penúltima semana ou vencimento após o dia 20'
+    ],
+    inadimplencia: [
+      'Inadimplência de ativos GT e GP × meta (9,3% / 11%)',
+      'LFI negociados que receberam todas as parcelas no mês',
+      'Recuperados frente aos 5%',
+      '% de 1ªs parcelas pagas × projeção (meta 75%, degrau 68%)',
+      '% de ativos pagantes (meta 88%) — GT e GP',
+      'Conciliação bancária e de cartões feita; divergência de caixa justificada',
+      'Baixas do arquivo retorno diárias e remessa enviada',
+      'SPC/Serasa atualizado; negociações no histórico',
+      'Acordos pendentes de desconto de pontualidade até o dia 30/31'
+    ],
+    comercial: [
+      'Raio-X no mínimo diário (25 faladas / 8 potenciais / 1–2 matrículas); conversão perto de 50%',
+      'Pendentes e potenciais acumulando de um dia para o outro',
+      'Turmas à venda com 90 dias; alguma abaixo de 90% (minicurso) ou com 15 alunos ou menos',
+      'Contratos do mês assinados e sem pendência de documento',
+      'Meta de vendas / CAC (12%) no ritmo; expectativa alinhada ao que é entregue',
+      'Receita indireta (CSA): matrículas por indicação e 1ª parcela'
+    ],
+    conformidade: [
+      'Redatamento de parcela fora de adiamento de turma — foi autorizado?',
+      'SISTEC/Censo em dia; senha do Sistec só com o gestor',
+      'Curso com portaria ou parecer perto do vencimento',
+      'Saúde: convênios, seguros e horas de estágio em dia e arquivados',
+      'Folha paga até o 5º dia útil; documentos ao contador no prazo',
+      'Backup off-line do Acadweb/Qualinfo feito na semana',
+      'Requerimentos com as assinaturas obrigatórias (gestor + líder + aluno)',
+      'Matrículas da semana com documentos digitalizados'
+    ],
+    empregabilidade: [
+      'Empresas parceiras novas na semana; ativas na listagem',
+      'Vagas encaminhadas com 3 candidatos; contratados com foto (meta 2%)',
+      'Banco de Talentos com currículos novos; perfil pedido não atendido',
+      'Estagiários acompanhados (Ficha D); sinais de insatisfação da empresa',
+      'VPOs válidas (ata + foto + 10 alunos) e palestras realizadas',
+      'Cronograma da Feira de Empregabilidade (60 dias antes, 10 empresas, 2 processos)',
+      'NPS da semana (oficial 75, degrau 50–55); detratores com ação imediata',
+      'TMA de 6–8 min e FCR perto de 88% (CSA); fila nos picos',
+      'Pesquisa de satisfação e score semanal; instrutor com avaliação negativa reincidente',
+      'Insatisfações respondidas ao aluno em até 48 h'
+    ],
+    integracao: [
+      'A Integrada saiu com plano de ação e responsável',
+      'Handoffs do Pedagógico ao Comercial (datas, empresas) e ao ADM (virada de módulos)',
+      'CSA × CRA: sobreposição na negociação do mesmo aluno; alçadas claras',
+      'Planilha unificada e relatórios diários chegaram à Coordenação e à Gestão',
+      'Adimplentes com a Franqueadora',
+      'Leitura diária de Meus Indicadores e da evasão'
+    ]
+  };
+  function perguntasDe(tipo, chave) {
+    if (serieDe(tipo) !== 'integrada_semanal') { return []; }
+    return (PERGUNTAS[chave] || []).slice();
+  }
 
   var MOTIVOS_RECUSA = ['compromisso_trabalho', 'atendimento_aluno', 'ausencia_justificada', 'outro'];
   var SEMANAS_ATE_VIRAR_ASSUNTO = 3;   /* Fellow: na 3ª vez para de ser lembrete */
@@ -123,7 +208,7 @@
   function proximaData(tipo, dataISO) {
     if (!dataISO) { return null; }
     var s = serieDe(tipo);
-    if (s === 'lideres_semanal') { return addDias(dataISO, 7); }
+    if (s === 'lideres_semanal' || s === 'integrada_semanal') { return addDias(dataISO, 7); }
     if (s === 'equipe_quinzenal') { return addDias(dataISO, 14); }
     if (s === 'fechamento_mensal') {
       var d = fromISO(dataISO);
@@ -503,6 +588,7 @@
     serieIdDe: serieIdDe,
     secoesDe: secoesDe,
     duracaoDe: duracaoDe,
+    perguntasDe: perguntasDe,
     proximaData: proximaData,
     /* convite */
     statusConvite: statusConvite,
