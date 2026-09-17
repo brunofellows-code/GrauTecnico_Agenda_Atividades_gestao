@@ -436,3 +436,12 @@ Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada
 - **Planejamento do mês seguinte sempre aberto:** a janela 25–28 deixou de bloquear a criação; só fica registrado `foraDaJanela`. Testado: gestor cria out/26 fora da janela.
 - **Item recorrente:** no detalhe do item, "Repetir nos próximos meses" (1 · 2 · 3 · 5 · 11). Cria o plano de cada mês se não existir, copia o item (prazo no mesmo dia do mês), liga a atividade do membro, marca ↻ na origem e "↻ recorrente" nas cópias. Testado: 2 meses → plano de nov/26 criado.
 - **Atividades:** contagem "N vitais · N importantes · N rotina" no cabeçalho do painel (escopo e setor). A classificação em produção só aparece depois de aplicar `ARQUIVOS PARETTO/2026-09-16_DELTA_CONSOLIDADO_v1.json` na Importar (pendente do Bruno).
+
+## 31. Gráficos por perfil no Hoje + preparo de reunião (17/09, 10h) — antes da reunião das 14h
+
+- **Gestor:** "Atrasadas por setor e idade" (empilhado 1–2 · 3–7 · 8+ dias; clique abre o setor) e "Plano do mês por setor" (realizado = concluídos ÷ fechados; "sem plano" para setor com líder e sem plano; clique abre o plano).
+- **Líder:** "Aderência da equipe · 7 dias" por pessoa com a linha da meta 90% (clique abre a Performance) e "O que mais trava" (travas abertas por motivo; clique abre Atividades).
+- **Líder e membro:** "Sua semana" — 7 bolinhas (verde dia fechado, âmbar parcial, vermelho nada feito, cinza sem rotina) + "N de M dias fechados".
+- **Preparo:** o aviso "Amanhã:" do Hoje inclui as reuniões em que a pessoa está convocada e quantos assuntos dela estão na pauta.
+- Tudo sem biblioteca (barras em CSS), com o "i" (fórmula · dados · números · para que serve) e clique que abre a lista. 0 erros de console nos 3 perfis. Resumo por WhatsApp ao encerrar já existia (Fechamento).
+- **Não feito, declarado:** modo condução no celular e pauta com convocações sem resposta (próxima rodada).
