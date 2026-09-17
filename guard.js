@@ -203,12 +203,8 @@
       var ref = document.querySelector('.ui-nav[data-nav="Performance"]');
       if (!ref || !ref.parentNode) { return; }
       var defs = [
-        /* Cockpit logo depois de Performance: os dois leem resultado —
-           Performance mostra o que o sistema calcula, Cockpit recebe o que
-           só existe fora dele. Ficam vizinhos por isso. */
-        ['Cockpit', '<path d="M12 20a8 8 0 1 0-8-8"></path><path d="M12 12l4.5-3"></path><circle cx="12" cy="12" r="1.6"></circle>'],
+        /* 17/09: Cockpit e Riscos saíram da navegação (plano aprovado 16/09) — as páginas continuam por URL. */
         ['Glossário', '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>'],
-        ['Riscos', '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4M12 17h.01"></path>']
       ];
       var after = ref;
       defs.forEach(function (d) {

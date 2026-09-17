@@ -48,9 +48,19 @@
 .ev-pop-row{margin-bottom:8px}
 .ev-pop-k{font-size:9.5px;font-weight:700;letter-spacing:.05em;color:var(--muted2);margin-bottom:2px}
 .ev-pop-v{font-size:12px;font-weight:600;color:var(--text);line-height:1.35}
+@media (max-width:900px){
+  /* celular: a barra lateral some (o menu vem pelo botão flutuante do mnav.js); topo compacto; barra da agenda em linhas */
+  .ev-app>.ui-side{display:none}
+  .ev-top{padding:12px 14px;gap:8px}
+  .ev-h1{font-size:18px}
+  .ev-top-r{width:100%;flex-wrap:wrap;gap:8px}
+  .ev-body{padding:10px 10px 110px}
+  .ag-bar{gap:6px 8px}
+  .ag-bar-sp{display:none}
+}
 @media (max-width:760px){
-  .ev-top{padding:14px 16px}
-  .ev-body{padding:12px 12px 28px}
+  .ev-top{padding:12px 14px}
+  .ev-body{padding:10px 10px 110px}
 }
 </style>
 </head>

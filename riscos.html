@@ -81,7 +81,7 @@
 .rk-ct{font-size:14px;font-weight:800;margin:0}
 .rk-cs{font-size:12.5px;color:var(--muted);margin:0 0 14px;line-height:1.45}
 .rk-mx{display:flex;gap:10px}
-.rk-yttl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:14px 0}
+.rk-yttl{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:800;color:var(--accentText);text-transform:uppercase;letter-spacing:.08em;text-align:center;padding:14px 0}
 /* O texto do eixo agora é 'Impacto ↑' — o leitor de tela anuncia 'seta para
    cima', que é o que o eixo VERTICAL significa. Antes era '→' ('seta para a
    direita'), escolhido só porque o writing-mode vertical gira o glifo -90° e
@@ -100,7 +100,7 @@
 .rk-xrow{display:flex;gap:6px;margin-top:2px}
 .rk-xrow .rk-yax{visibility:hidden}
 .rk-xax{flex:1;text-align:center;font-size:11px;font-weight:800;color:var(--muted)}
-.rk-xttl{text-align:center;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 0 26px}
+.rk-xttl{text-align:center;font-size:11px;font-weight:800;color:var(--accentText);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 0 26px}
 .rk-leg{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
 .rk-leg span{font-size:11px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
 /* Banda sem nenhum risco: rebaixada, para não competir com as que têm.
@@ -113,7 +113,7 @@
 .rk-leg span.vazia .rk-sw{opacity:.4}
 .rk-sw{width:12px;height:12px;border-radius:4px;display:inline-block}
 .rk-hm{width:100%;border-collapse:separate;border-spacing:6px}
-.rk-hm th{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;text-align:center}
+.rk-hm th{font-size:11px;font-weight:800;color:var(--accentText);text-transform:uppercase;letter-spacing:.04em;padding:2px 4px;text-align:center}
 .rk-hm th.rowh{text-align:left}
 .rk-hcell{width:100%;height:38px;border-radius:9px;border:1px solid var(--border);background:var(--chipBg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;line-height:1;color:var(--onBrand);transition:transform .12s,filter .12s}
 .rk-hcell:not(.empty){cursor:pointer}
@@ -139,7 +139,7 @@
 /* 11px, não 9,5px: este é o rótulo de "Mitigação (do manual)" e "Sinal de
    alerta" — o conteúdo pelo qual a gaveta existe. Estava impresso no menor
    corpo da tela inteira, menor que a nota de rodapé. */
-.rk-fk{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.rk-fk{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accentText);margin-bottom:5px}
 .rk-fv{font-size:14px;line-height:1.55;color:var(--text)}
 .rk-fv.mit{background:var(--chipBg);border:1px solid var(--border);border-radius:11px;padding:11px 12px}
 .rk-fonte{font-size:11px;color:var(--muted);line-height:1.55;border-top:1px dashed var(--border);margin:18px 0 0;padding-top:12px}
@@ -191,7 +191,7 @@
 .rk-regbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
 .rk-fgroup{display:flex;flex-direction:column;gap:5px;min-width:0}
 .rk-fgroup.cresce{flex:1 1 240px}
-.rk-flab{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rk-flab{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accentText)}
 .rk-in,.rk-sel{width:100%;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text);background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:8px 11px;min-height:34px}
 .rk-in::placeholder{color:var(--muted);font-weight:500}
 .rk-in:focus,.rk-sel:focus{outline:2px solid var(--greenText);outline-offset:1px;border-color:var(--greenText)}
@@ -201,7 +201,7 @@
 .rk-regwrap{overflow-x:auto}
 .rk-regtb{width:100%;border-collapse:collapse;min-width:860px}
 .rk-regtb caption{caption-side:top;text-align:left;font-size:11px;color:var(--muted);line-height:1.5;padding:0 0 10px}
-.rk-regtb th{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:bottom}
+.rk-regtb th{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accentText);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:bottom}
 .rk-regtb td{font-size:12.5px;font-weight:500;color:var(--text);line-height:1.5;padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:top}
 .rk-regtb tbody tr:last-child td{border-bottom:0}
 .rk-regtb tbody tr:hover td{background:var(--s2)}

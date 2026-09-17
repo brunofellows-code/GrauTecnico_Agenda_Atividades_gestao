@@ -326,7 +326,11 @@
 /* barra de filtros do palco (classificação + "Só as minhas") */
 .at-fbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 12px}
 .at-fgroup{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
-.at-flabel{font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.at-flabel{font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accentText);margin-right:2px}
+/* 17/09: filtros (período · busca · classificação) ficam dobrados atrás de um botão — zero barra de filtro acima da dobra (regra do desenho aprovado) */
+body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on) .at-search,body:not(.at-filtros-on) #at-filtros{display:none}
+.at-fbtn{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text);background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:8px 11px;cursor:pointer;white-space:nowrap}
+.at-fbtn.on,.at-fbtn:hover{border-color:var(--brand);color:var(--accentText)}
 .at-fchip{display:inline-flex;align-items:center;gap:6px}
 .at-fchip .q{font-weight:700;color:var(--muted)}
 .at-fchip.on .q{color:var(--accentText)}
@@ -1265,6 +1269,14 @@
         vseg.appendChild(b);
       });
       right.insertBefore(vseg, seg);
+      /* 17/09: um só botão 'Filtros' — período, busca e classificação ficam escondidos até ser pedido */
+      var nAtivos = (periodo !== 'band' ? 1 : 0) + (search ? 1 : 0) + (FILTRO_PESO ? 1 : 0);
+      var fAberto; try { fAberto = localStorage.getItem('at_filtros') === '1'; } catch (e0) { fAberto = false; }
+      if (nAtivos) { fAberto = true; }
+      document.body.classList.toggle('at-filtros-on', !!fAberto);
+      var fbtn = el('<button type="button" class="at-fbtn' + (fAberto ? ' on' : '') + '" aria-expanded="' + (fAberto ? 'true' : 'false') + '"></button>'); fbtn.textContent = 'Filtros' + (nAtivos ? ' · ' + nAtivos + ' ativo' + (nAtivos > 1 ? 's' : '') : '') + (fAberto ? ' ▴' : ' ▾');
+      fbtn.addEventListener('click', function () { var on = !document.body.classList.contains('at-filtros-on'); document.body.classList.toggle('at-filtros-on', on); fbtn.classList.toggle('on', on); fbtn.setAttribute('aria-expanded', on ? 'true' : 'false'); fbtn.textContent = fbtn.textContent.replace(/ [▴▾]$/, on ? ' ▴' : ' ▾'); try { localStorage.setItem('at_filtros', on ? '1' : '0'); } catch (e1) { /* sem storage */ } });
+      right.insertBefore(fbtn, vseg);
 
       /* busca */
       var sbox = el('<div class="at-search"></div>'); sbox.appendChild(ico(PATH.user ? '<circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4-4"></path>' : '', 15));
@@ -1543,7 +1555,7 @@
       var mm = KPI.computar({ board: BOARD_FULL, hoje: hoje, setores: SETORES, ativ: ATIV });
       var wrap = el('<div data-lente="numeros"></div>');
       var head = el('<div style="display:flex;align-items:center;gap:7px;margin:2px 0 10px"></div>');
-      head.appendChild(el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)">Números da janela (' + PERIODO_LABEL[periodo] + (FILTRO_PESO ? ' · ' + rotuloFiltroPeso(FILTRO_PESO) : '') + ')</div>'));
+      head.appendChild(el('<div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accentText)">Números da janela (' + PERIODO_LABEL[periodo] + (FILTRO_PESO ? ' · ' + rotuloFiltroPeso(FILTRO_PESO) : '') + ')</div>'));
       head.appendChild(infoAt('Números da janela — como cada um é calculado', function () {
         return {
           formula: 'Aderência = concluídas ÷ previstas até hoje × 100 (meta 90%). Atrasadas = abertas com data efetiva vencida; atraso médio = média de dias de atraso. Em andamento = status "em andamento". Reprogramação = reprogramadas ÷ total × 100 (limite 20%). Sem responsável = abertas sem dono (não medem).',
