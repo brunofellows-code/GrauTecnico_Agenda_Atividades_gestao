@@ -334,7 +334,7 @@
         });
       }).catch(function () { return []; });
     },
-    listSolicPendentes: function () { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes'), c.f.where('status', '==', 'pendente'), c.f.limit(200)); return c.f.getDocs(q).then(mapDocs); }).catch(function () { return []; }); },
+    listSolicPendentes: function () { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes'), c.f.where('status', '==', 'pendente'), c.f.limit(200)); return c.f.getDocs(q).then(mapDocs).then(function (a) { return a.filter(function (x) { return x.tipo !== 'parceiro_plano'; }); }); }).catch(function () { return []; }); },
     listPlanosVivos: function () { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'planos_acao'), c.f.where('ativo', '==', true), c.f.limit(100)); return c.f.getDocs(q).then(mapDocs); }).catch(function () { return []; }); },
     listSugestoesPauta: function () { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'pauta_sugestoes'), c.f.where('status', '==', 'pendente'), c.f.limit(300)); return c.f.getDocs(q).then(function (s) { return mapDocs(s).filter(function (g) { return g.ativo !== false; }); }); }).catch(function () { return []; }); },
     atualizarSugestaoPauta: function (id, patch, acao) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'pauta_sugestoes', id), Object.assign({}, patch, { atualizadoEm: Date.now() })).then(function () { Store.log({ acao: acao || 'editar_pauta_sugestao', entidade: 'pauta_sugestao', refId: id, antes: null, depois: patch }); }); }).catch(function (e) { throw ferr(e); }); },

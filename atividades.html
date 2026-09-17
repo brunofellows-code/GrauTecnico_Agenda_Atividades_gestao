@@ -591,7 +591,8 @@
           return fb().then(function (c) {
             var db = c.db, f = c.f;
             var q = f.query(f.collection(db, 'solicitacoes'), f.where('status', '==', 'pendente'), f.limit(200));
-            return f.getDocs(q).then(mapDocs);
+            /* aceites entre setores (tipo parceiro_plano) vivem no Planejamento, não são pedidos de atividade */
+            return f.getDocs(q).then(mapDocs).then(function (a) { return a.filter(function (x) { return x.tipo !== 'parceiro_plano'; }); });
           }).catch(function (e) { throw ferr(e); });
         },
 

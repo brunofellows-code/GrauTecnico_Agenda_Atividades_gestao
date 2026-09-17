@@ -129,6 +129,17 @@
 .pl-tri button{width:34px;height:30px;border:1px solid var(--border);background:var(--s2);border-radius:7px;cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--fs-xs);color:var(--muted)}
 .pl-tri button.on-verde{background:var(--haloGreen);border-color:var(--green);color:var(--greenText)} .pl-tri button.on-amarelo{background:var(--haloAmber);border-color:var(--amber);color:var(--bandaAlta,var(--amber))} .pl-tri button.on-vermelho{background:var(--haloRed);border-color:var(--red);color:var(--red)}
 
+/* parceiros · membro · cobertura */
+.pl-chip{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);font-weight:800;padding:2px 7px;border-radius:6px;background:var(--chipBg);border:1px solid var(--border);white-space:nowrap;color:var(--muted);margin:1px 2px 1px 0}
+.pl-chip.ok{color:var(--greenText);border-color:var(--green)} .pl-chip.warn{color:var(--bandaAlta,var(--orange));border-color:var(--orange)} .pl-chip.bad{color:var(--red);border-color:var(--red)}
+.pl-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-family:inherit;font-weight:800;padding:0 2px;line-height:1}
+.pl-tbl tr.mine td{background:var(--activeBg)}
+.pl-cov{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted2);margin:-4px 0 10px}
+.pl-cov b{color:var(--text)}
+.pl-cov .kp{border:1px dashed var(--border);border-radius:6px;padding:1px 7px;color:var(--muted)}
+.pl-ped{background:var(--s1);border:1px solid var(--orange);border-radius:13px;padding:12px 16px;box-shadow:var(--shadowSoft);margin-bottom:var(--sp-4)}
+.pl-ped .t{font-size:var(--fs-base);font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+
 /* sugestões e estados */
 .pl-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap}
 .pl-item:first-of-type{border-top:0}
@@ -181,6 +192,7 @@
 
   <script src="ui.js"></script>
   <script src="riscos-catalogo.js"></script>
+  <script src="kpis-setor.js"></script>
   <script src="recorrencia.js"></script>
   <script src="planejamento-motor.js"></script>
   <script src="kpi.js"></script>
@@ -189,7 +201,7 @@
   (function () {
   'use strict';
   var R = window.GrautRecorrencia, M = window.PlanejamentoMotor;
-  var USER = null, SETORES = [], USERS = [], PLANOS = [], SUGS = null;
+  var USER = null, SETORES = [], USERS = [], PLANOS = [], SUGS = null, SOLIC = [], OCC = {};
   var HOJE = null, COMPS = [], FOCO = null;          /* FOCO = { sig, comp } — plano aberto */
   var MODO_CHECKIN = false, EDITANDO = null;         /* EDITANDO = { itemId, campo } */
   var RISCO_SETOR_SIGLA = { 'Central Rel.': 'CRA', 'Pedagógico': 'PED', 'Gestor': 'GES', 'ADM/Fin': 'ADM', 'Agência': 'AGE', 'CSA': 'CSA' };
@@ -257,6 +269,27 @@
         }).then(function () { var dep = {}; dep[campo] = lista.length + ' item(ns)'; Store.log({ acao: acao || 'planejamento_editado', entidade: 'planejamento', refId: id, antes: antes || null, depois: dep }); return agora; });
       }).catch(function (e) { throw ferr(e); });
     },
+    /* aceite do setor parceiro: registro em solicitacoes (qualquer ativo cria com status pendente — regra atual do banco) */
+    listSolicParceiro: function () { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes'), c.f.where('status', '==', 'pendente'), c.f.limit(300)); return c.f.getDocs(q).then(function (sn) { return mapDocs(sn).filter(function (x) { return x.tipo === 'parceiro_plano'; }); }); }).catch(function () { return []; }); },
+    criarSolicParceiro: function (doc) { return fb().then(function (c) { var body = Object.assign({}, doc, { tipo: 'parceiro_plano', status: 'pendente', solicitanteUid: USER.uid, solicitanteNome: USER.name || USER.nome || '', criadoEm: Date.now() }); return c.f.addDoc(c.f.collection(c.db, 'solicitacoes'), body).then(function (ref) { Store.log({ acao: 'parceiro_plano_' + body.resposta, entidade: 'solicitacao', refId: ref.id, antes: null, depois: { planejamentoId: body.planejamentoId, itemId: body.itemId, setorSigla: body.setorSigla } }); body.id = ref.id; return body; }); }).catch(function (e) { throw ferr(e); }); },
+    /* ocorrências das atividades nascidas de itens do plano (lotes de 30 no where-in) */
+    listOccPorAtividades: function (ids) {
+      if (!ids.length) { return Promise.resolve([]); }
+      return fb().then(function (c) {
+        var lotes = []; for (var i = 0; i < ids.length && i < 120; i += 30) { lotes.push(ids.slice(i, i + 30)); }
+        return Promise.all(lotes.map(function (lote) { var q = c.f.query(c.f.collection(c.db, 'ocorrencias'), c.f.where('atividadeId', 'in', lote), c.f.limit(300)); return c.f.getDocs(q).then(function (sn) { var a = []; sn.forEach(function (d) { a.push(d.data()); }); return a; }); })).then(function (rs) { var flat = []; rs.forEach(function (r) { r.forEach(function (o) { flat.push(o); }); }); return flat; });
+      }).catch(function () { return []; });
+    },
+    /* item do membro → atividade única na agenda dele (o membro conclui no Hoje; o líder verifica aqui) */
+    criarAtividadeDoItem: function (pl, it) {
+      return fb().then(function (c) {
+        var now = Date.now();
+        var doc = { titulo: it.oque, descricao: 'Item do plano de ' + pl.setorSigla + ' · ' + compLabel(pl.competencia) + (it.como ? '\nCOMO: ' + it.como : '') + (it.onde ? '\nONDE: ' + it.onde : ''), setorSigla: pl.setorSigla, setorSiglas: [pl.setorSigla], subsetorSigla: it.subsetorSigla || null, todosSetores: false,
+          responsavelUid: it.quemUid, responsavelNome: it.quemNome || nomeUser(it.quemUid) || '', recorrencia: 'unico', horario: null, diasSemana: null, diaMes: null, data: it.quandoPrevisto || ultimoDia(pl.competencia), deslizante: false, dataInicio: null, dataFim: null, peso: 'importante', camada: 'operacional',
+          origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id, setorSigla: pl.setorSigla, competencia: pl.competencia }, origemTipo: 'planejamento', ativo: true, criadoPor: USER.uid, criadoEm: now, atualizadoEm: now };
+        return c.f.addDoc(c.f.collection(c.db, 'atividades'), doc).then(function (ref) { Store.log({ acao: 'planejamento_item_para_agenda', entidade: 'atividade', refId: ref.id, antes: null, depois: { titulo: doc.titulo, planejamentoId: pl.id, itemId: it.id } }); return ref.id; });
+      }).catch(function (e) { throw ferr(e); });
+    },
     log: function (entry) { return fb().then(function (c) { return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry)); }).catch(function (e) { if (window.console && console.warn) { console.warn('[planejamento] log falhou', e); } }); }
   };
   function salvarItens(pl, lista, acao, antes) { return Store.atualizarLista(pl.id, 'itens', lista, pl.atualizadoEm == null ? null : pl.atualizadoEm, acao, antes).then(function (ts) { pl.itens = lista; pl.atualizadoEm = ts; }); }
@@ -301,11 +334,30 @@
     g.appendChild(kpi('Setores sem plano', String(tot.semPlano.length), tot.semPlano.length ? 'amber' : 'green', tot.semPlano.length ? tot.semPlano.join(' · ') : 'todos entregaram', { formula: 'setores-raiz COM LÍDER sem plano ENTREGUE para a competência (rascunho conta como sem plano). Setor sem líder no cadastro não é cobrado — o plano dele é opcional. Prazo de entrega: dia 25 do mês anterior (D-5 · D-3 · D-0 nas células).', dados: 'planejamentos.entregueEm + usuarios.setoresLiderados.', numeros: tot.semPlano.length + ' de ' + obrig.length + ' obrigado(s)', serve: 'cobrar antes do dia 25, não depois.' }, function () { var alvo = document.getElementById('pl-grade'); if (alvo) { alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
     var cta = el('<div class="pl-cta"></div>');
     var meuSig = minhaSigla();
+    if (!ehGestor() && !escLider()) {
+      /* membro: não grava check-in — vê o que é dele no plano do setor */
+      var plM = meuSig ? planoDe(meuSig, compFoco) : null, meusIt = plM ? vivos(plM).filter(function (i) { return i.quemUid === USER.uid && statusItem(i) === 'aberto'; }) : [];
+      var venc = meusIt.filter(function (i) { return i.quandoPrevisto && R.compareISO(i.quandoPrevisto, HOJE) < 0; }).length, amn = meusIt.filter(function (i) { return i.quandoPrevisto === amanha(); }).length;
+      cta.appendChild(txt('div', 't', plM ? 'Seu plano · ' + nomeSetor(meuSig) : 'Seu setor ainda não tem plano'));
+      cta.appendChild(txt('div', 'm', plM ? (meusIt.length ? meusIt.length + ' item(ns) seus em aberto' + (venc ? ' · ' + venc + ' vencido(s)' : '') + (amn ? ' · ' + amn + ' vence(m) amanhã' : '') : 'nenhum item seu em aberto') : 'o líder do setor monta o plano até o dia 25 do mês anterior'));
+      var btM = btn('Ver o plano', 'p', function () { FOCO = { sig: meuSig, comp: compFoco }; MODO_CHECKIN = false; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 50); });
+      btM.disabled = !plM; cta.appendChild(btM); g.appendChild(cta);
+    } else {
     cta.appendChild(txt('div', 't', M.acompanhamentoAberto(HOJE) ? 'Semana ' + semanaAtual().slice(6) + ' aberta para check-in' : 'Check-in abre na sexta'));
     cta.appendChild(txt('div', 'm', 'fez o quê · vai cumprir? 🟢🟡🔴 · o que trava — 60 segundos por item'));
     var bt = btn('Acompanhar esta semana', 'p', function () { if (!meuSig) { toast('Você não lidera um setor com plano nesta competência.', 'err'); return; } FOCO = { sig: meuSig, comp: compFoco }; MODO_CHECKIN = true; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 50); });
     bt.disabled = !meuSig; cta.appendChild(bt); g.appendChild(cta);
+    }
     body.appendChild(g);
+
+    /* 1b · pedidos de outros setores para o(s) meu(s) */
+    var ped = pedidosParaMim();
+    if (ped.length) {
+      var pb = el('<div class="pl-ped" id="pl-pedidos"></div>');
+      var pt = el('<div class="t"></div>'); pt.appendChild(document.createTextNode(ped.length === 1 ? '1 pedido de outro setor espera a sua resposta' : ped.length + ' pedidos de outros setores esperam a sua resposta')); pt.appendChild(infoBtn('Pedidos de outros setores', { formula: 'item do plano de outro setor que chamou um setor que você lidera e ainda não teve resposta (aceite ou não posso, com motivo).', dados: 'planejamentos (setoresEnvolvidos) × solicitacoes (tipo parceiro_plano).', numeros: ped.length + ' pendente(s)', serve: 'o outro líder só conta com o seu setor depois do aceite.' })); pb.appendChild(pt);
+      ped.forEach(function (x) { var row = el('<div class="pl-item"></div>'); var tx = el('<div class="tx"></div>'); tx.appendChild(document.createTextNode(x.it.oque)); tx.appendChild(txt('small', '', 'plano de ' + nomeSetor(x.pl.setorSigla) + ' · ' + compLabel(x.pl.competencia) + ' · ' + (x.it.quemNome || nomeUser(x.it.quemUid) || '—') + ' · prazo ' + fmtBR(x.it.quandoPrevisto) + ' · chamou ' + x.sig)); row.appendChild(tx); var ac = el('<span class="pl-acts"></span>'); ac.appendChild(btn('Aceitar', 'ok sm', function () { responderParceiro(x.pl, x.it, x.sig, 'aceito'); })); ac.appendChild(btn('Não posso', 'warn sm', function () { responderParceiro(x.pl, x.it, x.sig, 'recusado'); })); ac.appendChild(btn('Ver plano', 'sm', function () { FOCO = { sig: x.pl.setorSigla, comp: x.pl.competencia }; MODO_CHECKIN = false; render(); })); row.appendChild(ac); pb.appendChild(row); });
+      body.appendChild(pb);
+    }
 
     /* 2 · grade mês × setor */
     body.appendChild(secao('Plano por setor · ' + compLabel(COMPS[0]) + ' a ' + compLabel(COMPS[2]), { formula: 'uma célula por setor-raiz e mês: itens do plano, % realizado (concluídos ÷ fechados), faróis da última semana e o estado (rascunho com D-5/D-3/D-0 até o dia 25 do mês anterior · entregue · aprovado = ciência de gestor e sócio). Subsetores vivem DENTRO do plano do setor-raiz.', dados: 'planejamentos das três competências + setores ativos.', serve: 'quem entregou, quem está atrasado e como vai cada mês, num relance.' }));
@@ -355,6 +407,8 @@
     var compFoco = COMPS[1];
     if (Guard.isLider && Guard.isLider()) { var esc = escLider() || {}; var cands = raizes().filter(function (s) { return esc[s.sigla] && planoDe(s.sigla, compFoco); }); return cands.length ? cands[0].sigla : null; }
     if (ehGestor()) { var c2 = raizes().filter(function (s) { var p = planoDe(s.sigla, compFoco); return p && vivos(p).some(function (i) { return statusItem(i) === 'aberto'; }); }); return c2.length ? c2[0].sigla : null; }
+    /* membro: o plano do setor onde está lotado (raiz do subsetor) */
+    if (USER.setor) { var s0 = setor(USER.setor); var raiz = s0 && s0.setorPaiSigla ? s0.setorPaiSigla : USER.setor; return planoDe(raiz, compFoco) ? raiz : null; }
     return null;
   }
 
@@ -375,7 +429,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {} }, base || {});
+    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null }, base || {});
   }
 
   /* ============================================================
@@ -402,7 +456,16 @@
       if (pl.aprovSocio) { sp.appendChild(pill('✓ sócio ' + primeiroNome(pl.aprovSocio.nome), 'ok')); } else if (ehSocio()) { sp.appendChild(btn('Dar ciência (sócio)', 'ok sm', function () { ciencia(pl, 'aprovSocio'); })); }
     }
     h.appendChild(sp); card.appendChild(h);
-    if (!podeEd) { var ro = txt('div', 'pl-info-v', 'Somente leitura — edita quem lidera ' + sig + ' (ou o gestor). O plano é público para toda a unidade.'); ro.style.cssText = 'color:var(--muted2);font-size:var(--fs-xs);margin-bottom:8px'; card.appendChild(ro); }
+    if (!podeEd) { var meus = vivos(pl).filter(function (i) { return i.quemUid === USER.uid; }).length; var ro = txt('div', 'pl-info-v', (meus ? 'Você tem ' + meus + ' item(ns) neste plano (linhas destacadas). ' : '') + 'Somente leitura — edita quem lidera ' + sig + ' (ou o gestor). O que é seu chega à sua agenda no Hoje; você conclui lá e o líder verifica aqui.'); ro.style.cssText = 'color:var(--muted2);font-size:var(--fs-xs);margin-bottom:8px'; card.appendChild(ro); }
+    var cov = coberturaKpis(pl);
+    if (cov) {
+      var cv = el('<div class="pl-cov"></div>');
+      cv.appendChild(el('<span><b>' + cov.com + ' de ' + cov.total + '</b> indicadores do setor com item neste mês</span>'));
+      cv.appendChild(infoBtn('Indicadores do setor', { formula: 'todo item aponta o indicador que ele move (coluna Indicador). Cobertura = indicadores do catálogo do setor com ao menos um item vivo no mês.', dados: 'kpis-setor.js (metas do checklist da Integrada e dos manuais) × itens do plano.', numeros: cov.com + ' com item · ' + cov.sem.length + ' sem item', serve: 'o plano nasce dos indicadores, não de uma lista de desejos: o que não tem item não vai mexer.' }));
+      cov.sem.slice(0, 6).forEach(function (k) { var kp = txt('span', 'kp', k.nome + (k.meta ? ' · ' + k.meta : '')); kp.title = 'Sem item neste mês'; cv.appendChild(kp); });
+      if (cov.sem.length > 6) { cv.appendChild(txt('span', '', '+ ' + (cov.sem.length - 6))); }
+      card.appendChild(cv);
+    }
 
     if (MODO_CHECKIN && podeEd) { card.appendChild(renderCheckin(pl)); box.appendChild(card); return box; }
 
@@ -419,7 +482,7 @@
     /* grade 5W2H */
     card.appendChild(secao('Plano de ação 5W2H', { formula: 'as colunas da planilha: O quê · Onde · Como · Quem · Quando (início) · Quanto (R$ previsto) · Prazo · Status. Clique numa célula para editar; Enter salva, Esc cancela. Concluir pede relato de 60+ e evidência; Não feito pede o motivo.', dados: 'planejamentos.itens[] — gravado inteiro com trava: se outra pessoa salvou antes, nada seu é gravado e você é avisado.', serve: 'um plano por setor, subsetores como seções, editável no lugar.' }, r.n));
     var wrap = el('<div class="pl-tblwrap" tabindex="0" role="region" aria-label="Plano de ação de ' + sig + '"></div>');
-    var tb = el('<table class="pl-tbl"><thead><tr><th>O quê</th><th>Onde</th><th>Como</th><th>Quem</th><th>Quando</th><th>Quanto</th><th>Prazo</th><th>Status</th><th>Semana</th><th></th></tr></thead></table>');
+    var tb = el('<table class="pl-tbl"><thead><tr><th>O quê</th><th>Indicador</th><th>Onde</th><th>Como</th><th>Quem</th><th>Com quem</th><th>Quando</th><th>Quanto</th><th>Prazo</th><th>Status</th><th>Semana</th><th></th></tr></thead></table>');
     var tbody = document.createElement('tbody');
     var grupos = [{ sig: null, nome: nomeSetor(sig) }].concat(subsDe(sig).map(function (s) { return { sig: s.sigla, nome: s.nome || s.sigla }; }));
     var itens = vivos(pl).slice().sort(function (a, b) { return (a.quandoPrevisto || '9999').localeCompare(b.quandoPrevisto || '9999'); });
@@ -427,10 +490,10 @@
     grupos.forEach(function (gp) {
       var doGrupo = itens.filter(function (i) { return (i.subsetorSigla || null) === gp.sig || (gp.sig === null && orfaos.indexOf(i) >= 0); });
       if (gp.sig !== null && !doGrupo.length) { return; }
-      if (grupos.length > 1) { var hr = el('<tr class="sub-h"><td colspan="10"></td></tr>'); hr.firstChild.textContent = gp.nome + (gp.sig ? ' · subsetor' : ''); tbody.appendChild(hr); }
+      if (grupos.length > 1) { var hr = el('<tr class="sub-h"><td colspan="12"></td></tr>'); hr.firstChild.textContent = gp.nome + (gp.sig ? ' · subsetor' : ''); tbody.appendChild(hr); }
       doGrupo.forEach(function (it) { tbody.appendChild(linhaItem(pl, it, podeEd)); });
     });
-    if (!itens.length) { var tr0 = el('<tr><td colspan="10"></td></tr>'); tr0.firstChild.appendChild(txt('span', 'v vazio', 'Nenhum item ainda — comece pela linha abaixo.')); tbody.appendChild(tr0); }
+    if (!itens.length) { var tr0 = el('<tr><td colspan="12"></td></tr>'); tr0.firstChild.appendChild(txt('span', 'v vazio', 'Nenhum item ainda — comece pela linha abaixo.')); tbody.appendChild(tr0); }
     if (podeEd) { tbody.appendChild(linhaAdicionar(pl, grupos)); }
     tb.appendChild(tbody); wrap.appendChild(tb); card.appendChild(wrap);
     if (r.n > M.TETO_ITENS_SEM_AVISO) { var av = txt('div', 'pl-info-v', M.avisoExcesso(r.n)); av.style.cssText = 'color:var(--bandaAlta,var(--orange));font-size:var(--fs-xs);margin-top:8px'; card.appendChild(av); }
@@ -445,6 +508,80 @@
     }
     box.appendChild(card);
     return box;
+  }
+  /* ---------- KPIs do setor, membro × líder, parceiros ---------- */
+  function kpisDo(sig) { return window.KpisSetor ? KpisSetor.de(sig) : []; }
+  function kpiNome(chave) { var k = window.KpisSetor ? KpisSetor.porChave(chave) : null; return k ? k.nome : (chave || ''); }
+  function ehMembro(uid) { var u = USERS.filter(function (x) { return x.uid === uid; })[0]; return !!(u && u.perfil !== 'lider' && u.perfil !== 'gestor' && u.perfil !== 'Admin' && u.perfil !== 'Editor'); }
+  function amanha() { return R.addDias(HOJE, 1); }
+  function prazoPill(it) {
+    if (!it.quandoPrevisto) { return null; }
+    var quem = primeiroNome(it.quemNome || nomeUser(it.quemUid));
+    if (R.compareISO(it.quandoPrevisto, HOJE) < 0) { return pill('vencido há ' + R.diasEntre(it.quandoPrevisto, HOJE) + 'd' + (quem ? ' · ' + quem : ''), 'bad'); }
+    if (it.quandoPrevisto === HOJE) { return pill('vence hoje' + (quem ? ' · ' + quem : ''), 'warn'); }
+    if (it.quandoPrevisto === amanha()) { return pill('vence amanhã' + (quem ? ' · ' + quem : ''), 'warn'); }
+    return null;
+  }
+  function solicDe(pl, it, sig) { return SOLIC.filter(function (x) { return x.planejamentoId === pl.id && x.itemId === it.id && x.setorSigla === sig; }).sort(function (a, b) { return (b.criadoEm || 0) - (a.criadoEm || 0); })[0] || null; }
+  function pedidosParaMim() {
+    var esc = escLider(); if (!esc) { return []; }
+    var out = [];
+    PLANOS.forEach(function (pl) { if (pl.competencia !== COMPS[1]) { return; } vivos(pl).forEach(function (it) { if (statusItem(it) !== 'aberto') { return; } (it.setoresEnvolvidos || []).forEach(function (se) { if (!se || !se.sigla || !esc[se.sigla]) { return; } if (solicDe(pl, it, se.sigla)) { return; } out.push({ pl: pl, it: it, sig: se.sigla }); }); }); });
+    return out;
+  }
+  function responderParceiro(pl, it, sig, resposta) {
+    if (resposta === 'aceito') { gravaResposta(pl, it, sig, 'aceito', null); return; }
+    var inp = UI.input({ placeholder: 'Por que o seu setor não pode entrar neste item?' });
+    UI.modal({ title: 'Não posso — ' + it.oque, width: 440, body: [UI.field({ label: 'Motivo', required: true, control: inp })], footer: function (close) { return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }), UI.button({ label: 'Enviar', icon: 'check', onClick: function () { if (inp.value.trim().length < 3) { toast('Escreva o motivo.', 'err'); return; } close(); gravaResposta(pl, it, sig, 'recusado', inp.value.trim()); } })]; } });
+  }
+  function gravaResposta(pl, it, sig, resposta, motivo) {
+    Store.criarSolicParceiro({ resposta: resposta, motivo: motivo || null, planejamentoId: pl.id, itemId: it.id, setorSigla: sig, setorOrigem: pl.setorSigla, competencia: pl.competencia, tituloItem: it.oque })
+      .then(function (doc) { SOLIC.push(doc); toast(resposta === 'aceito' ? 'Aceite registrado — o líder de ' + pl.setorSigla + ' vê no plano.' : 'Resposta registrada com o motivo.'); render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function celulaParceiros(pl, it, editavel) {
+    var td = document.createElement('td'); td.style.whiteSpace = 'normal'; td.style.minWidth = '110px';
+    (it.setoresEnvolvidos || []).forEach(function (se) {
+      if (!se || !se.sigla) { return; }
+      var so = solicDe(pl, it, se.sigla), cls = so ? (so.resposta === 'aceito' ? 'ok' : 'bad') : 'warn';
+      var chip = el('<span class="pl-chip ' + cls + '"></span>'); chip.appendChild(document.createTextNode(se.sigla + (so ? (so.resposta === 'aceito' ? ' ✓' : ' ✗') : ' · aguarda')));
+      chip.title = so ? ((so.resposta === 'aceito' ? 'Aceito por ' : 'Recusado por ') + (so.solicitanteNome || '—') + (so.motivo ? ' — ' + so.motivo : '')) : ('Aguardando o líder de ' + se.sigla + ' aceitar.');
+      if (editavel) { var x = el('<button type="button" title="Tirar o setor" aria-label="Tirar o setor">×</button>'); x.addEventListener('click', function (ev) { ev.stopPropagation(); var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { setoresEnvolvidos: (o.setoresEnvolvidos || []).filter(function (z) { return z.sigla !== se.sigla; }) }) : o; }); salvarItens(pl, lista, 'planejamento_item_parceiro_removido', { itemId: it.id, sigla: se.sigla }).then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); }); }); chip.appendChild(x); }
+      else if (!so && escreve(se.sigla) && statusItem(it) === 'aberto') { var ok = el('<button type="button" title="Aceitar">Aceitar</button>'); ok.addEventListener('click', function (ev) { ev.stopPropagation(); responderParceiro(pl, it, se.sigla, 'aceito'); }); var no = el('<button type="button" title="Não posso">✗</button>'); no.addEventListener('click', function (ev) { ev.stopPropagation(); responderParceiro(pl, it, se.sigla, 'recusado'); }); chip.appendChild(ok); chip.appendChild(no); }
+      td.appendChild(chip);
+    });
+    if (editavel) {
+      var add = el('<button type="button" class="pl-chip" title="Chamar outro setor">+ setor</button>');
+      add.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var ja = (it.setoresEnvolvidos || []).map(function (z) { return z.sigla; });
+        var opts = raizes().filter(function (r0) { return r0.sigla !== pl.setorSigla && ja.indexOf(r0.sigla) < 0 && liderDe(r0.sigla); }).map(function (r0) { return { value: r0.sigla, label: r0.nome + ' (' + r0.sigla + ') · ' + primeiroNome(liderDe(r0.sigla).nome) }; });
+        if (!opts.length) { toast('Nenhum outro setor com líder para chamar.', 'err'); return; }
+        var sel = UI.select({ placeholder: 'Qual setor precisa entrar?', options: opts });
+        UI.modal({ title: 'Chamar outro setor — ' + it.oque, width: 440, body: [txt('div', 'pl-info-v', 'O líder do setor chamado recebe o pedido no Hoje e aqui, e aceita ou diz que não pode (com motivo). Nada trava enquanto ele não responde.'), UI.field({ label: 'Setor', required: true, control: sel })], footer: function (close) { return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }), UI.button({ label: 'Chamar', icon: 'check', onClick: function () { if (!sel.value) { toast('Escolha o setor.', 'err'); return; } var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { setoresEnvolvidos: (o.setoresEnvolvidos || []).concat([{ sigla: sel.value, em: Date.now() }]) }) : o; }); salvarItens(pl, lista, 'planejamento_item_parceiro', { itemId: it.id, sigla: sel.value }).then(function () { close(); toast('Pedido enviado ao líder de ' + sel.value + '.'); render(); }).catch(function (e) { toast(e.message, 'err'); }); } })]; } });
+      });
+      td.appendChild(add);
+    }
+    if (!td.childNodes.length) { td.appendChild(txt('span', 'v vazio', '—')); }
+    return td;
+  }
+  /* item de membro → atividade única na agenda dele */
+  function garantirAtividade(pl, it) {
+    if (it.atividadeId || !it.quemUid || !ehMembro(it.quemUid) || statusItem(it) !== 'aberto') { return Promise.resolve(false); }
+    return Store.criarAtividadeDoItem(pl, it).then(function (atId) { var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { atividadeId: atId }) : o; }); return salvarItens(pl, lista, 'planejamento_item_ligado_atividade', { itemId: it.id, atividadeId: atId }).then(function () { return true; }); });
+  }
+  function verificarItem(pl, it) {
+    var occ = OCC[it.atividadeId]; if (!occ || occ.status !== 'concluida') { return; }
+    var dia = occ.concluidaEm ? R.toISO(new Date(Number(occ.concluidaEm))) : HOJE;
+    var patch = { quandoRealizado: dia, status: 'concluido', relato: occ.relato || null, evidencia: occ.relato ? 'relato na atividade' : null, naoFeito: false, verificadoPor: { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() } };
+    var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
+    salvarItens(pl, lista, 'planejamento_item_verificado', { itemId: it.id }).then(function () { toast('Verificado — item concluído no plano.'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+  }
+  function coberturaKpis(pl) {
+    var lista = kpisDo(pl.setorSigla).filter(function (k) { return k.chave !== 'outro'; }); if (!lista.length) { return null; }
+    var com = {}; vivos(pl).forEach(function (i) { if (i.indicador) { com[i.indicador] = true; } });
+    var sem = lista.filter(function (k) { return !com[k.chave]; });
+    return { total: lista.length, com: lista.length - sem.length, sem: sem };
   }
   function sugestoesDe(pl) {
     var cat = window.RISCOS_CATALOGO || [], out = [], ja = {};
@@ -461,25 +598,32 @@
 
   /* ---------- linha do item: edição na célula ---------- */
   function linhaItem(pl, it, podeEd) {
-    var st = statusItem(it), tr = el('<tr' + (st !== 'aberto' ? ' class="done"' : '') + '></tr>');
+    var st = statusItem(it), tr = el('<tr' + (st !== 'aberto' ? ' class="done"' : (it.quemUid === USER.uid ? ' class="mine"' : '')) + '></tr>');
     var editavel = podeEd && st === 'aberto';
     tr.appendChild(celula(pl, it, 'oque', 'texto', editavel));
+    tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
     tr.appendChild(celula(pl, it, 'onde', 'texto', editavel));
     tr.appendChild(celula(pl, it, 'como', 'texto', editavel));
     tr.appendChild(celula(pl, it, 'quemUid', 'quem', editavel));
+    tr.appendChild(celulaParceiros(pl, it, editavel));
     tr.appendChild(celula(pl, it, 'inicio', 'data', editavel));
     tr.appendChild(celula(pl, it, 'valorPrevistoCentavos', 'brl', editavel));
     tr.appendChild(celula(pl, it, 'quandoPrevisto', 'data', editavel));
     /* status */
     var tdS = document.createElement('td'); tdS.className = 'num';
-    if (st === 'concluido') { var dd = it.quandoRealizado && it.quandoPrevisto ? R.diasEntre(it.quandoPrevisto, it.quandoRealizado) : 0; var ps = pill('✓ ' + fmtBR(it.quandoRealizado) + (dd > 0 ? ' · +' + dd + 'd' : ''), dd > 0 ? 'warn' : 'ok'); ps.title = it.relato || ''; tdS.appendChild(ps); }
+    if (st === 'concluido') { var dd = it.quandoRealizado && it.quandoPrevisto ? R.diasEntre(it.quandoPrevisto, it.quandoRealizado) : 0; var ps = pill('✓ ' + fmtBR(it.quandoRealizado) + (dd > 0 ? ' · +' + dd + 'd' : ''), dd > 0 ? 'warn' : 'ok'); ps.title = it.relato || ''; tdS.appendChild(ps); if (it.verificadoPor) { var pv = pill('verificado por ' + primeiroNome(it.verificadoPor.nome), 'ok'); tdS.appendChild(pv); } }
     else if (st === 'nao_feito') { var pn = pill('✗ ' + motivoLabel(it.motivo), 'bad'); pn.title = it.motivoDetalhe || ''; tdS.appendChild(pn); }
     else {
       var travado = KPI.planejamentoItemTravado(it);
       if (travado) { var pt = pill('🔒 R$ > 200 · falta ' + (it.aprovGestor ? '' : 'gestor') + (!it.aprovGestor && !it.aprovSocio ? ' + ' : '') + (it.aprovSocio ? '' : 'sócio'), 'warn'); pt.title = 'Acima da alçada do líder: só vale com ciência de gestor E sócio (quem criou não assina).'; tdS.appendChild(pt); if (cabeAprovar(it)) { tdS.appendChild(btn('Assinar', 'ok sm', function () { assinarItem(pl, it); })); } }
-      else if (it.quandoPrevisto && R.compareISO(it.quandoPrevisto, HOJE) < 0) { tdS.appendChild(pill('vencido há ' + R.diasEntre(it.quandoPrevisto, HOJE) + 'd', 'bad')); }
-      else { tdS.appendChild(pill('aberto', '')); }
-      if (podeEd) { var ac = el('<span class="pl-acts" style="margin-top:4px"></span>'); ac.appendChild(btn('Concluir', 'ok sm', function () { modalConcluir(pl, it); })); ac.appendChild(btn('Não feito', 'warn sm', function () { modalNaoFeito(pl, it); })); tdS.appendChild(ac); }
+      else {
+        var occ = it.atividadeId ? OCC[it.atividadeId] : null, pp = prazoPill(it);
+        if (occ && occ.status === 'concluida') { var pf = pill('feito por ' + primeiroNome(it.quemNome || nomeUser(it.quemUid)) + ' em ' + fmtBR(occ.concluidaEm ? R.toISO(new Date(Number(occ.concluidaEm))) : HOJE), 'ok'); pf.title = occ.relato || ''; tdS.appendChild(pf); if (podeEd) { tdS.appendChild(btn('Verificar ✓', 'p sm', function () { verificarItem(pl, it); })); } }
+        else if (pp) { tdS.appendChild(pp); }
+        else if (it.atividadeId) { tdS.appendChild(pill('na agenda de ' + primeiroNome(it.quemNome || nomeUser(it.quemUid)), 'doing')); }
+        else { tdS.appendChild(pill('aberto', '')); }
+      }
+      if (podeEd) { var ac = el('<span class="pl-acts" style="margin-top:4px"></span>'); if (!it.atividadeId && it.quemUid && ehMembro(it.quemUid)) { ac.appendChild(btn('→ agenda', 'sm', function () { garantirAtividade(pl, it).then(function (ok) { if (ok) { toast('Está na agenda de ' + primeiroNome(it.quemNome || nomeUser(it.quemUid)) + '. Ele(a) conclui no Hoje; você verifica aqui.'); return reload().then(render); } }).catch(function (e) { toast(e.message, 'err'); }); })); } ac.appendChild(btn('Concluir', 'ok sm', function () { modalConcluir(pl, it); })); ac.appendChild(btn('Não feito', 'warn sm', function () { modalNaoFeito(pl, it); })); tdS.appendChild(ac); }
     }
     tr.appendChild(tdS);
     /* farol da semana */
@@ -494,7 +638,7 @@
   function celula(pl, it, campo, tipo, editavel) {
     var td = document.createElement('td'); if (tipo === 'data' || tipo === 'brl') { td.className = 'num'; }
     var val = it[campo];
-    var mostra = tipo === 'quem' ? (it.quemNome || nomeUser(it.quemUid) || '') : tipo === 'data' ? (val ? fmtBR(val) : '') : tipo === 'brl' ? fmtBRL(val) : (val || '');
+    var mostra = tipo === 'quem' ? (it.quemNome || nomeUser(it.quemUid) || '') : tipo === 'kpi' ? (val ? kpiNome(val) : '') : tipo === 'data' ? (val ? fmtBR(val) : '') : tipo === 'brl' ? fmtBRL(val) : (val || '');
     var v = txt('span', 'v' + (mostra ? '' : ' vazio'), mostra || (campo === 'oque' ? 'sem título' : '—')); v.title = mostra; td.appendChild(v);
     if (!editavel) { return td; }
     td.className += ' ed'; td.setAttribute('tabindex', '0'); td.setAttribute('role', 'button'); td.setAttribute('aria-label', 'Editar ' + campo);
@@ -502,7 +646,8 @@
       if (EDITANDO) { return; }
       EDITANDO = { itemId: it.id, campo: campo };
       var inp;
-      if (tipo === 'quem') { inp = document.createElement('select'); USERS.forEach(function (u) { var o = document.createElement('option'); o.value = u.uid; o.textContent = u.nome; if (u.uid === it.quemUid) { o.selected = true; } inp.appendChild(o); }); }
+      if (tipo === 'quem') { inp = document.createElement('select'); USERS.forEach(function (u) { var o = document.createElement('option'); o.value = u.uid; o.textContent = u.nome + (ehMembro(u.uid) ? '' : ' · líder'); if (u.uid === it.quemUid) { o.selected = true; } inp.appendChild(o); }); }
+      else if (tipo === 'kpi') { inp = document.createElement('select'); var o0 = document.createElement('option'); o0.value = ''; o0.textContent = '— qual indicador este item move? —'; inp.appendChild(o0); kpisDo(pl.setorSigla).forEach(function (k) { var o = document.createElement('option'); o.value = k.chave; o.textContent = k.nome + (k.meta ? ' · meta ' + k.meta : ''); if (k.chave === it.indicador) { o.selected = true; } inp.appendChild(o); }); }
       else { inp = document.createElement('input'); inp.type = tipo === 'data' ? 'date' : 'text'; inp.value = tipo === 'brl' ? (val == null ? '' : (Number(val) / 100).toFixed(2).replace('.', ',')) : (val || ''); if (tipo === 'brl') { inp.placeholder = '0,00'; inp.style.width = '110px'; } }
       td.innerHTML = ''; td.appendChild(inp); inp.focus(); if (inp.select) { try { inp.select(); } catch (e) { /* select em date */ } }
       var fechado = false;
@@ -510,7 +655,7 @@
       function salva() {
         if (fechado) { return; } fechado = true; EDITANDO = null;
         var novoVal;
-        if (tipo === 'quem') { novoVal = inp.value || null; }
+        if (tipo === 'quem' || tipo === 'kpi') { novoVal = inp.value || null; }
         else if (tipo === 'brl') { novoVal = parseBRL(inp.value); }
         else if (tipo === 'data') { novoVal = inp.value && R.isISO(inp.value) ? inp.value : null; }
         else { novoVal = inp.value.trim() || null; }
@@ -518,11 +663,13 @@
         if (JSON.stringify(novoVal) === JSON.stringify(val == null ? null : val)) { render(); return; }
         var patch = {}; patch[campo] = novoVal; if (tipo === 'quem') { patch.quemNome = nomeUser(novoVal); }
         var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
-        salvarItens(pl, lista, 'planejamento_item_editado', { itemId: it.id, campo: campo }).then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); render(); });
+        salvarItens(pl, lista, 'planejamento_item_editado', { itemId: it.id, campo: campo })
+          .then(function () { if (tipo === 'quem') { var novoIt = lista.filter(function (o) { return o.id === it.id; })[0]; return garantirAtividade(pl, novoIt).then(function (criou) { if (criou) { toast('Item na agenda de ' + primeiroNome(novoIt.quemNome) + '.'); return reload(); } }); } })
+          .then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); render(); });
       }
       inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); salva(); } else if (ev.key === 'Escape') { ev.preventDefault(); cancela(); } });
       inp.addEventListener('blur', function () { setTimeout(salva, 80); });
-      if (tipo === 'quem') { inp.addEventListener('change', salva); }
+      if (tipo === 'quem' || tipo === 'kpi') { inp.addEventListener('change', salva); }
     }
     td.addEventListener('click', abrir);
     td.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrir(); } });
@@ -530,9 +677,9 @@
   }
   function linhaAdicionar(pl, grupos) {
     var tr = el('<tr class="add"></tr>');
-    var td1 = document.createElement('td'); td1.colSpan = 3;
+    var td1 = document.createElement('td'); td1.colSpan = 4;
     var inp = el('<input type="text" placeholder="＋ Novo item: o que vai ser feito? (Enter salva; quem = líder, prazo = fim do mês)" aria-label="Novo item">'); td1.appendChild(inp); tr.appendChild(td1);
-    var td2 = document.createElement('td'); td2.colSpan = 6;
+    var td2 = document.createElement('td'); td2.colSpan = 7;
     var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Seção');
     grupos.forEach(function (g) { var o = document.createElement('option'); o.value = g.sig || ''; o.textContent = g.sig ? (g.nome + ' (subsetor)') : g.nome; sel.appendChild(o); });
     if (grupos.length > 1) { td2.appendChild(sel); }
@@ -650,7 +797,11 @@
   function reload() {
     HOJE = R.hojeISO();
     var c = HOJE.slice(0, 7); COMPS = [M.compShift(c, -1), c, M.compShift(c, 1)];
-    return Promise.all([Store.listSetores(), Store.listUsuarios(), Store.listPlanejamentos(COMPS)]).then(function (r) { SETORES = r[0]; USERS = r[1]; PLANOS = r[2]; });
+    return Promise.all([Store.listSetores(), Store.listUsuarios(), Store.listPlanejamentos(COMPS), Store.listSolicParceiro()]).then(function (r) {
+      SETORES = r[0]; USERS = r[1]; PLANOS = r[2]; SOLIC = r[3] || [];
+      var ids = []; PLANOS.forEach(function (pl) { vivos(pl).forEach(function (i) { if (i.atividadeId && ids.indexOf(i.atividadeId) < 0) { ids.push(i.atividadeId); } }); });
+      return Store.listOccPorAtividades(ids).then(function (occs) { OCC = {}; occs.forEach(function (o) { if (!o || !o.atividadeId || o.status === 'pulada') { return; } var atual = OCC[o.atividadeId]; if (!atual || String(o.data || '') < String(atual.data || '')) { OCC[o.atividadeId] = o; } }); });
+    });
   }
   Guard.onReady(function (u) {
     USER = u;

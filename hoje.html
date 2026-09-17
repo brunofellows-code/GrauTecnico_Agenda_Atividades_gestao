@@ -278,6 +278,7 @@
   <script src="ui.js"></script>
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
+  <script src="kpis-setor.js"></script>
   <script src="scores.js"></script>
   <script src="conclusao.js"></script>
   <script src="app-version.js"></script>
@@ -298,6 +299,8 @@
   var CONVOC_LIMITE = 500;
   var SNAPS = [];               /* kpi_snapshots dos últimos 20 dias (tendência) */
   var USUARIOS = [];            /* contas ativas (líder por setor, ranking) */
+  var PLANEJ = [];              /* planos da competência atual (itens meus · pedidos de outros setores) */
+  var SOLIC_PARC = [];          /* respostas de aceite entre setores (solicitacoes tipo parceiro_plano) */
   var LIDO_EM = null;
   var CELEBRADO = '', CELEB80 = '';
   var R = window.GrautRecorrencia;
@@ -393,6 +396,13 @@
           var a = []; snap.forEach(function (d) { var u = d.data() || {}; u.uid = d.id; u.id = d.id; a.push(u); }); return a;
         });
       }).catch(function () { return []; });
+    },
+    /* planos do mês (itens que são meus; pedidos de outros setores ao meu) — 1 leitura, ≤ 100 docs */
+    listPlanejamentosComp: function (comp) {
+      return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'planejamentos'), c.f.where('competencia', '==', comp), c.f.limit(100)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; if (o.ativo !== false) { a.push(o); } }); return a; }); }).catch(function () { return []; });
+    },
+    listSolicParceiro: function () {
+      return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes'), c.f.where('status', '==', 'pendente'), c.f.limit(300)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; if (o.tipo === 'parceiro_plano') { o.id = d.id; a.push(o); } }); return a; }); }).catch(function () { return []; });
     },
     confirmarPresenca: function (reuniaoId, atuais, uid, recusas) {
       return fb().then(function (c) {
@@ -839,13 +849,15 @@
     var reun = reunioesAResponder(hoje);
     if (reun.length) { itens.push({ t: reun.length + (reun.length === 1 ? ' convocação sem resposta' : ' convocações sem resposta'), label: 'Responder', fn: function () { rolaAte('sec-reunioes'); } }); }
     var semAta = CAN_WRITE() ? reunioesSemAta(hoje) : [];
-    if (semAta.length) { itens.push({ t: semAta.length + (semAta.length === 1 ? ' reunião sem ata' : ' reuniões sem ata'), label: 'Fechar ata', fn: function () { window.location.href = 'projetos.html?r=' + encodeURIComponent(semAta[0].id) + '&bloco=fim; } }); }
+    if (semAta.length) { itens.push({ t: semAta.length + (semAta.length === 1 ? ' reunião sem ata' : ' reuniões sem ata'), label: 'Fechar ata', fn: function () { window.location.href = 'projetos.html?r=' + encodeURIComponent(semAta[0].id) + '&bloco=fim'; } }); }
     var semDono = ativ.filter(function (a) { return !a.responsavelUid; });
     if (semDono.length) {
       var por = {}; semDono.forEach(function (a) { var s = raizDe(KPI.setoresDe(a, m0Setores())[0] || '—'); por[s] = (por[s] || 0) + 1; });
       var top = Object.keys(por).sort(function (a, b) { return por[b] - por[a]; })[0];
       itens.push({ t: semDono.length + (semDono.length === 1 ? ' atividade sem dono' : ' atividades sem dono'), small: top && top !== '—' ? (KPI.nomeSetor(top, m0Setores()) + ' concentra ' + por[top] + '.') : '', label: 'Dar dono', fn: function () { irParaSetor(top && top !== '—' ? top : ''); } });
     }
+    var pedSet = pedidosDeSetorParaMim();
+    if (pedSet.length) { itens.push({ t: pedSet.length + (pedSet.length === 1 ? ' pedido de outro setor espera sua resposta' : ' pedidos de outros setores esperam sua resposta'), small: pedSet[0].pl.setorSigla + ' chamou ' + pedSet[0].sig + ' em "' + pedSet[0].it.oque + '".', label: 'Responder', fn: function () { window.location.href = 'planejamento.html'; } }); }
     var esc = [];
     PLANOS.forEach(function (p) {
       var prog = KPI.pctPlano(p.atividadeIds, MODELO.board, hoje), e = KPI.escalonamentoPlano(p, prog.pct, hoje);
@@ -965,6 +977,39 @@
     var tr = el('<button type="button" class="hj-act stop">⚑ ' + (estaTravada(px.occ) ? 'Trava' : 'Travei') + '</button>'); tr.addEventListener('click', function () { modalTravei(px.occ); }); acts.appendChild(tr);
     h.appendChild(acts);
     return h;
+  }
+
+  /* ---------- plano do setor: itens meus · pedidos de outros setores ---------- */
+  function itensDoPlanoMeus(hoje) {
+    var out = [];
+    PLANEJ.forEach(function (pl) { (pl.itens || []).forEach(function (it) { if (!it || it.removido || it.quemUid !== CURRENT_USER.uid) { return; } var st = it.quandoRealizado || it.status === 'concluido' ? 'concluido' : (it.naoFeito || it.status === 'nao_feito' ? 'nao_feito' : 'aberto'); if (st !== 'aberto') { return; } out.push({ pl: pl, it: it, prazo: it.quandoPrevisto || null, dias: it.quandoPrevisto ? R.diasEntre(it.quandoPrevisto, hoje) : null }); }); });
+    out.sort(function (a, b) { return (a.prazo || '9999').localeCompare(b.prazo || '9999'); });
+    return out;
+  }
+  function pedidosDeSetorParaMim() {
+    var esc = escopoLider(); if (!esc) { return []; }
+    var out = [];
+    PLANEJ.forEach(function (pl) { (pl.itens || []).forEach(function (it) { if (!it || it.removido || it.quandoRealizado || it.naoFeito) { return; } (it.setoresEnvolvidos || []).forEach(function (se) { if (!se || !se.sigla || !esc[se.sigla]) { return; } var respondido = SOLIC_PARC.some(function (x) { return x.planejamentoId === pl.id && x.itemId === it.id && x.setorSigla === se.sigla; }); if (!respondido) { out.push({ pl: pl, it: it, sig: se.sigla }); } }); }); });
+    return out;
+  }
+  function blocoPlano(hoje) {
+    var frag = document.createDocumentFragment(), meus = itensDoPlanoMeus(hoje), amanha = R.addDias(hoje, 1);
+    if (!meus.length) { return frag; }
+    var hojeN = meus.filter(function (x) { return x.prazo === hoje; }).length, amN = meus.filter(function (x) { return x.prazo === amanha; }).length, venc = meus.filter(function (x) { return x.dias != null && x.dias > 0; }).length;
+    frag.appendChild(secao('sec-plano', 'Do plano do setor', { formula: 'itens do plano mensal do seu setor em que você é o QUEM, ainda abertos, por prazo. Vencido = prazo passou. O item que virou atividade está também na sua agenda — conclua lá; o líder verifica no plano.', dados: 'planejamentos da competência (itens vivos).', numeros: meus.length + ' item(ns) · ' + hojeN + ' vence(m) hoje · ' + amN + ' amanhã · ' + venc + ' vencido(s)', serve: 'prepare-se: o que é seu no plano do mês, antes de virar atraso.' }, meus.length, { label: 'Plano do setor', href: 'planejamento.html' }));
+    meus.slice(0, 6).forEach(function (x) {
+      var r = el('<div class="hj-row"></div>');
+      var lab = x.dias != null && x.dias > 0 ? diasTxt(x.dias) : (x.prazo === hoje ? 'hoje' : (x.prazo === amanha ? 'amanhã' : (x.prazo ? fmtBR(x.prazo) : '—')));
+      var pz = txt('span', x.dias != null && x.dias > 0 ? 'hj-late' : 'hj-time', lab); if (x.prazo === amanha || x.prazo === hoje) { pz.style.color = 'var(--bandaAlta,var(--amber))'; } r.appendChild(pz);
+      var tt = el('<div class="tt"></div>'); var t = txt('div', 't', x.it.oque || '(sem título)'); t.title = t.textContent; tt.appendChild(t);
+      tt.appendChild(txt('div', 'm', 'plano de ' + x.pl.setorSigla + (x.it.indicador && window.KpisSetor && KpisSetor.porChave(x.it.indicador) ? ' · ' + KpisSetor.porChave(x.it.indicador).nome : '') + (x.it.como ? ' · ' + x.it.como : '') + (x.it.atividadeId ? ' · na sua agenda' : '')));
+      r.appendChild(tt);
+      var occ = x.it.atividadeId ? MODELO.board.filter(function (o) { return o.act && o.act.id === x.it.atividadeId && o.status !== 'pulada'; })[0] : null;
+      if (occ && occ.status !== 'concluida' && PODE_AGIR(occ)) { r.appendChild(miniActs(occ)); } else if (occ && occ.status === 'concluida') { r.appendChild(txt('span', 'hj-tag ok', 'feito · aguarda o líder verificar')); }
+      frag.appendChild(r);
+    });
+    if (meus.length > 6) { var ln = txt('div', 'hj-info-v', '+ ' + (meus.length - 6) + ' outro(s) no plano.'); ln.style.cssText = 'color:var(--muted2);font-size:var(--fs-xs);margin-top:4px'; frag.appendChild(ln); }
+    return frag;
   }
 
   /* reuniões: convocações (RSVP), passadas sem ata, compromissos nascidos de decisão */
@@ -1166,6 +1211,9 @@
     if (!d.doHoje.length) { w.appendChild(vazio('Nada previsto para hoje', gestor || lider ? 'Suas rotinas pessoais aparecem aqui quando você for o responsável por alguma atividade.' : 'Quando o seu líder atribuir uma rotina a você, ela aparece aqui com horário e um toque para concluir.')); }
     else { d.comHora.concat(d.semHora).forEach(function (o) { w.appendChild(linhaDia(o)); }); }
 
+    /* 4b · do plano do setor (itens meus: prepare-se para amanhã, vencidos com nome) */
+    w.appendChild(blocoPlano(hoje));
+
     /* 5 · mais atrasadas (usuário: as suas; líder: do setor; gestor: da unidade) */
     var baseAtr = usuario ? pessoal : (lider ? vis.filter(function (o) { return actNoEscopo(o.act, escopoLider() || {}); }) : vis);
     var pend = KPI.pendenciasPorRotina(baseAtr, hoje);
@@ -1202,11 +1250,13 @@
       ehUsuario ? Promise.resolve([]) : Store.listPlanosVivos(),
       uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve({ itens: [], cheio: false, erro: false }),
       KPI.lerSnapshots ? KPI.lerSnapshots(hoje) : Promise.resolve([]),
-      ehUsuario ? Promise.resolve([]) : Store.listUsuarios()
+      ehUsuario ? Promise.resolve([]) : Store.listUsuarios(),
+      Store.listPlanejamentosComp(hoje.slice(0, 7)),
+      ehUsuario ? Promise.resolve([]) : Store.listSolicParceiro()
     ]).then(function (r) {
       MODELO = r[0]; PLANOS = r[1] || [];
       var cv = r[2] || {}; CONVOC = cv.itens || []; CONVOC_AVISO = cv.cheio ? 'cheio' : (cv.erro ? 'erro' : '');
-      SNAPS = r[3] || []; USUARIOS = r[4] || [];
+      SNAPS = r[3] || []; USUARIOS = r[4] || []; PLANEJ = r[5] || []; SOLIC_PARC = r[6] || [];
       LIDO_EM = Date.now();
       paint();
     }).catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
