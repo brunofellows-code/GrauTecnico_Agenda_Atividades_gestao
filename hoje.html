@@ -948,6 +948,18 @@
     r.appendChild(miniActs(o));
     return r;
   }
+  /* reunião de hoje em que estou convocado = compromisso na agenda (Bruno, 17/09: "ferramenta de controle de atividades e compromissos") */
+  function linhaReuniaoHoje(r) {
+    var row = el('<div class="hj-row"></div>');
+    row.appendChild(txt('span', 'hj-time' + (r.horaPrevista ? '' : ' sem'), r.horaPrevista || '—'));
+    var tt = el('<div class="tt"></div>'); var t = txt('div', 't', '📅 ' + (r.titulo || 'Reunião')); t.title = r.titulo || ''; tt.appendChild(t);
+    var ext = (r.convidadosExternos || []).map(function (x) { return x && x.nome; }).filter(Boolean).join(', ');
+    var conv = (r.convocados || []).length, resp = window.ReunioesMotor && ReunioesMotor.statusConvite ? ReunioesMotor.statusConvite(r, CURRENT_USER.uid) : null;
+    tt.appendChild(txt('div', 'm' + (resp === 'sem_resposta' ? ' bad' : ''), 'reunião · ' + (ext ? 'com ' + ext : conv + ' convocado(s)') + (r.horaInicioReal && !r.encerradaEm ? ' · em andamento' : '') + (resp === 'sem_resposta' ? ' · responda Vou / Não vou em "Reuniões que esperam você"' : '')));
+    row.appendChild(tt);
+    row.appendChild(el('<a class="hj-gb p" href="projetos.html?r=' + encodeURIComponent(r.id) + '">' + (r.horaInicioReal && !r.encerradaEm ? 'Entrar' : 'Pauta') + ' →</a>'));
+    return row;
+  }
   function linhaAtrasada(it) {
     var o = it.occ;
     var r = el('<div class="hj-row' + (estaTravada(o) ? ' trv' : '') + '"></div>');
@@ -1206,10 +1218,11 @@
     }
     if (px) { w.appendChild(secao('sec-comece', 'Comece por esta', { formula: 'uma única sugestão, sempre pela mesma regra: (1º) sua rotina atrasada mais crítica — vital primeiro, depois há mais dias sem fazer — pela ocorrência mais recente · senão (2º) a de hoje com horário mais cedo · senão (3º) a primeira de hoje.', dados: 'suas ocorrências abertas.', numeros: px.motivo === 'atrasada' ? 'atrasada ' + diasTxt(px.dias) : px.motivo === 'hora' ? 'horário ' + px.hora : 'de hoje, sem horário', serve: 'tirar o custo de decidir por onde começar.' })); w.appendChild(heroi(px)); }
 
-    /* 4 · agenda de hoje */
-    w.appendChild(secao('sec-agenda', 'Agenda de hoje', { formula: 'suas ocorrências com data de hoje (menos as puladas): primeiro as com horário, em ordem; depois as sem horário, por nome.', dados: 'responsável = você.', numeros: d.doHoje.length + ' prevista(s) · ' + d.feitasHoje + ' concluída(s)', serve: 'um só lugar para fechar o dia.' }, d.doHoje.length || null));
-    if (!d.doHoje.length) { w.appendChild(vazio('Nada previsto para hoje', gestor || lider ? 'Suas rotinas pessoais aparecem aqui quando você for o responsável por alguma atividade.' : 'Quando o seu líder atribuir uma rotina a você, ela aparece aqui com horário e um toque para concluir.')); }
-    else { d.comHora.concat(d.semHora).forEach(function (o) { w.appendChild(linhaDia(o)); }); }
+    /* 4 · agenda de hoje (reuniões de hoje primeiro, depois as ocorrências) */
+    var reunHoje = CONVOC.filter(function (r) { return r && r.data === hoje && !r.encerradaEm; }).sort(function (a, b) { return (a.horaPrevista || '99').localeCompare(b.horaPrevista || '99'); });
+    w.appendChild(secao('sec-agenda', 'Agenda de hoje', { formula: 'reuniões de hoje em que você está convocado (com horário) e, depois, suas ocorrências com data de hoje (menos as puladas): primeiro as com horário, em ordem; depois as sem horário, por nome.', dados: 'responsável = você.', numeros: d.doHoje.length + ' prevista(s) · ' + d.feitasHoje + ' concluída(s)', serve: 'um só lugar para fechar o dia.' }, (d.doHoje.length + reunHoje.length) || null));
+    if (!d.doHoje.length && !reunHoje.length) { w.appendChild(vazio('Nada previsto para hoje', gestor || lider ? 'Suas rotinas pessoais aparecem aqui quando você for o responsável por alguma atividade.' : 'Quando o seu líder atribuir uma rotina a você, ela aparece aqui com horário e um toque para concluir.')); }
+    else { reunHoje.forEach(function (r) { w.appendChild(linhaReuniaoHoje(r)); }); d.comHora.concat(d.semHora).forEach(function (o) { w.appendChild(linhaDia(o)); }); }
 
     /* 4b · do plano do setor (itens meus: prepare-se para amanhã, vencidos com nome) */
     w.appendChild(blocoPlano(hoje));

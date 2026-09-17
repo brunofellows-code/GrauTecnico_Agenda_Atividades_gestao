@@ -245,6 +245,16 @@
   function escLider() { if (!(Guard.isLider && Guard.isLider())) { return null; } return KPI.escopoLider ? KPI.escopoLider(USER.setoresLiderados || [], SETORES) : null; }
   function escreve(sig) { if (ehGestor()) { return true; } var esc = escLider(); return !!(esc && esc[sig]); }
   function obrigado(s) { return !!liderDe(s.sigla); } /* só quem tem líder próprio entrega plano */
+  /* o líder só vê a tela dele (Bruno, 17/09): gestor = unidade inteira; líder = raiz(es) do que lidera; membro = raiz do setor onde está lotado */
+  function raizDe(sig) { var s0 = setor(sig); return s0 && s0.setorPaiSigla ? s0.setorPaiSigla : sig; }
+  function escopoRaizes() {
+    var all = raizes(); if (ehGestor()) { return all; }
+    var esc = escLider(), ok = {};
+    if (esc) { Object.keys(esc).forEach(function (sig) { ok[raizDe(sig)] = true; }); }
+    else if (USER.setor) { ok[raizDe(USER.setor)] = true; }
+    return all.filter(function (s) { return ok[s.sigla]; });
+  }
+  function noEscopo(sig) { return ehGestor() || escopoRaizes().some(function (s) { return s.sigla === sig; }); }
   function liderDe(sig) { return USERS.filter(function (u) { return u.perfil === 'lider' && (u.setoresLiderados || []).indexOf(sig) >= 0; })[0] || null; }
   function novoId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
   function vivos(pl) { return ((pl && pl.itens) || []).filter(function (i) { return i && !i.removido; }); }
@@ -339,13 +349,22 @@
     var jan = M.janela(HOJE); if (jan.aberta) { acts.appendChild(pill('Planejamento de ' + compLabel(jan.competencia) + ' aberto até dia ' + jan.fecha, 'ok')); }
 
     /* 1 · três números da competência em foco + ação */
-    var rz = raizes(), tot = { conc: 0, fech: 0, risco: 0, semPlano: [], abertos: 0 };
+    if (FOCO && !noEscopo(FOCO.sig)) { FOCO = null; }
+    var rz = escopoRaizes(), unidade = ehGestor(), tot = { conc: 0, fech: 0, risco: 0, semPlano: [], abertos: 0 };
     rz.forEach(function (s) { var pl = planoDe(s.sigla, compFoco); if ((!pl || !pl.entregueEm) && obrigado(s)) { tot.semPlano.push(s.sigla); } if (!pl) { return; } var r = resumoPlano(pl); tot.conc += r.concluidos; tot.fech += r.concluidos + r.naoFeitos; tot.risco += r.risco; tot.abertos += r.abertos; });
     var pct = tot.fech ? Math.round(tot.conc / tot.fech * 100) : null;
     var g = el('<div class="pl-kpis"></div>');
     g.appendChild(kpi('Realizado · ' + compLabel(compFoco), pct == null ? '—' : pct + '%', pct == null ? 'flat' : (pct >= 80 ? 'green' : (pct >= 60 ? 'amber' : 'red')), pct == null ? (tot.abertos ? tot.abertos + ' item(ns) em andamento' : 'nada fechado ainda') : tot.conc + ' concluídos de ' + tot.fech + ' fechados', { formula: 'concluídos ÷ (concluídos + não feitos) × 100, somando os planos de todos os setores-raiz da competência. Em andamento não entra na conta — senão o mês começa em 0% e o número vira ansiedade.', dados: 'planejamentos da competência (itens vivos).', numeros: tot.conc + ' ÷ ' + tot.fech + (pct == null ? ' (nada fechado)' : ' = ' + pct + '%'), serve: 'o mês está sendo cumprido ou empurrado?' }));
     g.appendChild(kpi('Itens em risco', String(tot.risco), tot.risco ? 'red' : 'green', tot.risco ? 'farol amarelo/vermelho ou prazo vencido' : 'nenhum item fora do rumo', { formula: 'item aberto cujo último farol semanal é amarelo ou vermelho, ou cujo prazo já passou.', dados: 'acompanhamentos[semana] + quandoPrevisto de cada item.', numeros: tot.risco + ' de ' + tot.abertos + ' aberto(s)', serve: 'o que vai para a Reunião de Líderes como assunto.' }, function () { var alvo = document.getElementById('pl-plano'); if (alvo) { alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
     var obrig = rz.filter(obrigado);
+    if (!unidade) {
+      /* líder/membro: no lugar de "setores sem plano", o prazo do próximo mês do SEU setor */
+      var prox = COMPS[2], sigP = rz.length ? rz[0].sigla : null, plP = sigP ? planoDe(sigP, prox) : null, dlP = M.compShift(prox, -1) + '-25', diasP = R.diasEntre(HOJE, dlP), nItP = plP ? vivos(plP).length : 0;
+      var valP = !plP ? 'sem plano' : (!plP.entregueEm ? 'rascunho' : (KPI.planejamentoStatus(plP) === 'aprovado' ? 'aprovado' : 'entregue'));
+      var corP = (plP && plP.entregueEm) ? 'green' : (diasP < 0 ? 'red' : (diasP <= 5 ? 'amber' : (plP ? 'amber' : 'flat')));
+      var subP = plP && plP.entregueEm ? 'entregue em ' + fmtBR(R.toISO(new Date(Number(plP.entregueEm)))) + ' · ' + nItP + ' item(ns)' : ((diasP >= 0 ? 'entregar até ' + fmtBR(dlP) + ' · D-' + diasP : 'prazo era ' + fmtBR(dlP) + ' · ' + (-diasP) + ' dia(s) atrasado') + (plP ? ' · ' + nItP + ' item(ns)' : ''));
+      g.appendChild(kpi('Plano de ' + compLabel(prox), valP, corP, subP, { formula: 'estado do plano do seu setor para o próximo mês: sem plano → rascunho → entregue → aprovado. Prazo de entrega: dia 25 do mês anterior (D-5 aviso, D-3 gestão avisada, D-0 não conforme).', dados: 'planejamentos do setor ' + (sigP || '—') + ' · competência ' + prox + '.', numeros: valP + (plP ? ' · ' + nItP + ' item(ns)' : '') + ' · ' + (diasP >= 0 ? 'D-' + diasP : 'atrasado ' + (-diasP) + 'd'), serve: 'não chegar no dia 25 sem plano: clique na célula do próximo mês para criar (ou copiar o mês atual).' }));
+    } else
     g.appendChild(kpi('Setores sem plano', String(tot.semPlano.length), tot.semPlano.length ? 'amber' : 'green', tot.semPlano.length ? tot.semPlano.join(' · ') : 'todos entregaram', { formula: 'setores-raiz COM LÍDER sem plano ENTREGUE para a competência (rascunho conta como sem plano). Setor sem líder no cadastro não é cobrado — o plano dele é opcional. Prazo de entrega: dia 25 do mês anterior (D-5 · D-3 · D-0 nas células).', dados: 'planejamentos.entregueEm + usuarios.setoresLiderados.', numeros: tot.semPlano.length + ' de ' + obrig.length + ' obrigado(s)', serve: 'cobrar antes do dia 25, não depois.' }, function () { var alvo = document.getElementById('pl-grade'); if (alvo) { alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
     var cta = el('<div class="pl-cta"></div>');
     var meuSig = minhaSigla();
@@ -370,12 +389,12 @@
     if (ped.length) {
       var pb = el('<div class="pl-ped" id="pl-pedidos"></div>');
       var pt = el('<div class="t"></div>'); pt.appendChild(document.createTextNode(ped.length === 1 ? '1 pedido de outro setor espera a sua resposta' : ped.length + ' pedidos de outros setores esperam a sua resposta')); pt.appendChild(infoBtn('Pedidos de outros setores', { formula: 'item do plano de outro setor que chamou um setor que você lidera e ainda não teve resposta (aceite ou não posso, com motivo).', dados: 'planejamentos (setoresEnvolvidos) × solicitacoes (tipo parceiro_plano).', numeros: ped.length + ' pendente(s)', serve: 'o outro líder só conta com o seu setor depois do aceite.' })); pb.appendChild(pt);
-      ped.forEach(function (x) { var row = el('<div class="pl-item"></div>'); var tx = el('<div class="tx"></div>'); tx.appendChild(document.createTextNode(x.it.oque)); tx.appendChild(txt('small', '', 'plano de ' + nomeSetor(x.pl.setorSigla) + ' · ' + compLabel(x.pl.competencia) + ' · ' + (x.it.quemNome || nomeUser(x.it.quemUid) || '—') + ' · prazo ' + fmtBR(x.it.quandoPrevisto) + ' · chamou ' + x.sig)); row.appendChild(tx); var ac = el('<span class="pl-acts"></span>'); ac.appendChild(btn('Aceitar', 'ok sm', function () { responderParceiro(x.pl, x.it, x.sig, 'aceito'); })); ac.appendChild(btn('Não posso', 'warn sm', function () { responderParceiro(x.pl, x.it, x.sig, 'recusado'); })); ac.appendChild(btn('Ver plano', 'sm', function () { FOCO = { sig: x.pl.setorSigla, comp: x.pl.competencia }; MODO_CHECKIN = false; render(); })); row.appendChild(ac); pb.appendChild(row); });
+      ped.forEach(function (x) { var row = el('<div class="pl-item"></div>'); var tx = el('<div class="tx"></div>'); tx.appendChild(document.createTextNode(x.it.oque)); tx.appendChild(txt('small', '', 'plano de ' + nomeSetor(x.pl.setorSigla) + ' · ' + compLabel(x.pl.competencia) + ' · ' + (x.it.quemNome || nomeUser(x.it.quemUid) || '—') + ' · prazo ' + fmtBR(x.it.quandoPrevisto) + ' · chamou ' + x.sig + (x.it.como ? ' · como: ' + x.it.como : ''))); row.appendChild(tx); var ac = el('<span class="pl-acts"></span>'); ac.appendChild(btn('Aceitar', 'ok sm', function () { responderParceiro(x.pl, x.it, x.sig, 'aceito'); })); ac.appendChild(btn('Não posso', 'warn sm', function () { responderParceiro(x.pl, x.it, x.sig, 'recusado'); })); row.appendChild(ac); pb.appendChild(row); });
       body.appendChild(pb);
     }
 
     /* 2 · grade mês × setor */
-    body.appendChild(secao('Plano por setor · ' + compLabel(COMPS[0]) + ' a ' + compLabel(COMPS[2]), { formula: 'uma célula por setor-raiz e mês: itens do plano, % realizado (concluídos ÷ fechados), faróis da última semana e o estado (rascunho com D-5/D-3/D-0 até o dia 25 do mês anterior · entregue · aprovado = ciência de gestor e sócio). Subsetores vivem DENTRO do plano do setor-raiz.', dados: 'planejamentos das três competências + setores ativos.', serve: 'quem entregou, quem está atrasado e como vai cada mês, num relance.' }));
+    body.appendChild(secao((unidade ? 'Plano por setor · ' : (rz.length === 1 ? 'Seu setor · ' : 'Seus setores · ')) + compLabel(COMPS[0]) + ' a ' + compLabel(COMPS[2]), { formula: 'uma célula por setor-raiz e mês: itens do plano, % realizado (concluídos ÷ fechados), faróis da última semana e o estado (rascunho com D-5/D-3/D-0 até o dia 25 do mês anterior · entregue · aprovado = ciência de gestor e sócio). Subsetores vivem DENTRO do plano do setor-raiz.', dados: 'planejamentos das três competências + setores ativos.', serve: 'quem entregou, quem está atrasado e como vai cada mês, num relance.' }));
     var grid = el('<div class="pl-grid" id="pl-grade"></div>');
     var hd = el('<div class="pl-gr hd"><div>Setor</div></div>');
     COMPS.forEach(function (c) { var h = txt('div', c === compFoco ? 'foco' : '', compLabel(c) + (c === compFoco ? ' · em curso' : (c > compFoco ? ' · planejar' : ''))); hd.appendChild(h); });
@@ -854,7 +873,7 @@
     reload().then(function () {
       var qs = String(location.search || ''), m = qs.match(/[?&]setor=([A-Z0-9]+)/i), mc = qs.match(/[?&]comp=(\d{4}-\d{2})/), mi = qs.match(/[?&]item=([A-Za-z0-9_-]+)/); var ms = minhaSigla();
       var compQ = mc && COMPS.indexOf(mc[1]) >= 0 ? mc[1] : COMPS[1];
-      if (m && planoDe(m[1].toUpperCase(), compQ)) { FOCO = { sig: m[1].toUpperCase(), comp: compQ }; if (mi) { ABERTOS[mi[1]] = true; } }
+      if (m && planoDe(m[1].toUpperCase(), compQ) && noEscopo(m[1].toUpperCase())) { FOCO = { sig: m[1].toUpperCase(), comp: compQ }; if (mi) { ABERTOS[mi[1]] = true; } }
       else if (ms) { FOCO = { sig: ms, comp: COMPS[1] }; }
       render();
     }).catch(function (e) { setState('Não consegui carregar o planejamento.', (e && e.message) || 'Erro ao ler o banco.'); });

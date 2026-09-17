@@ -243,10 +243,25 @@
   var LISTA_QUANDO = 'proximas';
   var TIPOS_REUNIAO = [
     ['lideres', 'Reunião de Líderes'], ['integrada', 'Reunião Integrada'], ['instrutor', 'Reunião com Instrutor'],
-    ['lideres_turma', 'Reunião c/ Líderes de Turmas'], ['departamento', 'Reunião de Departamento'], ['resultado_mensal', 'Resultado Mensal'],
+    ['lideres_turma', 'Reunião c/ Líderes de Turmas'], ['departamento', 'Reunião de Departamento'], ['alinhamento', 'Alinhamento entre líderes'], ['externa', 'Externa · com alguém de fora'], ['resultado_mensal', 'Resultado Mensal'],
     ['socio_fin', 'Bruno × Gestor (semanal · fin/adm)'], ['socio_com', 'Tiago × Gestor (semanal · comercial)'], ['mensal_estrategica', 'Sócios + Gestor (mensal estratégica)']
   ];
   var TIPO_LABEL = {}; TIPOS_REUNIAO.forEach(function (t) { TIPO_LABEL[t[0]] = t[1]; });
+  /* regra §9-b (Bruno, 16/09): quem não é gestor vê só as reuniões com interseção com ele — convocado, participante, presente, criador — ou do setor que lidera */
+  function visivelReuniao(r) {
+    if (!r) { return false; } if (Guard.isGestor && Guard.isGestor()) { return true; }
+    var uid = USER.uid;
+    if (r.criadoPorUid === uid || (r.convocadosUids || []).indexOf(uid) >= 0 || (r.participantesUids || []).indexOf(uid) >= 0 || (r.presentes || []).indexOf(uid) >= 0) { return true; }
+    if (Guard.isLider && Guard.isLider() && r.setorSigla) { var esc = KPI.escopoLider(USER.setoresLiderados || [], (CTX && CTX.setores) || []); if (esc[r.setorSigla]) { return true; } }
+    return false;
+  }
+  /* convocados por tipo; alinhamento = quem cria + líder(es) do setor escolhido; externa = quem cria (+ o nome de fora) */
+  function convocadosDe(tipoV, setorV) {
+    var eu = { uid: USER.uid, nome: USER.name || USER.nome };
+    if (tipoV === 'alinhamento') { var esc = KPI.escopoLider([setorV], CTX.setores || []), out = [{ uid: eu.uid, nome: eu.nome }]; USERS.forEach(function (u) { if (u.perfil !== 'lider' || u.uid === eu.uid) { return; } var lid = u.setoresLiderados || []; for (var i = 0; i < lid.length; i++) { if (lid[i] === setorV || esc[lid[i]]) { out.push({ uid: u.uid, nome: u.nome }); return; } } }); return out; }
+    if (tipoV === 'externa') { return [{ uid: eu.uid, nome: eu.nome }]; }
+    return KPI.convocadosPorTipo(tipoV, USERS, CTX.setores, eu, tipoV === 'departamento' ? setorV : null);
+  }
   var MOTIVOS_FALTA = ['Conflito de agenda', 'Atendimento urgente', 'Ausência justificada', 'Esquecimento/não vi', 'Outro'];
   var DIAS_SEM = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 
@@ -573,18 +588,22 @@
     box.appendChild(txt('span', 'lb', 'Nova reunião'));
     var tipo = el('<select aria-label="Tipo"></select>'); TIPOS_REUNIAO.forEach(function (t) { var o = document.createElement('option'); o.value = t[0]; o.textContent = t[1]; tipo.appendChild(o); });
     var setor = el('<select aria-label="Setor" style="display:none"></select>'); (CTX.setores || []).filter(function (s) { return s.ativo !== false; }).forEach(function (s) { var o = document.createElement('option'); o.value = s.sigla; o.textContent = s.nome + ' (' + s.sigla + ')'; setor.appendChild(o); });
+    var externo = el('<input type="text" aria-label="Com quem (fora)" placeholder="Com quem (fora): nome · empresa" style="display:none;min-width:220px">');
     var data = el('<input type="date" aria-label="Data">'); data.value = hojeISO();
     var hora = el('<input type="time" aria-label="Hora">'); hora.value = '09:00';
     var hint = txt('span', 'hint', '');
-    function attHint() { var conv = KPI.convocadosPorTipo(tipo.value, USERS, CTX.setores, { uid: USER.uid, nome: USER.name || USER.nome }, tipo.value === 'departamento' ? setor.value : null); var dur = motorTem('duracaoDe') ? M.duracaoDe(tipo.value) : 0; var pb = window.PautaModelo ? PautaModelo.blocosNovos(tipo.value) : []; hint.textContent = conv.length + ' convocado(s) automaticamente · ' + (pb.length ? PautaModelo.somaMin(pb) : dur) + ' min de roteiro. Ajuste presença e convidados dentro da reunião.'; }
-    tipo.addEventListener('change', function () { setor.style.display = tipo.value === 'departamento' ? '' : 'none'; attHint(); }); setor.addEventListener('change', attHint);
-    box.appendChild(tipo); box.appendChild(setor); box.appendChild(data); box.appendChild(hora);
+    function attHint() { var conv = convocadosDe(tipo.value, setor.value); var dur = motorTem('duracaoDe') ? M.duracaoDe(tipo.value) : 0; var pb = window.PautaModelo ? PautaModelo.blocosNovos(tipo.value) : []; hint.textContent = conv.length + ' convocado(s) automaticamente · ' + (pb.length ? PautaModelo.somaMin(pb) : dur) + ' min de roteiro. Ajuste presença e convidados dentro da reunião.'; }
+    tipo.addEventListener('change', function () { setor.style.display = (tipo.value === 'departamento' || tipo.value === 'alinhamento') ? '' : 'none'; externo.style.display = tipo.value === 'externa' ? '' : 'none'; attHint(); }); setor.addEventListener('change', attHint);
+    box.appendChild(tipo); box.appendChild(setor); box.appendChild(externo); box.appendChild(data); box.appendChild(hora);
     box.appendChild(btn('Criar', 'p', function () {
       if (!R.isISO(data.value)) { toast('Informe a data.', 'err'); return; }
-      var conv = KPI.convocadosPorTipo(tipo.value, USERS, CTX.setores, { uid: USER.uid, nome: USER.name || USER.nome }, tipo.value === 'departamento' ? setor.value : null);
+      if (tipo.value === 'externa' && externo.value.trim().length < 2) { toast('Diga com quem é a reunião (nome · empresa).', 'err'); externo.focus(); return; }
+      var conv = convocadosDe(tipo.value, setor.value);
       if (!conv.length) { conv.push({ uid: USER.uid, nome: USER.name || USER.nome || USER.email || '(eu)' }); }
-      var doc = { titulo: TIPO_LABEL[tipo.value], data: data.value, tipo: tipo.value, setorSigla: tipo.value === 'departamento' ? setor.value : null, horaPrevista: hora.value || null,
-        horaInicioReal: null, encerradaEm: null, convocados: conv, convocadosUids: conv.map(function (c) { return c.uid; }), convidadosExternos: [], presentes: [],
+      var nomeSetorV = (CTX.setores || []).filter(function (s) { return s.sigla === setor.value; }).map(function (s) { return s.nome || s.sigla; })[0] || setor.value;
+      var tituloV = tipo.value === 'externa' ? 'Externa · ' + externo.value.trim() : (tipo.value === 'alinhamento' ? 'Alinhamento · ' + nomeSetorV : TIPO_LABEL[tipo.value]);
+      var doc = { titulo: tituloV, data: data.value, tipo: tipo.value, setorSigla: tipo.value === 'departamento' ? setor.value : null, setorConvidado: tipo.value === 'alinhamento' ? setor.value : null, horaPrevista: hora.value || null,
+        horaInicioReal: null, encerradaEm: null, convocados: conv, convocadosUids: conv.map(function (c) { return c.uid; }), convidadosExternos: tipo.value === 'externa' ? [{ nome: externo.value.trim() }] : [], presentes: [],
         pautaTexto: null, pautaGeradaEm: null, pautaItens: [], pautaBlocos: window.PautaModelo ? PautaModelo.blocosNovos(tipo.value) : [], preparo: window.PautaModelo ? PautaModelo.preparoNovo(tipo.value) : [],
         notaReuniao: null, resumoTexto: '', participantesUids: [], decisoes: [], serieId: motorTem('serieIdDe') ? M.serieIdDe({ tipo: tipo.value, setorSigla: tipo.value === 'departamento' ? setor.value : null }) : tipo.value };
       Store.criarReuniao(doc).then(function (id) { toast('Reunião criada — os convocados veem a chamada no Hoje.'); return reload().then(function () { abrir(id); }); }).catch(function (e) { toast(e.message, 'err'); });
@@ -1036,7 +1055,7 @@
   function reload(manterAberta) {
     if (!manterAberta) { setState('Carregando as reuniões…', 'Lendo reuniões, atividades e pessoas.'); }
     return Promise.all([KPI.carregar('band'), Store.listReunioes(), Store.listUsuariosAtivos(), Store.listSolicPendentes(), Store.listSugestoesPauta(), Store.listPlanosVivos()]).then(function (r) {
-      CTX = r[0]; REUN = r[1] || []; USERS = r[2] || []; PENDS = r[3] || []; SUGS = (r[4] || []).filter(function (g) { return g.status === 'pendente'; }); PLANOS = r[5] || [];
+      CTX = r[0]; USERS = r[2] || []; REUN = (r[1] || []).filter(visivelReuniao); PENDS = r[3] || []; SUGS = (r[4] || []).filter(function (g) { return g.status === 'pendente'; }); PLANOS = r[5] || [];
       OLD_OCC = null;
       return varrerAntigas();
     }).then(function () { rerender(); }).catch(function (e) { setState('Não consegui carregar as reuniões.', (e && e.message) || 'Erro ao ler o banco.'); });
