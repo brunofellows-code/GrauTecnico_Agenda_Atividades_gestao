@@ -425,3 +425,5 @@ Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada
 - **Manual dentro do sistema (`manual.html`)**, no menu de todos os perfis, abre na aba do perfil de quem entrou (Gestor e sócios · Líder · Membro · As telas). Mesmo conteúdo do PDF e da apresentação.
 - **Entregáveis:** `GERA_Manual_do_Lider.pdf` (A4, frente e verso) e `GERA_Apresentacao.pptx` (12 slides, 16:9, com capturas do simulador), gerados em `scratchpad/entrega/` e enviados ao Bruno. python-pptx 1.0.2 instalado em venv isolado no scratchpad (não no sistema).
 - Testado no simulador: menu Nova, linha "verificado ✓", remover/não feito desativam a atividade, concluir grava a ocorrência, manual nos 3 perfis; auditoria estática 17 telas OK.
+
+- **08h20 — sentido inverso feito:** editar uma atividade nascida do plano (quem, data, título) em Atividades atualiza o item do plano; editar um evento nascido do plano (data → início, hora, título, local → onde) em Eventos atualiza o item. Transação no doc do plano; nunca bloqueia a edição; erro só no console. **Cadastro:** Usuários avisa "N usuário(s) sem setor de lotação" com os nomes.

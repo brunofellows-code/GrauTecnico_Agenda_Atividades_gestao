@@ -179,11 +179,37 @@
         });
       }).catch(function (e) { throw ferr(e); });
     },
+    /* 17/09 · sentido inverso: evento nascido de um item do plano (planoId + itemId) — mudar data, hora, título ou local aqui atualiza o item. Nunca bloqueia a edição. */
+    sincronizarItemDoPlano: function (c, id, patch) {
+      if (!patch || !('data' in patch || 'hora' in patch || 'titulo' in patch || 'local' in patch)) { return Promise.resolve(); }
+      var db = c.db, f = c.f;
+      return f.getDoc(f.doc(db, 'eventos', id)).then(function (snap) {
+        var ev = snap && snap.exists && snap.exists() ? snap.data() : null;
+        if (!ev || !ev.planoId || !ev.itemId) { return; }
+        var ref = f.doc(db, 'planejamentos', ev.planoId);
+        return f.runTransaction(db, function (tx) {
+          return tx.get(ref).then(function (ps) {
+            if (!ps.exists()) { return; }
+            var d = ps.data() || {}, mudou = false;
+            var itens = (d.itens || []).map(function (it) {
+              if (!it || it.id !== ev.itemId) { return it; }
+              var novo = Object.assign({}, it);
+              if ('data' in patch && ev.data) { novo.inicio = ev.data; }
+              if ('hora' in patch) { novo.hora = ev.hora || null; }
+              if ('titulo' in patch && ev.titulo) { novo.oque = ev.titulo; }
+              if ('local' in patch) { novo.onde = ev.local || null; }
+              mudou = JSON.stringify(novo) !== JSON.stringify(it); return novo;
+            });
+            if (mudou) { tx.update(ref, { itens: itens, atualizadoEm: Date.now() }); }
+          });
+        });
+      }).catch(function (e) { if (window.console && console.warn) { console.warn('[agenda] item do plano não acompanhou:', (e && e.message) || e); } });
+    },
     atualizarEvento: function (id, patch, acao, antes) {
       return fb().then(function (c) {
         var db = c.db, f = c.f;
         var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
-        return f.updateDoc(f.doc(db, 'eventos', id), up).then(function () {
+        return f.updateDoc(f.doc(db, 'eventos', id), up).then(function () { return Store.sincronizarItemDoPlano(c, id, patch); }).then(function () {
           Store.log({ acao: acao || 'editar_evento', entidade: 'evento', refId: id, antes: antes || null, depois: patch });
         });
       }).catch(function (e) { throw ferr(e); });

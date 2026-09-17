@@ -625,8 +625,35 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
             var up = Object.assign({}, patch, { atualizadoEm: Date.now() });
             return f.updateDoc(f.doc(db, 'atividades', id), up).then(function () {
               api.log({ acao: 'editar_atividade', entidade: 'atividade', refId: id, antes: antes || null, depois: patch });
+              return api.sincronizarItemDoPlano(c, id, patch);
             });
           }).catch(function (e) { throw ferr(e); });
+        },
+        /* 17/09 · sentido inverso: atividade nascida de um item do plano (origem.tipo = planejamento) —
+           mudar quem, data ou título aqui atualiza o item no plano do setor. Nunca bloqueia a edição. */
+        sincronizarItemDoPlano: function (c, id, patch) {
+          if (!patch || !('responsavelUid' in patch || 'data' in patch || 'titulo' in patch)) { return Promise.resolve(); }
+          var db = c.db, f = c.f;
+          return f.getDoc(f.doc(db, 'atividades', id)).then(function (snap) {
+            var act = snap && snap.exists && snap.exists() ? snap.data() : null;
+            var og = act && act.origem; if (!og || og.tipo !== 'planejamento' || !og.planejamentoId || !og.itemId) { return; }
+            var ref = f.doc(db, 'planejamentos', og.planejamentoId);
+            return f.runTransaction(db, function (tx) {
+              return tx.get(ref).then(function (ps) {
+                if (!ps.exists()) { return; }
+                var d = ps.data() || {}, mudou = false;
+                var itens = (d.itens || []).map(function (it) {
+                  if (!it || it.id !== og.itemId) { return it; }
+                  var novo = Object.assign({}, it);
+                  if ('responsavelUid' in patch) { novo.quemUid = act.responsavelUid || null; novo.quemNome = act.responsavelNome || null; }
+                  if ('data' in patch && act.data) { novo.quandoPrevisto = act.data; }
+                  if ('titulo' in patch && act.titulo) { novo.oque = act.titulo; }
+                  mudou = JSON.stringify(novo) !== JSON.stringify(it); return novo;
+                });
+                if (mudou) { tx.update(ref, { itens: itens, atualizadoEm: Date.now() }); }
+              });
+            }).then(function () { api.log({ acao: 'planejamento_item_sincronizado_da_atividade', entidade: 'planejamento', refId: og.planejamentoId, antes: null, depois: { itemId: og.itemId, atividadeId: id } }); });
+          }).catch(function (e) { if (window.console && console.warn) { console.warn('[atividades] item do plano não acompanhou:', (e && e.message) || e); } });
         },
 
         /* 16/09 · inativar e ativar gravam o que a tela montou (patchInativacao

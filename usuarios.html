@@ -953,6 +953,11 @@
       count.innerHTML = '';
       count.appendChild(txt('b', null, String(vis.length)));
       count.appendChild(document.createTextNode(' ' + (vis.length === 1 ? 'usuário' : 'usuários') + (inativos ? ' · ' + inativos + ' inativo(s)' : '')));
+      /* 17/09: membro sem setor de lotação não vê o plano do setor nem a agenda do setor — avisar quem cadastra */
+      var semSetor = ALL.filter(function (u) { return L.estaAtivo(u) && !String(u.setor || '').trim(); });
+      var av = document.getElementById('us-semsetor'); if (!av) { av = document.createElement('div'); av.id = 'us-semsetor'; av.style.cssText = 'font-size:var(--fs-sm);font-weight:700;color:var(--bandaAlta,var(--orange));margin:6px 0 10px'; toolbar.parentNode.insertBefore(av, toolbar.nextSibling); }
+      av.textContent = semSetor.length ? semSetor.length + ' usuário(s) sem setor de lotação — abra o cadastro e escolha o setor: ' + semSetor.slice(0, 6).map(function (u) { return u.nome || u.email || u.id; }).join(', ') + (semSetor.length > 6 ? ' e mais ' + (semSetor.length - 6) : '') : '';
+      av.hidden = !semSetor.length;
 
       var sw = document.getElementById('us-showinactive'); sw.innerHTML = '';
       sw.appendChild(UI.checkbox({ checked: showInactive, label: 'Mostrar inativos', onToggle: function (v) { showInactive = v; renderList(); } }));
