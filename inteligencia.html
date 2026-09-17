@@ -1255,7 +1255,7 @@
     if (CTX_MONTADO || !window.GrautCtx) { return; }
     var exp = document.getElementById('pf-export');
     if (!exp) { return; }
-    var w = GrautCtx.mount(exp, { setores: m.setores, user: USER, rotuloTudo: 'Toda a escola', onChange: carregar });
+    var w = GrautCtx.mount(exp, { setores: m.setores, user: USER, rotuloTudo: (Guard.isLider && Guard.isLider()) ? 'Meu escopo' : 'Toda a escola', onChange: carregar });
     if (w) { exp.insertBefore(w, exp.firstChild); }
     CTX_MONTADO = true;
   }
@@ -1473,6 +1473,8 @@
       if (meu !== PLANO_TOKEN) { return; }
       var planos = [];
       snap.forEach(function (d) { planos.push(Object.assign({ id: d.id }, d.data())); });
+      /* §9-b (Bruno, 16/09): quem não é gestor vê só os planos com interseção com ele — dono, setor que lidera ou atividade do seu recorte */
+      if (!(Guard.isGestor && Guard.isGestor())) { var escL = KPI.escopoLider(USER.setoresLiderados || [], (m && m.setores) || []); var idsVis = {}; (BOARD || []).forEach(function (o) { if (o && o.act && o.act.id) { idsVis[o.act.id] = true; } }); planos = planos.filter(function (p) { return p.donoUid === USER.uid || (p.setorSigla && escL[p.setorSigla]) || (p.atividadeIds || []).some(function (id) { return !!idsVis[id]; }); }); }
       planos.sort(function (a, b) { return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1; });
       list.innerHTML = '';
       if (!planos.length) {
