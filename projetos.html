@@ -134,9 +134,9 @@
 .rn-card .h .mn{font-size:var(--fs-xs);color:var(--muted2);font-weight:700}
 .rn-card .h .sp{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .rn-donos{font-size:var(--fs-xs);color:var(--muted2);margin:-6px 0 10px}
-.rn-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--border)}
+.rn-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--border);flex-wrap:wrap}
 .rn-item:first-of-type{border-top:0}
-.rn-item .tx{flex:1;min-width:0;font-size:var(--fs-base);font-weight:600;line-height:1.35}
+.rn-item .tx{flex:1 1 200px;min-width:0;font-size:var(--fs-base);font-weight:600;line-height:1.35}
 .rn-item .tx small{display:block;color:var(--muted2);font-size:var(--fs-xs);font-weight:600;margin-top:2px}
 .rn-item .acts{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex:none}
 .rn-item.done .tx{text-decoration:line-through;opacity:.6}
@@ -148,7 +148,7 @@
 .rn-add{display:flex;gap:8px;margin-top:10px;align-items:center}
 .rn-add input{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:inherit;font-size:var(--fs-sm);padding:8px 10px;min-width:0}
 .rn-add input:focus{outline:2px solid var(--brand);outline-offset:1px;border-color:transparent}
-.rn-form{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr auto;gap:8px;align-items:end;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;margin:8px 0 4px;width:100%}
+.rn-form{display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr auto;gap:8px;align-items:end;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;margin:8px 0 4px;width:100%;flex-basis:100%}
 .rn-form label{display:flex;flex-direction:column;gap:4px;font-size:var(--fs-xs);font-weight:800;color:var(--muted2);letter-spacing:.04em;text-transform:uppercase;min-width:0}
 .rn-form input,.rn-form select{background:var(--s1);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:var(--fs-sm);padding:7px 9px;min-width:0;text-transform:none;letter-spacing:0;font-weight:600}
 .rn-pres{display:grid;grid-template-columns:repeat(2,1fr);gap:6px 14px}
@@ -910,16 +910,16 @@
     row.appendChild(tx);
     var ac = el('<div class="acts"></div>');
     if (podeEditar) {
-      ac.appendChild(btn('Decidir', 'p sm', function () { if (row.querySelector('.rn-form')) { return; } row.appendChild(formDecidir(r, it.texto, function () { marcarItem(r, idx, 'resolvida'); })); }));
+      ac.appendChild(btn('Decidir', 'p sm', function () { if (row.querySelector('.rn-form')) { return; } row.appendChild(formDecidir(r, it.texto, function () { return marcarItem(r, idx, 'resolvida', true); })); }));
       ac.appendChild(btn('Resolvido', 'ok sm', function () { marcarItem(r, idx, 'resolvida'); }));
       ac.appendChild(btn('Próxima', 'sm', function () { marcarItem(r, idx, 'aberta'); toast('Fica aberto e rola para a próxima reunião.'); }));
     } else if (it.uid === USER.uid && !r.encerradaEm) { ac.appendChild(btn('Remover', 'sm', function () { var novo = (r.pautaItens || []).filter(function (_, i) { return i !== idx; }); Store.atualizarReuniao(r.id, { pautaItens: novo }, 'pauta_item_removido').then(function () { r.pautaItens = novo; renderReuniao(); }).catch(function (e) { toast(e.message, 'err'); }); })); }
     row.appendChild(ac);
     return row;
   }
-  function marcarItem(r, idx, status) {
+  function marcarItem(r, idx, status, semRepintar) {
     var novo = (r.pautaItens || []).map(function (it, i) { return i === idx ? Object.assign({}, it, { status: status, tratadoEm: Date.now() }) : it; });
-    return Store.atualizarReuniao(r.id, { pautaItens: novo }, 'pauta_item_' + status).then(function () { r.pautaItens = novo; renderReuniao(); }).catch(function (e) { toast(e.message, 'err'); });
+    return Store.atualizarReuniao(r.id, { pautaItens: novo }, 'pauta_item_' + status).then(function () { r.pautaItens = novo; if (!semRepintar) { renderReuniao(); } }).catch(function (e) { toast(e.message, 'err'); });
   }
   /* decidir = demanda com dono, prazo e setor → vira atividade única na hora */
   function formDecidir(r, textoIni, depois) {
@@ -936,7 +936,9 @@
       var dono = sel.value || USER.uid, dec = { texto: t, comoTexto: null, porqueTexto: null, donoUid: dono, donoNome: nomeUser(dono) || USER.name, prazo: prazo, atividadeId: null, aberta: true, atualizacoes: [], em: Date.now() };
       go.disabled = true;
       Store.criarAtividadeDeDecisao(dec, r, ssel.value).then(function (atId) { dec.atividadeId = atId; dec.aberta = false; return salvarDecisoes(r, (r.decisoes || []).concat([dec]), 'criar_decisao'); })
-        .then(function () { toast('Demanda criada: ' + primeiroNome(dec.donoNome) + ' até ' + fmtBR(prazo) + '. Já está na agenda da pessoa.'); if (depois) { depois(); } else { renderReuniao(); } })
+        .then(function () { toast('Demanda criada: ' + primeiroNome(dec.donoNome) + ' até ' + fmtBR(prazo) + '. Já está na agenda da pessoa.'); return depois ? depois() : null; })
+        /* a atividade nova precisa entrar no quadro para o status da demanda sair certo ("em aberto", não "fora da janela") */
+        .then(function () { return reload(true); })
         .catch(function (e) { go.disabled = false; toast(e.message, 'err'); });
     });
     f.appendChild(oq); f.appendChild(qm); f.appendChild(pz); f.appendChild(st); f.appendChild(go);
