@@ -57,6 +57,8 @@
   .ev-body{padding:10px 10px 110px}
   .ag-bar{gap:6px 8px}
   .ag-bar-sp{display:none}
+  /* mês no celular: as 7 colunas rolam dentro da grade, nunca a página */
+  .ag-month{overflow-x:auto;grid-template-columns:repeat(7,minmax(92px,1fr))}
 }
 @media (max-width:760px){
   .ev-top{padding:12px 14px}
