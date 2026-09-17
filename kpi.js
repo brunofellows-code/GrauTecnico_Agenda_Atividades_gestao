@@ -1977,6 +1977,8 @@
        recorrente → 1 item por atividade (occ = a atrasada mais recente),
                     perdidas = quantas ficaram para trás, desde = a mais antiga;
        única      → 1 item por ocorrência (cada uma é um compromisso).
+     Concluir a rotina FECHA o passado (Todoist): perdidas anteriores à última
+     conclusão da atividade viram histórico (saem daqui, ficam na aderência).
      Não grava nada. As ocorrências antigas continuam no board: a aderência
      (concluídas ÷ previstas) segue contando cada falha.
      Ordem: vitais primeiro, depois mais dias sem fazer, depois título.
@@ -1984,10 +1986,21 @@
      ============================================================ */
   K.pendenciasPorRotina = function (board, hoje) {
     var R = window.GrautRecorrencia; /* este bloco (R12) não tem R no escopo */
-    var por = {}, ordem = [];
-    (Array.isArray(board) ? board : []).forEach(function (o) {
+    var lista = Array.isArray(board) ? board : [];
+    /* Todoist: concluir a rotina fecha o passado. A última conclusão de cada
+       atividade recorrente marca o corte — perdidas ANTERIORES a ela são
+       histórico (contam na aderência), não pendência. */
+    var ultimaFeita = {};
+    lista.forEach(function (o) {
+      if (!o || !o.act || o.status !== "concluida" || !o.effDate) { return; }
+      var k = o.act.id, atual = ultimaFeita[k];
+      if (!atual || R.compareISO(o.effDate, atual) > 0) { ultimaFeita[k] = o.effDate; }
+    });
+    var por = {}, ordem = [], historico = 0;
+    lista.forEach(function (o) {
       if (!o || !o.act || !o.atrasada) { return; }
       var unica = o.act.recorrencia === "unico";
+      if (!unica && ultimaFeita[o.act.id] && R.compareISO(o.effDate, ultimaFeita[o.act.id]) < 0) { historico++; return; }
       var k = unica ? (o.act.id + "_" + (o.origData || o.effDate)) : o.act.id;
       var b = por[k];
       if (!b) {
@@ -2009,7 +2022,7 @@
       return (pa - pb) || (b.dias - a.dias) || String(a.act.titulo || "").localeCompare(String(b.act.titulo || ""), "pt-BR");
     });
     var perdidas = 0; itens.forEach(function (i) { perdidas += i.perdidas; });
-    return { itens: itens, total: itens.length, ocorrencias: perdidas };
+    return { itens: itens, total: itens.length, ocorrencias: perdidas, historico: historico };
   };
 
   /* Faixas de idade das pendências (Upflow "aging balance"): 1–2 dias ·

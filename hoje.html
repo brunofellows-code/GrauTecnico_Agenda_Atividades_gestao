@@ -955,7 +955,7 @@
     h.appendChild(txt('span', 'lab', (act.peso && PESO_LABEL[act.peso] ? PESO_LABEL[act.peso] : 'ATIVIDADE') + ' · ' + (RECOR_LABEL[act.recorrencia] || 'rotina')));
     h.appendChild(txt('div', 'ttl', tituloDe(px.occ)));
     var meta = el('<div class="meta"></div>');
-    if (px.motivo === 'atrasada') { meta.appendChild(el('<b>atrasada ' + diasTxt(px.dias) + '</b>')); meta.appendChild(document.createTextNode(' · ' + metaDe(act))); }
+    if (px.motivo === 'atrasada') { meta.appendChild(el('<b>sem fazer ' + diasTxt(px.dias) + '</b>')); meta.appendChild(document.createTextNode((px.perdidas > 1 ? ' · perdeu ' + px.perdidas + ' vezes' : '') + ' · ' + metaDe(act))); }
     else { meta.appendChild(document.createTextNode((px.motivo === 'hora' ? 'hoje às ' + px.hora : 'hoje') + ' · ' + metaDe(act))); }
     h.appendChild(meta);
     var acts = el('<div class="hj-acts"></div>');
@@ -1148,9 +1148,14 @@
       w.appendChild(painelNumeros(pessoal, [], hoje, 'pessoal'));
     }
 
-    /* 3 · comece por esta */
-    var px = KPI.proximaAcao ? KPI.proximaAcao(m.board, uid, hoje) : null;
-    if (px) { w.appendChild(secao('sec-comece', 'Comece por esta', { formula: 'uma única sugestão, sempre pela mesma regra: (1º) sua atrasada mais antiga · senão (2º) a de hoje com horário mais cedo · senão (3º) a primeira de hoje.', dados: 'suas ocorrências abertas.', numeros: px.motivo === 'atrasada' ? 'atrasada ' + diasTxt(px.dias) : px.motivo === 'hora' ? 'horário ' + px.hora : 'de hoje, sem horário', serve: 'tirar o custo de decidir por onde começar.' })); w.appendChild(heroi(px)); }
+    /* 3 · comece por esta — a MESMA regra das pendências: a rotina atrasada
+       mais crítica (vital, mais dias sem fazer), pela ocorrência mais recente;
+       sem atraso, a de hoje mais cedo (proximaAcao). */
+    var pendMinhas = KPI.pendenciasPorRotina(pessoal, hoje);
+    var px = null;
+    if (pendMinhas.total) { var p0 = pendMinhas.itens[0]; px = { occ: p0.occ, motivo: 'atrasada', dias: p0.dias, perdidas: p0.perdidas }; }
+    else { px = KPI.proximaAcao ? KPI.proximaAcao(m.board, uid, hoje) : null; if (px && px.motivo === 'atrasada') { px = null; } }
+    if (px) { w.appendChild(secao('sec-comece', 'Comece por esta', { formula: 'uma única sugestão, sempre pela mesma regra: (1º) sua rotina atrasada mais crítica — vital primeiro, depois há mais dias sem fazer — pela ocorrência mais recente · senão (2º) a de hoje com horário mais cedo · senão (3º) a primeira de hoje.', dados: 'suas ocorrências abertas.', numeros: px.motivo === 'atrasada' ? 'atrasada ' + diasTxt(px.dias) : px.motivo === 'hora' ? 'horário ' + px.hora : 'de hoje, sem horário', serve: 'tirar o custo de decidir por onde começar.' })); w.appendChild(heroi(px)); }
 
     /* 4 · agenda de hoje */
     w.appendChild(secao('sec-agenda', 'Agenda de hoje', { formula: 'suas ocorrências com data de hoje (menos as puladas): primeiro as com horário, em ordem; depois as sem horário, por nome.', dados: 'responsável = você.', numeros: d.doHoje.length + ' prevista(s) · ' + d.feitasHoje + ' concluída(s)', serve: 'um só lugar para fechar o dia.' }, d.doHoje.length || null));
