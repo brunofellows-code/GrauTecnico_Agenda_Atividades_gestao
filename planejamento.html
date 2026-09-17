@@ -315,6 +315,9 @@
         return c.f.addDoc(c.f.collection(c.db, 'atividades'), doc).then(function (ref) { Store.log({ acao: 'planejamento_item_para_agenda', entidade: 'atividade', refId: ref.id, antes: null, depois: { titulo: doc.titulo, planejamentoId: pl.id, itemId: it.id } }); return ref.id; });
       }).catch(function (e) { throw ferr(e); });
     },
+    /* agenda (coleção eventos, contrato do eventos.html/agenda-motor: siglaSetor · hora · local · categoria · planoId) */
+    criarEvento: function (doc) { return fb().then(function (c) { var now = Date.now(); var body = Object.assign({}, doc, { realizado: false, custoRealizado: null, ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now }); return c.f.addDoc(c.f.collection(c.db, 'eventos'), body).then(function (ref) { Store.log({ acao: 'planejamento_item_na_agenda', entidade: 'evento', refId: ref.id, antes: null, depois: { titulo: body.titulo, data: body.data, siglaSetor: body.siglaSetor } }); return ref.id; }); }).catch(function (e) { throw ferr(e); }); },
+    atualizarEvento: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'eventos', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
     log: function (entry) { return fb().then(function (c) { return c.f.addDoc(c.f.collection(c.db, 'atividade_log'), Object.assign({ ts: Date.now(), uid: (USER && USER.uid) || null }, entry)); }).catch(function (e) { if (window.console && console.warn) { console.warn('[planejamento] log falhou', e); } }); }
   };
   function salvarItens(pl, lista, acao, antes) { return Store.atualizarLista(pl.id, 'itens', lista, pl.atualizadoEm == null ? null : pl.atualizadoEm, acao, antes).then(function (ts) { pl.itens = lista; pl.atualizadoEm = ts; }); }
@@ -463,7 +466,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null }, base || {});
+    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, divulgar: null, eventoId: null }, base || {});
   }
 
   /* ============================================================
@@ -637,7 +640,7 @@
     var editavel = podeEd && st === 'aberto';
     /* ação primeiro (Asana/Linear): o quê · indicador · quem · com quem · prazo · status · semana; detalhe (como · onde · quando · quanto) à direita */
     var tdC = document.createElement('td'); tdC.className = 'chv'; var chev = el('<button type="button" class="pl-chev" aria-label="Detalhes do item" aria-expanded="' + (ABERTOS[it.id] ? 'true' : 'false') + '">' + (ABERTOS[it.id] ? '▾' : '▸') + '</button>'); chev.addEventListener('click', function () { ABERTOS[it.id] = !ABERTOS[it.id]; render(); }); tdC.appendChild(chev); tr.appendChild(tdC);
-    tr.appendChild(celula(pl, it, 'oque', 'texto', editavel));
+    var tdO = celula(pl, it, 'oque', 'texto', editavel); if (it.divulgar) { var pd = pill('📣 ' + (it.divulgar === 'unidade' ? 'agenda da unidade' : 'agenda do setor'), 'ok'); pd.title = it.divulgar === 'unidade' ? 'Na agenda da unidade — todos veem no dia' : 'Na agenda do setor — a equipe e os convidados veem no dia'; pd.style.marginTop = '3px'; tdO.appendChild(pd); } tr.appendChild(tdO);
     tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
     tr.appendChild(celula(pl, it, 'quemUid', 'quem', editavel));
     tr.appendChild(celulaParceiros(pl, it, editavel));
@@ -690,9 +693,36 @@
     g.appendChild(campoDet(pl, it, 'quandoRealizado', 'data', podeEd && fechado, 'Realizado em'));
     g.appendChild(campoDet(pl, it, 'valorFinalCentavos', 'brl', podeEd && fechado, 'Custo realizado'));
     g.appendChild(campoDet(pl, it, 'obs', 'texto', editavel || (podeEd && fechado), 'Observações', 'wide'));
+    g.appendChild(campoDivulgar(pl, it, editavel));
     if (it.relato) { var fr = el('<div class="f wide"></div>'); fr.appendChild(txt('label', '', 'Relato do fechamento' + (it.evidencia ? ' · evidência: ' + it.evidencia : ''))); var hv = el('<div class="h"></div>'); hv.appendChild(txt('span', 'v', it.relato)); fr.appendChild(hv); g.appendChild(fr); }
     else if (it.motivoDetalhe) { var fm = el('<div class="f wide"></div>'); fm.appendChild(txt('label', '', 'Por que não foi feito')); var hm = el('<div class="h"></div>'); hm.appendChild(txt('span', 'v', it.motivoDetalhe)); fm.appendChild(hm); g.appendChild(fm); }
     tr.firstChild.appendChild(g); return tr;
+  }
+  /* ---------- item na agenda (Bruno, 17/09): unidade = todos veem no dia; setor = equipe + convidados ---------- */
+  function equipeDoSetor(sig) { return USERS.filter(function (u) { if (u.perfil === 'gestor') { return false; } if (u.perfil === 'lider') { var esc = KPI.escopoLider(u.setoresLiderados || [], SETORES); return !!esc[sig] || (u.setoresLiderados || []).some(function (s0) { return raizDe(s0) === sig; }); } return !!(u.setor && raizDe(u.setor) === sig); }).map(function (u) { return u.uid; }); }
+  function convidadosDoItem(it) { var out = []; (it.setoresEnvolvidos || []).forEach(function (se) { var l = se && se.sigla ? liderDe(se.sigla) : null; if (l && out.indexOf(l.uid) < 0) { out.push(l.uid); } }); return out; }
+  function eventoDoItem(pl, it, escopo) {
+    return { titulo: it.oque, data: it.inicio || it.quandoPrevisto || ultimoDia(pl.competencia), hora: null, local: it.onde || null, categoria: 'evento', siglaSetor: escopo === 'setor' ? pl.setorSigla : null, setorOrigem: pl.setorSigla, planoId: pl.id, itemId: it.id, origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id }, convocadosUids: convidadosDoItem(it), confirmadosUids: [], recusas: {}, custoPrevisto: it.valorPrevistoCentavos != null ? it.valorPrevistoCentavos : null };
+  }
+  function sincronizarEvento(pl, it) { if (!it.eventoId) { return Promise.resolve(); } var ev = eventoDoItem(pl, it, it.divulgar); return Store.atualizarEvento(it.eventoId, { titulo: ev.titulo, data: ev.data, local: ev.local, convocadosUids: ev.convocadosUids, custoPrevisto: ev.custoPrevisto }).catch(function (e) { toast('O item foi salvo, mas a agenda não acompanhou: ' + e.message, 'err'); }); }
+  function divulgarItem(pl, it, v) {
+    v = v || null; if (v === (it.divulgar || null)) { return; }
+    var quando = fmtBR(it.inicio || it.quandoPrevisto || ultimoDia(pl.competencia));
+    function grava(patch, msg) { var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; }); return salvarItens(pl, lista, 'planejamento_item_divulgar', { itemId: it.id, divulgar: v }).then(function () { toast(msg); render(); }); }
+    var p0;
+    if (!v) { p0 = Store.atualizarEvento(it.eventoId, { ativo: false }).then(function () { return grava({ divulgar: null, eventoId: null }, 'Saiu da agenda.'); }); }
+    else if (it.eventoId) { var ev = eventoDoItem(pl, it, v); p0 = Store.atualizarEvento(it.eventoId, { siglaSetor: ev.siglaSetor, convocadosUids: ev.convocadosUids, ativo: true }).then(function () { return grava({ divulgar: v }, v === 'unidade' ? 'Agora na agenda da unidade — todos veem no dia ' + quando + '.' : 'Agora na agenda do setor — a equipe vê no dia ' + quando + '.'); }); }
+    else { p0 = Store.criarEvento(eventoDoItem(pl, it, v)).then(function (id) { return grava({ divulgar: v, eventoId: id }, v === 'unidade' ? 'Na agenda da unidade — todos veem no dia ' + quando + ' e são avisados no Hoje.' : 'Na agenda do setor — a equipe e os convidados veem no dia ' + quando + '.'); }); }
+    p0.catch(function (e) { toast(e.message, 'err'); render(); });
+  }
+  function campoDivulgar(pl, it, editavel) {
+    var f = el('<div class="f"></div>'); f.appendChild(txt('label', '', 'Divulgar na agenda'));
+    var h = el('<div class="h"></div>');
+    if (!editavel) { h.appendChild(txt('span', 'v' + (it.divulgar ? '' : ' vazio'), it.divulgar === 'unidade' ? '📣 agenda da unidade' : (it.divulgar === 'setor' ? '📣 agenda do setor' : 'só no plano'))); f.appendChild(h); return f; }
+    var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Divulgar na agenda');
+    [['', 'só no plano'], ['setor', '📣 agenda do setor · equipe e convidados veem no dia'], ['unidade', '📣 agenda da unidade · todos veem no dia']].forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; if ((it.divulgar || '') === o[0]) { op.selected = true; } sel.appendChild(op); });
+    sel.addEventListener('change', function () { divulgarItem(pl, it, sel.value); });
+    h.appendChild(sel); f.appendChild(h); return f;
   }
   function motivoLabel(v) { for (var i = 0; i < MOTIVOS.length; i++) { if (MOTIVOS[i][0] === v) { return MOTIVOS[i][1]; } } return v || 'sem motivo'; }
   function celula(pl, it, campo, tipo, editavel, host) {
@@ -724,6 +754,7 @@
         var patch = {}; patch[campo] = novoVal; if (tipo === 'quem') { patch.quemNome = nomeUser(novoVal); }
         var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
         salvarItens(pl, lista, 'planejamento_item_editado', { itemId: it.id, campo: campo })
+          .then(function () { var itAtual = lista.filter(function (o) { return o.id === it.id; })[0]; if (itAtual && itAtual.eventoId && ['oque', 'quandoPrevisto', 'inicio', 'onde'].indexOf(campo) >= 0) { return sincronizarEvento(pl, itAtual); } })
           .then(function () { if (tipo === 'quem') { var novoIt = lista.filter(function (o) { return o.id === it.id; })[0]; return garantirAtividade(pl, novoIt).then(function (criou) { if (criou) { toast('Item na agenda de ' + primeiroNome(novoIt.quemNome) + '.'); return reload(); } }); } })
           .then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); render(); });
       }
@@ -774,7 +805,7 @@
         if (!R.isISO(dt.value) || R.compareISO(dt.value, HOJE) > 0) { toast('A data de realização não pode ser futura.', 'err'); return; }
         var patch = { quandoRealizado: dt.value, status: 'concluido', relato: ta.value.trim(), evidencia: ev.value.trim(), valorFinalCentavos: parseBRL(fin.value), naoFeito: false };
         var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
-        salvarItens(pl, lista, 'planejamento_item_realizado', { itemId: it.id }).then(function () { close(); toast('Concluído. ✔'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+        salvarItens(pl, lista, 'planejamento_item_realizado', { itemId: it.id }).then(function () { if (it.eventoId) { return Store.atualizarEvento(it.eventoId, { realizado: true, custoRealizado: patch.valorFinalCentavos }).catch(function () { /* o item já está concluído; a agenda acompanha na próxima edição */ }); } }).then(function () { close(); toast('Concluído. ✔'); render(); }).catch(function (e) { toast(e.message, 'err'); });
       } })]; } });
   }
   function modalNaoFeito(pl, it) {

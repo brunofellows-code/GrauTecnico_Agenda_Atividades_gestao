@@ -205,6 +205,19 @@
 .hj-sk{background:var(--s1);border:1px solid var(--border);border-radius:14px;height:92px;position:relative;overflow:hidden}
 .hj-sk::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--s2),transparent);transform:translateX(-100%);animation:hjsh 1.1s infinite}
 @keyframes hjsh{100%{transform:translateX(100%)}}
+/* avisos da agenda: entra deslizando, o megafone pulsa 3 vezes e para */
+.hj-aviso{display:flex;align-items:flex-start;gap:var(--sp-3);background:var(--s1);border:1px solid var(--brand);border-left-width:4px;border-radius:13px;padding:10px var(--sp-4);margin-bottom:var(--sp-4);box-shadow:var(--shadowSoft);animation:hjin .5s var(--easeOut)}
+.hj-aviso .ic{font-size:20px;line-height:1.2;animation:hjpulse 1.6s ease-in-out 3;transform-origin:center}
+.hj-aviso .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.hj-aviso .ev{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.hj-aviso .ev .h{font-variant-numeric:tabular-nums;font-weight:800;color:var(--accentText);font-size:var(--fs-sm);min-width:44px}
+.hj-aviso .ev .t{font-weight:800;font-size:var(--fs-base);min-width:0}
+.hj-aviso .ev .m{color:var(--muted);font-size:var(--fs-xs);font-weight:600}
+.hj-aviso .ev .hj-gb{margin-left:auto}
+.hj-aviso .am{color:var(--muted2);font-size:var(--fs-xs);font-weight:600}
+@keyframes hjin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes hjpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+@media (prefers-reduced-motion:reduce){.hj-aviso,.hj-aviso .ic{animation:none}}
 .hj-skgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)}
 .hj-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--s1);border:1px solid var(--border);color:var(--text);font-size:var(--fs-base);font-weight:600;padding:10px 16px;border-radius:10px;z-index:80;box-shadow:var(--elev-3)}
 .hj-toast.err{border-color:var(--red);color:var(--red)}
@@ -279,6 +292,7 @@
   <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="kpis-setor.js"></script>
+  <script src="agenda-motor.js"></script>
   <script src="scores.js"></script>
   <script src="conclusao.js"></script>
   <script src="app-version.js"></script>
@@ -301,6 +315,7 @@
   var USUARIOS = [];            /* contas ativas (líder por setor, ranking) */
   var PLANEJ = [];              /* planos da competência atual (itens meus · pedidos de outros setores) */
   var SOLIC_PARC = [];          /* respostas de aceite entre setores (solicitacoes tipo parceiro_plano) */
+  var EVENTOS = [];             /* agenda (eventos) de hoje e de amanhã: avisos animados + compromissos */
   var LIDO_EM = null;
   var CELEBRADO = '', CELEB80 = '';
   var R = window.GrautRecorrencia;
@@ -403,6 +418,10 @@
     },
     listSolicParceiro: function () {
       return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'solicitacoes'), c.f.where('status', '==', 'pendente'), c.f.limit(300)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; if (o.tipo === 'parceiro_plano') { o.id = d.id; a.push(o); } }); return a; }); }).catch(function () { return []; });
+    },
+    /* agenda: eventos de hoje e de amanhã (1 leitura) — unidade para todos; do setor para a equipe e convidados */
+    listEventosProximos: function (hoje, amanha) {
+      return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'eventos'), c.f.where('data', 'in', [hoje, amanha]), c.f.limit(60)); return c.f.getDocs(q).then(function (snap) { var a = []; snap.forEach(function (d) { var o = d.data() || {}; o.id = d.id; if (o.ativo !== false && o.cancelado !== true) { a.push(o); } }); return a; }); }).catch(function () { return []; });
     },
     confirmarPresenca: function (reuniaoId, atuais, uid, recusas) {
       return fb().then(function (c) {
@@ -991,6 +1010,48 @@
     return h;
   }
 
+  /* ---------- agenda: avisos animados (Bruno, 17/09) — evento da unidade avisa todo mundo; evento do setor avisa a equipe e os convidados ---------- */
+  var ICONE_CAT = { palestra: '🎤', reuniao_integrada: '🤝', evento: '📌', calendario_escolar: '🏫' };
+  function sigEvento(ev) { return (ev && (ev.siglaSetor || ev.setorSigla)) || null; }
+  function raizSetor(sig) { var s = (MODELO.setores || []).filter(function (x) { return x.sigla === sig; })[0]; return s && s.setorPaiSigla ? s.setorPaiSigla : sig; }
+  function eventoParaMim(ev) {
+    var sig = sigEvento(ev), uid = CURRENT_USER.uid;
+    if (!sig) { return true; }
+    if ((ev.convocadosUids || []).indexOf(uid) >= 0) { return true; }
+    if (Guard.isGestor && Guard.isGestor()) { return true; }
+    var esc = escopoLider(); if (esc && esc[sig]) { return true; }
+    return !!(CURRENT_USER.setor && raizSetor(CURRENT_USER.setor) === raizSetor(sig));
+  }
+  function avisosAgenda(hoje) {
+    var amanha = R.addDias(hoje, 1), meus = EVENTOS.filter(eventoParaMim);
+    var deHoje = meus.filter(function (e) { return e.data === hoje; }).sort(function (a, b) { return ((a.hora || a.horario) || '99').localeCompare((b.hora || b.horario) || '99'); });
+    var deAmanha = meus.filter(function (e) { return e.data === amanha; });
+    if (!deHoje.length && !deAmanha.length) { return null; }
+    var box = el('<div class="hj-aviso" role="region" aria-label="Agenda de hoje na unidade e no setor"></div>');
+    var ic = txt('span', 'ic', '📣'); box.appendChild(ic);
+    var body = el('<div class="bd"></div>');
+    deHoje.forEach(function (e) {
+      var sig = sigEvento(e), r = el('<div class="ev"></div>');
+      r.appendChild(txt('span', 'h', (e.hora || e.horario) || 'hoje'));
+      var t = el('<span class="t"></span>'); t.appendChild(document.createTextNode((e.planoId ? '▸ ' : (ICONE_CAT[e.categoria] || '📌') + ' ') + (e.titulo || 'Evento'))); r.appendChild(t);
+      r.appendChild(txt('span', 'm', (sig ? 'agenda do setor ' + sig : 'agenda da unidade') + (e.local ? ' · ' + e.local : '') + (e.planoId ? ' · do plano' : '')));
+      var st = window.GrautAgenda && GrautAgenda.statusConvite ? GrautAgenda.statusConvite(e, CURRENT_USER.uid) : 'nao_convidado';
+      r.appendChild(el('<a class="hj-gb' + (st === 'sem_resposta' ? ' p' : '') + '" href="eventos.html">' + (st === 'sem_resposta' ? 'Responder →' : 'Agenda →') + '</a>'));
+      body.appendChild(r);
+    });
+    if (deAmanha.length) { body.appendChild(txt('div', 'am', 'Amanhã: ' + deAmanha.map(function (e) { return ((e.hora || e.horario) ? (e.hora || e.horario) + ' ' : '') + (e.titulo || 'Evento') + (sigEvento(e) ? ' (' + sigEvento(e) + ')' : ''); }).join(' · '))); }
+    box.appendChild(body);
+    return box;
+  }
+  function linhaEventoHoje(e) {
+    var row = el('<div class="hj-row"></div>');
+    row.appendChild(txt('span', 'hj-time' + ((e.hora || e.horario) ? '' : ' sem'), (e.hora || e.horario) || '—'));
+    var tt = el('<div class="tt"></div>'); var t = txt('div', 't', (ICONE_CAT[e.categoria] || '📌') + ' ' + (e.titulo || 'Evento')); tt.appendChild(t);
+    tt.appendChild(txt('div', 'm', (sigEvento(e) ? 'evento do setor ' + sigEvento(e) : 'evento da unidade') + (e.local ? ' · ' + e.local : '') + ' · você foi convidado(a)'));
+    row.appendChild(tt); row.appendChild(el('<a class="hj-gb p" href="eventos.html">Agenda →</a>'));
+    return row;
+  }
+
   /* ---------- plano do setor: itens meus · pedidos de outros setores ---------- */
   function itensDoPlanoMeus(hoje) {
     var out = [];
@@ -1182,6 +1243,9 @@
     var d = derivar(pessoal, hoje);
     var stk = KPI.streak80 ? KPI.streak80(m.board, uid, hoje) : null;
 
+    /* 0 · avisos da agenda (todos os perfis) */
+    var av = avisosAgenda(hoje); if (av) { w.appendChild(av); }
+
     /* 1 · faixa (gestor/líder) + progresso + carimbo */
     if (!usuario) { var fx = faixaExige(vis, ativ, hoje); if (fx) { w.appendChild(fx); } }
     w.appendChild(progresso(d, stk));
@@ -1220,9 +1284,10 @@
 
     /* 4 · agenda de hoje (reuniões de hoje primeiro, depois as ocorrências) */
     var reunHoje = CONVOC.filter(function (r) { return r && r.data === hoje && !r.encerradaEm; }).sort(function (a, b) { return (a.horaPrevista || '99').localeCompare(b.horaPrevista || '99'); });
-    w.appendChild(secao('sec-agenda', 'Agenda de hoje', { formula: 'reuniões de hoje em que você está convocado (com horário) e, depois, suas ocorrências com data de hoje (menos as puladas): primeiro as com horário, em ordem; depois as sem horário, por nome.', dados: 'responsável = você.', numeros: d.doHoje.length + ' prevista(s) · ' + d.feitasHoje + ' concluída(s)', serve: 'um só lugar para fechar o dia.' }, (d.doHoje.length + reunHoje.length) || null));
-    if (!d.doHoje.length && !reunHoje.length) { w.appendChild(vazio('Nada previsto para hoje', gestor || lider ? 'Suas rotinas pessoais aparecem aqui quando você for o responsável por alguma atividade.' : 'Quando o seu líder atribuir uma rotina a você, ela aparece aqui com horário e um toque para concluir.')); }
-    else { reunHoje.forEach(function (r) { w.appendChild(linhaReuniaoHoje(r)); }); d.comHora.concat(d.semHora).forEach(function (o) { w.appendChild(linhaDia(o)); }); }
+    var evHoje = EVENTOS.filter(function (e) { return e.data === hoje && (e.convocadosUids || []).indexOf(uid) >= 0; });
+    w.appendChild(secao('sec-agenda', 'Agenda de hoje', { formula: 'reuniões de hoje em que você está convocado (com horário) e, depois, suas ocorrências com data de hoje (menos as puladas): primeiro as com horário, em ordem; depois as sem horário, por nome.', dados: 'responsável = você.', numeros: d.doHoje.length + ' prevista(s) · ' + d.feitasHoje + ' concluída(s)', serve: 'um só lugar para fechar o dia.' }, (d.doHoje.length + reunHoje.length + evHoje.length) || null));
+    if (!d.doHoje.length && !reunHoje.length && !evHoje.length) { w.appendChild(vazio('Nada previsto para hoje', gestor || lider ? 'Suas rotinas pessoais aparecem aqui quando você for o responsável por alguma atividade.' : 'Quando o seu líder atribuir uma rotina a você, ela aparece aqui com horário e um toque para concluir.')); }
+    else { reunHoje.forEach(function (r) { w.appendChild(linhaReuniaoHoje(r)); }); evHoje.forEach(function (e) { w.appendChild(linhaEventoHoje(e)); }); d.comHora.concat(d.semHora).forEach(function (o) { w.appendChild(linhaDia(o)); }); }
 
     /* 4b · do plano do setor (itens meus: prepare-se para amanhã, vencidos com nome) */
     w.appendChild(blocoPlano(hoje));
@@ -1265,11 +1330,12 @@
       KPI.lerSnapshots ? KPI.lerSnapshots(hoje) : Promise.resolve([]),
       ehUsuario ? Promise.resolve([]) : Store.listUsuarios(),
       Store.listPlanejamentosComp(hoje.slice(0, 7)),
-      ehUsuario ? Promise.resolve([]) : Store.listSolicParceiro()
+      ehUsuario ? Promise.resolve([]) : Store.listSolicParceiro(),
+      Store.listEventosProximos(hoje, R.addDias(hoje, 1))
     ]).then(function (r) {
       MODELO = r[0]; PLANOS = r[1] || [];
       var cv = r[2] || {}; CONVOC = cv.itens || []; CONVOC_AVISO = cv.cheio ? 'cheio' : (cv.erro ? 'erro' : '');
-      SNAPS = r[3] || []; USUARIOS = r[4] || []; PLANEJ = r[5] || []; SOLIC_PARC = r[6] || [];
+      SNAPS = r[3] || []; USUARIOS = r[4] || []; PLANEJ = r[5] || []; SOLIC_PARC = r[6] || []; EVENTOS = r[7] || [];
       LIDO_EM = Date.now();
       paint();
     }).catch(function (e) { setState('Não consegui carregar o seu dia.', (e && e.message) || 'Erro ao ler o banco.'); });
