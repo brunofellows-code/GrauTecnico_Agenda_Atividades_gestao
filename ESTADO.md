@@ -447,3 +447,12 @@ Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada
 - **Não feito, declarado:** modo condução no celular e pauta com convocações sem resposta (próxima rodada).
 
 - **17/09 12h30 — melhoria 8 (a última do desafio):** Performance e Inteligência sem a barra de "lentes". `lentes.js` ganhou o modo `semBarra`: a tela mostra numa rolagem só todos os blocos das lentes que o perfil tem (membro: eu faço + números; líder/gestor: as três), na ordem do DOM; a barra some. Testado: Performance líder 6/6 blocos, Inteligência gestor 14/14, 0 erros. Service worker conferido: rede primeiro, sem risco de versão velha em produção.
+
+- **PUBLICADO 17/09 12h50 (2ª publicação do dia):** `main` = ff46055. No ar: telas em 1600 px, mês seguinte sempre aberto, item recorrente, contagem vital·importante·rotina, gráficos por perfil no Hoje, preparo de reunião, Performance e Inteligência sem lentes. Conferido por arquivo no site publicado.
+
+## 32. Primeiro uso em produção, tarde de 17/09 — correções e importação
+
+- **Importação do Pareto feita pelo Claude no Chrome do Bruno (autorizado: "Importa por aqui! Você pode fazer"):** `2026-09-16_DELTA_CONSOLIDADO_v1.json` → prévia 218 prontas · 0 bloqueadas · 0 já aplicadas → **218 gravadas · 0 falhas · 437 escritas**; arquivo de reversão baixado na pasta Downloads do Bruno. (Primeira tentativa parou porque o Chrome estava logado como Brenda/líder; o aplicador é só do gestor.)
+- **"Não consegui fazer um planejamento":** reproduzido na tela real como gestor: o plano abria, mas ao CRIAR a tela não rolava até ele (ficava fora da vista). Corrigido: rola, foca o primeiro item e o aviso diz o que fazer. Check-in deixou de parecer bloqueado ("o ideal é de sexta a segunda"; botão desligado explica o motivo).
+- **Usuários:** rótulos "É sócio" / "Usuário ativo" apareciam riscados (estilo de tarefa concluída vazando para formulário) → sem risco; falha ao carregar setores ganhou "Tentar de novo" (a falha vista foi momentânea, durante a importação); visão por setor mostra só quem tem gente e junta os setores vazios numa linha. Produção tem **7 usuários sem setor de lotação** (aviso novo): Antonia, Brenda, Bruno Bandeira, Bruno Fellows, conta de teste, Kamile e mais 1.
+- **Pedido novo do Bruno (registrado, não feito):** cadastro por solicitação — a pessoa acessa, pede acesso, o gestor aceita e define o perfil. Exige mudança nas regras do Firestore (só o Bruno publica) → próxima rodada.

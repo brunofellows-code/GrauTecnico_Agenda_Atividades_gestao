@@ -104,6 +104,10 @@
   .us-content{padding:16px 18px 40px}
   .us-why{padding-left:0}
 }
+/* 17/09: nesta tela o checkbox é de formulário (É sócio · Usuário ativo · setores) — marcado não significa 'feito', então não risca */
+.ui-check .label.done{color:var(--text);text-decoration:none}
+/* setores sem equipe: uma linha só, em vez de um cartão vazio por setor */
+.us-vchip{display:inline-block;font-size:var(--fs-xs);font-weight:700;padding:2px 8px;border:1px dashed var(--border);border-radius:6px;margin:2px 6px 2px 0;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1001,7 +1005,9 @@
 
       /* agrupado: o setor sem ninguém continua na tela, com o vazio da regra */
       var grupos = L.agruparPorSetor(vis, SETORES);
+      var vazios = grupos.filter(function (g) { return !g.usuarios.length; });
       grupos.forEach(function (g) {
+        if (!g.usuarios.length) { return; } /* 17/09: setor sem ninguém não ganha cartão próprio */
         var bloco = txt('div', 'us-grupo' + (g.pai ? ' us-gfilho' : ''));
         bloco.appendChild(cabecalhoGrupo(g));
         if (!g.usuarios.length) {
@@ -1016,6 +1022,15 @@
         }
         stage.appendChild(bloco);
       });
+      if (vazios.length) {
+        var bv = txt('div', 'us-grupo'), hv = txt('div', 'us-ghead');
+        hv.appendChild(txt('span', 'us-gnome', 'Setores sem equipe cadastrada'));
+        var sv = txt('div', 'us-gsub'); sv.appendChild(txt('b', null, String(vazios.length))); sv.appendChild(document.createTextNode(vazios.length === 1 ? ' setor' : ' setores')); hv.appendChild(sv); bv.appendChild(hv);
+        var cx = txt('div', 'us-gvazio');
+        vazios.forEach(function (g) { cx.appendChild(txt('span', 'us-vchip', (g.pai ? '↳ ' : '') + g.nome + (g.sigla ? ' · ' + g.sigla : ''))); });
+        cx.appendChild(txt('div', null, 'Para pôr alguém num deles, use "Adicionar usuário" ou edite a pessoa e escolha o setor de lotação.'));
+        bv.appendChild(cx); stage.appendChild(bv);
+      }
     }
 
     /* M6: desativar sempre passa por confirmação e explica que nada é apagado. */
@@ -1131,7 +1146,7 @@
         if (setoresCache === null) {
           setorBox.appendChild(txt('div', 'us-em', 'Carregando setores…'));
           carregarSetores(function (ok) {
-            if (!ok) { setorBox.innerHTML = ''; setorBox.appendChild(txt('div', 'us-em', 'Não consegui carregar os setores agora. Tente de novo.')); return; }
+            if (!ok) { setorBox.innerHTML = ''; var er = txt('div', 'us-em', 'Não consegui carregar os setores agora. '); var rb = document.createElement('button'); rb.type = 'button'; rb.textContent = 'Tentar de novo'; rb.style.cssText = 'font:inherit;font-weight:800;color:var(--accentText);background:none;border:0;cursor:pointer;text-decoration:underline;padding:0'; rb.addEventListener('click', function () { renderSetorSelect(); }); er.appendChild(rb); setorBox.appendChild(er); return; }
             renderSetorSelect();
           });
           return;
