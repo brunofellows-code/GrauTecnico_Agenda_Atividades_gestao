@@ -385,10 +385,10 @@
       var btM = btn('Ver o plano', 'p', function () { FOCO = { sig: meuSig, comp: compFoco }; MODO_CHECKIN = false; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 50); });
       btM.disabled = !plM; cta.appendChild(btM); g.appendChild(cta);
     } else {
-    cta.appendChild(txt('div', 't', M.acompanhamentoAberto(HOJE) ? 'Semana ' + semanaAtual().slice(6) + ' aberta para check-in' : 'Check-in abre na sexta'));
+    cta.appendChild(txt('div', 't', M.acompanhamentoAberto(HOJE) ? 'Semana ' + semanaAtual().slice(6) + ' · hora do check-in' : 'Check-in da semana · o ideal é de sexta a segunda'));
     cta.appendChild(txt('div', 'm', 'fez o quê · vai cumprir? 🟢🟡🔴 · o que trava — 60 segundos por item'));
     var bt = btn('Acompanhar esta semana', 'p', function () { if (!meuSig) { toast('Você não lidera um setor com plano nesta competência.', 'err'); return; } FOCO = { sig: meuSig, comp: compFoco }; MODO_CHECKIN = true; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 50); });
-    bt.disabled = !meuSig; cta.appendChild(bt); g.appendChild(cta);
+    bt.disabled = !meuSig; if (!meuSig) { bt.title = 'Ainda não há plano com item aberto para acompanhar — crie o plano e os itens primeiro.'; cta.appendChild(txt('div', 'm', 'Disponível quando houver plano com item aberto.')); } cta.appendChild(bt); g.appendChild(cta);
     }
     body.appendChild(g);
 
@@ -461,8 +461,8 @@
     /* 17/09 (Bruno): o plano do mês seguinte fica SEMPRE aberto para criar; a janela 25–28 só marca foraDaJanela no registro */
     function criar(itens) {
       Store.criarPlanejamento({ setorSigla: sig, competencia: comp, itens: itens, entregueEm: null, aprovGestor: null, aprovSocio: null, dispensas: [], foraDaJanela: pode.forcado || false })
-        .then(function () { toast('Plano de ' + sig + ' · ' + compLabel(comp) + ' criado.'); return reload(); })
-        .then(function () { FOCO = { sig: sig, comp: comp }; MODO_CHECKIN = false; render(); })
+        .then(function () { toast('Plano de ' + sig + ' · ' + compLabel(comp) + ' criado — clique num indicador ou escreva o primeiro item logo abaixo.'); return reload(); })
+        .then(function () { FOCO = { sig: sig, comp: comp }; MODO_CHECKIN = false; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } var i0 = document.getElementById('pl-novo'); if (i0) { try { i0.focus({ preventScroll: true }); } catch (e0) { i0.focus(); } } }, 120); })
         .catch(function (e) { toast(e.message, 'err'); });
     }
     if (!anterior || !vivos(anterior).length) { criar([]); return; }
