@@ -445,3 +445,5 @@ Quatro ficam para a próxima rodada, com motivo: 7. Hoje auto-atualizando a cada
 - **Preparo:** o aviso "Amanhã:" do Hoje inclui as reuniões em que a pessoa está convocada e quantos assuntos dela estão na pauta.
 - Tudo sem biblioteca (barras em CSS), com o "i" (fórmula · dados · números · para que serve) e clique que abre a lista. 0 erros de console nos 3 perfis. Resumo por WhatsApp ao encerrar já existia (Fechamento).
 - **Não feito, declarado:** modo condução no celular e pauta com convocações sem resposta (próxima rodada).
+
+- **17/09 12h30 — melhoria 8 (a última do desafio):** Performance e Inteligência sem a barra de "lentes". `lentes.js` ganhou o modo `semBarra`: a tela mostra numa rolagem só todos os blocos das lentes que o perfil tem (membro: eu faço + números; líder/gestor: as três), na ordem do DOM; a barra some. Testado: Performance líder 6/6 blocos, Inteligência gestor 14/14, 0 erros. Service worker conferido: rede primeiro, sem risco de versão velha em produção.

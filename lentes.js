@@ -169,6 +169,7 @@
     Array.prototype.forEach.call(nodes, function (el) {
       var tags = ' ' + String(el.getAttribute('data-lente') || '') + ' ';
       var mostra = tags.indexOf(' ' + id + ' ') !== -1;
+      if (CURRENT && CURRENT.opts && CURRENT.opts.semBarra) { mostra = false; for (var li = 0; li < CURRENT.set.length; li++) { if (tags.indexOf(' ' + CURRENT.set[li] + ' ') !== -1) { mostra = true; break; } } }
       /* preserva display inline original (ex.: flex) — cacheado no 1º toque */
       if (el.__glenDisp === undefined) {
         el.__glenDisp = (el.style.display && el.style.display !== 'none') ? el.style.display : '';
@@ -213,6 +214,7 @@
     var wrap = document.createElement('div');
     wrap.className = 'glen-wrap';
     wrap.id = 'gera-lentes';
+    if (opts.semBarra) { wrap.style.display = 'none'; } /* sem barra: nada para escolher — tudo do perfil aparece */
 
     /* legenda de 1 linha (ensina o código de cor) */
     var leg = document.createElement('div');

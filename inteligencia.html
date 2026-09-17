@@ -1791,7 +1791,7 @@
     /* R3 · Bloco 1: barra das 3 lentes (motor em lentes.js). Padrão desta
        tela = OS NÚMEROS ("Como vai?" é a pergunta-mãe da Inteligência). */
     if (window.GrautLentes) {
-      GrautLentes.mount({ tela: 'inteligencia', user: USER, padrao: 'numeros',
+      GrautLentes.mount({ tela: 'inteligencia', semBarra: true, user: USER, padrao: 'numeros',
         before: document.getElementById('pf-stamp'),
         onChange: function () { if (MODELO) { paint(MODELO); } } });
     }

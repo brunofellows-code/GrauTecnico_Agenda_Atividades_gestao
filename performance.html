@@ -1063,7 +1063,7 @@
     /* R3 · Bloco 1: barra das 3 lentes (motor em lentes.js). Padrão desta
        tela = EU COBRO (pessoa a pessoa é a razão de ser da Performance). */
     if (window.GrautLentes) {
-      GrautLentes.mount({ tela: 'performance', user: USER, padrao: 'eucobro',
+      GrautLentes.mount({ tela: 'performance', semBarra: true, user: USER, padrao: 'eucobro',
         before: document.getElementById('pf-stamp'),
         onChange: function () { if (MODELO && PP) { render(); } } });
     }
