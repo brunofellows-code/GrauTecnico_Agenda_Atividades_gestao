@@ -140,6 +140,21 @@
 .pl-ped{background:var(--s1);border:1px solid var(--orange);border-radius:13px;padding:12px 16px;box-shadow:var(--shadowSoft);margin-bottom:var(--sp-4)}
 .pl-ped .t{font-size:var(--fs-base);font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px}
 
+/* detalhe do item (linha expandida) · indicador clicável */
+.pl-tbl th.chv,.pl-tbl td.chv{width:22px;padding-left:8px;padding-right:0}
+.pl-chev{border:0;background:transparent;color:var(--muted2);cursor:pointer;font-size:12px;line-height:1;padding:3px 4px;border-radius:5px;font-family:inherit}
+.pl-chev:hover{color:var(--text);background:var(--activeBg)}
+.pl-tbl tr.det td{background:var(--s2);padding:8px 14px 12px 36px;border-bottom:1px solid var(--border)}
+.pl-det{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:8px 16px}
+.pl-det .f{min-width:0}
+.pl-det .f.wide{grid-column:span 2}
+.pl-det .f label{display:block;font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);margin-bottom:2px}
+.pl-det .h{display:block;min-height:24px;border-radius:6px;padding:2px 6px;margin-left:-6px}
+.pl-det .h.ed{cursor:text} .pl-det .h.ed:hover{background:var(--activeBg)}
+.pl-det .h .v{max-width:none;white-space:normal}
+.pl-cov button.kp{font-family:inherit;font-size:inherit;background:transparent;cursor:pointer}
+.pl-cov button.kp:hover,.pl-cov .kp.on{border-style:solid;border-color:var(--brand);color:var(--text)}
+
 /* sugestões e estados */
 .pl-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap}
 .pl-item:first-of-type{border-top:0}
@@ -201,7 +216,7 @@
   (function () {
   'use strict';
   var R = window.GrautRecorrencia, M = window.PlanejamentoMotor;
-  var USER = null, SETORES = [], USERS = [], PLANOS = [], SUGS = null, SOLIC = [], OCC = {};
+  var USER = null, SETORES = [], USERS = [], PLANOS = [], SUGS = null, SOLIC = [], OCC = {}, ABERTOS = {}, KPI_PENDENTE = null;
   var HOJE = null, COMPS = [], FOCO = null;          /* FOCO = { sig, comp } — plano aberto */
   var MODO_CHECKIN = false, EDITANDO = null;         /* EDITANDO = { itemId, campo } */
   var RISCO_SETOR_SIGLA = { 'Central Rel.': 'CRA', 'Pedagógico': 'PED', 'Gestor': 'GES', 'ADM/Fin': 'ADM', 'Agência': 'AGE', 'CSA': 'CSA' };
@@ -429,7 +444,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null }, base || {});
+    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null }, base || {});
   }
 
   /* ============================================================
@@ -462,8 +477,9 @@
       var cv = el('<div class="pl-cov"></div>');
       cv.appendChild(el('<span><b>' + cov.com + ' de ' + cov.total + '</b> indicadores do setor com item neste mês</span>'));
       cv.appendChild(infoBtn('Indicadores do setor', { formula: 'todo item aponta o indicador que ele move (coluna Indicador). Cobertura = indicadores do catálogo do setor com ao menos um item vivo no mês.', dados: 'kpis-setor.js (metas do checklist da Integrada e dos manuais) × itens do plano.', numeros: cov.com + ' com item · ' + cov.sem.length + ' sem item', serve: 'o plano nasce dos indicadores, não de uma lista de desejos: o que não tem item não vai mexer.' }));
-      cov.sem.slice(0, 6).forEach(function (k) { var kp = txt('span', 'kp', k.nome + (k.meta ? ' · ' + k.meta : '')); kp.title = 'Sem item neste mês'; cv.appendChild(kp); });
-      if (cov.sem.length > 6) { cv.appendChild(txt('span', '', '+ ' + (cov.sem.length - 6))); }
+      var lim = vivos(pl).length ? 6 : 12;
+      cov.sem.slice(0, lim).forEach(function (k) { var kp = txt(podeEd ? 'button' : 'span', 'kp' + (KPI_PENDENTE === k.chave ? ' on' : ''), k.nome + (k.meta ? ' · ' + k.meta : '')); if (podeEd) { kp.type = 'button'; kp.title = 'Criar um item para este indicador'; kp.addEventListener('click', function () { KPI_PENDENTE = KPI_PENDENTE === k.chave ? null : k.chave; render(); if (KPI_PENDENTE) { setTimeout(function () { var i0 = document.getElementById('pl-novo'); if (i0) { i0.focus(); } }, 30); } }); } else { kp.title = 'Sem item neste mês'; } cv.appendChild(kp); });
+      if (cov.sem.length > lim) { cv.appendChild(txt('span', '', '+ ' + (cov.sem.length - lim))); }
       card.appendChild(cv);
     }
 
@@ -482,7 +498,7 @@
     /* grade 5W2H */
     card.appendChild(secao('Plano de ação 5W2H', { formula: 'as colunas da planilha: O quê · Onde · Como · Quem · Quando (início) · Quanto (R$ previsto) · Prazo · Status. Clique numa célula para editar; Enter salva, Esc cancela. Concluir pede relato de 60+ e evidência; Não feito pede o motivo.', dados: 'planejamentos.itens[] — gravado inteiro com trava: se outra pessoa salvou antes, nada seu é gravado e você é avisado.', serve: 'um plano por setor, subsetores como seções, editável no lugar.' }, r.n));
     var wrap = el('<div class="pl-tblwrap" tabindex="0" role="region" aria-label="Plano de ação de ' + sig + '"></div>');
-    var tb = el('<table class="pl-tbl"><thead><tr><th>O quê</th><th>Indicador</th><th>Quem</th><th>Com quem</th><th>Prazo</th><th>Status</th><th>Semana</th><th>Como</th><th>Onde</th><th>Quando</th><th>Quanto</th><th></th></tr></thead></table>');
+    var tb = el('<table class="pl-tbl"><thead><tr><th class="chv"></th><th>O quê</th><th>Indicador</th><th>Quem</th><th>Setor convidado</th><th>Prazo</th><th>Custo</th><th>Status</th><th>Semana</th><th></th></tr></thead></table>');
     var tbody = document.createElement('tbody');
     var grupos = [{ sig: null, nome: nomeSetor(sig) }].concat(subsDe(sig).map(function (s) { return { sig: s.sigla, nome: s.nome || s.sigla }; }));
     var itens = vivos(pl).slice().sort(function (a, b) { return (a.quandoPrevisto || '9999').localeCompare(b.quandoPrevisto || '9999'); });
@@ -490,10 +506,10 @@
     grupos.forEach(function (gp) {
       var doGrupo = itens.filter(function (i) { return (i.subsetorSigla || null) === gp.sig || (gp.sig === null && orfaos.indexOf(i) >= 0); });
       if (gp.sig !== null && !doGrupo.length) { return; }
-      if (grupos.length > 1) { var hr = el('<tr class="sub-h"><td colspan="12"></td></tr>'); hr.firstChild.textContent = gp.nome + (gp.sig ? ' · subsetor' : ''); tbody.appendChild(hr); }
+      if (grupos.length > 1) { var hr = el('<tr class="sub-h"><td colspan="10"></td></tr>'); hr.firstChild.textContent = gp.nome + (gp.sig ? ' · subsetor' : ''); tbody.appendChild(hr); }
       doGrupo.forEach(function (it) { tbody.appendChild(linhaItem(pl, it, podeEd)); });
     });
-    if (!itens.length) { var tr0 = el('<tr><td colspan="12"></td></tr>'); tr0.firstChild.appendChild(txt('span', 'v vazio', 'Nenhum item ainda — comece pela linha abaixo.')); tbody.appendChild(tr0); }
+    if (!itens.length) { var tr0 = el('<tr><td colspan="10"></td></tr>'); tr0.firstChild.appendChild(txt('span', 'v vazio', podeEd ? 'Nenhum item ainda — clique num indicador do setor (acima) e escreva o que vai ser feito, ou use a linha abaixo.' : 'Nenhum item ainda — o líder monta o plano.')); tbody.appendChild(tr0); }
     if (podeEd) { tbody.appendChild(linhaAdicionar(pl, grupos)); }
     tb.appendChild(tbody); wrap.appendChild(tb); card.appendChild(wrap);
     if (r.n > M.TETO_ITENS_SEM_AVISO) { var av = txt('div', 'pl-info-v', M.avisoExcesso(r.n)); av.style.cssText = 'color:var(--bandaAlta,var(--orange));font-size:var(--fs-xs);margin-top:8px'; card.appendChild(av); }
@@ -601,11 +617,13 @@
     var st = statusItem(it), tr = el('<tr' + (st !== 'aberto' ? ' class="done"' : (it.quemUid === USER.uid ? ' class="mine"' : '')) + '></tr>');
     var editavel = podeEd && st === 'aberto';
     /* ação primeiro (Asana/Linear): o quê · indicador · quem · com quem · prazo · status · semana; detalhe (como · onde · quando · quanto) à direita */
+    var tdC = document.createElement('td'); tdC.className = 'chv'; var chev = el('<button type="button" class="pl-chev" aria-label="Detalhes do item" aria-expanded="' + (ABERTOS[it.id] ? 'true' : 'false') + '">' + (ABERTOS[it.id] ? '▾' : '▸') + '</button>'); chev.addEventListener('click', function () { ABERTOS[it.id] = !ABERTOS[it.id]; render(); }); tdC.appendChild(chev); tr.appendChild(tdC);
     tr.appendChild(celula(pl, it, 'oque', 'texto', editavel));
     tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
     tr.appendChild(celula(pl, it, 'quemUid', 'quem', editavel));
     tr.appendChild(celulaParceiros(pl, it, editavel));
     tr.appendChild(celula(pl, it, 'quandoPrevisto', 'data', editavel));
+    tr.appendChild(celulaCusto(pl, it, editavel));
     /* status */
     var tdS = document.createElement('td'); tdS.className = 'num';
     if (st === 'concluido') { var dd = it.quandoRealizado && it.quandoPrevisto ? R.diasEntre(it.quandoPrevisto, it.quandoRealizado) : 0; var ps = pill('✓ ' + fmtBR(it.quandoRealizado) + (dd > 0 ? ' · +' + dd + 'd' : ''), dd > 0 ? 'warn' : 'ok'); ps.title = it.relato || ''; tdS.appendChild(ps); if (it.verificadoPor) { var pv = pill('verificado por ' + primeiroNome(it.verificadoPor.nome), 'ok'); tdS.appendChild(pv); } }
@@ -625,20 +643,41 @@
     tr.appendChild(tdS);
     /* farol da semana */
     var tdF = document.createElement('td'); var ult = M.ultimoAcompanhamento(it); var fa = el('<span class="pl-farol"><i class="' + (ult ? ult.farol : '') + '"></i></span>'); fa.appendChild(document.createTextNode(ult ? ('W' + Object.keys(it.acompanhamentos || {}).sort().pop().slice(6)) : '—')); if (ult) { fa.title = ult.fez + (ult.motivo ? ' · ' + motivoLabel(ult.motivo) : ''); } tdF.appendChild(fa); tr.appendChild(tdF);
-    /* detalhe */
-    tr.appendChild(celula(pl, it, 'como', 'texto', editavel));
-    tr.appendChild(celula(pl, it, 'onde', 'texto', editavel));
-    tr.appendChild(celula(pl, it, 'inicio', 'data', editavel));
-    tr.appendChild(celula(pl, it, 'valorPrevistoCentavos', 'brl', editavel));
     /* remover */
     var tdX = document.createElement('td');
     if (podeEd && st === 'aberto') { var x = el('<button type="button" class="pl-x" title="Remover item" aria-label="Remover item">×</button>'); x.addEventListener('click', function () { if (!window.confirm('Remover "' + it.oque + '" do plano?')) { return; } var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { removido: true }) : o; }); salvarItens(pl, lista, 'planejamento_item_removido', { itemId: it.id }).then(function () { render(); }).catch(function (e) { toast(e.message, 'err'); }); }); tdX.appendChild(x); }
     tr.appendChild(tdX);
-    return tr;
+    if (!ABERTOS[it.id]) { return tr; }
+    var frag = document.createDocumentFragment(); frag.appendChild(tr); frag.appendChild(linhaDetalhe(pl, it, editavel, podeEd)); return frag;
+  }
+  /* custo: previsto (editável, alçada > R$ 200) e, depois de concluído, previsto → realizado */
+  function celulaCusto(pl, it, editavel) {
+    if (it.valorFinalCentavos != null) { var td = document.createElement('td'); td.className = 'num'; var sp = txt('span', 'v', fmtBRL(it.valorPrevistoCentavos) + ' → ' + fmtBRL(it.valorFinalCentavos)); sp.title = 'previsto → realizado'; td.appendChild(sp); return td; }
+    return celula(pl, it, 'valorPrevistoCentavos', 'brl', editavel);
+  }
+  /* linha de detalhe (▸): como · onde · turmas · com quem · início · custo · realizado em · custo realizado · observações · relato */
+  function campoDet(pl, it, campo, tipo, editavel, label, cls) {
+    var f = el('<div class="f' + (cls ? ' ' + cls : '') + '"></div>'); f.appendChild(txt('label', '', label));
+    var h = el('<div class="h"></div>'); celula(pl, it, campo, tipo, editavel, h); f.appendChild(h); return f;
+  }
+  function linhaDetalhe(pl, it, editavel, podeEd) {
+    var tr = el('<tr class="det"><td colspan="10"></td></tr>'), g = el('<div class="pl-det"></div>'), fechado = statusItem(it) !== 'aberto';
+    g.appendChild(campoDet(pl, it, 'como', 'texto', editavel, 'Como'));
+    g.appendChild(campoDet(pl, it, 'onde', 'texto', editavel, 'Onde'));
+    g.appendChild(campoDet(pl, it, 'turmas', 'texto', editavel, 'Turmas'));
+    g.appendChild(campoDet(pl, it, 'comQuem', 'texto', editavel, 'Com quem (pessoas)'));
+    g.appendChild(campoDet(pl, it, 'inicio', 'data', editavel, 'Início previsto'));
+    g.appendChild(campoDet(pl, it, 'valorPrevistoCentavos', 'brl', editavel, 'Custo previsto'));
+    g.appendChild(campoDet(pl, it, 'quandoRealizado', 'data', podeEd && fechado, 'Realizado em'));
+    g.appendChild(campoDet(pl, it, 'valorFinalCentavos', 'brl', podeEd && fechado, 'Custo realizado'));
+    g.appendChild(campoDet(pl, it, 'obs', 'texto', editavel || (podeEd && fechado), 'Observações', 'wide'));
+    if (it.relato) { var fr = el('<div class="f wide"></div>'); fr.appendChild(txt('label', '', 'Relato do fechamento' + (it.evidencia ? ' · evidência: ' + it.evidencia : ''))); var hv = el('<div class="h"></div>'); hv.appendChild(txt('span', 'v', it.relato)); fr.appendChild(hv); g.appendChild(fr); }
+    else if (it.motivoDetalhe) { var fm = el('<div class="f wide"></div>'); fm.appendChild(txt('label', '', 'Por que não foi feito')); var hm = el('<div class="h"></div>'); hm.appendChild(txt('span', 'v', it.motivoDetalhe)); fm.appendChild(hm); g.appendChild(fm); }
+    tr.firstChild.appendChild(g); return tr;
   }
   function motivoLabel(v) { for (var i = 0; i < MOTIVOS.length; i++) { if (MOTIVOS[i][0] === v) { return MOTIVOS[i][1]; } } return v || 'sem motivo'; }
-  function celula(pl, it, campo, tipo, editavel) {
-    var td = document.createElement('td'); if (tipo === 'data' || tipo === 'brl') { td.className = 'num'; }
+  function celula(pl, it, campo, tipo, editavel, host) {
+    var td = host || document.createElement('td'); if (!host && (tipo === 'data' || tipo === 'brl')) { td.className = 'num'; }
     var val = it[campo];
     var mostra = tipo === 'quem' ? (it.quemNome || nomeUser(it.quemUid) || '') : tipo === 'kpi' ? (val ? kpiNome(val) : '') : tipo === 'data' ? (val ? fmtBR(val) : '') : tipo === 'brl' ? fmtBRL(val) : (val || '');
     var v = txt('span', 'v' + (mostra ? '' : ' vazio'), mostra || (campo === 'oque' ? 'sem título' : '—')); v.title = mostra; td.appendChild(v);
@@ -679,18 +718,19 @@
   }
   function linhaAdicionar(pl, grupos) {
     var tr = el('<tr class="add"></tr>');
-    var td1 = document.createElement('td'); td1.colSpan = 6;
-    var inp = el('<input type="text" placeholder="＋ Novo item: o que vai ser feito? (Enter salva; quem = líder, prazo = fim do mês)" aria-label="Novo item">'); td1.appendChild(inp); tr.appendChild(td1);
-    var td2 = document.createElement('td'); td2.colSpan = 5;
+    var td1 = document.createElement('td'); td1.colSpan = 5;
+    var kpP = KPI_PENDENTE ? kpiNome(KPI_PENDENTE) : '';
+    var inp = el('<input type="text" id="pl-novo" aria-label="Novo item">'); inp.placeholder = kpP ? '＋ O que vai ser feito para mover "' + kpP + '"? (Enter salva)' : '＋ Novo item: o que vai ser feito? (Enter salva; quem = líder, prazo = fim do mês)'; if (kpP) { inp.style.borderColor = 'var(--brand)'; } td1.appendChild(inp); tr.appendChild(td1);
+    var td2 = document.createElement('td'); td2.colSpan = 4;
     var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Seção');
     grupos.forEach(function (g) { var o = document.createElement('option'); o.value = g.sig || ''; o.textContent = g.sig ? (g.nome + ' (subsetor)') : g.nome; sel.appendChild(o); });
     if (grupos.length > 1) { td2.appendChild(sel); }
     var b = btn('Adicionar', 'p sm', function () {
       var t = inp.value.trim(); if (t.length < 3) { toast('Escreva o que vai ser feito.', 'err'); inp.focus(); return; }
       var lid = liderDe(pl.setorSigla);
-      var novo = novoItem({ oque: t, quemUid: lid ? lid.uid : USER.uid, quemNome: lid ? lid.nome : (USER.name || USER.nome || ''), quandoPrevisto: ultimoDia(pl.competencia), subsetorSigla: sel.value || null });
+      var novo = novoItem({ oque: t, quemUid: lid ? lid.uid : USER.uid, quemNome: lid ? lid.nome : (USER.name || USER.nome || ''), quandoPrevisto: ultimoDia(pl.competencia), subsetorSigla: sel.value || null, indicador: KPI_PENDENTE || null });
       var v = M.validarItem({ oque: novo.oque, quemUid: novo.quemUid, quando: novo.quandoPrevisto }); if (!v.ok) { toast(v.erros[0], 'err'); return; }
-      salvarItens(pl, (pl.itens || []).concat([novo]), 'planejamento_item_add', { oque: t }).then(function () { toast('Item adicionado. Clique nas células para completar.'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+      salvarItens(pl, (pl.itens || []).concat([novo]), 'planejamento_item_add', { oque: t }).then(function () { KPI_PENDENTE = null; ABERTOS[novo.id] = true; toast('Item adicionado — complete quem, prazo e os detalhes (turmas, onde, custo).'); render(); }).catch(function (e) { toast(e.message, 'err'); });
     });
     b.style.marginLeft = '8px'; td2.appendChild(b); tr.appendChild(td2);
     var tdX = document.createElement('td'); tr.appendChild(tdX);
@@ -812,8 +852,9 @@
     document.getElementById('pl-mav').appendChild(UI.avatar({ initials: USER.initials, size: 40 }));
     setState('Carregando o planejamento…', 'Lendo setores, pessoas e planos.');
     reload().then(function () {
-      var m = String(location.search || '').match(/[?&]setor=([A-Z0-9]+)/i); var ms = minhaSigla();
-      if (m && planoDe(m[1].toUpperCase(), COMPS[1])) { FOCO = { sig: m[1].toUpperCase(), comp: COMPS[1] }; }
+      var qs = String(location.search || ''), m = qs.match(/[?&]setor=([A-Z0-9]+)/i), mc = qs.match(/[?&]comp=(\d{4}-\d{2})/), mi = qs.match(/[?&]item=([A-Za-z0-9_-]+)/); var ms = minhaSigla();
+      var compQ = mc && COMPS.indexOf(mc[1]) >= 0 ? mc[1] : COMPS[1];
+      if (m && planoDe(m[1].toUpperCase(), compQ)) { FOCO = { sig: m[1].toUpperCase(), comp: compQ }; if (mi) { ABERTOS[mi[1]] = true; } }
       else if (ms) { FOCO = { sig: ms, comp: COMPS[1] }; }
       render();
     }).catch(function (e) { setState('Não consegui carregar o planejamento.', (e && e.message) || 'Erro ao ler o banco.'); });
