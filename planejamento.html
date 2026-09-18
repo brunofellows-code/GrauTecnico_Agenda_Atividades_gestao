@@ -177,7 +177,7 @@
 @media (min-width:901px){html body .pl-dev{display:none}}
 @media (max-width:1100px){.pl-kpis{grid-template-columns:1fr 1fr}.pl-cta{grid-column:span 2}.pl-ck{grid-template-columns:1fr 1fr}}
 @media (max-width:900px){
-  .pl-app>.ui-side{display:none}.pl-top{display:none}.pl-mhead{display:flex}
+  .pl-app>.ui-side{display:none}.pl-top{display:block;position:static;padding:0;border-bottom:0;background:transparent}.pl-top>div:first-child{display:none}.pl-topactions{padding:10px 16px 0;justify-content:flex-start;flex-wrap:wrap}.pl-topactions:empty{display:none;padding:0}.pl-mhead{display:flex}
   .pl-wrap{padding:var(--sp-4) var(--sp-4) 110px}
   .pl-gr{grid-template-columns:110px repeat(3,1fr)}.pl-gr .rz small{display:none}.pl-cell{padding:6px}.pl-cell .b{display:none}
   .pl-week{grid-template-columns:repeat(2,1fr)}
@@ -462,7 +462,7 @@
     var pode = M.podeAbrir(HOJE, ehGestor());
     /* 17/09 (Bruno): o plano do mês seguinte fica SEMPRE aberto para criar; a janela 25–28 só marca foraDaJanela no registro */
     function criar(itens) {
-      Store.criarPlanejamento({ setorSigla: sig, competencia: comp, itens: itens, entregueEm: null, aprovGestor: null, aprovSocio: null, dispensas: [], foraDaJanela: pode.forcado || false })
+      Store.criarPlanejamento({ setorSigla: sig, competencia: comp, itens: itens, entregueEm: null, dispensas: [], foraDaJanela: pode.forcado || false })
         .then(function () { toast('Plano de ' + sig + ' · ' + compLabel(comp) + ' criado — clique num indicador ou escreva o primeiro item logo abaixo.'); return reload(); })
         .then(function () { FOCO = { sig: sig, comp: comp }; MODO_CHECKIN = false; render(); setTimeout(function () { var a = document.getElementById('pl-plano'); if (a) { a.scrollIntoView({ behavior: 'smooth', block: 'start' }); } var i0 = document.getElementById('pl-novo'); if (i0) { try { i0.focus({ preventScroll: true }); } catch (e0) { i0.focus(); } } }, 120); })
         .catch(function (e) { toast(e.message, 'err'); });
@@ -738,7 +738,7 @@
       if (i >= comps.length) { return Promise.resolve(); }
       var comp = comps[i];
       return Store.buscarPlano(pl.setorSigla, comp)
-        .then(function (plM) { if (plM) { return plM; } return Store.criarPlanejamento({ setorSigla: pl.setorSigla, competencia: comp, itens: [], entregueEm: null, aprovGestor: null, aprovSocio: null, dispensas: [], foraDaJanela: false }).then(function () { return Store.buscarPlano(pl.setorSigla, comp); }); })
+        .then(function (plM) { if (plM) { return plM; } return Store.criarPlanejamento({ setorSigla: pl.setorSigla, competencia: comp, itens: [], entregueEm: null, dispensas: [], foraDaJanela: false }).then(function () { return Store.buscarPlano(pl.setorSigla, comp); }); })
         .then(function (plM) {
           if (!plM) { throw new Error('Não consegui abrir o plano de ' + compLabel(comp) + '.'); }
           var ja = (plM.itens || []).some(function (o) { return o && !o.removido && o.origemRecorrencia && o.origemRecorrencia.itemId === it.id; });
