@@ -281,6 +281,14 @@
   function CAN_WRITE() { var p = (USER && USER.profile) || ''; return p === 'Admin' || p === 'Editor'; }
   function ehGestor() { return !!(Guard.isGestor && Guard.isGestor()); }
   function motorTem(n) { return !!(M && typeof M[n] === 'function'); }
+  /* 18/09 · a pauta que chega ANTES (padrão Fellow): o convocado lê o que será tratado na véspera,
+     chega decidido e a reunião começa do assunto, não do 'sobre o que era mesmo'. Abre o WhatsApp
+     com a pauta pronta; sem lista de telefone, quem manda escolhe o grupo. */
+  function enviarPauta(r) {
+    var t = textoPauta(r);
+    try { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); toast('WhatsApp aberto com a pauta — escolha o grupo ou a pessoa.'); }
+    catch (e) { copiarTexto(t, 'Não consegui abrir o WhatsApp; a pauta foi copiada.'); }
+  }
   function copiarTexto(texto, okMsg) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(texto); }
@@ -526,6 +534,7 @@
       ac.appendChild(btn(CAN_WRITE() ? (emAndamento(prox) ? 'Continuar ▶' : 'Conduzir ▶') : 'Abrir', 'p', function () { abrir(prox.id); }));
       if ((prox.convocadosUids || []).indexOf(USER.uid) >= 0 && motorTem('statusConvite') && M.statusConvite(prox, USER.uid) === 'sem_resposta') { ac.appendChild(btn('Vou', 'ok', function () { confirmarPresenca(prox); })); }
       ac.appendChild(btn('Copiar pauta', '', function () { copiarTexto(textoPauta(prox), 'Pauta copiada.'); }));
+      ac.appendChild(btn('Enviar pauta', '', function () { enviarPauta(prox); }));
       h.appendChild(ac); body.appendChild(h);
     } else { body.appendChild(vazio('Nenhuma reunião agendada', CAN_WRITE() ? 'Crie a próxima na linha acima — o tipo já convoca quem deve.' : 'Quando alguém convocar você, a reunião aparece aqui.')); }
     if (semAta.length) {
@@ -696,6 +705,7 @@
       }));
     }
     acts.appendChild(btn('Copiar pauta', '', function () { copiarTexto(textoPauta(r), 'Pauta copiada.'); }));
+    acts.appendChild(btn('Enviar pauta', '', function () { enviarPauta(r); }));
     if (r.encerradaEm) { acts.appendChild(btn('Copiar ata', '', function () { copiarTexto(r.resumoTexto || textoAta(r), 'Ata copiada.'); })); }
     if (r.encerradaEm && ehGestor()) { acts.appendChild(btn('Reabrir', '', function () { var agR = Date.now(); Store.atualizarReuniao(r.id, { encerradaEm: null, reabertaEm: agR }, 'reuniao_reaberta').then(function () { r.encerradaEm = null; r.reabertaEm = agR; toast('Reunião reaberta.'); renderReuniao(); }).catch(function (e) { toast(e.message, 'err'); }); })); }
 

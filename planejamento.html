@@ -153,6 +153,23 @@
 .pl-det .f label{display:block;font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accentText);margin-bottom:2px}
 .pl-det .h{display:block;min-height:24px;border-radius:6px;padding:2px 6px;margin-left:-6px}
 .pl-det .h.ed{cursor:text} .pl-det .h.ed:hover{background:var(--activeBg)}
+/* 18/09 · MARCOS do item (padrão Ninety/Rocks): item grande quebrado em etapas com data própria.
+   O item continua sendo a unidade de cobrança; o marco é o sinal de que está andando ou parou. */
+.pl-mk{display:flex;flex-direction:column;gap:4px;margin-top:2px}
+.pl-mk-l{display:flex;align-items:center;gap:7px;min-width:0}
+.pl-mk-c{flex:none;width:15px;height:15px;border-radius:4px;border:1.5px solid var(--border);background:var(--s2);cursor:pointer;padding:0;font-size:10px;line-height:1;color:var(--ctaText);display:flex;align-items:center;justify-content:center}
+.pl-mk-c.on{background:var(--cta);border-color:var(--cta)}
+.pl-mk-c:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.pl-mk-t{flex:1;min-width:0;font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-mk-l.ok .pl-mk-t{color:var(--muted);text-decoration:line-through}
+.pl-mk-d{flex:none;font-size:var(--fs-xs);font-weight:700;color:var(--muted2Text,var(--muted2))}
+.pl-mk-d.late{color:var(--redText,var(--red))}
+.pl-mk-x{flex:none;background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:0 2px}
+.pl-mk-add{display:flex;gap:6px;align-items:center;margin-top:2px}
+.pl-mk-add input[type=text]{flex:1;min-width:0}
+.pl-mk-add input{font:inherit;font-size:var(--fs-sm);background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:4px 7px}
+.pl-mk-add input:focus{outline:none;border-color:var(--brand)}
+.pl-mk-vazio{font-size:var(--fs-xs);color:var(--muted2Text,var(--muted2))}
 .pl-det .h .v{max-width:none;white-space:normal}
 .pl-cov button.kp{font-family:inherit;font-size:inherit;background:transparent;cursor:pointer}
 .pl-cov button.kp:hover,.pl-cov .kp.on{border-style:solid;border-color:var(--brand);color:var(--text)}
@@ -473,7 +490,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null, indicador: o.indicador || null, turmas: o.turmas || null, comQuem: o.comQuem || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null, repetir: null, origemRecorrencia: null }, base || {});
+    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, marcos: [], indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null, repetir: null, origemRecorrencia: null }, base || {});
   }
 
   /* ============================================================
@@ -648,6 +665,7 @@
     /* ação primeiro (Asana/Linear): o quê · indicador · quem · com quem · prazo · status · semana; detalhe (como · onde · quando · quanto) à direita */
     var tdC = document.createElement('td'); tdC.className = 'chv'; var chev = el('<button type="button" class="pl-chev" aria-label="Detalhes do item" aria-expanded="' + (ABERTOS[it.id] ? 'true' : 'false') + '">' + (ABERTOS[it.id] ? '▾' : '▸') + '</button>'); chev.addEventListener('click', function () { ABERTOS[it.id] = !ABERTOS[it.id]; render(); }); tdC.appendChild(chev); tr.appendChild(tdC);
     var tdO = celula(pl, it, 'oque', 'texto', editavel); if (it.repetir && it.repetir.ate) { var pr = pill('↻ até ' + compLabel(it.repetir.ate), ''); pr.style.marginTop = '3px'; tdO.appendChild(pr); } else if (it.origemRecorrencia) { var pr2 = pill('↻ recorrente', ''); pr2.title = 'Copiado do plano de ' + compLabel(it.origemRecorrencia.competencia); pr2.style.marginTop = '3px'; tdO.appendChild(pr2); }
+    var rmk = resumoMarcos(it); if (rmk.total) { var pm = pill('▪ ' + rmk.feitos + '/' + rmk.total + ' etapas', rmk.feitos === rmk.total ? 'ok' : (rmk.atrasados ? 'bad' : '')); pm.title = rmk.atrasados ? rmk.atrasados + ' etapa(s) com prazo vencido' : (rmk.feitos === rmk.total ? 'Todas as etapas feitas' : 'Etapas feitas de etapas planejadas'); pm.style.marginTop = '3px'; tdO.appendChild(pm); }
     if (it.divulgar) { var pd = pill('📣 ' + (it.divulgar === 'unidade' ? 'agenda da unidade' : 'agenda do setor'), 'ok'); pd.title = it.divulgar === 'unidade' ? 'Na agenda da unidade — todos veem no dia' : 'Na agenda do setor — a equipe e os convidados veem no dia'; pd.style.marginTop = '3px'; tdO.appendChild(pd); } tr.appendChild(tdO);
     tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
     tr.appendChild(celula(pl, it, 'quemUid', 'quem', editavel));
@@ -690,6 +708,70 @@
     var f = el('<div class="f' + (cls ? ' ' + cls : '') + '"></div>'); f.appendChild(txt('label', '', label));
     var h = el('<div class="h"></div>'); celula(pl, it, campo, tipo, editavel, h); f.appendChild(h); return f;
   }
+  /* ---------- MARCOS (etapas do item) ----------
+     Regra do banco: marcos vivem DENTRO de `itens`, então gravam pelo mesmo caminho já liberado
+     (planoSoConteudo → 'itens'). Nada de coleção nova, nada de regra nova. */
+  function marcosDe(it) { return Object.prototype.toString.call(it && it.marcos) === '[object Array]' ? it.marcos : []; }
+  function resumoMarcos(it) {
+    var ms = marcosDe(it), feitos = 0, atrasados = 0;
+    ms.forEach(function (m) {
+      if (m && m.feito) { feitos++; return; }
+      if (m && m.data && R.compareISO(m.data, HOJE) < 0) { atrasados++; }
+    });
+    return { total: ms.length, feitos: feitos, atrasados: atrasados };
+  }
+  function gravarMarcos(pl, it, ms, acao) {
+    var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, { marcos: ms }) : o; });
+    return salvarItens(pl, lista, acao || 'planejamento_marcos', { itemId: it.id })
+      .then(function () { it.marcos = ms; render(); })
+      .catch(function (e) { toast(e.message, 'err'); });
+  }
+  function campoMarcos(pl, it, editavel) {
+    var f = el('<div class="f wide"></div>');
+    var r = resumoMarcos(it);
+    f.appendChild(txt('label', '', 'Etapas' + (r.total ? ' · ' + r.feitos + ' de ' + r.total : '')));
+    var cx = el('<div class="pl-mk"></div>');
+    marcosDe(it).forEach(function (m, i) {
+      var atrasado = !m.feito && m.data && R.compareISO(m.data, HOJE) < 0;
+      var l = el('<div class="pl-mk-l' + (m.feito ? ' ok' : '') + '"></div>');
+      var c = el('<button type="button" class="pl-mk-c' + (m.feito ? ' on' : '') + '"></button>');
+      c.textContent = m.feito ? '✓' : '';
+      c.setAttribute('aria-label', (m.feito ? 'Desmarcar etapa: ' : 'Marcar etapa como feita: ') + (m.texto || ''));
+      if (editavel) {
+        c.addEventListener('click', function () {
+          var ms = marcosDe(it).map(function (x, j) { return j === i ? Object.assign({}, x, { feito: !x.feito, feitoEm: !x.feito ? Date.now() : null }) : x; });
+          gravarMarcos(pl, it, ms, 'planejamento_marco_' + (m.feito ? 'reaberto' : 'feito'));
+        });
+      } else { c.disabled = true; }
+      l.appendChild(c);
+      var t = txt('span', 'pl-mk-t', m.texto || '(sem texto)'); t.title = m.texto || ''; l.appendChild(t);
+      if (m.data) { var d = txt('span', 'pl-mk-d' + (atrasado ? ' late' : ''), fmtBR(m.data)); d.title = atrasado ? 'Etapa venceu em ' + fmtBR(m.data) + ' e não foi marcada' : 'Prazo da etapa'; l.appendChild(d); }
+      if (editavel) {
+        var x = el('<button type="button" class="pl-mk-x" title="Tirar a etapa" aria-label="Tirar a etapa">×</button>');
+        x.addEventListener('click', function () { gravarMarcos(pl, it, marcosDe(it).filter(function (z, j) { return j !== i; }), 'planejamento_marco_removido'); });
+        l.appendChild(x);
+      }
+      cx.appendChild(l);
+    });
+    if (!marcosDe(it).length && !editavel) { cx.appendChild(txt('div', 'pl-mk-vazio', 'Sem etapas.')); }
+    if (editavel) {
+      var add = el('<div class="pl-mk-add"></div>');
+      var inp = el('<input type="text" maxlength="90" placeholder="Nova etapa — o que precisa estar pronto antes">');
+      inp.setAttribute('aria-label', 'Nova etapa do item');
+      var dt = el('<input type="date">'); dt.setAttribute('aria-label', 'Prazo da etapa');
+      var ok = btn('+', 'sm', function () {
+        var t2 = (inp.value || '').replace(/^\s+|\s+$/g, '');
+        if (!t2) { toast('Escreva o que é a etapa.', 'err'); inp.focus(); return; }
+        var ms = marcosDe(it).concat([{ id: novoId(), texto: t2, data: dt.value || null, feito: false, feitoEm: null }]);
+        ms.sort(function (a, b) { return String(a.data || '9999').localeCompare(String(b.data || '9999')); });
+        inp.value = ''; dt.value = '';
+        gravarMarcos(pl, it, ms, 'planejamento_marco_criado');
+      });
+      inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); ok.click(); } });
+      add.appendChild(inp); add.appendChild(dt); add.appendChild(ok); cx.appendChild(add);
+    }
+    f.appendChild(cx); return f;
+  }
   function linhaDetalhe(pl, it, editavel, podeEd) {
     var tr = el('<tr class="det"><td colspan="10"></td></tr>'), g = el('<div class="pl-det"></div>'), fechado = statusItem(it) !== 'aberto';
     g.appendChild(campoDet(pl, it, 'como', 'texto', editavel, 'Como'));
@@ -704,6 +786,7 @@
     g.appendChild(campoDet(pl, it, 'obs', 'texto', editavel || (podeEd && fechado), 'Observações', 'wide'));
     g.appendChild(campoDivulgar(pl, it, editavel));
     g.appendChild(campoRepetir(pl, it, editavel));
+    g.appendChild(campoMarcos(pl, it, editavel));
     if (it.relato) { var fr = el('<div class="f wide"></div>'); fr.appendChild(txt('label', '', 'Relato do fechamento' + (it.evidencia ? ' · evidência: ' + it.evidencia : ''))); var hv = el('<div class="h"></div>'); hv.appendChild(txt('span', 'v', it.relato)); fr.appendChild(hv); g.appendChild(fr); }
     else if (it.motivoDetalhe) { var fm = el('<div class="f wide"></div>'); fm.appendChild(txt('label', '', 'Por que não foi feito')); var hm = el('<div class="h"></div>'); hm.appendChild(txt('span', 'v', it.motivoDetalhe)); fm.appendChild(hm); g.appendChild(fm); }
     tr.firstChild.appendChild(g); return tr;

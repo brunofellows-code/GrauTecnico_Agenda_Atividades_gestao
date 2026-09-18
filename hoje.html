@@ -74,6 +74,20 @@
 .hj-stamp button:hover{color:var(--text)}
 .hj-stamp button:disabled{opacity:.6;cursor:default}
 .hj-stamp .velho{color:var(--bandaAlta,var(--amber));font-weight:700}
+/* 18/09 · FECHAR O DIA (ritual do Sunsama, 60 segundos): no fim do expediente a pessoa passa
+   uma vez pelo que ficou aberto e decide item a item — fiz, vai para amanhã, ou travei. O dia
+   nunca termina com pendência sem decisão, e o líder para de descobrir isso só na semana seguinte. */
+.hj-fechar{border:1px solid var(--brand);background:var(--activeBg);color:var(--accentText);font-family:inherit;font-weight:800;font-size:var(--fs-sm);padding:5px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.hj-fechar:hover{background:var(--s2)}
+.hj-fechar:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.hj-rit{display:flex;flex-direction:column;gap:9px}
+.hj-rit-i{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--border);border-radius:11px;padding:10px 12px;background:var(--s2)}
+.hj-rit-i .tt{flex:1;min-width:160px}
+.hj-rit-i .t{font-size:var(--fs-base);font-weight:700;line-height:1.25}
+.hj-rit-i .m{font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
+.hj-rit-b{display:flex;gap:6px;flex-wrap:wrap}
+.hj-rit-res{font-size:var(--fs-base);line-height:1.5}
+.hj-rit-res b{color:var(--greenText,var(--green))}
 
 /* 3) painel de números */
 .hj-kpis{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:var(--sp-3)}
@@ -935,6 +949,59 @@
     return f;
   }
 
+  /* ---------- FECHAR O DIA ---------- */
+  var RITUAL = false;   /* true enquanto a pessoa está no ritual: as ações fecham o painel e ele volta sozinho */
+  function abertasDoDia(d) {
+    return (d.comHora || []).concat(d.semHora || []).filter(function (o) {
+      return o.status !== 'concluida' && o.status !== 'pulada' && PODE_AGIR(o);
+    });
+  }
+  function fecharODia() {
+    if (!MODELO) { return; }
+    var hoje = MODELO.hoje, uid = CURRENT_USER.uid;
+    var pessoal = MODELO.board.filter(function (o) { return o.act && o.act.responsavelUid === uid; });
+    var d = derivar(pessoal, hoje), abertas = abertasDoDia(d);
+    var corpo = [];
+    var topo = el('<div class="hj-rit-res"></div>');
+    topo.innerHTML = 'Você fez <b>' + d.feitasHoje + '</b> de ' + d.doHoje.length + ' hoje.';
+    corpo.push(topo);
+    if (!abertas.length) {
+      corpo.push(txt('div', 'hj-info-v', d.doHoje.length ? 'Nada em aberto. Pode encerrar o dia tranquilo. 🎯' : 'Nada estava previsto para você hoje.'));
+    } else {
+      corpo.push(txt('div', 'hj-info-v', 'Decida cada uma em um clique. O que fica sem decisão amanhece atrasado.'));
+      var lista = el('<div class="hj-rit"></div>');
+      abertas.forEach(function (o) {
+        var row = el('<div class="hj-rit-i"></div>');
+        var tt = el('<div class="tt"></div>');
+        tt.appendChild(txt('div', 't', tituloDe(o)));
+        tt.appendChild(txt('div', 'm', metaDe(o.act) + (horarioDe(o) ? ' · hoje às ' + horarioDe(o) : '') + (estaTravada(o) ? ' · travada' : '')));
+        row.appendChild(tt);
+        var bs = el('<div class="hj-rit-b"></div>');
+        var g = el('<button type="button" class="hj-act go">✓ Fiz</button>');
+        g.addEventListener('click', function () { RITUAL = true; fecharModal(); concluir(o); });
+        var a = el('<button type="button" class="hj-act">» Amanhã</button>');
+        a.addEventListener('click', function () { RITUAL = true; fecharModal(); modalAdiar(o); });
+        var t2 = el('<button type="button" class="hj-act stop">⚑ Travei</button>');
+        t2.addEventListener('click', function () { RITUAL = true; fecharModal(); modalTravei(o); });
+        bs.appendChild(g); bs.appendChild(a); bs.appendChild(t2);
+        row.appendChild(bs); lista.appendChild(row);
+      });
+      corpo.push(lista);
+    }
+    UI.modal({
+      title: 'Fechar o dia · ' + fmtDiaBR(hoje), width: 560, body: corpo,
+      footer: function (close) {
+        MODAL_FECHAR_RIT = close;
+        return [UI.button({ label: abertas.length ? 'Deixar como está' : 'Encerrar o dia', icon: abertas.length ? '' : 'check', onClick: function () {
+          RITUAL = false; close();
+          if (!abertas.length && d.doHoje.length) { toast('Dia fechado! 🎯'); }
+        } })];
+      }
+    });
+  }
+  var MODAL_FECHAR_RIT = null;
+  function fecharModal() { if (MODAL_FECHAR_RIT) { try { MODAL_FECHAR_RIT(); } catch (e) { /* já fechado */ } MODAL_FECHAR_RIT = null; } }
+  function fmtDiaBR(iso) { var p = String(iso || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] : ''; }
   /* progresso do dia + sequência (gatilhos: "já fez X de Y", nunca "faltam") */
   function progresso(d, stk) {
     var p = el('<div class="hj-prog"></div>');
@@ -951,6 +1018,12 @@
     if (d.doHoje.length) { tx.appendChild(el('<span>Você já fez <b>' + d.feitasHoje + '</b> de ' + d.doHoje.length + ' hoje' + (msg ? ' · ' + msg : '') + '</span>')); }
     else { tx.textContent = msg; }
     p.appendChild(tx);
+    if (d.doHoje.length) {
+      var fb = el('<button type="button" class="hj-fechar">Fechar o dia</button>');
+      fb.title = 'Passe uma vez pelo que ficou aberto: fiz, vai para amanhã, ou travei. Leva um minuto.';
+      fb.addEventListener('click', fecharODia);
+      p.appendChild(fb);
+    }
     if (stk && stk.dias >= 1) { var f = txt('span', 'hj-fire', '🔥 ' + stk.dias + (stk.dias === 1 ? ' dia' : ' dias')); f.title = 'Dias seguidos com pelo menos 80% das suas atividades do dia concluídas. Dia sem nada previsto não quebra.'; p.appendChild(f); }
     else if (stk && stk.recorde >= 2) { var f2 = txt('span', 'hj-fire', 'recorde ' + stk.recorde + ' dias'); f2.style.color = 'var(--muted2Text,var(--muted2))'; p.appendChild(f2); }
     p.appendChild(infoHj('Progresso do dia', { formula: 'concluídas hoje ÷ previstas para hoje × 100. Sequência (🔥): dias seguidos com ≥ 80% das SUAS atividades do dia concluídas; dia sem nada previsto não quebra.',
@@ -1417,6 +1490,9 @@
     /* celebrações (1 toast por dia por sessão; nunca modal) */
     if (stk && stk.hojePrev > 0 && !stk.hojeFechado && (stk.hojeFeitas / stk.hojePrev) >= 0.8 && CELEB80 !== hoje) { CELEB80 = hoje; toast('80% do seu dia — sequência garantida. 🔥'); }
     if (stk && stk.hojeFechado && stk.hojePrev > 0 && CELEBRADO !== hoje) { CELEBRADO = hoje; toast('Dia fechado! 🎯' + (stk.dias >= 2 ? ' Sequência de ' + stk.dias + ' dias. 🔥' : '')); }
+
+    /* o ritual reabre sozinho depois de cada decisão, até não sobrar nada em aberto */
+    if (RITUAL) { setTimeout(function () { if (RITUAL) { fecharODia(); } }, 220); }
   }
 
   /* ---------- atualização automática, COM TETO DE CUSTO (auditoria 17/09) ----------
