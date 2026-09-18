@@ -530,11 +530,16 @@
     function perfilLegado(v) { return !!v && PERFIL_VALS.indexOf(v) < 0; }
     /* ao editar um doc legado, sugere o papel novo. Editor -> '' (o Gestor decide
        Gestor vs Líder). Admin -> gestor. Visualizador/Consultor -> usuario. */
+    /* 18/09 (BUG): a lista e o editor liam o perfil por caminhos DIFERENTES. A lista usa
+       L.perfilEfetivo (que sabe traduzir os legados 'Admin' e 'Editor'); o editor usava esta
+       função, que não conhecia 'Editor' e caía no vazio. Resultado: um cadastro aparecia
+       'Líder' na lista e abria como outra coisa no editor — e um simples Salvar REBAIXAVA a
+       pessoa e apagava os setores que ela lidera, sem avisar. Agora o editor abre pelo MESMO
+       cálculo da lista: uma fonte só de verdade. */
     function sugerePerfil(v) {
       if (PERFIL_VALS.indexOf(v) >= 0) { return v; }
-      if (v === 'Admin') { return 'gestor'; }
-      if (v === 'Visualizador' || v === 'Consultor Externo') { return 'usuario'; }
-      return '';
+      var ef = L.perfilEfetivo(v);
+      return PERFIL_VALS.indexOf(ef) >= 0 ? ef : '';
     }
     var RX_UID = /^[A-Za-z0-9_-]{6,128}$/;
     var RX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
