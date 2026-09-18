@@ -328,14 +328,14 @@
    categorias diferentes' e ainda brigariam com o verde/vermelho/âmbar, que no GERA significam
    ESTADO. Então: uma família só, quatro pesos, com os tokens que já existem — zero cor nova,
    zero par de contraste novo para manter. É o que Linear e Notion fazem com recorrência. */
-.et-rec,.at-recpill{border-radius:6px;padding:1px 7px}
-.et-rec.f-diario,.at-recpill.f-diario{background:var(--s3);color:var(--text);font-weight:800}
-.et-rec.f-semanal,.at-recpill.f-semanal{background:var(--chipBg);color:var(--text);font-weight:800}
-.et-rec.f-quinzenal,.at-recpill.f-quinzenal{background:var(--chipBg);color:var(--muted);font-weight:700}
+.et-rec,.at-recpill{border-radius:6px;padding:1px 7px;font-weight:800}
+.et-rec.f-diario,.at-recpill.f-diario{color:var(--freqDiaria);background:var(--freqDiariaBg)}
+.et-rec.f-semanal,.at-recpill.f-semanal{color:var(--freqSemanal);background:var(--freqSemanalBg)}
+.et-rec.f-quinzenal,.at-recpill.f-quinzenal{color:var(--freqQuinzenal);background:var(--freqQuinzenalBg)}
 .et-rec.f-mensal,.at-recpill.f-mensal,
 .et-rec.f-bimestral,.at-recpill.f-bimestral,
-.et-rec.f-trimestral,.at-recpill.f-trimestral{background:transparent;color:var(--muted2Text,var(--muted2));font-weight:700}
-.et-rec.f-unico,.at-recpill.f-unico{background:transparent;color:var(--muted2Text,var(--muted2));font-weight:700;font-style:italic}
+.et-rec.f-trimestral,.at-recpill.f-trimestral{color:var(--freqMensal);background:var(--freqMensalBg)}
+.et-rec.f-unico,.at-recpill.f-unico{color:var(--muted2Text,var(--muted2));background:transparent;font-weight:700;font-style:italic}
 /* barra de filtros do palco (classificação + "Só as minhas") */
 .at-fbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 12px}
 .at-fgroup{display:flex;align-items:center;flex-wrap:wrap;gap:6px}

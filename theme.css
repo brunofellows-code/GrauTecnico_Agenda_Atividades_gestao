@@ -400,6 +400,13 @@ body {
   --amberText:  #F59E0B;               /* 5,29:1 */
   --orangeText: #FB923C;               /* 5,48:1 */
   --doingText:  #38BDF8;               /* 5,17:1 */
+  /* FREQUÊNCIA (18/09): cores DECORATIVAS, de propósito fora do semáforo — verde, vermelho,
+     âmbar e o azul de 'em andamento' continuam significando ESTADO e não podem ser gastos aqui.
+     Cada frequência tem a letra e a tinta do MESMO tom, que é o que harmoniza sem poluir. */
+  --freqDiaria:    #C4B5FD; --freqDiariaBg:    rgba(167,139,250,.16);
+  --freqSemanal:   #67E8F9; --freqSemanalBg:   rgba(34,211,238,.14);
+  --freqQuinzenal: #A5B4FC; --freqQuinzenalBg: rgba(129,140,248,.16);
+  --freqMensal:    #CBD5E1; --freqMensalBg:    rgba(148,163,184,.14);
 }
 [data-theme="light"] {
   --brand:      #16A34A;
@@ -413,6 +420,10 @@ body {
   --amberText:  #92400E;               /* 5,22:1 */
   --orangeText: #9A3412;               /* 5,19:1 */
   --doingText:  #075985;               /* 5,33:1 */
+  --freqDiaria:    #6D28D9; --freqDiariaBg:    rgba(124,58,237,.10);
+  --freqSemanal:   #155E75; --freqSemanalBg:   rgba(8,145,178,.10);
+  --freqQuinzenal: #4338CA; --freqQuinzenalBg: rgba(79,70,229,.10);
+  --freqMensal:    #475569; --freqMensalBg:    rgba(71,85,105,.10);
   /* cor do SETOR como letra sobre a própria tinta (10%): 6 das 8 ficavam abaixo de 4,5:1 no claro */
   --setor1Text: #6D28D9; --setor2Text: #1D4ED8; --setor3Text: #155E75; --setor4Text: #475569;
   --setor5Text: #9D174D; --setor6Text: #4338CA; --setor7Text: #854D0E; --setor8Text: #115E59;
