@@ -56,12 +56,12 @@ ok(p.andamento === 1, 'Em andamento = 1 (d4) → ' + p.andamento);
 ok(p.planejadas === 2, 'Planejadas = 2 (d5 + d7) → ' + p.planejadas);
 ok(p.vencidas === 1, 'Vencidas = 1 (d6) → ' + p.vencidas);
 ok(p.venceHoje === 1, 'Vence hoje = 1 (d7) → ' + p.venceHoje);
-ok(p.realizadas + p.andamento + p.planejadas + p.vencidas === p.total, 'baldes exclusivos somam o total');
+ok(p.realizadas + p.andamento + p.planejadas + p.vencidas + p.indisponiveis === p.total, 'baldes exclusivos somam o total (R7·B1.4: inclui indisponíveis)');
 ok(K.placarReuniao([], getOcc, H) === null, 'sem decisões → null (placar não pinta)');
 ok(K.placarReuniao(null, getOcc, H) === null, 'null-safe');
-/* decisão com atividade e SEM occ no board (janela) → aberta/planejada, nunca inventa */
+/* decisão com atividade e SEM occ no board (janela) → indisponível, nunca inventa (R7·B1.4) */
 var p2 = K.placarReuniao([{ texto: 'x', atividadeId: 'fora-da-janela' }], getOcc, H);
-ok(p2.planejadas === 1 && p2.realizadas === 0, 'occ fora da janela → planejada (nunca inventa status)');
+ok(p2.indisponiveis === 1 && p2.planejadas === 0 && p2.realizadas === 0, 'occ fora da janela → indisponível (R7·B1.4: nunca vira planejada)');
 
 console.log('\n' + PASS + ' PASS · ' + FAIL + ' FAIL');
 if (FAIL) { process.exit(1); }
