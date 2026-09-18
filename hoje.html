@@ -1040,7 +1040,7 @@
     t.title = 'Esta tela lê o banco uma vez, ao abrir. Se alguém concluir algo agora, só aparece aqui depois de atualizar.';
     s.appendChild(t);
     var b = txt('button', '', 'Atualizar'); b.type = 'button'; b.setAttribute('aria-label', 'Atualizar os números desta tela');
-    b.addEventListener('click', function () { b.disabled = true; b.textContent = 'Lendo…'; refresh(); });
+    b.addEventListener('click', function () { b.disabled = true; b.textContent = 'Lendo…'; refresh().then(function () { toast('Números atualizados agora.'); }).catch(function () {}); });
     s.appendChild(b);
     return s;
   }
@@ -1517,7 +1517,7 @@
     var uid = (CURRENT_USER && CURRENT_USER.uid) || null;
     var hoje = R.hojeISO();
     var ehUsuario = !!(Guard.isUsuario && Guard.isUsuario());
-    Promise.all([
+    return Promise.all([
       KPI.carregar('band'),
       ehUsuario ? Promise.resolve([]) : Store.listPlanosVivos(),
       uid ? Store.listMinhasConvocacoes(uid) : Promise.resolve({ itens: [], cheio: false, erro: false }),

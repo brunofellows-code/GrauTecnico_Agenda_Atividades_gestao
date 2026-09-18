@@ -214,6 +214,13 @@
 .pl-toast.err{border-color:var(--red);color:var(--redText,var(--red))}
 .pl-info-k{font-size:var(--fs-xs);font-weight:800;color:var(--muted2Text,var(--muted2));letter-spacing:.08em;margin-top:10px}
 .pl-info-v{font-size:var(--fs-base);line-height:1.5}
+/* 18/09 · SEM SETOR DE LOTAÇÃO. Quem não está ligado a um setor via esta tela inteira vazia,
+   com zeros que pareciam do setor, e sem nenhuma explicação: parecia sistema quebrado.
+   Em produção 7 de 10 cadastros estavam assim. Agora a tela diz o que falta e a quem pedir. */
+.pl-semsetor{display:flex;align-items:flex-start;gap:11px;border:1px solid var(--amber);background:var(--haloAmber);border-radius:12px;padding:13px 15px;margin:0 0 14px}
+.pl-semsetor .ic{flex:none;width:26px;height:26px;border-radius:8px;background:var(--amber);color:var(--onAmber,#1A1200);display:flex;align-items:center;justify-content:center;font-weight:800}
+.pl-semsetor .t{font-size:var(--fs-base);font-weight:800;margin-bottom:2px}
+.pl-semsetor .d{font-size:var(--fs-sm);color:var(--text);line-height:1.5}
 .pl-dev{position:fixed;left:14px;bottom:14px;z-index:30;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:0;font-family:inherit;font-size:var(--fs-sm);font-weight:700;padding:9px 13px;border-radius:10px;background:var(--cta);color:var(--ctaText);box-shadow:var(--elev-2)}
 .pl-dev .pin{width:8px;height:8px;border-radius:50%;background:var(--ctaText)}
 @media (min-width:901px){html body .pl-dev{display:none}}
@@ -300,6 +307,7 @@
     else if (USER.setor) { ok[raizDe(USER.setor)] = true; }
     return all.filter(function (s) { return ok[s.sigla]; });
   }
+  function ehLider() { return !!(Guard.isLider && Guard.isLider()); }
   function noEscopo(sig) { return ehGestor() || escopoRaizes().some(function (s) { return s.sigla === sig; }); }
   function liderDe(sig) { return USERS.filter(function (u) { return u.perfil === 'lider' && (u.setoresLiderados || []).indexOf(sig) >= 0; })[0] || null; }
   function novoId() { return 'i' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36); }
@@ -436,6 +444,18 @@
     var acts = document.getElementById('pl-actions'); acts.innerHTML = '';
     var jan = M.janela(HOJE); if (jan.aberta) { acts.appendChild(pill('Planejamento de ' + compLabel(jan.competencia) + ' aberto até dia ' + jan.fecha, 'ok')); }
 
+    /* sem escopo nenhum: não é tela vazia, é cadastro incompleto — e quem vê precisa saber disso */
+    if (!ehGestor() && !escopoRaizes().length) {
+      var av = el('<div class="pl-semsetor"></div>');
+      av.appendChild(el('<span class="ic">!</span>'));
+      var cx = el('<div></div>');
+      cx.appendChild(txt('div', 't', 'Você ainda não está ligado a um setor'));
+      cx.appendChild(txt('div', 'd', ehLider()
+        ? 'O seu cadastro não diz quais setores você lidera, então esta tela não tem o que mostrar. Peça ao gestor para abrir Usuários, editar o seu cadastro e marcar os setores que você lidera.'
+        : 'O plano é do setor, e o seu cadastro ainda não diz em qual setor você está. Peça ao gestor para abrir Usuários, editar o seu cadastro e escolher o seu setor de lotação. Enquanto isso, as suas atividades continuam normalmente na aba Hoje.'));
+      av.appendChild(cx);
+      body.appendChild(av);
+    }
     /* 1 · três números da competência em foco + ação */
     if (FOCO && !noEscopo(FOCO.sig)) { FOCO = null; }
     var rz = escopoRaizes(), unidade = ehGestor(), tot = { conc: 0, fech: 0, risco: 0, semPlano: [], abertos: 0 };
