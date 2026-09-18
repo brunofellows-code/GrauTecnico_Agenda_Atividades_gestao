@@ -12,6 +12,7 @@
 <script src="theme.js"></script>
 <script src="guard.js"></script>
 <script src="mnav.js"></script>
+  <script src="busca.js"></script>
 
 <style>
 /* ============================================================
@@ -172,6 +173,30 @@
 .pl-mk-vazio{font-size:var(--fs-xs);color:var(--muted2Text,var(--muted2))}
 .pl-det .h .v{max-width:none;white-space:normal}
 .pl-cov button.kp{font-family:inherit;font-size:inherit;background:transparent;cursor:pointer}
+/* 18/09 · NÚMERO DO INDICADOR (padrão Scorecard do Ninety / OKR do Perdoo). Até aqui o indicador
+   era só um nome com a meta em texto: o plano dizia o que mover, ninguém registrava quanto deu.
+   Sem número medido não há tendência, e sem tendência é gestão por atividade, não por resultado. */
+.pl-ind{border:1px solid var(--border);border-radius:12px;margin:0 0 12px;overflow:hidden}
+.pl-ind-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 12px;background:var(--s2);cursor:pointer}
+.pl-ind-h .t{font-size:var(--fs-xs);font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accentText)}
+.pl-ind-h .n{font-size:var(--fs-xs);font-weight:700;color:var(--muted)}
+.pl-ind-h .cv{margin-left:auto;font-size:12px;color:var(--muted)}
+.pl-ind-b{padding:4px 12px 10px}
+.pl-ind-r{display:grid;grid-template-columns:minmax(150px,1.6fr) 96px 92px 118px 1fr;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)}
+.pl-ind-r:last-child{border-bottom:0}
+.pl-ind-r .nm{font-size:var(--fs-sm);font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-ind-r .mt{font-size:var(--fs-xs);color:var(--muted2Text,var(--muted2));min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-ind-r input{width:100%;font:inherit;font-size:var(--fs-sm);font-weight:800;text-align:right;background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:3px 7px}
+.pl-ind-r input:focus{outline:none;border-color:var(--brand)}
+.pl-ind-r .vv{font-size:var(--fs-sm);font-weight:800;text-align:right}
+.pl-ind-spark{display:flex;align-items:flex-end;gap:2px;height:22px}
+.pl-ind-spark i{display:block;width:6px;border-radius:2px 2px 0 0;background:var(--muted2);min-height:2px}
+.pl-ind-spark i.ok{background:var(--green)} .pl-ind-spark i.bad{background:var(--red)} .pl-ind-spark i.warn{background:var(--amber)}
+.pl-ind-spark i.vazio{background:var(--border);height:2px}
+.pl-ind-d{font-size:var(--fs-xs);font-weight:700;margin-left:6px}
+.pl-ind-d.ok{color:var(--greenText,var(--green))} .pl-ind-d.bad{color:var(--redText,var(--red))} .pl-ind-d.neutro{color:var(--muted2Text,var(--muted2))}
+.pl-ind-aviso{font-size:var(--fs-xs);color:var(--bandaAlta,var(--amber));font-weight:700;padding:6px 12px}
+@media (max-width:1100px){.pl-ind-r{grid-template-columns:minmax(120px,1.4fr) 84px 80px 104px;}.pl-ind-r .mt{display:none}}
 .pl-cov button.kp:hover,.pl-cov .kp.on{border-style:solid;border-color:var(--brand);color:var(--text)}
 
 /* sugestões e estados */
@@ -236,6 +261,8 @@
   'use strict';
   var R = window.GrautRecorrencia, M = window.PlanejamentoMotor;
   var USER = null, SETORES = [], USERS = [], PLANOS = [], SUGS = null, SOLIC = [], OCC = {}, ABERTOS = {}, KPI_PENDENTE = null;
+  /* números dos indicadores: IND[sigla] = { 'AAAA-MM': { chave: {v, obs, em, por} } } · carregado sob demanda, um setor por vez */
+  var IND = {}, IND_PEDINDO = {}, IND_ERRO = {}, IND_ABERTO = {};
   var HOJE = null, COMPS = [], FOCO = null;          /* FOCO = { sig, comp } — plano aberto */
   var MODO_CHECKIN = false, EDITANDO = null;         /* EDITANDO = { itemId, campo } */
   var RISCO_SETOR_SIGLA = { 'Central Rel.': 'CRA', 'Pedagógico': 'PED', 'Gestor': 'GES', 'ADM/Fin': 'ADM', 'Agência': 'AGE', 'CSA': 'CSA' };
@@ -338,6 +365,40 @@
     criarEvento: function (doc) { return fb().then(function (c) { var now = Date.now(); var body = Object.assign({}, doc, { realizado: false, custoRealizado: null, ativo: true, criadoPorUid: USER.uid, criadoEm: now, atualizadoEm: now }); return c.f.addDoc(c.f.collection(c.db, 'eventos'), body).then(function (ref) { Store.log({ acao: 'planejamento_item_na_agenda', entidade: 'evento', refId: ref.id, antes: null, depois: { titulo: body.titulo, data: body.data, siglaSetor: body.siglaSetor } }); return ref.id; }); }).catch(function (e) { throw ferr(e); }); },
     concluirOcorrenciaDoItem: function (pl, it, relato, dia) {
       return fb().then(function (c) { var data = it.quandoPrevisto || ultimoDia(pl.competencia); var id = R.docIdOcorrencia ? R.docIdOcorrencia(it.atividadeId, data) : (it.atividadeId + '_' + data); var now = Date.now(); return c.f.setDoc(c.f.doc(c.db, 'ocorrencias', id), { atividadeId: it.atividadeId, data: data, prazoOriginal: data, responsavelUid: it.quemUid || null, setorSigla: pl.setorSigla, status: 'concluida', concluidaEm: dia ? new Date(dia + 'T12:00:00').getTime() : now, relato: relato || null, relatoEm: now, concluidaPorUid: USER.uid, origem: { tipo: 'planejamento', planejamentoId: pl.id, itemId: it.id } }, { merge: true }); }).catch(function (e) { throw ferr(e); });
+    },
+    /* ---------- NÚMERO DO INDICADOR (coleção indicadores_mes) ----------
+       Um doc por SETOR e por MÊS, id = SIG_AAAA-MM, com TODOS os indicadores daquele setor dentro.
+       Assim 13 meses de um setor custam 13 leituras, e não 13 × 47. Leio por id (getDoc) de propósito:
+       consulta com dois filtros pediria índice composto no Console, e id nunca pede índice nenhum. */
+    listIndicadoresMes: function (sig, comps) {
+      return fb().then(function (c) {
+        return Promise.all(comps.map(function (comp) {
+          return c.f.getDoc(c.f.doc(c.db, 'indicadores_mes', sig + '_' + comp)).then(function (sn) {
+            return { comp: comp, valores: (sn && sn.exists && sn.exists() ? (sn.data() || {}).valores : null) || {} };
+          });
+        })).then(function (rs) { var m = {}; rs.forEach(function (r) { m[r.comp] = r.valores; }); return m; });
+      }).catch(function (e) { throw ferr(e); });
+    },
+    /* transação: lê o doc do mês, troca SÓ o indicador editado e regrava o mapa inteiro.
+       Sem isto, dois líderes do mesmo setor no mesmo minuto apagariam o número um do outro. */
+    salvarIndicadorMes: function (sig, comp, chave, valor, obs) {
+      return fb().then(function (c) {
+        var ref = c.f.doc(c.db, 'indicadores_mes', sig + '_' + comp), agora = Date.now();
+        return c.f.runTransaction(c.db, function (tx) {
+          return tx.get(ref).then(function (sn) {
+            var atual = (sn && sn.exists && sn.exists() ? (sn.data() || {}).valores : null) || {};
+            var novos = {}; var k; for (k in atual) { if (Object.prototype.hasOwnProperty.call(atual, k)) { novos[k] = atual[k]; } }
+            if (valor == null) { delete novos[chave]; } else { novos[chave] = { v: valor, obs: obs || null, em: agora, por: USER.uid }; }
+            var body = { setorSigla: sig, competencia: comp, valores: novos, atualizadoEm: agora, atualizadoPor: USER.uid };
+            if (sn && sn.exists && sn.exists()) { tx.update(ref, { valores: novos, atualizadoEm: agora, atualizadoPor: USER.uid }); }
+            else { tx.set(ref, body); }
+            return novos;
+          });
+        }).then(function (novos) {
+          Store.log({ acao: 'indicador_mes_lancado', entidade: 'indicador', refId: sig + '_' + comp, antes: null, depois: { chave: chave, valor: valor } });
+          return novos;
+        });
+      }).catch(function (e) { throw ferr(e); });
     },
     buscarPlano: function (sig, comp) { return fb().then(function (c) { var q = c.f.query(c.f.collection(c.db, 'planejamentos'), c.f.where('setorSigla', '==', sig), c.f.where('competencia', '==', comp), c.f.limit(3)); return c.f.getDocs(q).then(function (sn) { return mapDocs(sn).filter(function (x) { return x.ativo !== false; })[0] || null; }); }).catch(function (e) { throw ferr(e); }); },
     atualizarAtividade: function (id, patch) { return fb().then(function (c) { return c.f.updateDoc(c.f.doc(c.db, 'atividades', id), Object.assign({}, patch, { atualizadoEm: Date.now() })); }).catch(function (e) { throw ferr(e); }); },
@@ -529,6 +590,8 @@
       card.appendChild(cv);
     }
 
+    var pind = painelIndicadores(pl, podeEd); if (pind) { card.appendChild(pind); }
+
     if (MODO_CHECKIN && podeEd) { card.appendChild(renderCheckin(pl)); box.appendChild(card); return box; }
 
     /* semana do setor (seg–dom) */
@@ -638,6 +701,117 @@
     var patch = { quandoRealizado: dia, status: 'concluido', relato: occ.relato || null, evidencia: occ.relato ? 'relato na atividade' : null, naoFeito: false, verificadoPor: { uid: USER.uid, nome: USER.name || USER.nome || '', em: Date.now() } };
     var lista = (pl.itens || []).map(function (o) { return o.id === it.id ? Object.assign({}, o, patch) : o; });
     salvarItens(pl, lista, 'planejamento_item_verificado', { itemId: it.id }).then(function () { if (it.eventoId) { return Store.atualizarEvento(it.eventoId, { realizado: true }).catch(function () { }); } }).then(function () { toast('Verificado — item concluído no plano.'); render(); }).catch(function (e) { toast(e.message, 'err'); });
+  }
+  /* ---------- NÚMEROS DO INDICADOR ---------- */
+  var IND_MESES = 12;
+  function compsDoHistorico(comp) { var a = []; for (var i = IND_MESES - 1; i >= 0; i--) { a.push(M.compShift(comp, -i)); } return a; }
+  function carregarIndicadores(sig, comp) {
+    if (IND[sig] || IND_PEDINDO[sig]) { return; }
+    IND_PEDINDO[sig] = true;
+    Store.listIndicadoresMes(sig, compsDoHistorico(comp))
+      .then(function (m) { IND[sig] = m; IND_PEDINDO[sig] = false; render(); })
+      .catch(function (e) { IND_PEDINDO[sig] = false; IND_ERRO[sig] = (e && e.message) || 'não consegui ler os números.'; render(); });
+  }
+  function valorInd(sig, comp, chave) {
+    var m = IND[sig]; if (!m || !m[comp]) { return null; }
+    var c = m[comp][chave];
+    return c && typeof c.v === 'number' ? c : null;
+  }
+  /* ok · warn (até 10% fora) · bad · neutro (indicador sem meta numérica, ou mês sem número) */
+  function statusInd(k, v) {
+    if (v == null || k.metaNum == null || !k.sentido) { return 'neutro'; }
+    var meta = k.metaNum;
+    if (k.sentido === 'maior') { if (v >= meta) { return 'ok'; } return v >= meta * 0.9 ? 'warn' : 'bad'; }
+    if (v <= meta) { return 'ok'; }
+    return v <= meta * 1.1 || (meta === 0 && v <= 1) ? 'warn' : 'bad';
+  }
+  function numInd(v, k) {
+    if (v == null) { return '—'; }
+    var t = Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+    return t + (k && k.unidade === '%' ? '%' : (k && k.unidade && k.unidade !== 'un' ? ' ' + k.unidade : ''));
+  }
+  function sparkInd(sig, comp, k) {
+    var comps = compsDoHistorico(comp), vals = comps.map(function (c) { var x = valorInd(sig, c, k.chave); return x ? x.v : null; });
+    var presentes = vals.filter(function (x) { return x != null; });
+    var wrap = el('<span style="display:inline-flex;align-items:flex-end"></span>');
+    var sp = el('<span class="pl-ind-spark"></span>');
+    var max = presentes.length ? Math.max.apply(null, presentes) : 0;
+    if (k.metaNum != null) { max = Math.max(max, k.metaNum); }
+    comps.forEach(function (c, i) {
+      var v = vals[i];
+      var b = el('<i></i>');
+      if (v == null) { b.className = 'vazio'; }
+      else { b.className = statusInd(k, v) === 'neutro' ? '' : statusInd(k, v); b.style.height = Math.max(3, Math.round((max ? v / max : 0) * 22)) + 'px'; }
+      b.title = compLabel(c) + ': ' + (v == null ? 'sem número' : numInd(v, k));
+      sp.appendChild(b);
+    });
+    wrap.appendChild(sp);
+    /* variação contra o mês anterior, já com o sinal certo para o sentido do indicador */
+    var atual = valorInd(sig, comp, k.chave), ant = valorInd(sig, M.compShift(comp, -1), k.chave);
+    if (atual && ant) {
+      var dif = atual.v - ant.v, melhor = k.sentido === 'menor' ? dif < 0 : dif > 0;
+      var d = txt('span', 'pl-ind-d ' + (dif === 0 ? 'neutro' : (melhor ? 'ok' : 'bad')), (dif > 0 ? '▲' : (dif < 0 ? '▼' : '=')) + ' ' + numInd(Math.abs(dif), k));
+      d.title = 'Contra ' + compLabel(M.compShift(comp, -1)) + ' (' + numInd(ant.v, k) + ')' + (k.sentido ? ' · neste indicador, ' + (k.sentido === 'menor' ? 'menor é melhor' : 'maior é melhor') : '');
+      wrap.appendChild(d);
+    }
+    return wrap;
+  }
+  function painelIndicadores(pl, podeEd) {
+    var lista = kpisDo(pl.setorSigla).filter(function (k) { return k.chave !== 'outro'; });
+    if (!lista.length) { return null; }
+    var sig = pl.setorSigla, comp = pl.competencia;
+    carregarIndicadores(sig, comp);
+    var aberto = IND_ABERTO[sig + comp] === true;
+    var box = el('<div class="pl-ind"></div>');
+    var lancados = 0, fora = 0;
+    lista.forEach(function (k) { var x = valorInd(sig, comp, k.chave); if (x) { lancados++; if (statusInd(k, x.v) === 'bad') { fora++; } } });
+    var h = el('<div class="pl-ind-h"></div>');
+    h.appendChild(txt('span', 't', 'Números do setor · ' + compLabel(comp)));
+    h.appendChild(txt('span', 'n', IND_PEDINDO[sig] ? 'lendo…' : (lancados + ' de ' + lista.length + ' lançados' + (fora ? ' · ' + fora + ' fora da meta' : ''))));
+    h.appendChild(infoBtn('Números do setor', { formula: 'o número que o indicador deu no mês, lançado pelo líder do setor. Na meta = atingiu o alvo oficial; até 10% fora = âmbar; mais que isso = vermelho. Indicador cuja meta não é um número só (ex.: "25 faladas · 8 potenciais") fica sem cor.', dados: 'coleção indicadores_mes, um documento por setor e por mês; as barrinhas são os últimos ' + IND_MESES + ' meses.', numeros: lancados + ' de ' + lista.length + ' indicadores com número em ' + compLabel(comp) + (fora ? ' · ' + fora + ' fora da meta' : ''), serve: 'o plano diz o que vai ser feito; o número diz se aquilo mudou o resultado. Sem ele, a reunião discute atividade, não resultado.' }));
+    h.appendChild(txt('span', 'cv', aberto ? '▾' : '▸'));
+    h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0');
+    h.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    function alterna() { IND_ABERTO[sig + comp] = !aberto; render(); }
+    h.addEventListener('click', function (ev) { if (ev.target.closest && ev.target.closest('.pl-i')) { return; } alterna(); });
+    h.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); alterna(); } });
+    box.appendChild(h);
+    if (IND_ERRO[sig]) { box.appendChild(txt('div', 'pl-ind-aviso', IND_ERRO[sig] + ' Se a mensagem falar de permissão, peça ao gestor para publicar a regra nova do Firestore.')); }
+    if (!aberto) { return box; }
+    var b = el('<div class="pl-ind-b"></div>');
+    lista.forEach(function (k) {
+      var x = valorInd(sig, comp, k.chave), st = statusInd(k, x ? x.v : null);
+      var r = el('<div class="pl-ind-r"></div>');
+      var nm = txt('div', 'nm', k.nome); nm.title = k.nome; r.appendChild(nm);
+      var mt = txt('div', 'mt', k.meta || '—'); mt.title = 'Meta oficial: ' + (k.meta || 'sem meta definida'); r.appendChild(mt);
+      if (podeEd) {
+        var inp = el('<input type="text" inputmode="decimal" maxlength="12">');
+        inp.value = x ? String(x.v).replace('.', ',') : '';
+        inp.placeholder = k.unidade === '%' ? '%' : (k.unidade || 'nº');
+        inp.setAttribute('aria-label', 'Número de ' + k.nome + ' em ' + compLabel(comp) + (k.meta ? ' (meta ' + k.meta + ')' : ''));
+        var grava = function () {
+          var t = (inp.value || '').replace(/\s/g, '').replace(',', '.');
+          var novo = t === '' ? null : Number(t);
+          if (novo != null && (isNaN(novo) || !isFinite(novo))) { toast('Escreva só o número (use vírgula para decimal).', 'err'); inp.focus(); return; }
+          if (x && novo === x.v) { return; }
+          if (!x && novo == null) { return; }
+          Store.salvarIndicadorMes(sig, comp, k.chave, novo, null)
+            .then(function (novos) { if (!IND[sig]) { IND[sig] = {}; } IND[sig][comp] = novos; toast(novo == null ? 'Número apagado.' : k.nome + ': ' + numInd(novo, k) + ' registrado em ' + compLabel(comp) + '.'); render(); })
+            .catch(function (e) { toast(e.message, 'err'); });
+        };
+        inp.addEventListener('blur', grava);
+        inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); inp.blur(); } });
+        r.appendChild(inp);
+      } else { r.appendChild(txt('div', 'vv', numInd(x ? x.v : null, k))); }
+      var pl2 = el('<div></div>');
+      if (x && st !== 'neutro') { pl2.appendChild(pill(st === 'ok' ? 'na meta' : (st === 'warn' ? 'perto' : 'fora'), st === 'ok' ? 'ok' : (st === 'warn' ? 'warn' : 'bad'))); }
+      else if (x) { pl2.appendChild(pill('registrado', '')); }
+      r.appendChild(pl2);
+      r.appendChild(sparkInd(sig, comp, k));
+      b.appendChild(r);
+    });
+    box.appendChild(b);
+    return box;
   }
   function coberturaKpis(pl) {
     var lista = kpisDo(pl.setorSigla).filter(function (k) { return k.chave !== 'outro'; }); if (!lista.length) { return null; }

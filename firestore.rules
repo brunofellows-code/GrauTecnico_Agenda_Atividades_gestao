@@ -226,6 +226,37 @@ service cloud.firestore {
       allow delete: if false; // soft-delete sempre (ativo:false)
     }
 
+    // ---------- indicadores_mes (18/09 - o NUMERO do indicador do setor) ----------
+    // Ate aqui o indicador do setor era so um NOME com a meta escrita em texto: o plano
+    // dizia "este item move a inadimplencia", mas ninguem registrava quanto a inadimplencia
+    // deu no mes. Sem numero medido nao ha tendencia, e sem tendencia e gestao por atividade,
+    // nao por resultado. Esta colecao guarda UM documento por SETOR e por MES com todos os
+    // indicadores daquele setor - assim um ano inteiro de um setor custa 12 leituras, e nao
+    // 12 x 47. O id E a identidade (SIG_AAAA-MM): salvar de novo corrige, nunca duplica.
+    //
+    // Escreve: gestor em qualquer setor; lider so no escopo dele (mesma doutrina do plano).
+    // Le: qualquer ativo - o numero do setor nao e segredo de quem executa.
+    // Sem delete: historico de indicador nao se apaga; corrigir e sobrescrever, e o
+    // atividade_log guarda quem mexeu e quando.
+    match /indicadores_mes/{id} {
+      allow read: if isActive();
+      allow create: if (isAdmin() || (isLider() && noEscopoDoLider(request.resource.data.setorSigla)))
+                    && id == request.resource.data.setorSigla + '_' + request.resource.data.competencia
+                    && request.resource.data.keys().hasOnly(['setorSigla', 'competencia', 'valores', 'atualizadoEm', 'atualizadoPor'])
+                    && request.resource.data.setorSigla is string
+                    && request.resource.data.competencia is string
+                    && request.resource.data.competencia.size() == 7
+                    && request.resource.data.valores is map
+                    && request.resource.data.atualizadoEm is number
+                    && request.resource.data.atualizadoPor == request.auth.uid;
+      allow update: if (isAdmin() || (isLider() && noEscopoDoLider(resource.data.setorSigla)))
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['valores', 'atualizadoEm', 'atualizadoPor'])
+                    && request.resource.data.setorSigla == resource.data.setorSigla
+                    && request.resource.data.competencia == resource.data.competencia
+                    && request.resource.data.atualizadoPor == request.auth.uid;
+      allow delete: if false;
+    }
+
     // ---------- atividades ----------
     // R5-B1: ACEITE DE ATRIBUICAO (padrao Outlook Accept/Decline em tarefa
     // atribuida): o RESPONSAVEL — mesmo perfil 'usuario' — registra aceite ou
