@@ -323,6 +323,19 @@
 .at-bars i.off{background:var(--border)}
 .at-peso.vital .at-bars i,.at-bars.vital i{background:var(--red)}
 .et-card .at-clinha{display:flex;align-items:center;flex-wrap:wrap;gap:4px 7px}
+/* 18/09 · FREQUÊNCIA COMO ESCALA, NÃO COMO PALETA. Diária → mensal é uma escala ORDENADA:
+   quem lê precisa sentir 'mais frequente = mais denso'. Quatro matizes soltos diriam 'quatro
+   categorias diferentes' e ainda brigariam com o verde/vermelho/âmbar, que no GERA significam
+   ESTADO. Então: uma família só, quatro pesos, com os tokens que já existem — zero cor nova,
+   zero par de contraste novo para manter. É o que Linear e Notion fazem com recorrência. */
+.et-rec,.at-recpill{border-radius:6px;padding:1px 7px}
+.et-rec.f-diario,.at-recpill.f-diario{background:var(--s3);color:var(--text);font-weight:800}
+.et-rec.f-semanal,.at-recpill.f-semanal{background:var(--chipBg);color:var(--text);font-weight:800}
+.et-rec.f-quinzenal,.at-recpill.f-quinzenal{background:var(--chipBg);color:var(--muted);font-weight:700}
+.et-rec.f-mensal,.at-recpill.f-mensal,
+.et-rec.f-bimestral,.at-recpill.f-bimestral,
+.et-rec.f-trimestral,.at-recpill.f-trimestral{background:transparent;color:var(--muted2Text,var(--muted2));font-weight:700}
+.et-rec.f-unico,.at-recpill.f-unico{background:transparent;color:var(--muted2Text,var(--muted2));font-weight:700;font-style:italic}
 /* barra de filtros do palco (classificação + "Só as minhas") */
 .at-fbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;margin:0 0 12px}
 .at-fgroup{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
@@ -1809,7 +1822,7 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
         setoresDe(o.act).forEach(function (sg) { var st = txt('span', 'at-tag', sg); var sc = corSetor(sg); st.style.color = 'var(--' + sc + 'Text,var(--' + sc + '))'; st.style.background = 'var(--' + sc + 'Bg)'; into.appendChild(st); });
       }
       if (o.act.subsetorSigla) { var subt = txt('span', 'at-tag sub', o.act.subsetorSigla); var cc = corSetor(o.act.subsetorSigla); subt.style.color = 'var(--' + cc + 'Text,var(--' + cc + '))'; subt.style.background = 'var(--' + cc + 'Bg)'; into.appendChild(subt); }
-      var rec = el('<span class="at-recpill"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
+      var rec = el('<span class="at-recpill f-' + (o.act.recorrencia || 'unico') + '"></span>'); rec.appendChild(ico(PATH.repeat, 11)); rec.appendChild(document.createTextNode(RECOR_LABEL[o.act.recorrencia] || o.act.recorrencia)); into.appendChild(rec);
       if (o.horario) { var hr = el('<span class="at-mi"></span>'); hr.appendChild(ico(PATH.clock, 12)); hr.appendChild(document.createTextNode(o.horario)); into.appendChild(hr); }
       if (o.act.responsavelNome) { var rp = el('<span class="at-mi"></span>'); rp.appendChild(ico(PATH.user, 12)); rp.appendChild(document.createTextNode(o.act.responsavelNome)); into.appendChild(rp); }
       /* F1-H: supervisor visível no card (rastreabilidade de quem acompanha) */
@@ -2789,7 +2802,7 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
       }
       var foot = el('<div class="et-cfoot"></div>');
       rodapeDono(act, foot);
-      foot.appendChild(txt('span', 'et-rec', recTxt));
+      foot.appendChild(txt('span', 'et-rec f-' + (act.recorrencia || 'unico'), recTxt));
       card.appendChild(foot);
       return card;
     }
