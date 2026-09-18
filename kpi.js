@@ -29,7 +29,7 @@
       _fb = Promise.all([
         import('./firebase.js'),
         import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
-      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+      ]).then(function (m) { return { db: m[0].db, f: (window.GrautCache ? window.GrautCache.vigiar(m[1]) : m[1]) }; });
     }
     return _fb;
   }
@@ -55,22 +55,22 @@
   }
 
   /* ---------- leituras (mesmas queries/where/limit do atividades.html) ---------- */
-  function listSetores() {
+  function listSetoresCru() {
     return fb().then(function (c) {
       return c.f.getDocs(c.f.collection(c.db, 'setores')).then(function (s) {
         var a = []; s.forEach(function (d) { a.push(d.data()); });
-        a.sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0); });
+        a.sort(function (x, y) { return (x.ordem || 0) - (y.ordem || 0) || (x.sigla < y.sigla ? -1 : 1); });   /* empate de ordem resolvido pela sigla: a lista sai SEMPRE igual (e pode ser compartilhada entre telas) */
         return a;
       });
     }).catch(function (e) { throw ferr(e); });
   }
-  function listAtividadesAtivas() {
+  function listAtividadesAtivasCru() {
     return fb().then(function (c) {
       var f = c.f, q = f.query(f.collection(c.db, 'atividades'), f.where('ativo', '==', true), f.limit(2000));
       return f.getDocs(q).then(function (s) { var a = []; s.forEach(function (d) { a.push(Object.assign({ id: d.id }, d.data())); }); return a; });
     }).catch(function (e) { throw ferr(e); });
   }
-  function listOcorrencias(jIni, jFim) {
+  function listOcorrenciasCru(jIni, jFim) {
     return fb().then(function (c) {
       /* 17/09 (auditoria): a consulta vem em ordem de data CRESCENTE; com limit(3000) seco, quando a janela de 75 dias
          passasse de 3000 registros o banco devolvia os 3000 MAIS ANTIGOS e as conclusões de hoje sumiam da tela, em
@@ -92,6 +92,54 @@
       return pagina(null, 1);
     }).catch(function (e) { throw ferr(e); });
   }
+
+  /* ---------- memória curta da aba (cache.js) ----------
+     Duas economias, nesta ordem de importância:
+
+     1. UMA janela serve todos os períodos. A janela "band" (45 dias
+        atrás + 30 à frente) CONTÉM a semana e o mês corrente. Então
+        lê-se a band uma vez e recorta-se na memória — trocar de
+        período (ou de tela) deixou de custar leitura nova.
+     2. prazo curto por coleção. Ocorrências mudam o dia inteiro
+        (2 min); catálogo de atividades muda pouco (10 min); setores
+        quase nunca (30 min).
+
+     Qualquer gravação na aba apaga o que ela mexeu (cache.js `vigiar`),
+     então quem acabou de concluir uma tarefa nunca vê o número velho. */
+  var TTL = { set: 1800, ativ: 600, occ: 120 };
+  function cache() { return window.GrautCache || null; }
+
+  function listSetores() {
+    var c = cache();
+    if (!c) { return listSetoresCru(); }
+    return c.ler('set:todos', TTL.set, listSetoresCru);
+  }
+  function listAtividadesAtivas() {
+    var c = cache();
+    if (!c) { return listAtividadesAtivasCru(); }
+    return c.ler('ativ:ativas', TTL.ativ, listAtividadesAtivasCru);
+  }
+  /* Recebe o leitor CRU de quem chama (cada tela mantém a própria conexão e a
+     própria tradução de erro) e resolve a parte comum: guardar a band uma vez
+     e recortar dela. Usado pelo próprio motor e pelo atividades.html. */
+  function memoriaOcorrencias(jIni, jFim, lerCru) {
+    var c = cache();
+    if (!c) { return lerCru(jIni, jFim); }
+    var band = windowFor('band');
+    /* fora da band (uma tela pediu passado/futuro distante): lê direto, sem memória */
+    if (R.compareISO(jIni, band.jIni) < 0 || R.compareISO(jFim, band.jFim) > 0) {
+      return lerCru(jIni, jFim);
+    }
+    return c.ler('occ:' + band.jIni + '..' + band.jFim, TTL.occ, function () {
+      return lerCru(band.jIni, band.jFim);
+    }).then(function (todas) {
+      if (jIni === band.jIni && jFim === band.jFim) { return todas; }
+      return todas.filter(function (o) {
+        return o && o.data && R.compareISO(o.data, jIni) >= 0 && R.compareISO(o.data, jFim) <= 0;
+      });
+    });
+  }
+  function listOcorrencias(jIni, jFim) { return memoriaOcorrencias(jIni, jFim, listOcorrenciasCru); }
 
   /* ---------- helpers de setor (mesma lógica multi-homing/cor do atividades.html) ---------- */
   /* defensivo de propósito: esta função já derrubou a tela Hoje quando um
@@ -326,10 +374,25 @@
     nomeSetor: nomeSetor,
     setoresDe: setoresDe,
     computar: computar,
+    /* leitores com memória curta: a tela que tem Store próprio (atividades)
+       usa ESTES para não pedir de novo o que outra tela acabou de ler */
+    lerSetores: listSetores,
+    lerAtividadesAtivas: listAtividadesAtivas,
+    lerOcorrencias: listOcorrencias,
+    memoriaOcorrencias: memoriaOcorrencias,
     /* usado em testes: expõe a expansão pura */
     _buildBoard: buildBoard,
-    carregar: function (periodo) {
+    /* apaga a memória curta da aba: o botão "Atualizar" chama isto antes de recarregar */
+    invalidarCache: function (prefixo) { if (window.GrautCache) { window.GrautCache.limpar(prefixo); } },
+    /* há quanto tempo o número na tela foi lido do banco (ms), ou null se veio agora */
+    idadeDados: function () {
+      if (!window.GrautCache) { return null; }
+      var b = windowFor('band');
+      return window.GrautCache.idadeMs('occ:' + b.jIni + '..' + b.jFim);
+    },
+    carregar: function (periodo, forcar) {
       periodo = periodo || 'band';
+      if (forcar && window.GrautCache) { window.GrautCache.limpar(); }
       var w = windowFor(periodo);
       var hoje = R.hojeISO();
       return Promise.all([listSetores(), listAtividadesAtivas(), listOcorrencias(w.jIni, w.jFim)])

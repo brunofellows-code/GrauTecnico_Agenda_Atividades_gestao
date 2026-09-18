@@ -91,7 +91,7 @@
   <div class="ev-sheet" id="ev-sheet" role="dialog" aria-label="Eventos do dia"></div>
 
   <script src="ui.js"></script>
-  <script src="recorrencia.js"></script>
+  <script src="cache.js"></script>  <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="agenda-motor.js"></script>
   <script type="module">
@@ -123,7 +123,7 @@
       _fb = Promise.all([
         import('./firebase.js'),
         import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
-      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+      ]).then(function (m) { return { db: m[0].db, f: (window.GrautCache ? window.GrautCache.vigiar(m[1]) : m[1]) }; });
     }
     return _fb;
   }

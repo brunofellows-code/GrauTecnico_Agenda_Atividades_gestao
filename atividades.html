@@ -456,7 +456,7 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
   <div class="at-toast" id="at-toast"><span class="bar"></span><span id="at-toast-msg"></span></div>
 
   <script src="ui.js"></script>
-  <script src="recorrencia.js"></script>
+  <script src="cache.js"></script>  <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="cascade.js"></script>
   <script src="ctx.js"></script>
@@ -493,7 +493,7 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
           _fb = Promise.all([
             import('./firebase.js'),
             import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
-          ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+          ]).then(function (m) { return { db: m[0].db, f: (window.GrautCache ? window.GrautCache.vigiar(m[1]) : m[1]) }; });
         }
         return _fb;
       }
@@ -515,7 +515,17 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
 
       var api = {
         /* ----- leituras de apoio ----- */
+        /* Os três leitores pesados (setores, atividades, ocorrências) passaram
+           a usar a memória curta da aba (cache.js), nas MESMAS chaves do motor
+           kpi.js — a resposta é idêntica, então a tela anterior já deixou o
+           trabalho feito. Cada tela continua com a própria conexão e a própria
+           tradução de erro; só deixou de pedir de novo o que acabou de ser lido.
+           Gravação nesta aba apaga a memória na hora (cache.js `vigiar`). */
         listSetores: function () {
+          var mem = window.GrautCache;
+          return mem ? mem.ler('set:todos', 1800, api._setoresCru) : api._setoresCru();
+        },
+        _setoresCru: function () {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
             return f.getDocs(f.collection(db, 'setores')).then(function (snap) {
@@ -531,6 +541,11 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
            (KPI.usuariosNoEscopo). Demais perfis: permission-denied →
            fallback (auto-atribuição). */
         listUsuariosAtivos: function () {
+          var mem = window.GrautCache;
+          if (mem) { return mem.ler('usr:ativos', 600, function () { return api._usuariosAtivosCru(); }); }
+          return api._usuariosAtivosCru();
+        },
+        _usuariosAtivosCru: function () {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
             var q = f.query(f.collection(db, 'usuarios'), f.where('ativo', '==', true), f.limit(1000));
@@ -585,6 +600,10 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
         /* Todas as atividades ATIVAS (sem filtro de setor — o filtro é em
            memória). Teto 2000 + filtro single-field = sem índice composto. */
         listAtividadesAtivas: function () {
+          var mem = window.GrautCache;
+          return mem ? mem.ler('ativ:ativas', 600, api._ativasCru) : api._ativasCru();
+        },
+        _ativasCru: function () {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
             var q = f.query(f.collection(db, 'atividades'), f.where('ativo', '==', true), f.limit(2000));
@@ -603,6 +622,9 @@ body:not(.at-filtros-on) .at-seg[aria-label="Período"],body:not(.at-filtros-on)
         /* Ocorrências (overrides gravados) da janela. Range em campo único
            (data) → sem índice composto; filtro de setor em memória. */
         listOcorrencias: function (jIni, jFim) {
+          return KPI.memoriaOcorrencias(jIni, jFim, api._ocorrenciasCru);
+        },
+        _ocorrenciasCru: function (jIni, jFim) {
           return fb().then(function (c) {
             var db = c.db, f = c.f;
             /* 17/09 (auditoria): em páginas — o limit(3000) seco devolvia os 3000 MAIS ANTIGOS e cortava os de hoje (ver kpi.js) */

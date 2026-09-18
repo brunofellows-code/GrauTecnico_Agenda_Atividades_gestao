@@ -393,6 +393,8 @@
       initials: initialsOf(nome)
     };
     window.GRAUT_USER = user;
+    /* memória curta da aba pertence a ESTA pessoa: se trocou de login, ela se apaga sozinha */
+    if (window.GrautCache) { try { window.GrautCache.dono(user.uid || ''); } catch (eC) {} }
     settled = true;
 
     /* 16/09 · CORRIDA DO PORTÃO. A decisão de acesso é assíncrona (import do

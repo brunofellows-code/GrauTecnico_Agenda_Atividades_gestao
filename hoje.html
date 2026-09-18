@@ -318,7 +318,7 @@
 
   <script src="flags.js"></script>
   <script src="ui.js"></script>
-  <script src="recorrencia.js"></script>
+  <script src="cache.js"></script>  <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="kpis-setor.js"></script>
   <script src="agenda-motor.js"></script>
@@ -390,7 +390,7 @@
       _fb = Promise.all([
         import('./firebase.js'),
         import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
-      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+      ]).then(function (m) { return { db: m[0].db, f: (window.GrautCache ? window.GrautCache.vigiar(m[1]) : m[1]) }; });
     }
     return _fb;
   }
@@ -1037,10 +1037,11 @@
     var min = Math.floor((Date.now() - LIDO_EM) / 60000), hh = new Date(LIDO_EM);
     var quando = pad2(hh.getHours()) + ':' + pad2(hh.getMinutes());
     var t = txt('span', min >= 15 ? 'velho' : '', min < 1 ? 'lido agora, ' + quando : 'lido às ' + quando + ' · ' + min + ' min atrás');
-    t.title = 'Esta tela lê o banco uma vez, ao abrir. Se alguém concluir algo agora, só aparece aqui depois de atualizar.';
+    t.title = 'Esta tela lê o banco ao abrir e reaproveita por até 2 minutos o que acabou de ler. Se alguém concluir algo agora, aparece aqui no próximo Atualizar.';
     s.appendChild(t);
     var b = txt('button', '', 'Atualizar'); b.type = 'button'; b.setAttribute('aria-label', 'Atualizar os números desta tela');
-    b.addEventListener('click', function () { b.disabled = true; b.textContent = 'Lendo…'; refresh().then(function () { toast('Números atualizados agora.'); }).catch(function () {}); });
+    /* o botão é a saída de emergência da memória curta: joga fora o que está guardado e lê o banco de novo */
+    b.addEventListener('click', function () { b.disabled = true; b.textContent = 'Lendo…'; if (window.GrautCache) { window.GrautCache.limparTudo(); } refresh().then(function () { toast('Números atualizados agora.'); }).catch(function () {}); });
     s.appendChild(b);
     return s;
   }

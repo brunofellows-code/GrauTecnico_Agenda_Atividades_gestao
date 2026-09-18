@@ -81,7 +81,7 @@
 
   <script src="ui.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- F1-D: leitura de .xlsx/.xls no navegador -->
-  <script src="recorrencia.js"></script>
+  <script src="cache.js"></script>  <script src="recorrencia.js"></script>
   <script type="module">
   (function () {
   'use strict';
@@ -112,7 +112,7 @@
       _fb = Promise.all([
         import('./firebase.js'),
         import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
-      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+      ]).then(function (m) { return { db: m[0].db, f: (window.GrautCache ? window.GrautCache.vigiar(m[1]) : m[1]) }; });
     }
     return _fb;
   }

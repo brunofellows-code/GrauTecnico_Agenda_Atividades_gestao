@@ -272,7 +272,7 @@
   <div class="pf-pop" id="pf-pop"></div>
 
   <script src="ui.js"></script>
-  <script src="recorrencia.js"></script>
+  <script src="cache.js"></script>  <script src="recorrencia.js"></script>
   <script src="kpi.js"></script>
   <script src="pareto-motor.js"></script><!-- módulo 8: a conta das rotinas que mais falham -->
   <script src="ctx.js"></script>
@@ -1346,7 +1346,7 @@
       _fbi = Promise.all([
         import('./firebase.js'),
         import('https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js')
-      ]).then(function (m) { return { db: m[0].db, f: m[1] }; });
+      ]).then(function (m) { return { db: m[0].db, f: (window.GrautCache ? window.GrautCache.vigiar(m[1]) : m[1]) }; });
     }
     return _fbi;
   }
@@ -1804,7 +1804,7 @@
         onChange: function () { if (MODELO) { paint(MODELO); } } });
     }
     var exp = document.getElementById('pf-export');
-    if (exp) { var rb = UI.button({ label: 'Atualizar', icon: 'upload', variant: 'ghost' }); rb.addEventListener('click', carregar); exp.appendChild(rb); }
+    if (exp) { var rb = UI.button({ label: 'Atualizar', icon: 'upload', variant: 'ghost' }); rb.addEventListener('click', function () { if (window.GrautCache) { window.GrautCache.limparTudo(); } carregar(); }); exp.appendChild(rb); }
     document.querySelectorAll('.pf-seg').forEach(wireSeg);
     carregar();
   }
