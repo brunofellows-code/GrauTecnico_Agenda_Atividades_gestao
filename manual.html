@@ -25,6 +25,11 @@
 .mn-sub{font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin-top:3px}
 .mn-body{padding:18px 32px 48px;max-width:900px}
 .mn-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.mn-why{border-left:3px solid var(--brand);background:var(--activeBg);border-radius:0 11px 11px 0;padding:13px 16px;margin:0 0 18px}
+.mn-why .t{font-size:var(--fs-xs);font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accentText);margin-bottom:6px}
+.mn-why ul{margin:6px 0 0;padding-left:18px}
+.mn-why li{font-size:var(--fs-base);line-height:1.5;margin:0 0 4px;max-width:70ch}
+.mn-why p{font-size:var(--fs-base);line-height:1.5;margin:0;max-width:70ch}
 .mn-tab{font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:var(--muted);background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:8px 13px;cursor:pointer}
 .mn-tab.on{color:var(--accentText);border-color:var(--brand);background:var(--activeBg)}
 .mn-tab:hover{color:var(--text)}
@@ -102,12 +107,56 @@
     ['Regras', '<ul><li>Você vê só as suas atividades, o plano do seu setor (leitura) e as reuniões e eventos em que foi convocado.</li><li>Se uma rotina sua está atrasada, ela conta contra você; se está sem dono, conta contra o líder.</li></ul>']
   ];
 
+  /* ---------- as duas rotinas que sustentam o sistema ----------
+     Escrito a partir da simulação de ponta a ponta de 18/09 (26 de 26 passos
+     verdes no perfil de líder): cada passo abaixo foi executado na tela, não
+     é suposição. */
+  var REUNIAO = [
+    ['Por que a reunião fica aqui e não no caderno',
+      '<p>Tudo o que a reunião decide vira <b>tarefa com dono e prazo na agenda da pessoa</b>, na hora. O que não foi tratado <b>rola sozinho</b> para a reunião seguinte e aparece na pauta. No fim sai a <b>ata</b> pronta. Reunião anotada em caderno some; aqui ela cobra sozinha.</p>'],
+    ['1 · Marcar (qualquer dia antes)',
+      '<p>Aba ' + k('Reuniões') + ' → caixa ' + k('NOVA REUNIÃO') + ': escolha o <b>modelo</b> (Líderes, Integrada, Departamento, Mensal…), a <b>data</b> e a <b>hora</b>. O modelo já traz o roteiro com os temas e os minutos de cada um.</p><p>Quem foi convocado vê a chamada no <b>Hoje</b> e responde <b>Vou / Não vou</b>.</p>'],
+    ['2 · Mandar a pauta ANTES (o passo que mais muda a reunião)',
+      '<p>Abra a reunião e use ' + k('Enviar pauta') + ' — abre o WhatsApp com o texto pronto — ou ' + k('Copiar pauta') + ' para colar onde quiser.</p><p>A pauta já sai com: os temas do dia, <b>o que ficou pendente da reunião anterior</b> e os assuntos que as pessoas colocaram. Quem lê antes chega decidido.</p>'],
+    ['3 · Qualquer convocado põe assunto',
+      '<p>Dentro da reunião, entre num tema e use ' + k('Adicionar assunto') + ': uma linha dizendo o que precisa ser decidido. Não precisa ser líder — quem foi convocado pode.</p>'],
+    ['4 · No dia: iniciar e conduzir pelo relógio',
+      '<p>' + k('▶ Iniciar reunião') + '. O roteiro aparece numerado, com o tempo de cada tema e um relógio correndo no tema aberto. Em cada tema, escreva o resumo em duas ou três linhas.</p>'],
+    ['5 · Cada assunto termina em uma das três',
+      '<ul><li>' + k('Decidir') + ' — abre <b>O quê · Quem · Prazo · Setor</b> e ' + k('Criar demanda') + '. Vira atividade na agenda da pessoa <b>na hora</b>.</li><li>' + k('Resolvido') + ' — foi resolvido ali, encerra.</li><li>' + k('Próxima') + ' — fica aberto e <b>rola para a próxima reunião</b>, contando as vezes que já rolou.</li></ul><p>Assunto sem uma das três não some: volta na pauta seguinte.</p>'],
+    ['6 · Fechamento e ata',
+      '<p>Último tema: ' + k('Fechamento') + '. Ele mostra as demandas criadas, cobra as <b>pendências da reunião anterior sem tratamento</b> (elas travam o encerramento), pede a <b>nota de 1 a 10</b> de cada participante (abaixo de 8, o que faria ser 10) e o texto da ata.</p><p>' + k('Encerrar reunião e registrar a ata') + '. Pronto: a ata fica gravada e a próxima já nasce com o que ficou.</p>'],
+    ['O que trava de propósito',
+      '<ul><li>Não dá para encerrar deixando pendência da anterior sem tratar (Feito / Não feito / Assunto).</li><li>Decisão sem <b>dono</b> e sem <b>prazo</b> não vira demanda.</li><li>Reunião sem ata aparece no <b>Hoje</b> do gestor até ser fechada.</li></ul>']
+  ];
+
+  var PLANO = [
+    ['Por que o plano do mês existe',
+      '<p>O plano é o <b>compromisso do setor com o mês</b>: o que vai ser feito, por quem, até quando e quanto custa. Ele nasce dos <b>indicadores do setor</b> — item sem indicador atrás é tarefa solta. E é dele que saem o check-in da semana, a cobrança do Hoje e a aderência na Performance.</p>'],
+    ['1 · Criar, até o dia 25 do mês anterior',
+      '<p>Aba ' + k('Planejamento') + ' → mês seguinte → ' + k('Copiar de <mês>') + ' (traz o que se repete) ou ' + k('Do zero') + '. O <b>Hoje</b> do gestor avisa, a partir do dia 10, qual setor ainda não entregou.</p>'],
+    ['2 · Escrever os itens (5W2H na horizontal)',
+      '<p>A grade tem: <b>O quê · Indicador · Quem · Setor convidado · Prazo · Custo · Status · Semana</b>.</p><ol><li>Na linha ' + k('＋ Novo item') + ' escreva o que vai ser feito e tecle Enter. Nasce com <b>quem = você</b> e <b>prazo = fim do mês</b>.</li><li>Clique num <b>indicador sem item</b> para o sistema já amarrar a ação ao número que ela move.</li><li>Abra o detalhe (▸) para <b>como, onde, turmas, com quem, início, hora, custo previsto</b> e observações.</li></ol>'],
+    ['3 · Quebrar em MARCOS (etapas com data)',
+      '<p>Dentro do item, cada etapa com a sua data. A coluna <b>O quê</b> passa a mostrar ' + k('▪ 2/5 etapas') + '.</p><p>Serve para o item de mês inteiro não virar surpresa no dia 30: no check-in da semana você vê se as etapas estão saindo.</p>'],
+    ['4 · Preencher os NÚMEROS DO SETOR',
+      '<p>No topo do plano, ' + k('NÚMEROS DO SETOR') + ' → clique para abrir. Para cada indicador, digite <b>o número do mês</b>. A tela mostra <b>medido · meta · tendência</b> e diz quantos ainda faltam ("0 de 8 lançados").</p><p>Sem esse número, o plano vira lista de tarefas sem placar.</p>'],
+    ['5 · Quem faz e quem ajuda',
+      '<ul><li><b>Quem</b>: se for alguém da sua equipe, o item entra na agenda dessa pessoa; ela conclui no Hoje e você usa ' + k('Verificar ✓') + '.</li><li><b>Setor convidado</b>: chame outro setor. O líder de lá <b>Aceita</b> ou diz <b>Não posso</b> com motivo. Ninguém entra em plano alheio sem aceitar.</li></ul>'],
+    ['6 · Entregar',
+      '<p>' + k('Entregar plano') + '. Item com custo acima de <b>R$ 200</b> fica travado até gestor <b>e</b> sócio assinarem.</p>'],
+    ['7 · Toda semana, de sexta a segunda: o check-in',
+      '<p>' + k('Acompanhar esta semana') + '. Para cada item aberto, três respostas de 20 segundos: <b>fez o quê · vai cumprir? 🟢🟡🔴 · o que trava</b>. ' + k('Salvar a semana') + '.</p><p>🟡 ou 🔴 <b>vira assunto na Reunião de Líderes sozinho</b>. É assim que o problema chega à mesa antes de virar prejuízo.</p>'],
+    ['8 · Fechar o item',
+      '<ul><li>' + k('Realizado em') + ' com evidência, ou ' + k('Não feito') + ' com motivo — não existe item que simplesmente some.</li><li>Item não feito derruba a aderência do mês e aparece na Performance.</li></ul>']
+  ];
+
   var TELAS = [
     ['Hoje', 'o seu dia: o que fazer, por onde começar, avisos e compromissos.'],
     ['Atividades', 'as rotinas do setor em quadro (a fazer · fazendo · atrasadas · feitas). Líder dá dono; gestor cria e ativa.'],
     ['Reuniões', 'convocação, condução por blocos com minutos, decisões que viram compromissos, ata e nota.'],
     ['Planejamento', 'o plano 5W2H do mês por setor, nascido dos indicadores; check-in semanal; aceite entre setores.'],
-    ['Eventos (Agenda)', 'agenda da unidade (todos) e do setor (equipe). É a única tela feita também para o celular.'],
+    ['Eventos (Agenda)', 'agenda da unidade (todos) e do setor (equipe). No celular é a tela mais confortável do sistema.'],
     ['Inteligência', 'os indicadores da unidade ou do seu setor, com o "i" que explica a conta.'],
     ['Performance', 'aderência por pessoa e por setor; quem precisa de ajuda.'],
     ['Glossário', 'toda sigla e termo do sistema, em linguagem simples.'],
@@ -116,31 +165,49 @@
 
   /* ---------- pintura ---------- */
   function perfilDe(u) { if (!u) { return 'usuario'; } if (u.perfil === 'gestor' || u.socio) { return 'gestor'; } return u.perfil === 'lider' ? 'lider' : 'usuario'; }
-  var ROTULO = { gestor: 'Gestor e sócios', lider: 'Líder de setor', usuario: 'Membro da equipe', telas: 'As telas' };
+  var ROTULO = { gestor: 'Gestor e sócios', lider: 'Líder de setor', usuario: 'Membro da equipe', reuniao: 'A reunião', plano: 'O plano do mês', telas: 'As telas' };
+
+  var SUB = { gestor: 'como o GERA funciona para quem gere a unidade', lider: 'como o GERA funciona para quem lidera um setor',
+    usuario: 'como o GERA funciona para você', reuniao: 'do convite à ata, passo a passo', plano: 'do dia 25 ao fechamento, passo a passo', telas: 'o que cada tela responde' };
+  function atualizaSub() { var e = document.getElementById('mn-sub'); if (e) { e.textContent = SUB[ABA] || SUB.usuario; } }
 
   function render() {
     var body = document.getElementById('mn-body'); body.innerHTML = '';
     var meu = perfilDe(USER);
     var tabs = el('<div class="mn-tabs" role="tablist"></div>');
-    ['gestor', 'lider', 'usuario', 'telas'].forEach(function (id) {
+    ['gestor', 'lider', 'usuario', 'reuniao', 'plano', 'telas'].forEach(function (id) {
       var b = el('<button type="button" class="mn-tab' + (ABA === id ? ' on' : '') + '" role="tab"></button>');
       b.textContent = ROTULO[id] + (id === meu ? ' · você' : '');
       b.setAttribute('aria-selected', ABA === id ? 'true' : 'false');
-      b.addEventListener('click', function () { ABA = id; render(); });
+      b.addEventListener('click', function () { ABA = id; atualizaSub(); render(); });
       tabs.appendChild(b);
     });
     body.appendChild(tabs);
     var lead = el('<p class="mn-lead"></p>'); lead.textContent = LEAD; body.appendChild(lead);
+
+    /* O combinado: por que usar todo dia. Fica em TODAS as abas de propósito —
+       é o que separa o sistema de mais uma planilha bonita. */
+    var why = el('<div class="mn-why"></div>');
+    why.appendChild(el('<div class="t"></div>')).textContent = 'O combinado';
+    why.appendChild(el('<p>O GERA só devolve o que recebe. O custo é pequeno e o efeito é grande:</p>'));
+    var ul = el('<ul>'
+      + '<li><b>3 minutos por dia</b> — concluir no Hoje com um relato curto. Trabalho feito e não registrado conta como atrasado: a cobrança cai em você e a ajuda não chega.</li>'
+      + '<li><b>2 minutos por semana</b> — o check-in de sexta a segunda. É ele que leva o amarelo e o vermelho para a Reunião de Líderes <i>antes</i> de virar prejuízo.</li>'
+      + '<li><b>30 minutos por mês</b> — o plano até o dia 25. Sem plano entregue, o setor fica sem placar: nada para acompanhar na semana e nada para mostrar na reunião mensal.</li>'
+      + '<li><b>Toda decisão com dono e prazo</b> — decisão sem dono volta na próxima reunião, do mesmo jeito, com mais uma semana perdida.</li>'
+      + '</ul>');
+    why.appendChild(ul);
+    body.appendChild(why);
     if (ABA === 'telas') {
       var g = el('<div class="mn-grid"></div>');
       TELAS.forEach(function (t) { var c = el('<div class="mn-card"></div>'); c.appendChild(el('<div class="t"></div>')).textContent = t[0]; c.appendChild(el('<div class="d"></div>')).textContent = t[1]; g.appendChild(c); });
       body.appendChild(g);
     } else {
-      var lista = ABA === 'gestor' ? GESTOR : (ABA === 'lider' ? LIDER : MEMBRO);
+      var lista = ABA === 'gestor' ? GESTOR : ABA === 'lider' ? LIDER : ABA === 'reuniao' ? REUNIAO : ABA === 'plano' ? PLANO : MEMBRO;
       lista.forEach(function (s) { body.appendChild(sec(s[0], s[1])); });
     }
     var nota = el('<div class="mn-note"></div>');
-    nota.textContent = 'Dicas: o "i" ao lado de todo número mostra a conta; o sol/lua no rodapé da barra troca claro e escuro; no celular use a Agenda. Dúvida de palavra: Glossário.';
+    nota.textContent = 'Atalhos: ⌘K (Ctrl+K no Windows) abre a busca de qualquer tela — pessoa, atividade, reunião, item do plano. O "i" ao lado de todo número mostra a conta. O sol/lua no rodapé da barra troca claro e escuro. No fim do dia, "Fechar o dia" no Hoje resolve o que ficou aberto de uma vez. No celular, o botão redondo do canto abre o menu. Dúvida de palavra: Glossário.';
     body.appendChild(nota);
   }
 
@@ -148,8 +215,11 @@
     USER = user || null;
     var app = document.getElementById('app');
     app.insertBefore(UI.sidebar({ active: 'Manual', user: USER }), app.firstChild);
-    ABA = perfilDe(USER);
-    document.getElementById('mn-sub').textContent = 'como o GERA funciona para ' + (ROTULO[ABA] === 'Gestor e sócios' ? 'quem gere a unidade' : (ABA === 'lider' ? 'quem lidera um setor' : 'você'));
+    /* link direto para uma seção: manual.html?aba=reuniao  ·  ?aba=plano
+       (serve para mandar no grupo apontando exatamente o que a pessoa precisa ler) */
+    var pedida = (location.search.match(/[?&]aba=([a-z]+)/) || [])[1];
+    ABA = (['gestor', 'lider', 'usuario', 'reuniao', 'plano', 'telas'].indexOf(pedida) >= 0) ? pedida : perfilDe(USER);
+    atualizaSub();
     render();
   }
   Guard.onReady(boot);
