@@ -129,6 +129,7 @@
 .rn-blk .mn.over{color:var(--redText,var(--red));font-weight:800}
 .rn-blk:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
 .rn-nav{display:flex;gap:6px;padding:8px 4px 2px;justify-content:space-between}
+.rn-card-t{display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accentText);margin-bottom:11px}
 .rn-card{background:var(--s1);border:1px solid var(--border);border-radius:13px;padding:var(--sp-4) 18px;box-shadow:var(--shadowSoft)}
 .rn-card .h{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .rn-card .h .t{font-size:var(--fs-lg);font-weight:800;letter-spacing:-.01em}
@@ -230,6 +231,8 @@
   <script src="pautas-modelo.js"></script>
   <script src="reunioes-motor.js"></script>
   <script src="kpi.js"></script>
+  <script src="desempenho.js"></script>
+  <script src="desempenho-ui.js"></script>
   <script src="conclusao.js"></script>
   <script src="app-version.js"></script>
   <script>
@@ -461,6 +464,53 @@
       OLD_OCC = mapa;
     }).catch(function () { OLD_OCC = {}; });
   }
+  /* ---------- a decisão traduzida para a régua única (desempenho.js) ----------
+     Um lugar só faz a tradução: se cada bloco traduzisse do seu jeito, o placar
+     do topo e o da pauta dariam números diferentes na mesma tela. */
+  function itemDeDecisao(x) {
+    var d = x && x.dec; if (!d) { return null; }
+    var occ = occDaAtividade(d.atividadeId);
+    var st = (x.st && x.st.chave) || (KPI.statusDecisao(d, occ, hojeISO()) || {}).chave;
+    var estado;
+    if (st === 'no_prazo') { estado = 'no_prazo'; }
+    else if (st === 'atraso') { estado = 'com_atraso'; }
+    else if (st === 'resolvida') { estado = 'no_prazo'; }          /* resolvida na mesa: nasceu e morreu dentro do prazo */
+    else if (st === 'feita') { estado = 'entregue'; }              /* feita, mas sem data de conclusão: não infla o "no prazo" */
+    else if (st === 'vencida') { estado = 'vencida'; }
+    else if (st === 'sem_janela') { estado = 'indisponivel'; }
+    else if (occ && occ.status === 'em_andamento') { estado = 'andamento'; }
+    else if (d.naoFeito) { estado = 'nao_feito'; }
+    else { estado = 'aberto'; }
+    return { peso: d.peso || '', estado: estado, motivo: d.motivo || null };
+  }
+  function itensDeDecisoes(lista) {
+    var out = [];
+    (lista || []).forEach(function (x) { var i = itemDeDecisao(x); if (i) { out.push(i); } });
+    return out;
+  }
+  /* i obrigatório: a mesma explicação onde quer que o placar apareça */
+  function infoPlacar(p) {
+    return infoBtn('Previsto × realizado', {
+      formula: 'CUMPRIDO = feitas no prazo + feitas com atraso + feitas sem data ÷ o que conta. NO PRAZO = só as feitas até a data combinada. O QUE CONTA exclui as que estão fora da janela lida do banco — dado que não temos não vira nota boa nem ruim. Meta 90% (padrão Level 10).',
+      dados: 'decisões registradas nas reuniões desta série + a ocorrência da atividade-filha de cada uma.',
+      numeros: !p || !p.contam ? 'nenhuma decisão ainda.' : (p.contam + ' contam = ' + p.no_prazo + ' no prazo + ' + p.com_atraso + ' com atraso + ' + p.entregue + ' sem data + ' + p.andamento + ' em andamento + ' + p.aberto + ' a fazer + ' + p.vencida + ' vencidas + ' + p.nao_feito + ' não feitas' + (p.indisponivel ? ' · ' + p.indisponivel + ' fora da janela, de fora da conta' : '') + ' · ponderado por peso: ' + (p.pctPonderado == null ? '—' : p.pctPonderado + '%')),
+      serve: 'saber, antes de discutir, se a reunião está cumprindo o que decide — e onde exatamente ela não está.'
+    });
+  }
+  /* uma coluna por reunião da série, da mais antiga para a mais nova */
+  function serieDaSerie(lista, tipo, setorSigla) {
+    var ordenadas = (lista || []).filter(function (r) {
+      if (!r || !r.data) { return false; }
+      if (tipo && (r.tipo || null) !== tipo) { return false; }
+      if (tipo === 'departamento' && (r.setorSigla || null) !== (setorSigla || null)) { return false; }
+      return (r.decisoes || []).length > 0;
+    }).sort(function (a, b) { return (a.data || '').localeCompare(b.data || ''); });
+    return GrautDesempenho.serie(ordenadas.map(function (r) {
+      return { rotulo: fmtBR(r.data).slice(0, 5), titulo: r.titulo || (TIPO_LABEL[r.tipo] || 'Reunião'), chave: r.id,
+        itens: itensDeDecisoes((r.decisoes || []).map(function (d, i) { return { dec: d, reuniao: r, idx: i, st: statusDe(d) }; })) };
+    }));
+  }
+
   function diasDe(prazo, hoje) { if (!prazo) { return null; } return R.diasEntre(prazo, hoje); } /* positivo = venceu há N dias */
   function concluirAoVivo(o) {
     if (!window.GrautConclusao) { toast('Não carreguei o módulo de conclusão. Recarregue a página.', 'err'); return Promise.resolve(false); }
@@ -572,19 +622,34 @@
     /* placar de demandas (a ATA) + tabela */
     var todasDec = [];
     REUN.forEach(function (r) { (r.decisoes || []).forEach(function (d, i) { if (d && typeof d === 'object') { todasDec.push({ dec: d, reuniao: r, idx: i, st: statusDe(d) }); } }); });
-    var placar = KPI.placarReuniao ? KPI.placarReuniao(todasDec.map(function (x) { return x.dec; }), occDaAtividade, hoje) : null;
-    body.appendChild(secao('Demandas das reuniões', { formula: 'cada decisão registrada em reunião vira uma demanda com dono e prazo. Realizadas = feitas (no prazo ou com atraso) ou resolvidas na reunião · Em andamento = atividade iniciada · Planejadas = abertas dentro do prazo · Vencidas = prazo passou e não foi feita · Fora da janela = atividade antiga sem dado carregado.', dados: 'reunioes.decisoes[] de todas as reuniões que você vê + a ocorrência da atividade-filha.', numeros: placar ? (placar.total + ' = ' + placar.realizadas + ' realizadas + ' + placar.andamento + ' em andamento + ' + placar.planejadas + ' planejadas + ' + placar.vencidas + ' vencidas + ' + placar.indisponiveis + ' fora da janela') : 'nenhuma decisão ainda', serve: 'a mesma leitura da sua planilha de ATA: Realizado / Planejado / Em andamento e No prazo / Com atraso.' }, placar ? placar.total : null));
-    if (!placar) { body.appendChild(vazio('Nenhuma demanda ainda', 'A primeira decisão registrada numa reunião aparece aqui com dono, prazo e status.')); }
+    /* 18/09: seis cartões de mesmo peso viraram UM gráfico (pedido do Bruno:
+       "resumo em tela única, 1 gráfico"). Mesma régua do plano (desempenho.js). */
+    var placar = GrautDesempenho.placar(itensDeDecisoes(todasDec));
+    body.appendChild(secao('Demandas das reuniões', null, placar.total || null));
+    if (!placar.total) { body.appendChild(vazio('Nenhuma demanda ainda', 'A primeira decisão registrada numa reunião aparece aqui com dono, prazo e status.')); }
     else {
-      var g = el('<div class="rn-kpis"></div>');
-      [['Realizadas', placar.realizadas, placar.realizadas ? 'green' : 'flat', placar.noPrazo + ' no prazo · ' + placar.comAtraso + ' com atraso'],
-        ['Em andamento', placar.andamento, placar.andamento ? 'blue' : 'flat', 'iniciadas'],
-        ['Planejadas', placar.planejadas, 'flat', 'dentro do prazo'],
-        ['Vencidas', placar.vencidas, placar.vencidas ? 'red' : 'green', placar.vencidas ? 'cobrar hoje' : 'nenhuma'],
-        ['Vencem hoje', placar.venceHoje, placar.venceHoje ? 'amber' : 'flat', 'prazo é hoje'],
-        ['% realizado', placar.total ? Math.round(placar.realizadas / placar.total * 100) + '%' : '—', placar.total && placar.realizadas / placar.total >= 0.9 ? 'green' : 'amber', 'meta 90% (Level 10)']
-      ].forEach(function (k) { var c = el('<div class="rn-kpi t-' + k[2] + '"></div>'); c.appendChild(txt('div', 'lab', k[0])); c.appendChild(txt('div', 'val', String(k[1]))); c.appendChild(txt('div', 'sub', k[3])); g.appendChild(c); });
-      body.appendChild(g);
+      var cx = el('<div class="rn-card"></div>');
+      cx.appendChild(GrautDesempenhoUI.barra(placar, { info: infoPlacar(placar) }));
+      cx.appendChild(GrautDesempenhoUI.porPeso(placar));
+      if (placar.motivos.length) { cx.appendChild(GrautDesempenhoUI.motivos(placar)); }
+      body.appendChild(cx);
+
+      /* o acumulado que vai sendo alimentado reunião a reunião */
+      var sr = serieDaSerie(REUN, null, null);
+      if (sr.length > 1) {
+        var cs = el('<div class="rn-card" style="margin-top:12px"></div>');
+        var hh = txt('div', 'rn-card-t', 'Como está indo, reunião a reunião');
+        hh.appendChild(infoBtn('Reunião a reunião', {
+          formula: 'uma coluna por reunião que gerou demanda, da mais antiga para a mais nova. A altura de cada cor é a fatia daquele estado. O ACUMULADO soma todas as demandas desde a primeira reunião.',
+          dados: 'todas as reuniões com decisões, de todos os tipos, dentro do que a tela leu.',
+          numeros: sr.length + ' reunião(ões) · acumulado ' + (sr[sr.length - 1].acumulado.pct == null ? '—' : sr[sr.length - 1].acumulado.pct + '%'),
+          serve: 'ver se a disciplina está melhorando ou piorando — uma reunião boa é acidente, a curva é o sistema.'
+        }));
+        cs.appendChild(hh);
+        cs.appendChild(GrautDesempenhoUI.serie(sr));
+        body.appendChild(cs);
+      }
+
       var abertasDec = todasDec.filter(function (x) { return x.st.chave === 'aberta' || x.st.chave === 'vencida'; }).sort(function (a, b) { return (a.dec.prazo || '').localeCompare(b.dec.prazo || ''); });
       if (abertasDec.length) {
         var t = el('<div class="rn-tbl" style="margin-top:12px"></div>');
@@ -654,7 +719,15 @@
     row.appendChild(t);
     row.appendChild(txt('span', '', primeiroNome(d.donoNome || nomeUser(d.donoUid)) || '—'));
     row.appendChild(txt('span', 'num', fmtBR(x.reuniao.data)));
-    row.appendChild(txt('span', 'num', fmtBR(d.prazo)));
+    var cPrazo = txt('span', 'num', fmtBR(d.prazo));
+    if (d.prazoOriginal && d.prazoOriginal !== d.prazo) {
+      var nRep = (d.atualizacoes || []).filter(function (u) { return u && u.tipo === 'repactuado'; }).length;
+      var og = txt('small', '', 'era ' + fmtBR(d.prazoOriginal) + (nRep > 1 ? ' · repactuado ' + nRep + '×' : ''));
+      og.style.cssText = 'display:block;color:var(--amberText,var(--amber));font-weight:700';
+      og.title = 'Prazo combinado na reunião: ' + fmtBR(d.prazoOriginal);
+      cPrazo.appendChild(og);
+    }
+    row.appendChild(cPrazo);
     var ds = txt('span', 'dias num ' + (dd > 0 && (st.chave === 'aberta' || st.chave === 'vencida') ? 'bad' : 'ok'), dd == null ? '—' : (dd > 0 ? '+' + dd : (dd === 0 ? 'hoje' : String(dd))));
     ds.title = dd > 0 ? 'venceu há ' + dd + ' dia(s)' : (dd === 0 ? 'vence hoje' : 'faltam ' + (-dd) + ' dia(s)');
     row.appendChild(ds);
@@ -664,6 +737,7 @@
     if (r && CAN_WRITE() && !r.encerradaEm && (st.chave === 'aberta' || st.chave === 'vencida')) {
       acts.appendChild(btn('Feito', 'ok sm', function () { feitoDemanda(x, r); }));
       acts.appendChild(btn('Não feito', 'warn sm', function () { naoFeitoDemanda(x, r); }));
+      acts.appendChild(btn('Novo prazo', 'sm', function () { novoPrazoDemanda(x, r); }));
       acts.appendChild(btn('Assunto', 'sm', function () { viraAssunto(r, d.texto, { reuniaoId: x.reuniao.id, idx: x.idx }).then(function () { return registrarAndamento(x, { reuniaoId: r.id, uid: USER.uid, em: Date.now(), texto: 'virou assunto' }, 'registrar_andamento'); }).then(function () { rerender(); }); }));
     } else if (!r) {
       var ab = btn('Abrir', 'sm', function () { abrir(x.reuniao.id); }); acts.appendChild(ab);
@@ -671,6 +745,56 @@
     row.appendChild(acts);
     return row;
   }
+  /* NOVO PRAZO (18/09, pedido do Bruno): repactuar sem apagar o combinado.
+     O prazo da reunião fica gravado em prazoOriginal na primeira vez e a linha
+     passa a mostrar "era dd/mm · repactuado 2x". Prazo que muda sem deixar
+     rastro é prazo que não existe — e era exatamente o que faltava para o item
+     rolar de reunião em reunião sem ninguém perceber. */
+  function novoPrazoDemanda(x, r) {
+    var d = x.dec, hoje = hojeISO();
+    var inp = el('<input type="date" class="ui-input" aria-label="Novo prazo">');
+    inp.min = R.addDias(hoje, 1);
+    inp.value = R.addDias(hoje, 7);
+    var sel = document.createElement('select'); sel.className = 'ui-input'; sel.setAttribute('aria-label', 'Por que o prazo mudou');
+    var vazioOp = document.createElement('option'); vazioOp.value = ''; vazioOp.textContent = '— Por que o prazo mudou? —'; sel.appendChild(vazioOp);
+    var MOT = GrautDesempenho.MOTIVOS;
+    for (var k in MOT) { if (Object.prototype.hasOwnProperty.call(MOT, k)) { var o = document.createElement('option'); o.value = k; o.textContent = MOT[k]; sel.appendChild(o); } }
+    var det = el('<input type="text" class="ui-input" placeholder="Em uma linha, o que mudou" aria-label="Detalhe">');
+    var aviso = txt('div', 'rn-info-v', 'O prazo combinado na reunião (' + fmtBR(d.prazoOriginal || d.prazo) + ') continua gravado. A linha passa a mostrar que foi repactuado.');
+    aviso.style.cssText = 'color:var(--muted);font-size:var(--fs-sm);margin-top:8px';
+    UI.modal({
+      title: 'Novo prazo · ' + (d.texto || ''),
+      width: 460,
+      body: [inp, sel, det, aviso],
+      footer: function (close) {
+        return [UI.button({ label: 'Cancelar', variant: 'ghost', onClick: close }),
+          UI.button({ label: 'Repactuar', icon: 'check', onClick: function () {
+            var novo = inp.value;
+            if (!R.isISO(novo) || R.compareISO(novo, hoje) <= 0) { toast('Escolha uma data futura.', 'err'); return; }
+            if (!sel.value) { toast('Diga por que o prazo mudou.', 'err'); return; }
+            var antes = d.prazo;
+            var lista = (x.reuniao.decisoes || []).map(function (dd, i) {
+              if (i !== x.idx) { return dd; }
+              return Object.assign({}, dd, {
+                prazo: novo,
+                prazoOriginal: dd.prazoOriginal || antes,
+                atualizacoes: (dd.atualizacoes || []).concat([{ tipo: 'repactuado', reuniaoId: r ? r.id : null, uid: USER.uid,
+                  em: Date.now(), de: antes, para: novo, motivo: sel.value, detalhe: (det.value || '').trim() || null,
+                  texto: 'prazo ' + fmtBR(antes) + ' → ' + fmtBR(novo) }])
+              });
+            });
+            var occ = occDaAtividade(d.atividadeId);
+            var passo = occ
+              ? Store.setOcorrencia(occ.act, occ.origData, { status: 'reprogramada', dataOverride: novo }, 'reprogramar_demanda')
+              : Promise.resolve();
+            passo.then(function () { return salvarDecisoes(x.reuniao, lista, 'repactuar_prazo_demanda'); })
+              .then(function () { close(); toast('Prazo repactuado para ' + fmtBR(novo) + '. O combinado da reunião continua registrado.'); return reload(true); })
+              .catch(function (e) { toast(e.message, 'err'); });
+          } })];
+      }
+    });
+  }
+
   function feitoDemanda(x, r) {
     var d = x.dec, occ = occDaAtividade(d.atividadeId);
     var fim = function () { return registrarAndamento(x, { reuniaoId: r.id, uid: USER.uid, em: Date.now(), texto: 'feita' }, 'registrar_andamento').then(function () { toast('Demanda concluída.'); rerender(); }); };
@@ -855,10 +979,23 @@
   /* 2 · o que ficou da anterior (a tabela da ATA) */
   function blocoAcoes(r, hoje) {
     var box = el('<div></div>'), rl = pendenciasDaAnterior(r);
-    var placar = KPI.placarReuniao ? KPI.placarReuniao(rl.map(function (x) { return x.dec; }), occDaAtividade, hoje) : null;
-    var lead = txt('div', 'rn-info-v', ''); lead.style.cssText = 'color:var(--muted);font-size:var(--fs-sm);margin-bottom:10px';
-    lead.appendChild(document.createTextNode(rl.length ? ('Feito ou não feito, sem explicação longa (Level 10). ' + (placar ? placar.realizadas + ' realizada(s) · ' + placar.andamento + ' em andamento · ' + placar.vencidas + ' vencida(s) · ' + placar.planejadas + ' no prazo' : '')) : 'Nada ficou da reunião anterior desta série.'));
-    lead.appendChild(infoBtn('O que ficou da anterior', { formula: 'demandas de reuniões ANTERIORES desta série ainda abertas ou vencidas. Dias = hoje − prazo (positivo = venceu há N dias). "Nª vez" = quantas reuniões já passou sem ser feita; na 3ª vira assunto (Fellow).', dados: 'reunioes.decisoes[] da série + ocorrência da atividade-filha.', numeros: rl.length + ' pendência(s)', serve: 'a reunião não fecha com pendência sem tratamento: Feito, Não feito ou Assunto.' }));
+    /* 18/09: a frase de texto virou o mesmo gráfico do topo da lista e do plano.
+       Quem abre este bloco na reunião vê, antes de qualquer discussão, se o que
+       foi decidido está sendo cumprido — e em qual classificação está falhando. */
+    var placar = GrautDesempenho.placar(itensDeDecisoes(rl));
+    if (placar.total) {
+      var cab = el('<div class="rn-card" style="margin-bottom:13px"></div>');
+      cab.appendChild(GrautDesempenhoUI.barra(placar, { info: infoPlacar(placar) }));
+      cab.appendChild(GrautDesempenhoUI.porPeso(placar, { avisarSemClasse: false }));
+      if (placar.motivos.length) { cab.appendChild(GrautDesempenhoUI.motivos(placar)); }
+      box.appendChild(cab);
+    }
+    var lead = txt('div', 'rn-info-v', '');
+    lead.style.cssText = 'color:var(--muted);font-size:var(--fs-sm);margin-bottom:10px';
+    lead.appendChild(document.createTextNode(rl.length
+      ? 'Feito ou não feito, sem explicação longa (Level 10). Item só sai daqui quando é concluído — ou quando muda de prazo, e aí o combinado original fica registrado.'
+      : 'Nada ficou pendente das reuniões anteriores desta série.'));
+    lead.appendChild(infoBtn('O que ficou da anterior', { formula: 'demandas de reuniões ANTERIORES desta série ainda abertas ou vencidas. Dias = hoje − prazo (positivo = venceu há N dias).', dados: 'reunioes.decisoes[] das reuniões passadas do mesmo tipo (e do mesmo setor, no caso de departamento).', numeros: rl.length + ' pendência(s) trazida(s) para esta reunião.', serve: 'garantir que decisão não morre no caderno: ela volta até ser concluída.' }));
     box.appendChild(lead);
     if (!rl.length) { return box; }
     var t = el('<div class="rn-tbl"></div>');
@@ -989,13 +1126,21 @@
     var oq = el('<label>O quê<input type="text"></label>'); oq.querySelector('input').value = textoIni || '';
     var qm = el('<label>Quem<select></select></label>'); var sel = qm.querySelector('select'); USERS.forEach(function (u) { var o = document.createElement('option'); o.value = u.uid; o.textContent = u.nome; if (u.uid === USER.uid) { o.selected = true; } sel.appendChild(o); });
     var pz = el('<label>Prazo<input type="date"></label>'); pz.querySelector('input').value = R.addDias(hojeISO(), 7);
+    var pz2 = el('<label>Peso<select></select></label>'); var psel = pz2.querySelector('select');
+    GrautDesempenho.PESO_ORDEM.forEach(function (k) {
+      var o = document.createElement('option'); o.value = k;
+      o.textContent = GrautDesempenho.PESO_DEF[k].rotulo; o.title = GrautDesempenho.PESO_DEF[k].ajuda;
+      psel.appendChild(o);
+    });
+    psel.value = 'importante';
+    psel.title = 'Vital: se falhar, o mês falha. Importante: move o indicador. Rotina: tem de acontecer.';
     var st = el('<label>Setor<select></select></label>'); var ssel = st.querySelector('select'); (CTX.setores || []).filter(function (s) { return s.ativo !== false; }).forEach(function (s) { var o = document.createElement('option'); o.value = s.sigla; o.textContent = s.sigla; ssel.appendChild(o); });
     function setorDoDono() { var u = USERS.filter(function (x) { return x.uid === sel.value; })[0]; var sig = u && (u.setor || (u.setoresLiderados || [])[0]); if (sig) { ssel.value = sig; } }
     sel.addEventListener('change', setorDoDono); setorDoDono();
     var go = btn('Criar demanda', 'p', function () {
       var t = oq.querySelector('input').value.trim(), prazo = pz.querySelector('input').value;
       if (t.length < 3) { toast('Escreva o que foi decidido.', 'err'); return; } if (!R.isISO(prazo)) { toast('Informe o prazo.', 'err'); return; }
-      var dono = sel.value || USER.uid, dec = { texto: t, comoTexto: null, porqueTexto: null, donoUid: dono, donoNome: nomeUser(dono) || USER.name, prazo: prazo, atividadeId: null, aberta: true, atualizacoes: [], em: Date.now() };
+      var dono = sel.value || USER.uid, dec = { texto: t, comoTexto: null, porqueTexto: null, donoUid: dono, donoNome: nomeUser(dono) || USER.name, prazo: prazo, prazoOriginal: prazo, peso: psel.value, atividadeId: null, aberta: true, atualizacoes: [], em: Date.now() };
       go.disabled = true;
       Store.criarAtividadeDeDecisao(dec, r, ssel.value).then(function (atId) { dec.atividadeId = atId; dec.aberta = false; return salvarDecisoes(r, (r.decisoes || []).concat([dec]), 'criar_decisao'); })
         .then(function () { toast('Demanda criada: ' + primeiroNome(dec.donoNome) + ' até ' + fmtBR(prazo) + '. Já está na agenda da pessoa.'); return depois ? depois() : null; })
@@ -1003,7 +1148,7 @@
         .then(function () { return reload(true); })
         .catch(function (e) { go.disabled = false; toast(e.message, 'err'); });
     });
-    f.appendChild(oq); f.appendChild(qm); f.appendChild(pz); f.appendChild(st); f.appendChild(go);
+    f.appendChild(oq); f.appendChild(qm); f.appendChild(pz); f.appendChild(pz2); f.appendChild(st); f.appendChild(go);
     setTimeout(function () { oq.querySelector('input').focus(); }, 30);
     return f;
   }

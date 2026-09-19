@@ -137,6 +137,8 @@
 .pl-chip.ok{color:var(--greenText);border-color:var(--green)} .pl-chip.warn{color:var(--bandaAlta,var(--orange));border-color:var(--orange)} .pl-chip.bad{color:var(--redText,var(--red));border-color:var(--red)}
 .pl-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-family:inherit;font-weight:800;padding:0 2px;line-height:1}
 .pl-tbl tr.mine td{background:var(--activeBg)}
+.pl-dz{margin-top:var(--sp-4);padding-top:var(--sp-4);border-top:1px solid var(--border)}
+.pl-dz-t{display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--accentText);margin-bottom:11px}
 .pl-cov{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--muted2Text,var(--muted2));margin:-4px 0 10px}
 .pl-cov b{color:var(--text)}
 .pl-cov .kp{border:1px dashed var(--border);border-radius:6px;padding:1px 7px;color:var(--muted)}
@@ -262,6 +264,8 @@
   <script src="cache.js"></script>  <script src="recorrencia.js"></script>
   <script src="planejamento-motor.js"></script>
   <script src="kpi.js"></script>
+  <script src="desempenho.js"></script>
+  <script src="desempenho-ui.js"></script>
   <script src="app-version.js"></script>
   <script>
   (function () {
@@ -424,6 +428,41 @@
     r.risco = risco; r.abertos = it.filter(function (i) { return statusItem(i) === 'aberto'; }).length;
     return r;
   }
+  /* ---------- o item do plano traduzido para a MESMA régua da reunião ----------
+     (desempenho.js). Se o plano medisse por uma conta e a reunião por outra,
+     o mesmo trabalho teria dois percentuais diferentes na mesma mesa. */
+  function itemDoPlano(i) {
+    if (!i) { return null; }
+    var st = statusItem(i), estado;
+    if (st === 'concluido') {
+      var fez = i.quandoRealizado || null, prazo = i.quandoPrevisto || null;
+      estado = (fez && prazo) ? (R.compareISO(fez, prazo) <= 0 ? 'no_prazo' : 'com_atraso') : 'entregue';
+    } else if (st === 'nao_feito') {
+      estado = 'nao_feito';
+    } else if (i.quandoPrevisto && R.compareISO(i.quandoPrevisto, HOJE) < 0) {
+      estado = 'vencida';
+    } else if (i.inicio && R.compareISO(i.inicio, HOJE) <= 0) {
+      estado = 'andamento';
+    } else {
+      estado = 'aberto';
+    }
+    return { peso: i.peso || '', estado: estado, motivo: i.motivo || null };
+  }
+  function itensDoPlano(pl) {
+    var out = [];
+    vivos(pl).forEach(function (i) { var x = itemDoPlano(i); if (x) { out.push(x); } });
+    return out;
+  }
+  function placarDoPlano(pl) { return GrautDesempenho.placar(itensDoPlano(pl)); }
+  function infoDesempenho(p) {
+    return infoBtn('Previsto × realizado', {
+      formula: 'CUMPRIDO = concluídos no prazo + concluídos com atraso + concluídos sem data de realização ÷ o que conta. NO PRAZO = realizado até o prazo combinado. Vencido = passou do prazo e continua aberto. Meta 90%.',
+      dados: 'itens vivos do plano deste mês (removidos ficam de fora), com o prazo e a data de realização de cada um.',
+      numeros: !p || !p.contam ? 'nenhum item ainda.' : (p.contam + ' itens = ' + p.no_prazo + ' no prazo + ' + p.com_atraso + ' com atraso + ' + p.entregue + ' sem data + ' + p.andamento + ' em andamento + ' + p.aberto + ' a fazer + ' + p.vencida + ' vencidos + ' + p.nao_feito + ' não feitos · ponderado por peso: ' + (p.pctPonderado == null ? '—' : p.pctPonderado + '%')),
+      serve: 'fechar o desempenho do setor no mês: o que foi entregue, o que atrasou, o que não saiu e por quê.'
+    });
+  }
+
   function estadoPlano(pl, comp) {
     if (!pl) { return { chave: 'sem', rotulo: 'sem plano', cls: 'bad' }; }
     var pz = KPI.planejamentoPrazo(comp, HOJE, pl.entregueEm || null);
@@ -571,7 +610,7 @@
       footer: function (close) { return [UI.button({ label: 'Do zero', variant: 'ghost', onClick: function () { close(); criar([]); } }), UI.button({ label: 'Copiar de ' + compLabel(anterior.competencia), icon: 'check', onClick: function () { close(); criar(vivos(anterior).map(function (o) { return novoItem({ oque: o.oque, onde: o.onde || null, como: o.como || null, quemUid: o.quemUid, quemNome: o.quemNome, quandoPrevisto: ultimoDia(comp), inicio: null, valorPrevistoCentavos: o.valorPrevistoCentavos == null ? null : o.valorPrevistoCentavos, subsetorSigla: o.subsetorSigla || null, origemRisco: o.origemRisco || null, indicador: o.indicador || null, turmas: o.turmas || null, comQuem: o.comQuem || null }); })); } })]; } });
   }
   function novoItem(base) {
-    return Object.assign({ id: novoId(), oque: '', onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, marcos: [], indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null, repetir: null, origemRecorrencia: null }, base || {});
+    return Object.assign({ id: novoId(), oque: '', peso: null, onde: null, como: null, quemUid: null, quemNome: null, quandoPrevisto: null, inicio: null, valorPrevistoCentavos: null, valorFinalCentavos: null, setoresEnvolvidos: [], quandoRealizado: null, status: 'aberto', relato: null, evidencia: null, aprovGestor: null, aprovSocio: null, naoFeito: false, motivo: null, motivoDetalhe: null, naoFeitoEm: null, removido: false, criadoEm: Date.now(), criadoPor: USER.uid, subsetorSigla: null, origemRisco: null, acompanhamentos: {}, marcos: [], indicador: null, atividadeId: null, verificadoPor: null, turmas: null, comQuem: null, obs: null, hora: null, divulgar: null, eventoId: null, repetir: null, origemRecorrencia: null }, base || {});
   }
 
   /* ============================================================
@@ -608,6 +647,20 @@
       cov.sem.slice(0, lim).forEach(function (k) { var kp = txt(podeEd ? 'button' : 'span', 'kp' + (KPI_PENDENTE === k.chave ? ' on' : ''), k.nome + (k.meta ? ' · ' + k.meta : '')); if (podeEd) { kp.type = 'button'; kp.title = 'Criar um item para este indicador'; kp.addEventListener('click', function () { KPI_PENDENTE = KPI_PENDENTE === k.chave ? null : k.chave; render(); if (KPI_PENDENTE) { setTimeout(function () { var i0 = document.getElementById('pl-novo'); if (i0) { i0.focus(); } }, 30); } }); } else { kp.title = 'Sem item neste mês'; } cv.appendChild(kp); });
       if (cov.sem.length > lim) { cv.appendChild(txt('span', '', '+ ' + (cov.sem.length - lim))); }
       card.appendChild(cv);
+    }
+
+    /* 18/09 · "previsto × realizado dentro do prazo, fora, motivo e fechar o
+       desempenho do setor" — mesma régua e mesmo desenho da reunião. */
+    var pdz = placarDoPlano(pl);
+    if (pdz.total) {
+      var dbox = el('<div class="pl-dz"></div>');
+      var dh = txt('div', 'pl-dz-t', 'Desempenho do setor · ' + compLabel(comp));
+      dh.appendChild(infoDesempenho(pdz));
+      dbox.appendChild(dh);
+      dbox.appendChild(GrautDesempenhoUI.barra(pdz, { tese: true }));
+      dbox.appendChild(GrautDesempenhoUI.porPeso(pdz, { avisarSemClasse: podeEd }));
+      if (pdz.motivos.length) { dbox.appendChild(GrautDesempenhoUI.motivos(pdz)); }
+      card.appendChild(dbox);
     }
 
     var pind = painelIndicadores(pl, podeEd); if (pind) { card.appendChild(pind); }
@@ -853,12 +906,46 @@
   }
 
   /* ---------- linha do item: edição na célula ---------- */
+  /* O chip de classificação. Só três palavras, um clique para trocar — se
+     exigisse abrir um formulário, ninguém classificaria e o gráfico por peso
+     nasceria vazio. Item sem classificação aparece como "classificar" e NÃO
+     vira "rotina" no silêncio (ver desempenho.js). */
+  var PESO_CLS = { vital: 'bad', importante: 'warn', rotina: '' };
+  function chipPeso(pl, it, editavel) {
+    var atual = GrautDesempenho.pesoDe(it);
+    var def = atual ? GrautDesempenho.PESO_DEF[atual] : null;
+    var rot = def ? def.rotulo : 'classificar';
+    var chip = pill(rot, atual ? PESO_CLS[atual] : '');
+    chip.style.marginTop = '5px';
+    chip.title = def ? def.ajuda : 'Vital: se falhar, o mês falha. Importante: move o indicador. Rotina: tem de acontecer.';
+    if (!editavel) { return chip; }
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = chip.className; b.textContent = rot;
+    b.title = chip.title + ' — clique para trocar';
+    b.style.cssText = 'margin-top:5px;cursor:pointer;font:inherit';
+    b.setAttribute('aria-label', 'Classificação do item: ' + rot + '. Clique para trocar.');
+    b.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      var ordem = [''].concat(GrautDesempenho.PESO_ORDEM);
+      var prox = ordem[(ordem.indexOf(atual) + 1) % ordem.length];
+      var lista = (pl.itens || []).map(function (x) { return x && x.id === it.id ? Object.assign({}, x, { peso: prox || null }) : x; });
+      b.disabled = true;
+      salvarItens(pl, lista, 'planejamento_item_peso', { id: it.id, de: atual || null, para: prox || null })
+        .then(function () { it.peso = prox || null; render(); })
+        .catch(function (e) { b.disabled = false; toast(e.message, 'err'); });
+    });
+    return b;
+  }
+
   function linhaItem(pl, it, podeEd) {
     var st = statusItem(it), tr = el('<tr' + (st !== 'aberto' ? ' class="done"' : (it.quemUid === USER.uid ? ' class="mine"' : '')) + '></tr>');
     var editavel = podeEd && st === 'aberto';
     /* ação primeiro (Asana/Linear): o quê · indicador · quem · com quem · prazo · status · semana; detalhe (como · onde · quando · quanto) à direita */
     var tdC = document.createElement('td'); tdC.className = 'chv'; var chev = el('<button type="button" class="pl-chev" aria-label="Detalhes do item" aria-expanded="' + (ABERTOS[it.id] ? 'true' : 'false') + '">' + (ABERTOS[it.id] ? '▾' : '▸') + '</button>'); chev.addEventListener('click', function () { ABERTOS[it.id] = !ABERTOS[it.id]; render(); }); tdC.appendChild(chev); tr.appendChild(tdC);
     var tdO = celula(pl, it, 'oque', 'texto', editavel); if (it.repetir && it.repetir.ate) { var pr = pill('↻ até ' + compLabel(it.repetir.ate), ''); pr.style.marginTop = '3px'; tdO.appendChild(pr); } else if (it.origemRecorrencia) { var pr2 = pill('↻ recorrente', ''); pr2.title = 'Copiado do plano de ' + compLabel(it.origemRecorrencia.competencia); pr2.style.marginTop = '3px'; tdO.appendChild(pr2); }
+    /* 18/09 · classificação do item (vital · importante · rotina). Um clique
+       cicla entre as três; é o que dá peso ao gráfico do desempenho do setor. */
+    tdO.appendChild(chipPeso(pl, it, editavel));
     var rmk = resumoMarcos(it); if (rmk.total) { var pm = pill('▪ ' + rmk.feitos + '/' + rmk.total + ' etapas', rmk.feitos === rmk.total ? 'ok' : (rmk.atrasados ? 'bad' : '')); pm.title = rmk.atrasados ? rmk.atrasados + ' etapa(s) com prazo vencido' : (rmk.feitos === rmk.total ? 'Todas as etapas feitas' : 'Etapas feitas de etapas planejadas'); pm.style.marginTop = '3px'; tdO.appendChild(pm); }
     if (it.divulgar) { var pd = pill('📣 ' + (it.divulgar === 'unidade' ? 'agenda da unidade' : 'agenda do setor'), 'ok'); pd.title = it.divulgar === 'unidade' ? 'Na agenda da unidade — todos veem no dia' : 'Na agenda do setor — a equipe e os convidados veem no dia'; pd.style.marginTop = '3px'; tdO.appendChild(pd); } tr.appendChild(tdO);
     tr.appendChild(celula(pl, it, 'indicador', 'kpi', editavel));
