@@ -290,12 +290,33 @@
     try { window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); toast('WhatsApp aberto com a pauta — escolha o grupo ou a pessoa.'); }
     catch (e) { copiarTexto(t, 'Não consegui abrir o WhatsApp; a pauta foi copiada.'); }
   }
+  /* 18/09 (varredura de 937 cliques): a versão antiga não esperava a promessa
+     do navegador. Quando o navegador RECUSA a área de transferência (permissão
+     negada, aba sem foco, http sem cadeado), ela dizia "Pauta copiada." e não
+     tinha copiado nada — a pessoa colava vazio no grupo. Agora: tenta o jeito
+     moderno, cai para o jeito antigo se ele recusar, e só diz que copiou
+     quando copiou mesmo. Se nada funcionar, aponta a saída ("Enviar pauta"). */
   function copiarTexto(texto, okMsg) {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(texto); }
-      else { var ta = document.createElement('textarea'); ta.value = texto; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
-      toast(okMsg || 'Copiado.');
-    } catch (e) { toast('Não consegui copiar — selecione o texto manualmente.', 'err'); }
+    function jeitoAntigo() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = texto; ta.setAttribute('readonly', 'readonly');
+        ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, texto.length);
+        var deu = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!deu;
+      } catch (e) { return false; }
+    }
+    function fim(deu) {
+      if (deu) { toast(okMsg || 'Copiado.'); }
+      else { toast('Não consegui copiar nesta aba. Use "Enviar pauta" ou copie o texto da tela.', 'err'); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function () { fim(true); }, function () { fim(jeitoAntigo()); });
+      return;
+    }
+    fim(jeitoAntigo());
   }
   function abreInfo(titulo, d) {
     var dd = (typeof d === 'function') ? d() : d, body = [];

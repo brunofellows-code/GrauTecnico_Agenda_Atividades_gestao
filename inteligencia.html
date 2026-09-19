@@ -198,6 +198,8 @@
 .dd-go{font-size:12.5px;font-weight:700;color:var(--greenText);text-decoration:none;margin-right:auto;align-self:center}
 .dd-go:hover{text-decoration:underline}
 @media(max-width:700px){.dd-row{flex-wrap:wrap}.dd-tit{flex-basis:100%;white-space:normal}}
+/* 18/09: em celular de 390px os dois cartões lado a lado empurravam a tela 29px para o lado. Abaixo de 460px, uma coluna. */
+@media(max-width:460px){.pf-focus,.pf-score{grid-template-columns:1fr}}
 
 /* ---------- F1-D: partida fria + backlog sem dono ---------- */
 .pf-banner{display:flex;align-items:center;gap:10px;background:var(--s1);border:1px solid var(--border);border-left:3px solid var(--brand);border-radius:12px;padding:12px 16px;margin-bottom:13px;font-size:12.5px;color:var(--muted);font-weight:600}

@@ -42,7 +42,13 @@
 .mn-card .d{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}
 .mn-card .d b{color:var(--text)}
 .mn-note{font-size:var(--fs-sm);color:var(--muted2Text,var(--muted2));line-height:1.5;margin-top:14px}
-@media (max-width:760px){.mn-top{padding:14px 16px}.mn-body{padding:14px 16px 28px}}
+/* 18/09: o Manual era a ÚNICA tela que mantinha a lista lateral no celular — ela sobrava 25px
+   e empurrava a página para o lado. Mesmo corte das outras telas (900px); a navegação no celular
+   é o botão redondo do canto (mnav.js). */
+@media (max-width:900px){.mn-app>.ui-side{display:none}}
+@media (max-width:760px){.mn-top{padding:14px 16px}.mn-body{padding:14px 16px 28px}
+  /* 18/09: a tecla (⌘K) com white-space:nowrap esticava a linha e empurrava a página 61px para o lado no celular */
+  .mn-k{white-space:normal;word-break:break-word}}
 </style>
 </head>
 <body>
